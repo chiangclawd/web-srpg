@@ -32,12 +32,12 @@ export const PORTRAIT_ASSETS: AssetEntry[] = [
   { key: 'portrait_shadow', url: 'assets/portraits/shadow.png' },
   { key: 'portrait_high_priest', url: 'assets/portraits/high_priest.png' },
 
-  // === 次要 BOSS（可選） ===
-  // { key: 'portrait_carl',       url: 'assets/portraits/carl.png' },
-  // { key: 'portrait_vlad',       url: 'assets/portraits/vlad.png' },
-  // { key: 'portrait_morden',     url: 'assets/portraits/morden.png' },
-  // { key: 'portrait_selene',     url: 'assets/portraits/selene.png' },
-  // { key: 'portrait_sub_priest', url: 'assets/portraits/sub_priest.png' },
+  // === 次要 BOSS ===
+  { key: 'portrait_carl', url: 'assets/portraits/carl.png' },
+  { key: 'portrait_vlad', url: 'assets/portraits/vlad.png' },
+  { key: 'portrait_morden', url: 'assets/portraits/morden.png' },
+  { key: 'portrait_selene', url: 'assets/portraits/selene.png' },
+  { key: 'portrait_sub_priest', url: 'assets/portraits/sub_priest.png' },
 ];
 
 /**
@@ -48,8 +48,8 @@ export const CG_ASSETS: AssetEntry[] = [
   // === 標題畫面背景 ===
   { key: 'cg_title', url: 'assets/cg/title.png' },
 
-  // === 章節入場大圖（之後使用）===
-  // { key: 'cg_chapter1', url: 'assets/cg/chapter1.png' },
+  // === 章節入場大圖 ===
+  { key: 'cg_chapter1', url: 'assets/cg/chapter1.png' },
   // { key: 'cg_chapter8', url: 'assets/cg/chapter8.png' },
 ];
 
@@ -64,19 +64,19 @@ export const CG_ASSETS: AssetEntry[] = [
  */
 export const SPRITE_ASSETS: AssetEntry[] = [
   // === 玩家陣營（5 個主角專用 sprite）===
-  // { key: 'sprite_arthur', url: 'assets/sprites/arthur.png' },
-  // { key: 'sprite_rosa',   url: 'assets/sprites/rosa.png' },
-  // { key: 'sprite_gary',   url: 'assets/sprites/gary.png' },
-  // { key: 'sprite_sharon', url: 'assets/sprites/sharon.png' },
-  // { key: 'sprite_rain',   url: 'assets/sprites/rain.png' },
+  { key: 'sprite_arthur', url: 'assets/sprites/arthur.png' },
+  { key: 'sprite_rosa', url: 'assets/sprites/rosa.png' },
+  { key: 'sprite_gary', url: 'assets/sprites/gary.png' },
+  { key: 'sprite_sharon', url: 'assets/sprites/sharon.png' },
+  { key: 'sprite_rain', url: 'assets/sprites/rain.png' },
 
   // === 敵方泛用兵種 sprite（6 種 unitType）===
-  // { key: 'sprite_enemy_sword',   url: 'assets/sprites/enemy_sword.png' },
-  // { key: 'sprite_enemy_lance',   url: 'assets/sprites/enemy_lance.png' },
-  // { key: 'sprite_enemy_archer',  url: 'assets/sprites/enemy_archer.png' },
-  // { key: 'sprite_enemy_mage',    url: 'assets/sprites/enemy_mage.png' },
-  // { key: 'sprite_enemy_cavalry', url: 'assets/sprites/enemy_cavalry.png' },
-  // { key: 'sprite_enemy_flier',   url: 'assets/sprites/enemy_flier.png' },
+  { key: 'sprite_enemy_sword', url: 'assets/sprites/enemy_sword.png' },
+  { key: 'sprite_enemy_lance', url: 'assets/sprites/enemy_lance.png' },
+  { key: 'sprite_enemy_archer', url: 'assets/sprites/enemy_archer.png' },
+  { key: 'sprite_enemy_mage', url: 'assets/sprites/enemy_mage.png' },
+  { key: 'sprite_enemy_cavalry', url: 'assets/sprites/enemy_cavalry.png' },
+  { key: 'sprite_enemy_flier', url: 'assets/sprites/enemy_flier.png' },
 
   // === 主要 BOSS 專用 sprite（之後可加，目前先用泛用版）===
   // { key: 'sprite_baron',       url: 'assets/sprites/baron.png' },
