@@ -1,0 +1,23 @@
+{
+  "name": "web-game",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "西方奇幻戰術 SRPG — Web (Phaser) + 可選桌面 (Tauri)",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "dependencies": {
+    "phaser": "^3.80.1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.10"
+  }
+}

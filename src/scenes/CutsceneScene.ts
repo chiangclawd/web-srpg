@@ -1,0 +1,175 @@
+import Phaser from 'phaser';
+import { CUTSCENES } from '../data/cutscenes';
+import { COMMANDERS } from '../data/commanders';
+import { getPortraitKey } from '../data/assetManifest';
+import type { DialogueLine } from '../types';
+
+export interface CutsceneNext {
+  scene: string;
+  data?: object;
+}
+
+export interface CutsceneSceneData {
+  cutsceneId: string;
+  next: CutsceneNext;
+}
+
+/**
+ * 從 cutscene 講話者字串對應到 commander id。
+ * 使用 prefix match 處理「伊歐侯爵（影）」這類後綴變化，
+ * 或「教主 — 黯」這種完整名稱。
+ */
+function findCommanderIdBySpeaker(speaker: string): string | null {
+  for (const cmd of Object.values(COMMANDERS)) {
+    if (speaker === cmd.name || speaker.startsWith(cmd.name)) return cmd.id;
+  }
+  return null;
+}
+
+export class CutsceneScene extends Phaser.Scene {
+  private lines: DialogueLine[] = [];
+  private current = 0;
+  private next!: CutsceneNext;
+  private speakerText!: Phaser.GameObjects.Text;
+  private bodyText!: Phaser.GameObjects.Text;
+  private placeholderText!: Phaser.GameObjects.Text;
+  private portraitImage: Phaser.GameObjects.Image | null = null;
+  private currentSpeakerId: string | null = null;
+
+  constructor() {
+    super({ key: 'CutsceneScene' });
+  }
+
+  init(data: CutsceneSceneData): void {
+    const cs = CUTSCENES[data.cutsceneId];
+    if (!cs) {
+      console.warn('Unknown cutscene id', data.cutsceneId);
+      this.lines = [{ speaker: '系統', text: `（找不到劇本：${data.cutsceneId}）` }];
+    } else {
+      this.lines = cs.lines;
+    }
+    this.current = 0;
+    this.next = data.next;
+    this.portraitImage = null;
+    this.currentSpeakerId = null;
+  }
+
+  create(): void {
+    const { width, height } = this.scale;
+
+    this.add.rectangle(0, 0, width, height, 0x0a0a0a).setOrigin(0);
+
+    // 立繪舞台中央位置（無立繪時用 ◇ 佔位）
+    const stageY = height * 0.32;
+    this.placeholderText = this.add
+      .text(width / 2, stageY, '◇', {
+        fontSize: '120px',
+        color: '#333333',
+      })
+      .setOrigin(0.5);
+
+    // 對話框
+    const boxH = 180;
+    const boxX = 40;
+    const boxY = height - boxH - 30;
+    const box = this.add.rectangle(boxX, boxY, width - 80, boxH, 0x000000, 0.85);
+    box.setOrigin(0);
+    box.setStrokeStyle(2, 0x4a90e2);
+
+    this.speakerText = this.add.text(boxX + 24, boxY + 18, '', {
+      fontSize: '20px',
+      color: '#7ed1ff',
+      fontStyle: 'bold',
+    });
+
+    this.bodyText = this.add.text(boxX + 24, boxY + 60, '', {
+      fontSize: '18px',
+      color: '#ffffff',
+      wordWrap: { width: width - 130 },
+      lineSpacing: 8,
+    });
+
+    // 進度提示
+    const prog = this.add
+      .text(width - 50, height - 18, '', {
+        fontSize: '13px',
+        color: '#888888',
+      })
+      .setOrigin(1, 1);
+    prog.setName('progressText');
+
+    // 點擊或按鍵繼續
+    this.input.on('pointerdown', () => this.advance());
+    this.input.keyboard?.on('keydown', () => this.advance());
+
+    this.showLine();
+  }
+
+  private showLine(): void {
+    const line = this.lines[this.current];
+    if (!line) return;
+    this.speakerText.setText(line.speaker);
+    this.bodyText.setText(line.text);
+    this.updatePortrait(line.speaker);
+    const prog = this.children.getByName('progressText') as Phaser.GameObjects.Text | null;
+    if (prog) prog.setText(`${this.current + 1} / ${this.lines.length}　▶ 點擊繼續`);
+  }
+
+  private updatePortrait(speaker: string): void {
+    const cmdId = findCommanderIdBySpeaker(speaker);
+    if (cmdId === this.currentSpeakerId) return; // 同一個講話者，不換立繪
+
+    // 淡出舊立繪
+    if (this.portraitImage) {
+      const old = this.portraitImage;
+      this.portraitImage = null;
+      this.tweens.add({
+        targets: old,
+        alpha: 0,
+        duration: 220,
+        ease: 'Cubic.easeOut',
+        onComplete: () => old.destroy(),
+      });
+    }
+
+    if (cmdId) {
+      const portraitKey = getPortraitKey(cmdId);
+      if (this.textures.exists(portraitKey)) {
+        const { width, height } = this.scale;
+        const stageY = height * 0.32;
+        const img = this.add.image(width / 2, stageY, portraitKey);
+        img.setOrigin(0.5);
+        // 縮到適合舞台大小（高度約 380px）
+        const maxH = 380;
+        const scale = maxH / img.height;
+        img.setScale(scale);
+        img.setAlpha(0);
+        this.tweens.add({
+          targets: img,
+          alpha: 1,
+          duration: 280,
+          ease: 'Cubic.easeOut',
+        });
+        this.portraitImage = img;
+        this.placeholderText.setVisible(false);
+      } else {
+        // 該武將沒立繪 → 顯示 ◇
+        this.placeholderText.setVisible(true);
+      }
+    } else {
+      // 旁白 / 未知 → 顯示 ◇ 佔位
+      this.placeholderText.setVisible(true);
+    }
+
+    this.currentSpeakerId = cmdId;
+  }
+
+  private advance(): void {
+    this.current += 1;
+    if (this.current >= this.lines.length) {
+      this.scene.start(this.next.scene, this.next.data ?? {});
+    } else {
+      this.showLine();
+    }
+  }
+}
