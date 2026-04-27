@@ -590,11 +590,21 @@ export class BattleScene extends Phaser.Scene {
 
   private onUnitHover(unit: Unit): void {
     if (this.isPaused) return;
-    if (this.selection.kind !== 'action_choice') return;
-    const attacker = this.selection.unit;
-    if (unit.faction === attacker.faction) return;
-    if (!this.selection.attackTargets.some((t) => coordEq(t, unit.position))) return;
-    this.showDamageTooltip(attacker, unit);
+    // 攻擊選擇中 → 預覽 attackTargets 中的敵人
+    if (this.selection.kind === 'action_choice') {
+      const attacker = this.selection.unit;
+      if (unit.faction === attacker.faction) return;
+      if (!this.selection.attackTargets.some((t) => coordEq(t, unit.position))) return;
+      this.showDamageTooltip(attacker, unit);
+      return;
+    }
+    // 選定單位中 → 預覽紅圈直接可打的敵人（一鍵原地攻擊前先看後果）
+    if (this.selection.kind === 'unit_selected') {
+      const attacker = this.selection.unit;
+      if (this.selection.directTargets.includes(unit)) {
+        this.showDamageTooltip(attacker, unit);
+      }
+    }
   }
 
   private onTileClicked(tile: Coord): void {
@@ -990,26 +1000,33 @@ export class BattleScene extends Phaser.Scene {
     const tag = (lbl: '優勢' | '劣勢' | '普通') =>
       lbl === '優勢' ? '【剋】' : lbl === '劣勢' ? '【弱】' : '';
 
+    // 計算戰後 HP 與致命結果
+    const defHpAfter = Math.max(0, defender.hp - ourHit.damage);
+    const willKill = defHpAfter === 0;
+    const atkHpAfter = counterHit ? Math.max(0, attacker.hp - counterHit.damage) : attacker.hp;
+    const willDie = counterHit ? atkHpAfter === 0 : false;
+
+    const killBadge = willKill ? '　★擊殺' : '';
+    const deathBadge = willDie ? '　⚠致命！' : '';
+
     const lines = [
       `${attacker.name} → ${defender.name}`,
-      `傷害 ${ourHit.damage}${tag(ourHit.counterLabel)}　(剩 ${Math.max(
-        0,
-        defender.hp - ourHit.damage
-      )}/${defender.maxHp})`,
+      `傷害 ${ourHit.damage}${tag(ourHit.counterLabel)}　(剩 ${defHpAfter}/${defender.maxHp})${killBadge}`,
       counterHit
-        ? `反擊 ${counterHit.damage}${tag(counterHit.counterLabel)}　(剩 ${Math.max(
-            0,
-            attacker.hp - counterHit.damage
-          )}/${attacker.maxHp})`
+        ? `反擊 ${counterHit.damage}${tag(counterHit.counterLabel)}　(剩 ${atkHpAfter}/${attacker.maxHp})${deathBadge}`
         : `對方無法反擊`,
     ];
 
+    // 主色調：致命=紅警告，擊殺=金，一般=白
+    const mainColor = willDie ? '#ff6666' : willKill ? '#ffd54a' : '#ffffff';
+
     const text = this.add.text(0, 0, lines.join('\n'), {
       fontSize: '12px',
-      color: '#ffffff',
+      color: mainColor,
       lineSpacing: 4,
       padding: { left: 8, right: 8, top: 6, bottom: 6 },
       backgroundColor: '#000000c8',
+      fontStyle: willDie || willKill ? 'bold' : 'normal',
     });
     const w = text.width;
     const h = text.height;
