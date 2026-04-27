@@ -4,6 +4,7 @@ export const CUTSCENES: Record<string, CutsceneScript> = {
   // ============= 第 1 章 =============
   ch1_prologue: {
     id: 'ch1_prologue',
+    bgImageKey: 'cg_chapter1',
     lines: [
       { speaker: '旁白', text: '阿斯卡尼亞王國 · 北方邊境 · 初春。' },
       { speaker: '旁白', text: '一場持續了二十年的和平，正在崩塌。' },

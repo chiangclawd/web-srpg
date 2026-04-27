@@ -102,6 +102,8 @@ export interface DialogueLine {
 export interface CutsceneScript {
   id: string;
   lines: DialogueLine[];
+  /** 背景大圖 texture key（如 'cg_chapter1'）。未設定 → 純黑底。 */
+  bgImageKey?: string;
 }
 
 export interface ChapterDef {

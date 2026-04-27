@@ -28,6 +28,7 @@ function findCommanderIdBySpeaker(speaker: string): string | null {
 
 export class CutsceneScene extends Phaser.Scene {
   private lines: DialogueLine[] = [];
+  private bgImageKey: string | undefined;
   private current = 0;
   private next!: CutsceneNext;
   private speakerText!: Phaser.GameObjects.Text;
@@ -35,6 +36,7 @@ export class CutsceneScene extends Phaser.Scene {
   private placeholderText!: Phaser.GameObjects.Text;
   private portraitImage: Phaser.GameObjects.Image | null = null;
   private currentSpeakerId: string | null = null;
+  private hasBgImage = false;
 
   constructor() {
     super({ key: 'CutsceneScene' });
@@ -45,21 +47,36 @@ export class CutsceneScene extends Phaser.Scene {
     if (!cs) {
       console.warn('Unknown cutscene id', data.cutsceneId);
       this.lines = [{ speaker: '系統', text: `（找不到劇本：${data.cutsceneId}）` }];
+      this.bgImageKey = undefined;
     } else {
       this.lines = cs.lines;
+      this.bgImageKey = cs.bgImageKey;
     }
     this.current = 0;
     this.next = data.next;
     this.portraitImage = null;
     this.currentSpeakerId = null;
+    this.hasBgImage = false;
   }
 
   create(): void {
     const { width, height } = this.scale;
 
-    this.add.rectangle(0, 0, width, height, 0x0a0a0a).setOrigin(0);
+    // 背景：優先用 CG 大圖（若 cutscene 有指定且 texture 已載入）
+    if (this.bgImageKey && this.textures.exists(this.bgImageKey)) {
+      const bg = this.add.image(width / 2, height / 2, this.bgImageKey);
+      // cover：縮到完全填滿畫布
+      const scale = Math.max(width / bg.width, height / bg.height);
+      bg.setScale(scale);
+      // 全螢幕半透明黑罩，讓對話框可讀但 CG 仍清楚
+      this.add.rectangle(0, 0, width, height, 0x000000, 0.35).setOrigin(0);
+      this.hasBgImage = true;
+    } else {
+      this.add.rectangle(0, 0, width, height, 0x0a0a0a).setOrigin(0);
+      this.hasBgImage = false;
+    }
 
-    // 立繪舞台中央位置（無立繪時用 ◇ 佔位）
+    // 立繪舞台中央位置（無立繪時用 ◇ 佔位；有 CG 時不顯示 ◇）
     const stageY = height * 0.32;
     this.placeholderText = this.add
       .text(width / 2, stageY, '◇', {
@@ -67,6 +84,7 @@ export class CutsceneScene extends Phaser.Scene {
         color: '#333333',
       })
       .setOrigin(0.5);
+    if (this.hasBgImage) this.placeholderText.setVisible(false);
 
     // 對話框
     const boxH = 180;
@@ -153,12 +171,12 @@ export class CutsceneScene extends Phaser.Scene {
         this.portraitImage = img;
         this.placeholderText.setVisible(false);
       } else {
-        // 該武將沒立繪 → 顯示 ◇
-        this.placeholderText.setVisible(true);
+        // 該武將沒立繪 → 有 CG 時讓 CG 當主視覺（不顯示 ◇），純黑底時用 ◇ 佔位
+        this.placeholderText.setVisible(!this.hasBgImage);
       }
     } else {
-      // 旁白 / 未知 → 顯示 ◇ 佔位
-      this.placeholderText.setVisible(true);
+      // 旁白 / 未知 → 有 CG 時讓 CG 當主視覺，純黑底時顯示 ◇
+      this.placeholderText.setVisible(!this.hasBgImage);
     }
 
     this.currentSpeakerId = cmdId;
