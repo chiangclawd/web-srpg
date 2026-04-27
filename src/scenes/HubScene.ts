@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { CHAPTERS } from '../data/chapters';
 import { COMMANDERS, RECRUIT_AT_CHAPTER } from '../data/commanders';
 import { UNIT_TYPES } from '../data/unitTypes';
-import { EQUIPMENT } from '../data/equipment';
+import { EQUIPMENT, getEquippableFor } from '../data/equipment';
 import {
   getCommanderProgress,
   setCommanderEquipment,
@@ -19,6 +19,22 @@ import { getPortraitKey } from '../data/assetManifest';
 
 export interface HubSceneData {
   chapterId: string;
+}
+
+/** 把裝備數值轉為人類可讀字串（含命中／爆擊加成）*/
+function formatStats(kind: 'weapon' | 'armor', item: EquipmentDef): string {
+  const parts: string[] = [];
+  if (kind === 'weapon') {
+    parts.push(`+${item.atk} 攻`);
+    if (item.def) parts.push(`+${item.def} 防`);
+    if (item.hitBonus) parts.push(`+${item.hitBonus}% 命中`);
+    if (item.critBonus) parts.push(`+${item.critBonus}% 爆`);
+  } else {
+    if (item.def) parts.push(`+${item.def} 防`);
+    if (item.hpBonus) parts.push(`+${item.hpBonus} HP`);
+    if (item.critBonus) parts.push(`+${item.critBonus}% 爆`);
+  }
+  return parts.join(' ');
 }
 
 export class HubScene extends Phaser.Scene {
@@ -288,6 +304,10 @@ export class HubScene extends Phaser.Scene {
   // ===== 換裝 picker =====
   private openEquipPicker(kind: 'weapon' | 'armor', cmdId: string): void {
     this.closeEquipPicker();
+    const cmd = COMMANDERS[cmdId];
+    if (!cmd) return;
+    const cmdLevel = getCommanderProgress(cmdId)?.level ?? cmd.startingLevel;
+
     const { width, height } = this.scale;
     const items: Phaser.GameObjects.GameObject[] = [];
 
@@ -296,27 +316,52 @@ export class HubScene extends Phaser.Scene {
     items.push(bg);
 
     const title = this.add
-      .text(width / 2, 60, kind === 'weapon' ? '— 選擇武器 —' : '— 選擇防具 —', {
-        fontSize: '24px',
-        color: '#7ed1ff',
-        fontStyle: 'bold',
-      })
+      .text(
+        width / 2,
+        50,
+        `${kind === 'weapon' ? '— 選擇武器 —' : '— 選擇防具 —'}\n${cmd.name}（${cmd.unitType}）LV ${cmdLevel}`,
+        {
+          fontSize: '20px',
+          color: '#7ed1ff',
+          fontStyle: 'bold',
+          align: 'center',
+        }
+      )
       .setOrigin(0.5);
     items.push(title);
 
-    const allItems = Object.values(EQUIPMENT).filter((e) => e.kind === kind);
+    // 此兵種專屬可選裝備（已過 level）
+    const equippable = getEquippableFor(cmd.unitType, cmdLevel, kind);
+    // 還沒解鎖（兵種對但等級不夠）→ 顯示灰色「LV X 解鎖」提示
+    const locked = Object.values(EQUIPMENT).filter(
+      (e) =>
+        e.kind === kind &&
+        e.unitTypes &&
+        e.unitTypes.includes(cmd.unitType) &&
+        (e.requiredLevel ?? 0) > cmdLevel
+    );
+
     let itemY = 110;
     items.push(
       this.makePickerItem(width / 2, itemY, '【無 — 卸下裝備】', '#aaaaaa', () => {
         this.equipItem(cmdId, kind, null);
       })
     );
-    itemY += 32;
+    itemY += 30;
 
-    for (const item of allItems) {
-      const stats = kind === 'weapon'
-        ? `+${item.atk} 攻`
-        : `+${item.def} 防 +${item.hpBonus} HP`;
+    if (equippable.length === 0 && locked.length === 0) {
+      const t = this.add
+        .text(width / 2, itemY, `（${cmd.unitType} 沒有可用的此類裝備）`, {
+          fontSize: '14px',
+          color: '#888888',
+        })
+        .setOrigin(0.5);
+      items.push(t);
+      itemY += 30;
+    }
+
+    for (const item of equippable) {
+      const stats = formatStats(kind, item);
       const label = `${item.name}（${stats}）`;
       items.push(
         this.makePickerItem(width / 2, itemY, label, '#ffffff', () => {
@@ -324,6 +369,31 @@ export class HubScene extends Phaser.Scene {
         })
       );
       itemY += 28;
+    }
+
+    if (locked.length > 0) {
+      itemY += 8;
+      const sep = this.add
+        .text(width / 2, itemY, '— 尚未解鎖 —', {
+          fontSize: '13px',
+          color: '#666666',
+        })
+        .setOrigin(0.5);
+      items.push(sep);
+      itemY += 24;
+
+      for (const item of locked) {
+        const stats = formatStats(kind, item);
+        const label = `🔒 ${item.name}（${stats}）　LV ${item.requiredLevel} 解鎖`;
+        const lockTxt = this.add
+          .text(width / 2, itemY, label, {
+            fontSize: '14px',
+            color: '#666666',
+          })
+          .setOrigin(0.5);
+        items.push(lockTxt);
+        itemY += 26;
+      }
     }
 
     items.push(

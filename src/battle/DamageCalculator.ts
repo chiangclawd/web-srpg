@@ -19,6 +19,10 @@ export interface DamageContext {
   defenderHpRatio?: number;
   /** 難度倍率（敵方攻擊額外乘）：休閒 0.7、普通 1.0、困難 1.3 */
   enemyAttackMul?: number;
+  /** 攻擊方武器的命中率加成（百分點，可省略）*/
+  attackerWeaponHitBonus?: number;
+  /** 攻擊方武器的爆擊率加成（百分點，可省略）*/
+  attackerWeaponCritBonus?: number;
 }
 
 export interface DamageResult {
@@ -86,10 +90,16 @@ export function computeDamage(ctx: DamageContext): DamageResult {
 
   dmg = Math.max(1, Math.floor(dmg));
 
-  // 命中／爆擊率：以攻擊方兵種為準（之後可加裝備修正）
+  // 命中／爆擊率：兵種基底 + 武器加成
   const aType = UNIT_TYPES[ctx.attackerType];
-  const hitRate = Math.max(0, Math.min(100, aType.hitRate ?? 95));
-  const critRate = Math.max(0, Math.min(100, aType.critRate ?? 5));
+  const hitRate = Math.max(
+    0,
+    Math.min(100, (aType.hitRate ?? 95) + (ctx.attackerWeaponHitBonus ?? 0))
+  );
+  const critRate = Math.max(
+    0,
+    Math.min(100, (aType.critRate ?? 5) + (ctx.attackerWeaponCritBonus ?? 0))
+  );
 
   return {
     damage: dmg,

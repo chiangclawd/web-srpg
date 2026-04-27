@@ -49,7 +49,7 @@ export const COMMANDERS: Record<string, CommanderDef> = {
     statBonus: { hp: 4, attack: 2, defense: 1 },
     skill: { id: 'knight_charge', name: '騎士榮耀', desc: '移動 ≥ 3 格時，攻擊 ×1.3' },
     startingLevel: 9, growthRates: { hp: 3, attack: 2, defense: 1 },
-    startingEquipment: { weapon: 'silver_sword', armor: 'knight_armor' },
+    startingEquipment: { weapon: 'pegasus_blade', armor: 'cavalry_plate' },
   },
 
   // ===== 第 1 章敵方 =====
@@ -58,7 +58,7 @@ export const COMMANDERS: Record<string, CommanderDef> = {
     statBonus: { hp: 2, attack: 1, defense: 0 },
     skill: { id: 'cavalry_charge', name: '突擊', desc: '移動 ≥ 3 格時，攻擊 ×1.2' },
     startingLevel: 5, growthRates: { hp: 3, attack: 2, defense: 1 },
-    startingEquipment: { weapon: 'iron_sword', armor: 'leather_armor' },
+    startingEquipment: { weapon: 'cavalry_blade', armor: 'cavalry_leather' },
   },
   selene: {
     id: 'selene', name: '賽琳', faction: 'enemy', unitType: 'mage',
@@ -105,7 +105,7 @@ export const COMMANDERS: Record<string, CommanderDef> = {
     statBonus: { hp: 12, attack: 3, defense: 2 },
     skill: { id: 'king_terminator', name: '王國終結者', desc: '對玩家攻擊 ×1.2' },
     startingLevel: 9, growthRates: { hp: 5, attack: 2, defense: 2 },
-    startingEquipment: { weapon: 'silver_sword', armor: 'knight_armor' },
+    startingEquipment: { weapon: 'pegasus_blade', armor: 'cavalry_plate' },
   },
 
   // ===== 第 4 章敵方 =====
@@ -138,7 +138,7 @@ export const COMMANDERS: Record<string, CommanderDef> = {
     statBonus: { hp: 14, attack: 3, defense: 3 },
     skill: { id: 'wall_breaker', name: '城牆破壞者', desc: '攻擊 ×1.15' },
     startingLevel: 11, growthRates: { hp: 5, attack: 2, defense: 2 },
-    startingEquipment: { weapon: 'silver_sword', armor: 'knight_armor' },
+    startingEquipment: { weapon: 'pegasus_blade', armor: 'cavalry_plate' },
   },
 
   // ===== 第 6 章 BOSS：影武者（影子）+ 伊歐侯爵（真身） =====
@@ -173,7 +173,7 @@ export const COMMANDERS: Record<string, CommanderDef> = {
     statBonus: { hp: 4, attack: 1, defense: 0 },
     skill: { id: 'high_sky', name: '高空優勢', desc: '對地面單位攻擊 ×1.2' },
     startingLevel: 11, growthRates: { hp: 3, attack: 2, defense: 0 },
-    startingEquipment: { weapon: 'iron_sword', armor: 'leather_armor' },
+    startingEquipment: { weapon: 'wing_blade', armor: 'wyvern_scale' },
   },
 
   // ===== 第 8 章 最終 BOSS =====
@@ -228,7 +228,7 @@ export const COMMANDERS: Record<string, CommanderDef> = {
     statBonus: { hp: 4, attack: 2, defense: 0 },
     skill: { id: 'martyrdom', name: '殉道', desc: 'HP < 25% 攻擊 ×1.6' },
     startingLevel: 15, growthRates: { hp: 3, attack: 2, defense: 0 },
-    startingEquipment: { weapon: 'steel_sword', armor: 'leather_armor' },
+    startingEquipment: { weapon: 'wing_blade', armor: 'light_mail' },
   },
 
   // ===== 第 10 章 真・最終 BOSS =====
@@ -244,6 +244,6 @@ export const COMMANDERS: Record<string, CommanderDef> = {
     statBonus: { hp: 8, attack: 4, defense: 1 },
     skill: { id: 'high_sky', name: '虛空之翼', desc: '對地面單位攻擊 ×1.2' },
     startingLevel: 18, growthRates: { hp: 4, attack: 3, defense: 1 },
-    startingEquipment: { weapon: 'silver_sword', armor: 'leather_armor' },
+    startingEquipment: { weapon: 'sky_lance', armor: 'storm_armor' },
   },
 };

@@ -767,6 +767,8 @@ export class BattleScene extends Phaser.Scene {
       attackerMovedDistance: attacker.lastMoveDistance,
       defenderHpRatio: defender.hp / defender.maxHp,
       enemyAttackMul: getEnemyAttackMul(),
+      attackerWeaponHitBonus: attacker.weapon?.hitBonus,
+      attackerWeaponCritBonus: attacker.weapon?.critBonus,
     });
     const rolled = rollAttack(result);
     this.playAttackSound(attacker.unitType);
@@ -835,6 +837,8 @@ export class BattleScene extends Phaser.Scene {
       attackerMovedDistance: 0, // 反擊不算移動加成
       defenderHpRatio: attacker.hp / attacker.maxHp,
       enemyAttackMul: getEnemyAttackMul(),
+      attackerWeaponHitBonus: defender.weapon?.hitBonus,
+      attackerWeaponCritBonus: defender.weapon?.critBonus,
     });
     const counterRolled = rollAttack(counter);
     this.playAttackSound(defender.unitType);
@@ -1025,6 +1029,8 @@ export class BattleScene extends Phaser.Scene {
       attackerMovedDistance: attacker.lastMoveDistance,
       defenderHpRatio: defender.hp / defender.maxHp,
       enemyAttackMul: getEnemyAttackMul(),
+      attackerWeaponHitBonus: attacker.weapon?.hitBonus,
+      attackerWeaponCritBonus: attacker.weapon?.critBonus,
     });
     const counterRange = attackTargetTiles(defender.position, defender.attackRange).some(
       (c) => coordEq(c, attacker.position)
@@ -1042,6 +1048,8 @@ export class BattleScene extends Phaser.Scene {
           defenderFaction: attacker.faction,
           attackerMovedDistance: 0,
           defenderHpRatio: attacker.hp / attacker.maxHp,
+          attackerWeaponHitBonus: defender.weapon?.hitBonus,
+          attackerWeaponCritBonus: defender.weapon?.critBonus,
         })
       : null;
 
@@ -1207,6 +1215,8 @@ export class BattleScene extends Phaser.Scene {
         attackerMovedDistance: fromMovedDistance,
         defenderHpRatio: defender.hp / defender.maxHp,
         enemyAttackMul: getEnemyAttackMul(),
+        attackerWeaponHitBonus: attacker.weapon?.hitBonus,
+        attackerWeaponCritBonus: attacker.weapon?.critBonus,
       });
       const expected = (r.damage * r.hitRate) / 100;
       return { expected, raw: r.damage, canKill: r.damage >= defender.hp };
@@ -1235,6 +1245,8 @@ export class BattleScene extends Phaser.Scene {
         defenderFaction: attacker.faction,
         attackerMovedDistance: 0,
         defenderHpRatio: attacker.hp / attacker.maxHp,
+        attackerWeaponHitBonus: defender.weapon?.hitBonus,
+        attackerWeaponCritBonus: defender.weapon?.critBonus,
       });
       return (r.damage * r.hitRate) / 100;
     };

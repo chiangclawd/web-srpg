@@ -34,6 +34,14 @@ export interface EquipmentDef {
   atk: number;
   def: number;
   hpBonus: number;
+  /** 兵種限定：哪些兵種可裝備；undefined = 通用（向下相容用，新裝備建議都填）*/
+  unitTypes?: UnitTypeId[];
+  /** 解鎖等級門檻；undefined / 0 = 開局即可裝備 */
+  requiredLevel?: number;
+  /** 命中率加成（百分點，例：5 = +5%）*/
+  hitBonus?: number;
+  /** 爆擊率加成（百分點）*/
+  critBonus?: number;
 }
 
 export interface CommanderSkill {
