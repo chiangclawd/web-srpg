@@ -45,6 +45,26 @@ const config: Phaser.Types.Core.GameConfig = {
 
 const game = new Phaser.Game(config);
 
+/**
+ * 嘗試鎖定橫屏（盡力而為，多數瀏覽器會 reject）：
+ *   - Android Chrome PWA：可成功鎖
+ *   - iOS Safari：API 存在但通常 reject；靠 manifest.json + 「請旋轉」遮罩
+ *   - 桌機：API 不適用，靜默失敗
+ */
+function tryLockLandscape(): void {
+  const so = (screen as Screen & {
+    orientation?: { lock?: (o: string) => Promise<void> };
+  }).orientation;
+  if (so && typeof so.lock === 'function') {
+    so.lock('landscape').catch(() => {
+      // 靜默失敗：iOS Safari、桌機都會 reject，這是預期內的
+    });
+  }
+}
+// 啟動時嘗試一次；使用者第一次點擊時再嘗試一次（部分瀏覽器要 user gesture）
+tryLockLandscape();
+window.addEventListener('pointerdown', () => tryLockLandscape(), { once: true });
+
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     game.destroy(true);

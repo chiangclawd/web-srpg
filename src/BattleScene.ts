@@ -72,8 +72,12 @@ export class BattleScene extends Phaser.Scene {
   private scenarioIdOverride: string | null = null;
   /** 玩家回合計數（從 1 起算）；用於 survive 條件判定與 UI 顯示 */
   private playerTurnNumber = 1;
-  /** UI 元素清單（縮放時用反比 scale 維持視覺大小） */
-  private uiElements: Phaser.GameObjects.GameObject[] = [];
+  /** UI 元素清單（縮放時用反比 scale + position 維持視覺大小、視覺位置不動） */
+  private uiElements: Array<{
+    obj: Phaser.GameObjects.GameObject;
+    baseX: number;
+    baseY: number;
+  }> = [];
   /** 拖曳平移用：pointerdown 起點（用來判斷是否超過 click 閾值）*/
   private dragStart: { x: number; y: number } | null = null;
   /** 拖曳平移用：上一個 pointermove 位置（用來算每幀 delta，比 pointer.movementX 可靠）*/
@@ -1178,20 +1182,38 @@ export class BattleScene extends Phaser.Scene {
     this.refreshUIScale();
   }
 
-  /** 把 UI 套用反比 scale，讓相機縮放不影響 UI 視覺大小 */
+  /**
+   * 把 UI 套用反比 scale + 反比 position，讓相機縮放完全不影響 UI 視覺。
+   *
+   * 推導：cam.zoom = z 時，scrollFactor=0 物件的螢幕 = obj.x * z（且 size = scale*z）
+   * 想固定螢幕位置 = baseX、固定 size = 1：
+   *    obj.x = baseX / z, obj.scale = 1 / z
+   *    → 螢幕 x = (baseX/z)*z = baseX ✓
+   *    → 螢幕 size = (1/z) * intrinsic * z = intrinsic ✓
+   */
   private refreshUIScale(): void {
-    const inv = Math.max(0.85, 1 / this.cameras.main.zoom);
-    for (const el of this.uiElements) {
-      const obj = el as Phaser.GameObjects.GameObject & {
+    const z = this.cameras.main.zoom;
+    const inv = 1 / z;
+    for (const item of this.uiElements) {
+      const obj = item.obj as Phaser.GameObjects.GameObject & {
         setScale?: (s: number) => unknown;
+        x?: number;
+        y?: number;
       };
       if (obj.setScale) obj.setScale(inv);
+      if ('x' in obj) obj.x = item.baseX * inv;
+      if ('y' in obj) obj.y = item.baseY * inv;
     }
   }
 
-  /** 把一個 UI 元件登記到清單，之後縮放時會自動反比 */
+  /** 把一個 UI 元件登記到清單；以登記當下的 (x, y) 為「畫面基準位置」 */
   private registerUI<T extends Phaser.GameObjects.GameObject>(el: T): T {
-    this.uiElements.push(el);
+    const o = el as T & { x?: number; y?: number };
+    this.uiElements.push({
+      obj: el,
+      baseX: o.x ?? 0,
+      baseY: o.y ?? 0,
+    });
     return el;
   }
 

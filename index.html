@@ -12,6 +12,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="西方戰術 SRPG" />
+    <!-- PWA manifest（Android Chrome 會強制套 orientation: landscape）-->
+    <link rel="manifest" href="manifest.json" />
     <title>西方戰術 SRPG</title>
     <style>
       html, body {
@@ -32,10 +34,56 @@
       #game canvas {
         display: block;
       }
+
+      /* 直屏（手機豎著拿）→ 顯示「請旋轉」遮罩，蓋住整個遊戲 */
+      #rotate-prompt {
+        display: none;
+      }
+      @media (max-width: 900px) and (orientation: portrait) {
+        #rotate-prompt {
+          display: flex;
+          position: fixed;
+          inset: 0;
+          background: #0a0a0a;
+          color: #eee;
+          align-items: center;
+          justify-content: center;
+          flex-direction: column;
+          gap: 24px;
+          z-index: 9999;
+          text-align: center;
+          padding: 24px;
+        }
+        #rotate-prompt .icon {
+          font-size: 64px;
+          animation: rotate-hint 1.6s ease-in-out infinite;
+          transform-origin: center;
+        }
+        #rotate-prompt .title {
+          font-size: 22px;
+          font-weight: bold;
+          color: #7ed1ff;
+        }
+        #rotate-prompt .desc {
+          font-size: 15px;
+          color: #888;
+          line-height: 1.5;
+        }
+        #game { display: none; }
+      }
+      @keyframes rotate-hint {
+        0%, 50%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(-90deg); }
+      }
     </style>
   </head>
   <body>
     <div id="game"></div>
+    <div id="rotate-prompt">
+      <div class="icon">📱</div>
+      <div class="title">請將裝置橫向使用</div>
+      <div class="desc">本遊戲設計為橫屏遊玩<br/>旋轉裝置即可開始</div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
