@@ -126,6 +126,7 @@ export class Unit {
     const bodyW = HEX_W * 0.7;
     const bodyH = HEX_H * 0.6;
     const spriteKey = this.findSpriteKey(commander.id, commander.unitType, commander.faction);
+    const hasSprite = !!spriteKey;
     if (spriteKey) {
       const img = scene.add.image(0, 2, spriteKey);
       // 等比縮放到剛好填入單位框
@@ -142,11 +143,15 @@ export class Unit {
       this.body = g;
     }
 
-    // 武將名（中央）
-    this.label = scene.add.text(0, -2, this.name, {
-      fontSize: '17px',
+    // 武將名：sprite 模式下移到頭頂上方並加描邊；色塊模式維持中央
+    const labelY = hasSprite ? -bodyH / 2 - 6 : -2;
+    const labelFontSize = hasSprite ? '12px' : '17px';
+    this.label = scene.add.text(0, labelY, this.name, {
+      fontSize: labelFontSize,
       color: '#ffffff',
       fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: hasSprite ? 3 : 0,
     });
     this.label.setOrigin(0.5);
 
