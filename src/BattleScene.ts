@@ -72,8 +72,10 @@ export class BattleScene extends Phaser.Scene {
   private scenarioIdOverride: string | null = null;
   /** 玩家回合計數（從 1 起算）；用於 survive 條件判定與 UI 顯示 */
   private playerTurnNumber = 1;
-  /** 拖曳平移用：pointerdown 起點 */
+  /** 拖曳平移用：pointerdown 起點（用來判斷是否超過 click 閾值）*/
   private dragStart: { x: number; y: number } | null = null;
+  /** 拖曳平移用：上一個 pointermove 位置（用來算每幀 delta，比 pointer.movementX 可靠）*/
+  private prevPointerPos: { x: number; y: number } | null = null;
   /** 拖曳平移用：本次按壓中是否曾經拖曳超過閾值；click handler 用來判斷是否該抑制 */
   private didDrag = false;
   /** 雙指捏合縮放：起始兩指距離 */
@@ -494,6 +496,7 @@ export class BattleScene extends Phaser.Scene {
     // === 雙指捏合縮放：兩指同時按下時改成 zoom，不再 pan ===
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       this.dragStart = { x: p.x, y: p.y };
+      this.prevPointerPos = { x: p.x, y: p.y };
       this.didDrag = false;
       // 第二指落下 → 進入 pinch 模式，記錄初始距離與 zoom
       const p1 = this.input.pointer1;
@@ -521,6 +524,8 @@ export class BattleScene extends Phaser.Scene {
         const fy = (p1.y + p2.y) / 2;
         this.applyZoom(newZoom, fx, fy);
         this.didDrag = true;
+        // 更新 prev 避免下一幀以舊 prev 計算 delta
+        this.prevPointerPos = { x: p.x, y: p.y };
         return;
       }
       // 單指拖曳平移
@@ -530,15 +535,28 @@ export class BattleScene extends Phaser.Scene {
       if (!this.didDrag && dx * dx + dy * dy > 64) {
         this.didDrag = true;
       }
-      if (this.didDrag) {
+      if (this.didDrag && this.prevPointerPos) {
         const cam = this.cameras.main;
+        // 用「相對 prev 位置」算 delta（pointer.movementX 在 touch 上不總可靠）
         // 拖曳量除以 zoom，視覺上才會跟手指一致
-        cam.scrollX -= (p.movementX || 0) / cam.zoom;
-        cam.scrollY -= (p.movementY || 0) / cam.zoom;
+        cam.scrollX -= (p.x - this.prevPointerPos.x) / cam.zoom;
+        cam.scrollY -= (p.y - this.prevPointerPos.y) / cam.zoom;
       }
+      this.prevPointerPos = { x: p.x, y: p.y };
     });
     this.input.on('pointerup', () => {
-      this.dragStart = null;
+      // 處理「pinch 中放開一指」→ 還有另一指在按 → 應該無縫接到單指拖曳
+      // 重新把 dragStart / prevPointerPos 設成那根還在按的指頭目前位置
+      const p1 = this.input.pointer1;
+      const p2 = this.input.pointer2;
+      const stillDown = p1.isDown ? p1 : p2.isDown ? p2 : null;
+      if (stillDown) {
+        this.dragStart = { x: stillDown.x, y: stillDown.y };
+        this.prevPointerPos = { x: stillDown.x, y: stillDown.y };
+      } else {
+        this.dragStart = null;
+        this.prevPointerPos = null;
+      }
       this.pinchStartDist = 0;
       // didDrag 不在這裡 reset；讓對應的 click handler 看到後再由下次 pointerdown 重置
     });
