@@ -72,6 +72,10 @@ export class BattleScene extends Phaser.Scene {
   private scenarioIdOverride: string | null = null;
   /** 玩家回合計數（從 1 起算）；用於 survive 條件判定與 UI 顯示 */
   private playerTurnNumber = 1;
+  /** 拖曳平移用：pointerdown 起點 */
+  private dragStart: { x: number; y: number } | null = null;
+  /** 拖曳平移用：本次按壓中是否曾經拖曳超過閾值；click handler 用來判斷是否該抑制 */
+  private didDrag = false;
 
   private highlightGfx!: Phaser.GameObjects.Graphics;
   private turnText!: Phaser.GameObjects.Text;
@@ -159,6 +163,17 @@ export class BattleScene extends Phaser.Scene {
     this.deployUnits();
     this.createUI();
     this.bindGlobalInput();
+
+    // 相機：邊界 = 完整棋盤 + UI 區域；初始置中於第一個我方單位
+    const cam = this.cameras.main;
+    const fullW = BOARD_OFFSET_X + boardWidthPx() + 280; // 留 UI 寬度的緩衝
+    const fullH = BOARD_OFFSET_Y + boardHeightPx() + 130;
+    cam.setBounds(0, 0, Math.max(fullW, this.scale.width), Math.max(fullH, this.scale.height));
+    const firstAlly = this.units.find((u) => u.faction === 'player' && u.isAlive());
+    if (firstAlly) {
+      const c = firstAlly.getCenterPx();
+      cam.centerOn(c.x, c.y);
+    }
 
     this.appendLog(`【${this.scenario.name}】戰鬥開始`);
     // 非預設勝利條件 → 廣播給玩家
@@ -252,7 +267,10 @@ export class BattleScene extends Phaser.Scene {
       const progress =
         cmd.faction === 'player' ? getCommanderProgress(cmd.id) ?? undefined : undefined;
       const unit = new Unit(this, cmd, dep.position, progress);
-      unit.on('pointerdown', () => this.onUnitClicked(unit));
+      unit.on('pointerup', () => {
+        if (this.didDrag) return;
+        this.onUnitClicked(unit);
+      });
       unit.on('pointerover', () => this.onUnitHover(unit));
       unit.on('pointerout', () => this.hideTooltip());
       this.units.push(unit);
@@ -273,21 +291,31 @@ export class BattleScene extends Phaser.Scene {
 
   // ===== UI =====
   private createUI(): void {
-    this.turnText = this.add.text(BOARD_OFFSET_X, 28, '', {
-      fontSize: '24px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-    });
+    // UI 一律 scrollFactor(0) → 鎖在畫面，不隨相機平移
+    // 並把側欄/底欄位置 clamp 到 viewport 內，避免大地圖 UI 跑到畫面外
+    const viewportW = this.scale.width;
+    const viewportH = this.scale.height;
+    const sideX = Math.min(BOARD_OFFSET_X + boardWidthPx() + 30, viewportW - 250);
+    const logY = Math.min(BOARD_OFFSET_Y + boardHeightPx() + 14, viewportH - 100);
 
-    const sideX = BOARD_OFFSET_X + boardWidthPx() + 30;
+    this.turnText = this.add
+      .text(BOARD_OFFSET_X, 28, '', {
+        fontSize: '24px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      })
+      .setScrollFactor(0);
+
     let y = BOARD_OFFSET_Y;
 
-    this.hintText = this.add.text(sideX, y, '', {
-      fontSize: '13px',
-      color: '#bbbbbb',
-      lineSpacing: 4,
-      wordWrap: { width: 220 },
-    });
+    this.hintText = this.add
+      .text(sideX, y, '', {
+        fontSize: '13px',
+        color: '#bbbbbb',
+        lineSpacing: 4,
+        wordWrap: { width: 220 },
+      })
+      .setScrollFactor(0);
     y += 88;
 
     this.makeButton(sideX, y, '結束我方回合', 0x4a90e2, () => {
@@ -323,24 +351,30 @@ export class BattleScene extends Phaser.Scene {
     y += 56;
 
     // 藥草庫存顯示（永久顯示）
-    this.potionText = this.add.text(sideX, y, `藥草庫存：${this.potionCount}`, {
-      fontSize: '13px',
-      color: '#90c8a0',
-    });
+    this.potionText = this.add
+      .text(sideX, y, `藥草庫存：${this.potionCount}`, {
+        fontSize: '13px',
+        color: '#90c8a0',
+      })
+      .setScrollFactor(0);
     y += 20;
 
-    this.infoText = this.add.text(sideX, y, '', {
-      fontSize: '13px',
-      color: '#dddddd',
-      lineSpacing: 5,
-      wordWrap: { width: 220 },
-    });
+    this.infoText = this.add
+      .text(sideX, y, '', {
+        fontSize: '13px',
+        color: '#dddddd',
+        lineSpacing: 5,
+        wordWrap: { width: 220 },
+      })
+      .setScrollFactor(0);
 
-    this.logText = this.add.text(BOARD_OFFSET_X, BOARD_OFFSET_Y + boardHeightPx() + 14, '', {
-      fontSize: '13px',
-      color: '#cccccc',
-      lineSpacing: 5,
-    });
+    this.logText = this.add
+      .text(BOARD_OFFSET_X, logY, '', {
+        fontSize: '13px',
+        color: '#cccccc',
+        lineSpacing: 5,
+      })
+      .setScrollFactor(0);
   }
 
   private makeButton(
@@ -366,6 +400,7 @@ export class BattleScene extends Phaser.Scene {
     const c = this.add.container(x + w / 2, y + h / 2, [bg, txt, hit]);
     c.setSize(w, h);
     c.setDepth(20);
+    c.setScrollFactor(0); // UI 鎖在畫面，不隨相機移動
     hit.on('pointerover', () => bg.setFillStyle(this.tint(color, 1.2)));
     hit.on('pointerout', () => bg.setFillStyle(color));
     hit.on('pointerdown', onClick);
@@ -377,16 +412,23 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private bindGlobalInput(): void {
+    // 全域 pointerup → tile click（沒打到任何 GameObject 時觸發）
+    // 改用 pointerup + didDrag 檢查，讓拖曳平移不會誤觸點擊
     this.input.on(
-      'pointerdown',
+      'pointerup',
       (
         pointer: Phaser.Input.Pointer,
         gameObjects: Phaser.GameObjects.GameObject[]
       ) => {
         if (this.isPaused) return;
+        if (this.didDrag) return;
         if (gameObjects.length > 0) return;
         if (this.gameState !== 'player_turn') return;
-        const tile = pixelToTile(pointer.x, pointer.y);
+        // 把螢幕座標轉成世界座標（考量相機 scroll）
+        const cam = this.cameras.main;
+        const worldX = pointer.x + cam.scrollX;
+        const worldY = pointer.y + cam.scrollY;
+        const tile = pixelToTile(worldX, worldY);
         if (!tile) {
           this.deselect();
           return;
@@ -394,6 +436,30 @@ export class BattleScene extends Phaser.Scene {
         this.onTileClicked(tile);
       }
     );
+
+    // === 拖曳平移：超過 8px 視為 pan，不觸發 click ===
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      this.dragStart = { x: p.x, y: p.y };
+      this.didDrag = false;
+    });
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+      if (!this.dragStart || !p.isDown) return;
+      const dx = p.x - this.dragStart.x;
+      const dy = p.y - this.dragStart.y;
+      if (!this.didDrag && dx * dx + dy * dy > 64) {
+        this.didDrag = true;
+      }
+      if (this.didDrag) {
+        const cam = this.cameras.main;
+        // movementX/Y 是這次 move 的增量；用負值讓拖曳方向 = 視角移動方向
+        cam.scrollX -= p.movementX || 0;
+        cam.scrollY -= p.movementY || 0;
+      }
+    });
+    this.input.on('pointerup', () => {
+      this.dragStart = null;
+      // didDrag 不在這裡 reset；讓對應的 click handler 看到後再由下次 pointerdown 重置
+    });
 
     this.input.keyboard?.on('keydown-R', () => {
       if (this.isPaused) return;
@@ -643,6 +709,8 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private selectUnit(unit: Unit): void {
+    // 大地圖：相機自動置中於選定單位（平滑）
+    this.panCameraTo(unit);
     const blocked = this.collectBlockedTiles(unit);
     const moveTiles = bfsReachable(unit.position, unit.moveRange, blocked).filter(
       (c) => !this.units.some((u) => u !== unit && u.isAlive() && coordEq(u.position, c))
@@ -947,6 +1015,14 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  /** 平滑把相機鏡頭移到指定單位中心（不會打斷玩家當下的拖曳）*/
+  private panCameraTo(unit: Unit): void {
+    const c = unit.getCenterPx();
+    const cam = this.cameras.main;
+    // pan 期間若使用者在拖曳，pan 會被繼續的 scroll 蓋掉，沒關係
+    cam.pan(c.x, c.y, 280, 'Sine.easeInOut');
+  }
+
   // ===== 高亮 =====
   private drawMoveHighlights(
     tiles: Coord[],
@@ -1194,6 +1270,8 @@ export class BattleScene extends Phaser.Scene {
   private async runEnemyAction(enemy: Unit): Promise<void> {
     const players = this.units.filter((u) => u.faction === 'player' && u.isAlive());
     if (players.length === 0) return;
+    // 敵方行動時相機平滑移到該敵兵，讓玩家看見 AI 在做什麼
+    this.panCameraTo(enemy);
 
     // 預估從某格攻擊某玩家會打多少傷害（不擲骰，用期望值：dmg × hitRate%）
     const predictDamage = (
