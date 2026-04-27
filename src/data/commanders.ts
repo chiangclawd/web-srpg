@@ -47,7 +47,7 @@ export const COMMANDERS: Record<string, CommanderDef> = {
   rain: {
     id: 'rain', name: '雷恩', faction: 'player', unitType: 'cavalry',
     statBonus: { hp: 4, attack: 2, defense: 1 },
-    skill: { id: 'knight_charge', name: '騎士榮耀', desc: '移動 ≥ 3 格時，攻擊 ×1.5' },
+    skill: { id: 'knight_charge', name: '騎士榮耀', desc: '移動 ≥ 3 格時，攻擊 ×1.3' },
     startingLevel: 9, growthRates: { hp: 3, attack: 2, defense: 1 },
     startingEquipment: { weapon: 'silver_sword', armor: 'knight_armor' },
   },
@@ -56,7 +56,7 @@ export const COMMANDERS: Record<string, CommanderDef> = {
   morden: {
     id: 'morden', name: '莫頓', faction: 'enemy', unitType: 'cavalry',
     statBonus: { hp: 2, attack: 1, defense: 0 },
-    skill: { id: 'cavalry_charge', name: '突擊', desc: '移動 ≥ 3 格時，攻擊 ×1.3' },
+    skill: { id: 'cavalry_charge', name: '突擊', desc: '移動 ≥ 3 格時，攻擊 ×1.2' },
     startingLevel: 5, growthRates: { hp: 3, attack: 2, defense: 1 },
     startingEquipment: { weapon: 'iron_sword', armor: 'leather_armor' },
   },

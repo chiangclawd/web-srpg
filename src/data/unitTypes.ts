@@ -9,6 +9,8 @@ export const UNIT_TYPES: Record<UnitTypeId, UnitTypeDef> = {
     attackRange: 1,
     moveRange: 3,
     baseStats: { hp: 28, attack: 8, defense: 4 },
+    hitRate: 95,
+    critRate: 8, // 揮劍俐落，爆擊偏高
   },
   lance: {
     id: 'lance',
@@ -18,6 +20,8 @@ export const UNIT_TYPES: Record<UnitTypeId, UnitTypeDef> = {
     attackRange: 1,
     moveRange: 3,
     baseStats: { hp: 30, attack: 7, defense: 5 },
+    hitRate: 95,
+    critRate: 3, // 沉穩刺擊，爆擊偏低
   },
   cavalry: {
     id: 'cavalry',
@@ -27,6 +31,8 @@ export const UNIT_TYPES: Record<UnitTypeId, UnitTypeDef> = {
     attackRange: 1,
     moveRange: 5,
     baseStats: { hp: 26, attack: 9, defense: 3 },
+    hitRate: 90,
+    critRate: 10, // 衝鋒爆發力強
   },
   archer: {
     id: 'archer',
@@ -36,6 +42,8 @@ export const UNIT_TYPES: Record<UnitTypeId, UnitTypeDef> = {
     attackRange: 2,
     moveRange: 3,
     baseStats: { hp: 22, attack: 8, defense: 2 },
+    hitRate: 85, // 遠程命中略低
+    critRate: 12, // 但會瞄準弱點
   },
   mage: {
     id: 'mage',
@@ -45,6 +53,8 @@ export const UNIT_TYPES: Record<UnitTypeId, UnitTypeDef> = {
     attackRange: 2,
     moveRange: 2,
     baseStats: { hp: 20, attack: 11, defense: 2 },
+    hitRate: 90,
+    critRate: 5,
   },
   flier: {
     id: 'flier',
@@ -54,5 +64,7 @@ export const UNIT_TYPES: Record<UnitTypeId, UnitTypeDef> = {
     attackRange: 1,
     moveRange: 6,
     baseStats: { hp: 22, attack: 8, defense: 2 },
+    hitRate: 85,
+    critRate: 8,
   },
 };

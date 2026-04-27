@@ -1,6 +1,7 @@
 import type { Faction, UnitTypeId } from '../types';
 import { getCounter } from './CounterSystem';
 import { SKILL_EFFECTS } from '../data/skillEffects';
+import { UNIT_TYPES } from '../data/unitTypes';
 
 export interface DamageContext {
   attackerType: UnitTypeId;
@@ -21,12 +22,30 @@ export interface DamageContext {
 }
 
 export interface DamageResult {
+  /** 預覽：「打中且未爆擊」時的傷害（拿來顯示在 tooltip）*/
   damage: number;
   counterMultiplier: number;
   counterLabel: '優勢' | '劣勢' | '普通';
   /** 哪些特技參與了計算（用於 tooltip 顯示） */
   appliedSkills: string[];
+  /** 該攻擊的命中率 0-100 */
+  hitRate: number;
+  /** 該攻擊的爆擊率 0-100（爆擊傷害 ×1.5）*/
+  critRate: number;
 }
+
+/** 真正執行攻擊時擲骰，回傳實際傷害與命中／爆擊狀態 */
+export interface ResolvedAttack {
+  damage: number;
+  hit: boolean;
+  crit: boolean;
+}
+
+export const CRIT_MULTIPLIER = 1.5;
+
+/** 每點 DEF 抵 5% 傷害；上限 70%（避免 BOSS 完全無敵） */
+const DEF_REDUCTION_PER_POINT = 0.05;
+const DEF_REDUCTION_CAP = 0.7;
 
 export function computeDamage(ctx: DamageContext): DamageResult {
   const counter = getCounter(ctx.attackerType, ctx.defenderType);
@@ -50,9 +69,12 @@ export function computeDamage(ctx: DamageContext): DamageResult {
     }
   }
 
-  let dmg = raw - totalDef;
+  // 防禦改為「乘法減傷」：每點 DEF 抵 5%，上限 70%
+  // 重甲跟布甲差別變明顯、地形 DEF 加成也更有感
+  const defReduction = Math.min(DEF_REDUCTION_CAP, totalDef * DEF_REDUCTION_PER_POINT);
+  let dmg = raw * (1 - defReduction);
 
-  // 防守方承受特技（乘在扣完防後）
+  // 防守方承受特技（乘在減傷後）
   const dSkill = ctx.defenderSkillId ? SKILL_EFFECTS[ctx.defenderSkillId] : undefined;
   if (dSkill?.incomingMul) {
     const mul = dSkill.incomingMul(ctx);
@@ -63,10 +85,35 @@ export function computeDamage(ctx: DamageContext): DamageResult {
   }
 
   dmg = Math.max(1, Math.floor(dmg));
+
+  // 命中／爆擊率：以攻擊方兵種為準（之後可加裝備修正）
+  const aType = UNIT_TYPES[ctx.attackerType];
+  const hitRate = Math.max(0, Math.min(100, aType.hitRate ?? 95));
+  const critRate = Math.max(0, Math.min(100, aType.critRate ?? 5));
+
   return {
     damage: dmg,
     counterMultiplier: counter.multiplier,
     counterLabel: counter.label,
     appliedSkills,
+    hitRate,
+    critRate,
   };
+}
+
+/**
+ * 真正執行攻擊：擲骰決定命中／爆擊，回傳實際造成的傷害。
+ * Miss → damage=0；Crit → damage * CRIT_MULTIPLIER（floor）。
+ */
+export function rollAttack(preview: DamageResult): ResolvedAttack {
+  const hitRoll = Math.random() * 100;
+  if (hitRoll >= preview.hitRate) {
+    return { damage: 0, hit: false, crit: false };
+  }
+  const critRoll = Math.random() * 100;
+  const crit = critRoll < preview.critRate;
+  const damage = crit
+    ? Math.max(1, Math.floor(preview.damage * CRIT_MULTIPLIER))
+    : preview.damage;
+  return { damage, hit: true, crit };
 }

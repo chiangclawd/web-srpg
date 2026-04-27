@@ -19,6 +19,10 @@ export interface UnitTypeDef {
     attack: number;
     defense: number;
   };
+  /** 命中率 0-100，預設 95 */
+  hitRate?: number;
+  /** 爆擊率 0-100，預設 5；爆擊傷害 ×1.5 */
+  critRate?: number;
 }
 
 export type EquipmentKind = 'weapon' | 'armor';

@@ -35,15 +35,15 @@ export const SKILL_EFFECTS: Record<string, SkillEffect> = {
   fameel_arcana: {
     outgoingMul: () => 1.3,
   },
-  // 騎士榮耀：移動 ≥ 3 格 攻擊 +50%
+  // 騎士榮耀：移動 ≥ 3 格 攻擊 +30%（原本 +50%，配合新 DEF 公式調降避免一刀秒殺）
   knight_charge: {
-    outgoingMul: (ctx) => ((ctx.attackerMovedDistance ?? 0) >= 3 ? 1.5 : 1.0),
+    outgoingMul: (ctx) => ((ctx.attackerMovedDistance ?? 0) >= 3 ? 1.3 : 1.0),
   },
 
   // === 第 1 章敵 ===
-  // 突擊：移動 ≥ 3 格 攻擊 +30%
+  // 突擊：移動 ≥ 3 格 攻擊 +20%（原本 +30%）
   cavalry_charge: {
-    outgoingMul: (ctx) => ((ctx.attackerMovedDistance ?? 0) >= 3 ? 1.3 : 1.0),
+    outgoingMul: (ctx) => ((ctx.attackerMovedDistance ?? 0) >= 3 ? 1.2 : 1.0),
   },
   // 冰錐：攻擊 +15%
   ice_cone: {

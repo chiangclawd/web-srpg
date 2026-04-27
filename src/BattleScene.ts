@@ -28,7 +28,7 @@ import { SCENARIOS, DEFAULT_SCENARIO_ID } from './data/scenarios';
 import { CHAPTERS } from './data/chapters';
 import { UNIT_TYPES } from './data/unitTypes';
 import { TERRAIN_TYPES, parseTerrain } from './data/terrainTypes';
-import { computeDamage } from './battle/DamageCalculator';
+import { computeDamage, rollAttack } from './battle/DamageCalculator';
 import { getCounter } from './battle/CounterSystem';
 import { EXP_PER_DAMAGE, EXP_PER_KILL } from './battle/Leveling';
 import { getCommanderProgress, saveProgress, getExcludedCommanders } from './data/save';
@@ -758,26 +758,43 @@ export class BattleScene extends Phaser.Scene {
       defenderHpRatio: defender.hp / defender.maxHp,
       enemyAttackMul: getEnemyAttackMul(),
     });
+    const rolled = rollAttack(result);
     this.playAttackSound(attacker.unitType);
     await attacker.showAttackAnimation(defender);
-    audio.playHit();
     const tCenter = defender.getCenterPx();
-    this.spawnHitParticles(tCenter.x, tCenter.y, this.particleColorForType(attacker.unitType));
-    defender.applyDamage(result.damage);
-    defender.flashHit();
-    defender.showFloatingText(`-${result.damage}`, '#ff8888', '16px');
+    if (rolled.hit) {
+      audio.playHit();
+      this.spawnHitParticles(
+        tCenter.x,
+        tCenter.y,
+        this.particleColorForType(attacker.unitType)
+      );
+      defender.applyDamage(rolled.damage);
+      defender.flashHit();
+      const dmgColor = rolled.crit ? '#ffd54a' : '#ff8888';
+      const dmgSize = rolled.crit ? '20px' : '16px';
+      const dmgText = rolled.crit ? `-${rolled.damage} 爆！` : `-${rolled.damage}`;
+      defender.showFloatingText(dmgText, dmgColor, dmgSize);
+    } else {
+      defender.showFloatingText('MISS', '#dddddd', '16px');
+    }
     const tag =
       result.counterLabel === '優勢'
         ? '【剋】'
         : result.counterLabel === '劣勢'
         ? '【弱】'
         : '';
-    this.appendLog(`${attacker.name} → ${defender.name} ${result.damage} 傷${tag}`);
-    if (attacker.faction === 'player' && this.battleStats[attacker.id]) {
-      this.battleStats[attacker.id].damageDealt += result.damage;
-      if (!defender.isAlive()) this.battleStats[attacker.id].kills += 1;
+    if (rolled.hit) {
+      const critTag = rolled.crit ? '【爆】' : '';
+      this.appendLog(`${attacker.name} → ${defender.name} ${rolled.damage} 傷${tag}${critTag}`);
+      if (attacker.faction === 'player' && this.battleStats[attacker.id]) {
+        this.battleStats[attacker.id].damageDealt += rolled.damage;
+        if (!defender.isAlive()) this.battleStats[attacker.id].kills += 1;
+      }
+      this.grantExp(attacker, rolled.damage, !defender.isAlive());
+    } else {
+      this.appendLog(`${attacker.name} → ${defender.name} MISS`);
     }
-    this.grantExp(attacker, result.damage, !defender.isAlive());
     await this.delay(220);
 
     if (!defender.isAlive()) {
@@ -809,26 +826,47 @@ export class BattleScene extends Phaser.Scene {
       defenderHpRatio: attacker.hp / attacker.maxHp,
       enemyAttackMul: getEnemyAttackMul(),
     });
+    const counterRolled = rollAttack(counter);
     this.playAttackSound(defender.unitType);
     await defender.showAttackAnimation(attacker);
-    audio.playHit();
     const aCenter = attacker.getCenterPx();
-    this.spawnHitParticles(aCenter.x, aCenter.y, this.particleColorForType(defender.unitType));
-    attacker.applyDamage(counter.damage);
-    attacker.flashHit();
-    attacker.showFloatingText(`-${counter.damage}`, '#ff8888', '16px');
+    if (counterRolled.hit) {
+      audio.playHit();
+      this.spawnHitParticles(
+        aCenter.x,
+        aCenter.y,
+        this.particleColorForType(defender.unitType)
+      );
+      attacker.applyDamage(counterRolled.damage);
+      attacker.flashHit();
+      const dmgColor = counterRolled.crit ? '#ffd54a' : '#ff8888';
+      const dmgSize = counterRolled.crit ? '20px' : '16px';
+      const dmgText = counterRolled.crit
+        ? `-${counterRolled.damage} 爆！`
+        : `-${counterRolled.damage}`;
+      attacker.showFloatingText(dmgText, dmgColor, dmgSize);
+    } else {
+      attacker.showFloatingText('MISS', '#dddddd', '16px');
+    }
     const ctag =
       counter.counterLabel === '優勢'
         ? '【剋】'
         : counter.counterLabel === '劣勢'
         ? '【弱】'
         : '';
-    this.appendLog(`${defender.name} 反擊 ${attacker.name} ${counter.damage} 傷${ctag}`);
-    if (defender.faction === 'player' && this.battleStats[defender.id]) {
-      this.battleStats[defender.id].damageDealt += counter.damage;
-      if (!attacker.isAlive()) this.battleStats[defender.id].kills += 1;
+    if (counterRolled.hit) {
+      const critTag = counterRolled.crit ? '【爆】' : '';
+      this.appendLog(
+        `${defender.name} 反擊 ${attacker.name} ${counterRolled.damage} 傷${ctag}${critTag}`
+      );
+      if (defender.faction === 'player' && this.battleStats[defender.id]) {
+        this.battleStats[defender.id].damageDealt += counterRolled.damage;
+        if (!attacker.isAlive()) this.battleStats[defender.id].kills += 1;
+      }
+      this.grantExp(defender, counterRolled.damage, !attacker.isAlive());
+    } else {
+      this.appendLog(`${defender.name} 反擊 ${attacker.name} MISS`);
     }
-    this.grantExp(defender, counter.damage, !attacker.isAlive());
     await this.delay(220);
 
     if (!attacker.isAlive()) {
@@ -1009,13 +1047,18 @@ export class BattleScene extends Phaser.Scene {
     const killBadge = willKill ? '　★擊殺' : '';
     const deathBadge = willDie ? '　⚠致命！' : '';
 
+    const fmtHitCrit = (r: { hitRate: number; critRate: number }) =>
+      `命中 ${r.hitRate}% / 爆 ${r.critRate}%`;
+
     const lines = [
       `${attacker.name} → ${defender.name}`,
       `傷害 ${ourHit.damage}${tag(ourHit.counterLabel)}　(剩 ${defHpAfter}/${defender.maxHp})${killBadge}`,
+      `　${fmtHitCrit(ourHit)}`,
       counterHit
         ? `反擊 ${counterHit.damage}${tag(counterHit.counterLabel)}　(剩 ${atkHpAfter}/${attacker.maxHp})${deathBadge}`
         : `對方無法反擊`,
-    ];
+      counterHit ? `　${fmtHitCrit(counterHit)}` : '',
+    ].filter((s) => s.length > 0);
 
     // 主色調：致命=紅警告，擊殺=金，一般=白
     const mainColor = willDie ? '#ff6666' : willKill ? '#ffd54a' : '#ffffff';
