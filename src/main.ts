@@ -9,27 +9,28 @@ import { loadLang } from './utils/i18n';
 
 loadSettings();
 loadLang();
-import { HEX_W, HEX_H, HEX_V_SPACING, BOARD_OFFSET_X, BOARD_OFFSET_Y } from './Grid';
-import { SCENARIOS, DEFAULT_SCENARIO_ID } from './data/scenarios';
 
-const scenario = SCENARIOS[DEFAULT_SCENARIO_ID]!;
-const SIDE_PANEL_WIDTH = 240;
-const RIGHT_MARGIN = 30;
-const BOTTOM_PANEL_HEIGHT = 110;
-
-// 六角棋盤實際 pixel 尺寸（pointy-top, odd-r）
-const boardW = HEX_W * (scenario.gridWidth + 0.5);
-const boardH = HEX_V_SPACING * (scenario.gridHeight - 1) + HEX_H;
-
-const GAME_WIDTH =
-  BOARD_OFFSET_X + boardW + SIDE_PANEL_WIDTH + RIGHT_MARGIN;
-const GAME_HEIGHT = BOARD_OFFSET_Y + boardH + BOTTOM_PANEL_HEIGHT;
+/**
+ * 依視窗 aspect ratio 動態決定 canvas 大小：
+ *   - 手機橫屏（~2.17:1）→ canvas 寬一點，填滿不留黑邊
+ *   - 桌機（~1.78:1）→ canvas 較方，剛好 fit
+ *
+ * 用較小的基準高度（720）讓文字相對放大、手機上更好讀。
+ * 22×16 大地圖會超出 viewport，由 BattleScene 相機 scroll/zoom 處理。
+ */
+const winW = typeof window !== 'undefined' ? window.innerWidth : 1280;
+const winH = typeof window !== 'undefined' ? window.innerHeight : 720;
+const winAspect = winW / winH;
+// 過寬或過高都做合理 clamp（避免極端視窗）
+const aspect = Math.max(1.4, Math.min(2.4, winAspect));
+const BASE_HEIGHT = 720;
+const BASE_WIDTH = Math.round(BASE_HEIGHT * aspect);
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'game',
-  width: GAME_WIDTH,
-  height: GAME_HEIGHT,
+  width: BASE_WIDTH,
+  height: BASE_HEIGHT,
   backgroundColor: '#0a0a0a',
   scene: [BootScene, TitleScene, CutsceneScene, HubScene, BattleScene],
   scale: {

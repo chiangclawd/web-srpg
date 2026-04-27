@@ -317,13 +317,13 @@ export class BattleScene extends Phaser.Scene {
 
     this.hintText = this.add
       .text(sideX, y, '', {
-        fontSize: '13px',
+        fontSize: '15px',
         color: '#bbbbbb',
         lineSpacing: 4,
         wordWrap: { width: 220 },
       })
       .setScrollFactor(0);
-    y += 88;
+    y += 96;
 
     this.makeButton(sideX, y, '結束我方回合', 0x4a90e2, () => {
       if (this.gameState === 'player_turn' && this.selection.kind === 'idle') {
@@ -360,15 +360,15 @@ export class BattleScene extends Phaser.Scene {
     // 藥草庫存顯示（永久顯示）
     this.potionText = this.add
       .text(sideX, y, `藥草庫存：${this.potionCount}`, {
-        fontSize: '13px',
+        fontSize: '15px',
         color: '#90c8a0',
       })
       .setScrollFactor(0);
-    y += 20;
+    y += 24;
 
     this.infoText = this.add
       .text(sideX, y, '', {
-        fontSize: '13px',
+        fontSize: '14px',
         color: '#dddddd',
         lineSpacing: 5,
         wordWrap: { width: 220 },
@@ -377,7 +377,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.logText = this.add
       .text(BOARD_OFFSET_X, logY, '', {
-        fontSize: '13px',
+        fontSize: '14px',
         color: '#cccccc',
         lineSpacing: 5,
       })
@@ -1288,7 +1288,7 @@ export class BattleScene extends Phaser.Scene {
     const mainColor = willDie ? '#ff6666' : willKill ? '#ffd54a' : '#ffffff';
 
     const text = this.add.text(0, 0, lines.join('\n'), {
-      fontSize: '12px',
+      fontSize: '13px',
       color: mainColor,
       lineSpacing: 4,
       padding: { left: 8, right: 8, top: 6, bottom: 6 },

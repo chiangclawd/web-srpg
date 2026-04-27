@@ -51,7 +51,7 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5);
     this.add
       .text(width / 2, height / 2 - 50, t('title.subtitle'), {
-        fontSize: '14px',
+        fontSize: '16px',
         color: '#bbbbbb',
         stroke: '#000000',
         strokeThickness: 3,
@@ -123,8 +123,8 @@ export class TitleScene extends Phaser.Scene {
         height - 36,
         hasExisting ? t('title.hintHasSave') : t('title.hintNoSave'),
         {
-          fontSize: '13px',
-          color: '#666666',
+          fontSize: '15px',
+          color: '#888888',
         }
       )
       .setOrigin(0.5);
