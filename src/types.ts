@@ -93,7 +93,17 @@ export interface ScenarioDef {
   gridHeight: number;
   terrain?: string[];
   deployments: DeploymentDef[];
-  victoryCondition: 'rout';
+  /**
+   * 勝利條件：
+   *   - 'rout'      → 全滅敵方（預設）
+   *   - 'kill_boss' → 擊殺指定 bossId 的敵方武將即勝（雜兵不必清光）
+   *   - 'survive'   → 撐過 surviveTurns 個玩家回合即勝（敵軍可能持續來增援）
+   */
+  victoryCondition: 'rout' | 'kill_boss' | 'survive';
+  /** 'kill_boss' 用：要擊殺哪一個敵方 commander id（必須出現在 deployments 中） */
+  bossId?: string;
+  /** 'survive' 用：撐過幾個玩家回合即勝（從第 1 回合開始算，含當前回合） */
+  surviveTurns?: number;
   /** 戰場背景色（章節氛圍）— 0xRRGGBB；預設 0x2a2a2a */
   bgColor?: number;
 }

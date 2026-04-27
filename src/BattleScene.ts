@@ -70,6 +70,8 @@ export class BattleScene extends Phaser.Scene {
   private scenario!: ScenarioDef;
   private chapterId: string = '';
   private scenarioIdOverride: string | null = null;
+  /** 玩家回合計數（從 1 起算）；用於 survive 條件判定與 UI 顯示 */
+  private playerTurnNumber = 1;
 
   private highlightGfx!: Phaser.GameObjects.Graphics;
   private turnText!: Phaser.GameObjects.Text;
@@ -159,6 +161,14 @@ export class BattleScene extends Phaser.Scene {
     this.bindGlobalInput();
 
     this.appendLog(`【${this.scenario.name}】戰鬥開始`);
+    // 非預設勝利條件 → 廣播給玩家
+    const cond = this.scenario.victoryCondition;
+    if (cond === 'survive' && this.scenario.surviveTurns) {
+      this.appendLog(`▶ 勝利條件：撐過 ${this.scenario.surviveTurns} 個玩家回合`);
+    } else if (cond === 'kill_boss' && this.scenario.bossId) {
+      const boss = COMMANDERS[this.scenario.bossId];
+      this.appendLog(`▶ 勝利條件：擊殺 ${boss?.name ?? this.scenario.bossId}（雜兵不需清光）`);
+    }
 
     // 啟動章節氛圍 BGM
     const mood = CHAPTER_MOODS[this.chapterId] ?? 'peaceful';
@@ -1128,7 +1138,18 @@ export class BattleScene extends Phaser.Scene {
     for (const u of this.units) {
       if (u.faction === 'player') u.resetTurn();
     }
-    this.turnText.setText('你的回合').setColor('#7ed1ff');
+    // survive 條件 → 顯示「回合 X / N」並判定是否撐到通關
+    if (this.scenario.victoryCondition === 'survive' && this.scenario.surviveTurns) {
+      this.turnText
+        .setText(`你的回合（${this.playerTurnNumber} / ${this.scenario.surviveTurns}）`)
+        .setColor('#7ed1ff');
+      if (this.playerTurnNumber > this.scenario.surviveTurns) {
+        this.gameOver(true);
+        return;
+      }
+    } else {
+      this.turnText.setText('你的回合').setColor('#7ed1ff');
+    }
     this.deselect();
   }
 
@@ -1141,6 +1162,7 @@ export class BattleScene extends Phaser.Scene {
   private endPlayerTurn(): void {
     if (this.gameState !== 'player_turn') return;
     this.gameState = 'enemy_turn';
+    this.playerTurnNumber += 1;
     this.turnText.setText('敵方回合').setColor('#ff8080');
     this.clearHighlights();
     this.waitBtn.setVisible(false);
@@ -1165,15 +1187,71 @@ export class BattleScene extends Phaser.Scene {
     const players = this.units.filter((u) => u.faction === 'player' && u.isAlive());
     if (players.length === 0) return;
 
+    // 預估從某格攻擊某玩家會打多少傷害（不擲骰，用期望值：dmg × hitRate%）
+    const predictDamage = (
+      attacker: Unit,
+      defender: Unit,
+      fromMovedDistance: number
+    ): { expected: number; raw: number; canKill: boolean } => {
+      const defTerrain = TERRAIN_TYPES[getTerrainAt(defender.position)];
+      const r = computeDamage({
+        attackerType: attacker.unitType,
+        defenderType: defender.unitType,
+        attackerAttack: attacker.attack,
+        defenderDefense: defender.defense,
+        terrainDefBonus: defTerrain.defBonus,
+        attackerSkillId: attacker.skillId,
+        defenderSkillId: defender.skillId,
+        attackerFaction: attacker.faction,
+        defenderFaction: defender.faction,
+        attackerMovedDistance: fromMovedDistance,
+        defenderHpRatio: defender.hp / defender.maxHp,
+        enemyAttackMul: getEnemyAttackMul(),
+      });
+      const expected = (r.damage * r.hitRate) / 100;
+      return { expected, raw: r.damage, canKill: r.damage >= defender.hp };
+    };
+
+    // 對某玩家從目前位置（或某新位置）的反擊期望傷害
+    const predictCounterIfWeAttack = (
+      attacker: Unit,
+      defender: Unit,
+      attackerPos: Coord
+    ): number => {
+      const inCounterRange = attackTargetTiles(defender.position, defender.attackRange).some(
+        (c) => coordEq(c, attackerPos)
+      );
+      if (!inCounterRange) return 0;
+      const atkTerrain = TERRAIN_TYPES[getTerrainAt(attackerPos)];
+      const r = computeDamage({
+        attackerType: defender.unitType,
+        defenderType: attacker.unitType,
+        attackerAttack: defender.attack,
+        defenderDefense: attacker.defense,
+        terrainDefBonus: atkTerrain.defBonus,
+        attackerSkillId: defender.skillId,
+        defenderSkillId: attacker.skillId,
+        attackerFaction: defender.faction,
+        defenderFaction: attacker.faction,
+        attackerMovedDistance: 0,
+        defenderHpRatio: attacker.hp / attacker.maxHp,
+      });
+      return (r.damage * r.hitRate) / 100;
+    };
+
+    // 第 1 步：選目標（優先剋制 + 殘血 + 接近）
     let bestTarget: Unit | null = null;
     let bestScore = -Infinity;
     for (const p of players) {
       const counter = getCounter(enemy.unitType, p.unitType);
       const dist = manhattan(enemy.position, p.position);
-      const lowHpBonus = (1 - p.hp / p.maxHp) * 8;
-      const score = (counter.multiplier - 1) * 80 - dist + lowHpBonus;
-      if (score > bestScore) {
-        bestScore = score;
+      const lowHpBonus = (1 - p.hp / p.maxHp) * 25; // 殘血加成提高，鼓勵集火
+      // 預判從目前位置直接打他能造成多少傷害（不考慮位移加成）
+      const pred = predictDamage(enemy, p, 0);
+      let s = pred.expected * 4 + (counter.multiplier - 1) * 60 - dist + lowHpBonus;
+      if (pred.canKill) s += 200; // 殘血可一擊必殺 → 強烈優先
+      if (s > bestScore) {
+        bestScore = s;
         bestTarget = p;
       }
     }
@@ -1183,24 +1261,41 @@ export class BattleScene extends Phaser.Scene {
     const inRangeFrom = (from: Coord): boolean =>
       attackTargetTiles(from, enemy.attackRange).some((c) => coordEq(c, target.position));
 
-    if (inRangeFrom(enemy.position)) {
-      await this.executeAttack(enemy, target);
-      return;
-    }
-
+    // 第 2 步：選位置
     const blocked = this.collectBlockedTiles(enemy);
     const reachable = bfsReachable(enemy.position, enemy.moveRange, blocked);
-    const standable = reachable.filter(
-      (c) => !this.units.some((u) => u !== enemy && u.isAlive() && coordEq(u.position, c))
-    );
+    const standable: Coord[] = [
+      { ...enemy.position }, // 原地不動也是選項
+      ...reachable.filter(
+        (c) => !this.units.some((u) => u !== enemy && u.isAlive() && coordEq(u.position, c))
+      ),
+    ];
 
     let bestTile: Coord | null = null;
-    let bestTileScore = Infinity;
+    let bestTileScore = -Infinity;
     for (const tile of standable) {
       const canAttack = inRangeFrom(tile);
-      const dist = manhattan(tile, target.position);
-      const score = canAttack ? -10000 + dist : dist;
-      if (score < bestTileScore) {
+      const moveDist = manhattan(tile, enemy.position);
+      const tileTerrain = TERRAIN_TYPES[getTerrainAt(tile)];
+      let score = 0;
+
+      if (canAttack) {
+        const myDmg = predictDamage(enemy, target, moveDist);
+        const counterDmg = predictCounterIfWeAttack(enemy, target, tile);
+        const willKill = myDmg.canKill;
+        const willDie = counterDmg >= enemy.hp;
+
+        score += myDmg.expected * 5;
+        if (willKill) score += 300;
+        if (willDie && !willKill) score -= 250; // 自殺式進攻嚴懲
+        score += tileTerrain.defBonus * 4; // 偏好高 DEF 地形
+        score += 50; // 比起逼近，能攻擊就直接攻擊
+      } else {
+        // 不能攻擊 → 越接近目標越好（負距離，越大越好）
+        score = -manhattan(tile, target.position) * 4;
+        score += tileTerrain.defBonus * 2; // 仍輕微偏好掩體
+      }
+      if (score > bestTileScore) {
         bestTileScore = score;
         bestTile = tile;
       }
@@ -1219,11 +1314,37 @@ export class BattleScene extends Phaser.Scene {
   // ===== 勝負 =====
   private checkBattleEnd(): boolean {
     const playerAlive = this.units.some((u) => u.faction === 'player' && u.isAlive());
-    const enemyAlive = this.units.some((u) => u.faction === 'enemy' && u.isAlive());
     if (!playerAlive) {
       this.gameOver(false);
       return true;
     }
+
+    const cond = this.scenario.victoryCondition;
+    if (cond === 'kill_boss') {
+      // 指定 BOSS 死即勝；雜兵還在不影響
+      const bossId = this.scenario.bossId;
+      const bossAlive =
+        bossId !== undefined &&
+        this.units.some((u) => u.id === bossId && u.faction === 'enemy' && u.isAlive());
+      if (!bossAlive) {
+        this.gameOver(true);
+        return true;
+      }
+      return false;
+    }
+
+    if (cond === 'survive') {
+      // 全滅敵方仍視為勝（給玩家提早結束的選項）；否則靠 startPlayerTurn 的回合數判斷
+      const enemyAlive = this.units.some((u) => u.faction === 'enemy' && u.isAlive());
+      if (!enemyAlive) {
+        this.gameOver(true);
+        return true;
+      }
+      return false;
+    }
+
+    // 'rout' （預設）— 全滅敵方即勝
+    const enemyAlive = this.units.some((u) => u.faction === 'enemy' && u.isAlive());
     if (!enemyAlive) {
       this.gameOver(true);
       return true;

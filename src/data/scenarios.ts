@@ -146,7 +146,7 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
 
   city_defense: {
     id: 'city_defense', name: '艾斯瑞特城圍城戰',
-    description: '北方要衝艾斯瑞特城——城牆雖固，但敵軍從三面湧來。',
+    description: '北方要衝艾斯瑞特城——撐過 6 個回合，援軍即至。',
     gridWidth: 11, gridHeight: 8,
     bgColor: 0x2a2618,
     // 地形設計：
@@ -180,7 +180,8 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
       // 工兵（教派刺客）潛入北面
       { commanderId: 'cult_assassin', position: { x: 8, y: 3 } },
     ],
-    victoryCondition: 'rout',
+    victoryCondition: 'survive',
+    surviveTurns: 6,
   },
 
   palace_intrigue: {
@@ -225,7 +226,7 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
 
   mountain_ruins: {
     id: 'mountain_ruins', name: '黑暗山遺跡 — 邪神禱詞',
-    description: '山中遺跡，主教施法中央，雷恩被綁在祭壇前。三方山口都有守軍。',
+    description: '主教詠唱進行中——擊殺主教即勝，無需清光教徒。',
     gridWidth: 11, gridHeight: 8,
     bgColor: 0x0e0e2a,
     // 地形設計：
@@ -260,7 +261,8 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
       { commanderId: 'griffon_rider', position: { x: 5, y: 0 } },
       { commanderId: 'griffon_rider', position: { x: 7, y: 0 } },
     ],
-    victoryCondition: 'rout',
+    victoryCondition: 'kill_boss',
+    bossId: 'high_priest',
   },
 
   // === 番外第 9 章：殘黨追擊 ===
