@@ -54,7 +54,7 @@ const CHAPTER_MOODS: Record<string, BgmMood> = {
 
 type UISelection =
   | { kind: 'idle' }
-  | { kind: 'unit_selected'; unit: Unit; reachable: Coord[] }
+  | { kind: 'unit_selected'; unit: Unit; reachable: Coord[]; directTargets: Unit[] }
   | { kind: 'action_choice'; unit: Unit; attackTargets: Coord[] }
   | { kind: 'busy' };
 
@@ -559,9 +559,25 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
 
-    // 已選擇某單位 → 點同一單位 = 原地不動進攻擊選擇（unit 的 hitArea 蓋住其腳下 tile）
+    // 已選擇某單位 + 點到自己 → 原地不動進攻擊選擇
     if (this.selection.kind === 'unit_selected' && this.selection.unit === unit) {
       this.onTileClicked(unit.position);
+      return;
+    }
+
+    // 已選擇某單位 + 點到一個「目前位置直接打得到的敵人」→ 一鍵原地攻擊
+    if (this.selection.kind === 'unit_selected' && this.selection.directTargets.includes(unit)) {
+      const attacker = this.selection.unit;
+      const target = unit;
+      this.selection = { kind: 'busy' };
+      this.clearHighlights();
+      this.cancelBtn.setVisible(false);
+      void this.executeAttack(attacker, target).then(() => {
+        if (attacker.isAlive()) attacker.exhaust();
+        this.deselect();
+        if (this.checkBattleEnd()) return;
+        this.checkPlayerTurnEnd();
+      });
       return;
     }
 
@@ -613,12 +629,25 @@ export class BattleScene extends Phaser.Scene {
     );
     // 把單位目前格子也算進可選範圍 → 點原格 = 原地不動，直接進攻擊選擇
     const reachable: Coord[] = [{ ...unit.position }, ...moveTiles];
-    this.selection = { kind: 'unit_selected', unit, reachable };
-    this.drawMoveHighlights(moveTiles, unit.position);
+
+    // 從現在位置直接可打到的敵人 → 點下去一次完成「原地攻擊」
+    const directTargetTiles = attackTargetTiles(unit.position, unit.attackRange);
+    const directTargets = this.units.filter(
+      (u) =>
+        u.isAlive() &&
+        u.faction !== unit.faction &&
+        directTargetTiles.some((t) => coordEq(t, u.position))
+    );
+
+    this.selection = { kind: 'unit_selected', unit, reachable, directTargets };
+    this.drawMoveHighlights(moveTiles, unit.position, directTargets.map((u) => u.position));
     this.cancelBtn.setVisible(true);
     this.waitBtn.setVisible(false);
     this.showUnitInfo(unit);
-    this.hintText.setText(`已選擇「${unit.name}」\n點綠格移動 / 點黃格原地不動，或按取消。`);
+    const hintLines = ['已選擇「' + unit.name + '」'];
+    if (directTargets.length > 0) hintLines.push('點紅圈敵人＝原地攻擊');
+    hintLines.push('點綠格移動 / 點黃格不動，或按取消');
+    this.hintText.setText(hintLines.join('\n'));
   }
 
   private enterActionChoice(unit: Unit): void {
@@ -857,7 +886,11 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ===== 高亮 =====
-  private drawMoveHighlights(tiles: Coord[], stayTile?: Coord): void {
+  private drawMoveHighlights(
+    tiles: Coord[],
+    stayTile?: Coord,
+    directAttackTiles: Coord[] = []
+  ): void {
     this.clearHighlights();
     // 一般可移動格：綠色
     this.highlightGfx.fillStyle(0x4ae26a, 0.32);
@@ -878,6 +911,15 @@ export class BattleScene extends Phaser.Scene {
       this.highlightGfx.fillPath();
       tracePointyHexPath(this.highlightGfx, center.x, center.y, HEX_SIZE - 2);
       this.highlightGfx.strokePath();
+    }
+    // 從目前位置直接可攻擊的敵人：紅色粗框（不填色，避免遮住敵方 sprite）
+    if (directAttackTiles.length > 0) {
+      this.highlightGfx.lineStyle(3, 0xff3344, 0.95);
+      for (const t of directAttackTiles) {
+        const center = hexCenterPx(t);
+        tracePointyHexPath(this.highlightGfx, center.x, center.y, HEX_SIZE - 1);
+        this.highlightGfx.strokePath();
+      }
     }
   }
 
