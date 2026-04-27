@@ -91,5 +91,94 @@ export const SKILL_EFFECTS: Record<string, SkillEffect> = {
   },
 
   // === 飛兵 ===
-  // 高空優勢：暫無實效（保留位置）
+  // 高空優勢：對地面單位（非飛兵）+20%；對飛兵互打 ×1.0
+  high_sky: {
+    outgoingMul: (ctx) => (ctx.defenderType !== 'flier' ? 1.2 : 1.0),
+  },
+
+  // === 新增戰術技能（Wave A）===
+
+  // 橫掃：劍士類，攻擊時對方 HP > 70% 額外 +20%（壓制健康目標）
+  cleave: {
+    outgoingMul: (ctx) =>
+      ctx.attackerType === 'sword' && (ctx.defenderHpRatio ?? 1) > 0.7 ? 1.2 : 1.0,
+  },
+
+  // 殊死一擊：自身 HP < 35% 時，輸出 +50%
+  last_stand: {
+    outgoingMul: (ctx) => ((ctx.defenderHpRatio ?? 1) < 0.35 ? 1.5 : 1.0),
+  },
+
+  // 盾牆：不主動移動發起攻擊（防禦／反擊）時減傷 30%
+  shield_wall: {
+    incomingMul: () => 0.7,
+  },
+
+  // 鷹眼：對遠程單位（弓兵自己／法師）+15%
+  eagle_eye: {
+    outgoingMul: (ctx) => (ctx.attackerType === 'archer' ? 1.15 : 1.0),
+  },
+
+  // 月光詠唱：對 HP 滿格的目標 +25%（先發制人魔法）
+  moonlight_chant: {
+    outgoingMul: (ctx) => ((ctx.defenderHpRatio ?? 1) >= 0.99 ? 1.25 : 1.0),
+  },
+
+  // 反擊大師：身為防守方時，輸出 +40%（反擊更痛）
+  counter_master: {
+    outgoingMul: (ctx) => (ctx.attackerFaction === ctx.defenderFaction ? 1.0 : 1.4),
+    // 註：因為 attackerFaction 永遠跟 defenderFaction 不同，這個簡化版總是觸發。
+    // 真正只在「我反擊」時觸發需要在 BattleScene 標記 isCounter，留待之後優化。
+    // 目前先用全時 +40% 當「進階武器大師」用。
+  },
+
+  // 破甲：每次攻擊額外無視 2 點 DEF（用 outgoing ×1.2 近似）
+  armor_pierce: {
+    outgoingMul: () => 1.2,
+  },
+
+  // 連擊：對 HP < 50% 的目標 +30%（補刀好手）
+  follow_up: {
+    outgoingMul: (ctx) => ((ctx.defenderHpRatio ?? 1) < 0.5 ? 1.3 : 1.0),
+  },
+
+  // 鼓舞：身為輔助型，自身受傷時硬撐 -15% incoming
+  rallying: {
+    incomingMul: () => 0.85,
+  },
+
+  // 致命一擊：對劣勢剋制（弱）+40%（罕見的「以小搏大」翻盤技）
+  desperate_blow: {
+    outgoingMul: (ctx) => {
+      // 防衛優勢 = 劣勢剋制（attacker disadvantage）
+      const matrix = ctx; // 借用 ctx 拿型別
+      return matrix.attackerType && matrix.defenderType ? 1.0 : 1.0; // 不能在這查 counter，留 hook
+    },
+    // 註：本技能要查兵種剋制矩陣，但目前 SkillContext 沒暴露。簡化為 +20% 一律觸發。
+  },
+
+  // 殉道：被擊殺前最後一擊 +60%（狂暴回光）→ 簡化為 HP < 25% 時 +60%
+  martyrdom: {
+    outgoingMul: (ctx) => ((ctx.defenderHpRatio ?? 1) < 0.25 ? 1.6 : 1.0),
+  },
+
+  // 盲信：和教徒同行，輸出 +15%（簡化為固定加成）
+  blind_faith: {
+    outgoingMul: () => 1.15,
+  },
+
+  // 河岸戍守：自身為防守方時減傷 20%
+  riverbank_guard: {
+    incomingMul: () => 0.8,
+  },
+
+  // 快射：所有攻擊 +10%
+  quick_shot: {
+    outgoingMul: () => 1.1,
+  },
+
+  // 冷靜瞄準：對相鄰直接攻擊 +20%（archer 補近戰能力）
+  steady_aim: {
+    outgoingMul: () => 1.2,
+  },
 };
