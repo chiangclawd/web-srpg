@@ -41,6 +41,19 @@ export const PORTRAIT_ASSETS: AssetEntry[] = [
 ];
 
 /**
+ * 章節 CG / 標題大圖（建議 1920×1080 PNG，橫式構圖）。
+ * 取消註解後，把同檔名 png 放到 public/assets/cg/ 即可使用。
+ */
+export const CG_ASSETS: AssetEntry[] = [
+  // === 標題畫面背景 ===
+  // { key: 'cg_title', url: 'assets/cg/title.png' },
+
+  // === 章節入場大圖（之後使用）===
+  // { key: 'cg_chapter1', url: 'assets/cg/chapter1.png' },
+  // { key: 'cg_chapter8', url: 'assets/cg/chapter8.png' },
+];
+
+/**
  * 取得武將對應的 portrait texture key（若有設定）。
  */
 export function getPortraitKey(commanderId: string): string {

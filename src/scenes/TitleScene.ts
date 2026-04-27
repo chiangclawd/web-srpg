@@ -21,25 +21,40 @@ export class TitleScene extends Phaser.Scene {
     const theme = getThemeColors();
     this.add.rectangle(0, 0, width, height, theme.bg).setOrigin(0);
 
-    const topLine = this.add.graphics();
-    topLine.lineStyle(3, 0x4a90e2, 0.8);
-    topLine.lineBetween(width * 0.2, height * 0.22, width * 0.8, height * 0.22);
-
-    const botLine = this.add.graphics();
-    botLine.lineStyle(3, 0x4a90e2, 0.8);
-    botLine.lineBetween(width * 0.2, height * 0.78, width * 0.8, height * 0.78);
+    // 若有 cg_title 大圖則用作背景，並蓋一層半透明黑讓文字可讀
+    const hasTitleCg = this.textures.exists('cg_title');
+    if (hasTitleCg) {
+      const bg = this.add.image(width / 2, height / 2, 'cg_title');
+      // cover：縮到完全填滿畫布
+      const scale = Math.max(width / bg.width, height / bg.height);
+      bg.setScale(scale);
+      // 半透明黑罩讓文字保持可讀
+      this.add.rectangle(0, 0, width, height, 0x000000, 0.45).setOrigin(0);
+    } else {
+      // 沒大圖時，用裝飾線條補空
+      const topLine = this.add.graphics();
+      topLine.lineStyle(3, 0x4a90e2, 0.8);
+      topLine.lineBetween(width * 0.2, height * 0.22, width * 0.8, height * 0.22);
+      const botLine = this.add.graphics();
+      botLine.lineStyle(3, 0x4a90e2, 0.8);
+      botLine.lineBetween(width * 0.2, height * 0.78, width * 0.8, height * 0.78);
+    }
 
     this.add
       .text(width / 2, height / 2 - 110, '西方戰術 SRPG', {
         fontSize: '54px',
         color: '#ffffff',
         fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 6,
       })
       .setOrigin(0.5);
     this.add
       .text(width / 2, height / 2 - 50, t('title.subtitle'), {
         fontSize: '14px',
-        color: '#888888',
+        color: '#bbbbbb',
+        stroke: '#000000',
+        strokeThickness: 3,
       })
       .setOrigin(0.5);
 
