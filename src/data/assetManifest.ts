@@ -50,7 +50,11 @@ export const CG_ASSETS: AssetEntry[] = [
 
   // === 章節入場大圖 ===
   { key: 'cg_chapter1', url: 'assets/cg/chapter1.png' },
+  // { key: 'cg_chapter2', url: 'assets/cg/chapter2.png' },
+  // { key: 'cg_chapter3', url: 'assets/cg/chapter3.png' },
+  // { key: 'cg_chapter6', url: 'assets/cg/chapter6.png' },
   // { key: 'cg_chapter8', url: 'assets/cg/chapter8.png' },
+  // { key: 'cg_chapter10', url: 'assets/cg/chapter10.png' },
 ];
 
 /**
@@ -78,9 +82,11 @@ export const SPRITE_ASSETS: AssetEntry[] = [
   { key: 'sprite_enemy_cavalry', url: 'assets/sprites/enemy_cavalry.png' },
   { key: 'sprite_enemy_flier', url: 'assets/sprites/enemy_flier.png' },
 
-  // === 主要 BOSS 專用 sprite（之後可加，目前先用泛用版）===
+  // === 主要 BOSS 專用 sprite（待產） ===
   // { key: 'sprite_baron',       url: 'assets/sprites/baron.png' },
   // { key: 'sprite_eo',          url: 'assets/sprites/eo.png' },
+  // { key: 'sprite_shadow',      url: 'assets/sprites/shadow.png' },
+  // { key: 'sprite_high_priest', url: 'assets/sprites/high_priest.png' },
   // { key: 'sprite_cult_leader', url: 'assets/sprites/cult_leader.png' },
 ];
 

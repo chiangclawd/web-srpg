@@ -49,6 +49,7 @@ export const CUTSCENES: Record<string, CutsceneScript> = {
   // ============= 第 2 章 =============
   ch2_prologue: {
     id: 'ch2_prologue',
+    bgImageKey: 'cg_chapter2',
     lines: [
       { speaker: '旁白', text: '——白楊崗以西二十里 · 黑松森——' },
       { speaker: '旁白', text: '黑松森是王國通往北方的唯一通路。' },
@@ -91,6 +92,7 @@ export const CUTSCENES: Record<string, CutsceneScript> = {
   // ============= 第 3 章 =============
   ch3_prologue: {
     id: 'ch3_prologue',
+    bgImageKey: 'cg_chapter3',
     lines: [
       { speaker: '旁白', text: '——歐斯基峽谷 · 黎明——' },
       { speaker: '旁白', text: '兩側山岩夾峙，中央一條淺河橫過。' },
@@ -230,6 +232,7 @@ export const CUTSCENES: Record<string, CutsceneScript> = {
   // ============= 第 6 章 =============
   ch6_prologue: {
     id: 'ch6_prologue',
+    bgImageKey: 'cg_chapter6',
     lines: [
       { speaker: '旁白', text: '——王國首都 · 翌日清晨——' },
       { speaker: '旁白', text: '亞瑟一行回到王都，向年邁的國王報告。' },
@@ -334,6 +337,7 @@ export const CUTSCENES: Record<string, CutsceneScript> = {
   // ============= 第 8 章（最終章） =============
   ch8_prologue: {
     id: 'ch8_prologue',
+    bgImageKey: 'cg_chapter8',
     lines: [
       { speaker: '旁白', text: '——虛空大殿 · 入口——' },
       { speaker: '旁白', text: '黑暗教派的最後堡壘。' },
@@ -437,6 +441,7 @@ export const CUTSCENES: Record<string, CutsceneScript> = {
   // ============= 番外第 10 章（真・最終）=============
   ch10_prologue: {
     id: 'ch10_prologue',
+    bgImageKey: 'cg_chapter10',
     lines: [
       { speaker: '旁白', text: '黑色裂縫吞沒了整個廢村，地面化為扭曲的時空。' },
       { speaker: '旁白', text: '從中浮現的，是一個眼神空洞、形象不定的存在。' },
