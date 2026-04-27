@@ -10,6 +10,12 @@ export const RECRUIT_AT_CHAPTER: Record<string, number> = {
   gary: 1,
   sharon: 5, // ch4 救出後，ch5 起可用
   rain: 8,   // ch7 救出後，ch8 起可用
+  // 普通兵種：第 1 章起即可調度，補陣容厚度
+  knight_recruit: 1,
+  spear_recruit: 1,
+  horse_scout: 1,
+  archer_recruit: 1,
+  apprentice_mage: 1,
 };
 
 export const COMMANDERS: Record<string, CommanderDef> = {
@@ -245,5 +251,105 @@ export const COMMANDERS: Record<string, CommanderDef> = {
     skill: { id: 'high_sky', name: '虛空之翼', desc: '對地面單位攻擊 ×1.2' },
     startingLevel: 18, growthRates: { hp: 4, attack: 3, defense: 1 },
     startingEquipment: { weapon: 'sky_lance', armor: 'storm_armor' },
+  },
+
+  // ============================================
+  // 玩家普通兵種（沒有特技、stat 低於英雄、陪衝主力）
+  // 這 5 名從第 1 章起可用，提供陣容厚度
+  // ============================================
+  knight_recruit: {
+    id: 'knight_recruit', name: '王國劍兵', faction: 'player', unitType: 'sword',
+    statBonus: { hp: 0, attack: 0, defense: 0 },
+    skill: { id: 'cleave', name: '揮砍', desc: '對 HP > 70% 的目標 ×1.2' },
+    startingLevel: 3, growthRates: { hp: 3, attack: 1, defense: 1 },
+    startingEquipment: { weapon: 'iron_sword', armor: 'leather_armor' },
+  },
+  spear_recruit: {
+    id: 'spear_recruit', name: '王國槍兵', faction: 'player', unitType: 'lance',
+    statBonus: { hp: 2, attack: 0, defense: 1 },
+    skill: { id: 'shield_wall', name: '盾牆', desc: '受到傷害 ×0.7' },
+    startingLevel: 3, growthRates: { hp: 4, attack: 1, defense: 2 },
+    startingEquipment: { weapon: 'iron_lance', armor: 'leather_armor' },
+  },
+  horse_scout: {
+    id: 'horse_scout', name: '騎兵斥候', faction: 'player', unitType: 'cavalry',
+    statBonus: { hp: 0, attack: 1, defense: 0 },
+    skill: { id: 'cavalry_charge', name: '突擊', desc: '移動 ≥ 3 格時，攻擊 ×1.2' },
+    startingLevel: 3, growthRates: { hp: 3, attack: 2, defense: 1 },
+    startingEquipment: { weapon: 'cavalry_blade', armor: 'cavalry_leather' },
+  },
+  archer_recruit: {
+    id: 'archer_recruit', name: '王國弓兵', faction: 'player', unitType: 'archer',
+    statBonus: { hp: 0, attack: 0, defense: 0 },
+    skill: { id: 'eagle_eye', name: '鷹眼', desc: '弓兵時 ×1.15' },
+    startingLevel: 3, growthRates: { hp: 2, attack: 2, defense: 0 },
+    startingEquipment: { weapon: 'short_bow', armor: 'cloth' },
+  },
+  apprentice_mage: {
+    id: 'apprentice_mage', name: '見習法師', faction: 'player', unitType: 'mage',
+    statBonus: { hp: -2, attack: 1, defense: 0 },
+    skill: { id: 'moonlight_chant', name: '月光詠唱', desc: '對滿血目標 ×1.25' },
+    startingLevel: 3, growthRates: { hp: 2, attack: 2, defense: 0 },
+    startingEquipment: { weapon: 'spark_tome', armor: 'robe' },
+  },
+
+  // ============================================
+  // 新增敵方雜兵類型（補強各章敵方陣容多樣性）
+  // ============================================
+  bandit_thug: {
+    id: 'bandit_thug', name: '蠻族劫匪', faction: 'enemy', unitType: 'sword',
+    statBonus: { hp: 2, attack: 1, defense: 0 },
+    skill: { id: 'last_stand', name: '殊死', desc: 'HP < 35% ×1.5' },
+    startingLevel: 4, growthRates: { hp: 3, attack: 2, defense: 0 },
+    startingEquipment: { weapon: 'iron_sword', armor: 'leather_armor' },
+  },
+  raider_horseman: {
+    id: 'raider_horseman', name: '蠻族騎士', faction: 'enemy', unitType: 'cavalry',
+    statBonus: { hp: 0, attack: 1, defense: 0 },
+    skill: { id: 'cavalry_charge', name: '突擊', desc: '移動 ≥ 3 格時 ×1.2' },
+    startingLevel: 5, growthRates: { hp: 3, attack: 2, defense: 1 },
+    startingEquipment: { weapon: 'cavalry_blade', armor: 'cavalry_leather' },
+  },
+  frost_witch: {
+    id: 'frost_witch', name: '霜之巫女', faction: 'enemy', unitType: 'mage',
+    statBonus: { hp: -1, attack: 1, defense: 0 },
+    skill: { id: 'ice_cone', name: '冰錐', desc: '攻擊 ×1.15' },
+    startingLevel: 6, growthRates: { hp: 2, attack: 2, defense: 0 },
+    startingEquipment: { weapon: 'fire_tome', armor: 'robe' },
+  },
+  sniper: {
+    id: 'sniper', name: '神射手', faction: 'enemy', unitType: 'archer',
+    statBonus: { hp: 0, attack: 1, defense: 0 },
+    skill: { id: 'eagle_eye', name: '鷹眼', desc: '弓兵時 ×1.15' },
+    startingLevel: 7, growthRates: { hp: 2, attack: 2, defense: 0 },
+    startingEquipment: { weapon: 'long_bow', armor: 'cloth' },
+  },
+  spear_militia: {
+    id: 'spear_militia', name: '蠻族長槍', faction: 'enemy', unitType: 'lance',
+    statBonus: { hp: 1, attack: 0, defense: 1 },
+    skill: { id: 'spear_formation', name: '槍陣', desc: '對騎兵 ×1.3' },
+    startingLevel: 5, growthRates: { hp: 4, attack: 1, defense: 2 },
+    startingEquipment: { weapon: 'iron_lance', armor: 'chain_mail' },
+  },
+  berserker: {
+    id: 'berserker', name: '狂戰士', faction: 'enemy', unitType: 'sword',
+    statBonus: { hp: 4, attack: 3, defense: -1 },
+    skill: { id: 'martyrdom', name: '狂暴', desc: 'HP < 25% ×1.6' },
+    startingLevel: 8, growthRates: { hp: 4, attack: 3, defense: 0 },
+    startingEquipment: { weapon: 'steel_sword', armor: 'leather_armor' },
+  },
+  shadow_minion: {
+    id: 'shadow_minion', name: '影之眷屬', faction: 'enemy', unitType: 'sword',
+    statBonus: { hp: 0, attack: 2, defense: 0 },
+    skill: { id: 'silent_blade', name: '無聲一刀', desc: '攻擊 ×1.4' },
+    startingLevel: 10, growthRates: { hp: 3, attack: 2, defense: 1 },
+    startingEquipment: { weapon: 'steel_sword', armor: 'cloth' },
+  },
+  void_acolyte: {
+    id: 'void_acolyte', name: '虛空使徒', faction: 'enemy', unitType: 'mage',
+    statBonus: { hp: 2, attack: 3, defense: 0 },
+    skill: { id: 'dark_prayer', name: '虛空禱詞', desc: '攻擊 ×1.3' },
+    startingLevel: 12, growthRates: { hp: 3, attack: 3, defense: 0 },
+    startingEquipment: { weapon: 'ice_tome', armor: 'robe' },
   },
 };

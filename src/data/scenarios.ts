@@ -38,15 +38,22 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
       '....F..MMM.........MM.',
     ],
     deployments: [
-      // 玩家陣營（西側森林邊緣）
+      // 玩家陣營（西側森林邊緣）— 3 英雄 + 5 普通兵
       { commanderId: 'arthur', position: { x: 1, y: 11 } },
       { commanderId: 'rosa', position: { x: 0, y: 13 } },
       { commanderId: 'gary', position: { x: 2, y: 13 } },
-      // 敵方陣營（東側山口、河對岸）
+      { commanderId: 'knight_recruit', position: { x: 1, y: 9 } },
+      { commanderId: 'spear_recruit', position: { x: 0, y: 11 } },
+      { commanderId: 'archer_recruit', position: { x: 0, y: 15 } },
+      { commanderId: 'horse_scout', position: { x: 2, y: 10 } },
+      { commanderId: 'apprentice_mage', position: { x: 1, y: 14 } },
+      // 敵方陣營（東側山口、河對岸）— 4 → 6（+50%）
       { commanderId: 'morden', position: { x: 19, y: 2 } },
       { commanderId: 'selene', position: { x: 20, y: 4 } },
       { commanderId: 'greg', position: { x: 18, y: 5 } },
       { commanderId: 'scout_archer', position: { x: 19, y: 8 } },
+      { commanderId: 'bandit_thug', position: { x: 17, y: 3 } },
+      { commanderId: 'raider_horseman', position: { x: 18, y: 11 } },
     ],
     victoryCondition: 'rout',
   },
@@ -79,15 +86,24 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
       '.FFFF.FFFF.FFFF.FFFF..',
     ],
     deployments: [
+      // 玩家英雄 + 普通兵
       { commanderId: 'arthur', position: { x: 0, y: 7 } },
       { commanderId: 'rosa', position: { x: 0, y: 8 } },
       { commanderId: 'gary', position: { x: 0, y: 6 } },
-      // 敵方四方包夾（東+北+南）
+      { commanderId: 'knight_recruit', position: { x: 0, y: 5 } },
+      { commanderId: 'spear_recruit', position: { x: 0, y: 9 } },
+      { commanderId: 'archer_recruit', position: { x: 0, y: 10 } },
+      { commanderId: 'horse_scout', position: { x: 0, y: 4 } },
+      { commanderId: 'apprentice_mage', position: { x: 0, y: 11 } },
+      // 敵方四方包夾（5 → 8，+50%）
       { commanderId: 'vlad', position: { x: 21, y: 7 } },
       { commanderId: 'caleb', position: { x: 21, y: 9 } },
       { commanderId: 'morden', position: { x: 17, y: 0 } },
       { commanderId: 'greg', position: { x: 17, y: 15 } },
       { commanderId: 'scout_archer', position: { x: 11, y: 0 } },
+      { commanderId: 'spear_militia', position: { x: 11, y: 15 } },
+      { commanderId: 'bandit_thug', position: { x: 21, y: 5 } },
+      { commanderId: 'raider_horseman', position: { x: 21, y: 11 } },
     ],
     victoryCondition: 'rout',
   },
@@ -120,15 +136,24 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
       'MMM................MMM',
     ],
     deployments: [
+      // 玩家英雄 + 普通兵
       { commanderId: 'arthur', position: { x: 0, y: 7 } },
       { commanderId: 'rosa', position: { x: 0, y: 8 } },
       { commanderId: 'gary', position: { x: 0, y: 6 } },
-      // 伯朗將軍鎮守東側高地
+      { commanderId: 'knight_recruit', position: { x: 0, y: 5 } },
+      { commanderId: 'spear_recruit', position: { x: 0, y: 9 } },
+      { commanderId: 'archer_recruit', position: { x: 0, y: 10 } },
+      { commanderId: 'horse_scout', position: { x: 0, y: 4 } },
+      { commanderId: 'apprentice_mage', position: { x: 0, y: 11 } },
+      // 伯朗將軍鎮守東側高地（+補強，5 → 8）
       { commanderId: 'baron', position: { x: 20, y: 7 } },
       { commanderId: 'morden', position: { x: 19, y: 5 } },
       { commanderId: 'greg', position: { x: 19, y: 9 } },
       { commanderId: 'caleb', position: { x: 21, y: 11 } },
       { commanderId: 'selene', position: { x: 19, y: 7 } },
+      { commanderId: 'spear_militia', position: { x: 18, y: 6 } },
+      { commanderId: 'bandit_thug', position: { x: 18, y: 8 } },
+      { commanderId: 'raider_horseman', position: { x: 17, y: 12 } },
     ],
     victoryCondition: 'rout',
   },
@@ -161,18 +186,27 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
       '..F.W..WWWWWWWWW..W..F',
     ],
     deployments: [
+      // 玩家英雄 + 普通兵
       { commanderId: 'arthur', position: { x: 0, y: 7 } },
       { commanderId: 'rosa', position: { x: 0, y: 8 } },
       { commanderId: 'gary', position: { x: 0, y: 6 } },
+      { commanderId: 'knight_recruit', position: { x: 0, y: 5 } },
+      { commanderId: 'spear_recruit', position: { x: 0, y: 9 } },
+      { commanderId: 'archer_recruit', position: { x: 0, y: 10 } },
+      { commanderId: 'horse_scout', position: { x: 0, y: 4 } },
+      { commanderId: 'apprentice_mage', position: { x: 0, y: 11 } },
       // 夏倫被困在中央島嶼上
       { commanderId: 'sharon', position: { x: 11, y: 7 } },
-      // 圍攻夏倫的教派刺客 + 河岸守衛
+      // 圍攻夏倫的教派刺客 + 河岸守衛（6 → 9）
       { commanderId: 'cult_assassin', position: { x: 11, y: 5 } },
       { commanderId: 'hirsch', position: { x: 14, y: 7 } },
       { commanderId: 'mara', position: { x: 16, y: 5 } },
       { commanderId: 'caleb', position: { x: 13, y: 11 } },
       { commanderId: 'greg', position: { x: 17, y: 8 } },
       { commanderId: 'scout_archer', position: { x: 19, y: 4 } },
+      { commanderId: 'sniper', position: { x: 20, y: 11 } },
+      { commanderId: 'spear_militia', position: { x: 18, y: 7 } },
+      { commanderId: 'frost_witch', position: { x: 11, y: 9 } },
     ],
     victoryCondition: 'rout',
   },
@@ -205,18 +239,26 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
       'MMMM.................F',
     ],
     deployments: [
-      // 玩家在城內（西側 col 1-3）
+      // 玩家在城內（西側 col 1-3）— 4 英雄 + 5 普通兵
       { commanderId: 'arthur', position: { x: 2, y: 7 } },
       { commanderId: 'rosa', position: { x: 2, y: 8 } },
       { commanderId: 'gary', position: { x: 3, y: 6 } },
       { commanderId: 'sharon', position: { x: 3, y: 9 } },
-      // 攻城方主力（東側）
+      { commanderId: 'knight_recruit', position: { x: 2, y: 5 } },
+      { commanderId: 'spear_recruit', position: { x: 2, y: 10 } },
+      { commanderId: 'archer_recruit', position: { x: 1, y: 5 } },
+      { commanderId: 'horse_scout', position: { x: 3, y: 11 } },
+      { commanderId: 'apprentice_mage', position: { x: 3, y: 4 } },
+      // 攻城方主力（東側）— 6 → 9（+50%，城牆推進感）
       { commanderId: 'carl', position: { x: 21, y: 7 } },
       { commanderId: 'mara', position: { x: 21, y: 2 } },
       { commanderId: 'hirsch', position: { x: 19, y: 4 } },
       { commanderId: 'caleb', position: { x: 21, y: 13 } },
       { commanderId: 'morden', position: { x: 19, y: 11 } },
       { commanderId: 'cult_assassin', position: { x: 16, y: 7 } },
+      { commanderId: 'spear_militia', position: { x: 18, y: 6 } },
+      { commanderId: 'bandit_thug', position: { x: 18, y: 8 } },
+      { commanderId: 'raider_horseman', position: { x: 20, y: 9 } },
     ],
     victoryCondition: 'survive',
     surviveTurns: 6,
@@ -250,18 +292,27 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
       'MMMMMMMMMMMMMMMMMMMMMM',
     ],
     deployments: [
+      // 玩家英雄 + 普通兵
       { commanderId: 'arthur', position: { x: 1, y: 7 } },
       { commanderId: 'rosa', position: { x: 1, y: 8 } },
       { commanderId: 'gary', position: { x: 1, y: 6 } },
       { commanderId: 'sharon', position: { x: 1, y: 9 } },
       { commanderId: 'rain', position: { x: 1, y: 5 } },
-      // 伊歐侯爵 + 影武者 + 教派守衛
+      { commanderId: 'knight_recruit', position: { x: 1, y: 4 } },
+      { commanderId: 'spear_recruit', position: { x: 1, y: 10 } },
+      { commanderId: 'archer_recruit', position: { x: 1, y: 11 } },
+      { commanderId: 'horse_scout', position: { x: 2, y: 4 } },
+      { commanderId: 'apprentice_mage', position: { x: 2, y: 11 } },
+      // 伊歐侯爵 + 影武者 + 教派守衛（6 → 9）
       { commanderId: 'eo', position: { x: 19, y: 7 } },
       { commanderId: 'shadow', position: { x: 17, y: 6 } },
       { commanderId: 'cult_assassin', position: { x: 17, y: 8 } },
       { commanderId: 'cultist_1', position: { x: 14, y: 5 } },
       { commanderId: 'cultist_2', position: { x: 14, y: 9 } },
       { commanderId: 'cultist_3', position: { x: 11, y: 7 } },
+      { commanderId: 'shadow_minion', position: { x: 13, y: 6 } },
+      { commanderId: 'shadow_minion', position: { x: 13, y: 8 } },
+      { commanderId: 'frost_witch', position: { x: 16, y: 7 } },
     ],
     victoryCondition: 'rout',
   },
@@ -294,21 +345,28 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
       'MMMM..........MMMMMMMM',
     ],
     deployments: [
+      // 玩家英雄 + 普通兵
       { commanderId: 'arthur', position: { x: 0, y: 7 } },
       { commanderId: 'rosa', position: { x: 0, y: 8 } },
       { commanderId: 'gary', position: { x: 0, y: 6 } },
       { commanderId: 'sharon', position: { x: 0, y: 9 } },
+      { commanderId: 'knight_recruit', position: { x: 0, y: 5 } },
+      { commanderId: 'spear_recruit', position: { x: 0, y: 10 } },
+      { commanderId: 'archer_recruit', position: { x: 0, y: 11 } },
+      { commanderId: 'horse_scout', position: { x: 0, y: 4 } },
+      { commanderId: 'apprentice_mage', position: { x: 0, y: 12 } },
       // 雷恩被綁在中央祭壇前
       { commanderId: 'rain', position: { x: 11, y: 7 } },
-      // 黑暗主教（祭壇後方）
+      // 黑暗主教（祭壇後方）+ 護衛（6 → 9）
       { commanderId: 'high_priest', position: { x: 19, y: 7 } },
-      // 教徒護衛
       { commanderId: 'cultist_1', position: { x: 17, y: 5 } },
       { commanderId: 'cultist_2', position: { x: 17, y: 7 } },
       { commanderId: 'cultist_3', position: { x: 17, y: 9 } },
-      // 飛兵從北側天空俯衝
       { commanderId: 'griffon_rider', position: { x: 11, y: 0 } },
       { commanderId: 'griffon_rider', position: { x: 14, y: 0 } },
+      { commanderId: 'shadow_minion', position: { x: 14, y: 6 } },
+      { commanderId: 'sniper', position: { x: 21, y: 5 } },
+      { commanderId: 'frost_witch', position: { x: 18, y: 8 } },
     ],
     victoryCondition: 'kill_boss',
     bossId: 'high_priest',
@@ -342,14 +400,19 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
       'MMMM........MMMM......',
     ],
     deployments: [
+      // 玩家英雄 + 普通兵
       { commanderId: 'arthur', position: { x: 1, y: 7 } },
       { commanderId: 'rosa', position: { x: 1, y: 8 } },
       { commanderId: 'gary', position: { x: 1, y: 6 } },
       { commanderId: 'sharon', position: { x: 1, y: 9 } },
       { commanderId: 'rain', position: { x: 1, y: 5 } },
-      // 教主・黯坐鎮中央王座東側
+      { commanderId: 'knight_recruit', position: { x: 1, y: 4 } },
+      { commanderId: 'spear_recruit', position: { x: 1, y: 10 } },
+      { commanderId: 'archer_recruit', position: { x: 2, y: 11 } },
+      { commanderId: 'horse_scout', position: { x: 2, y: 4 } },
+      { commanderId: 'apprentice_mage', position: { x: 2, y: 11 } },
+      // 教主・黯坐鎮中央王座東側 + 護衛（8 → 12）
       { commanderId: 'cult_leader', position: { x: 20, y: 7 } },
-      // 復活的影武者 + 主教 + 雜兵
       { commanderId: 'shadow', position: { x: 17, y: 6 } },
       { commanderId: 'high_priest', position: { x: 17, y: 8 } },
       { commanderId: 'cultist_1', position: { x: 15, y: 5 } },
@@ -357,6 +420,10 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
       { commanderId: 'cultist_3', position: { x: 13, y: 7 } },
       { commanderId: 'cult_assassin', position: { x: 14, y: 6 } },
       { commanderId: 'cult_assassin', position: { x: 14, y: 8 } },
+      { commanderId: 'shadow_minion', position: { x: 16, y: 5 } },
+      { commanderId: 'shadow_minion', position: { x: 16, y: 9 } },
+      { commanderId: 'void_acolyte', position: { x: 19, y: 6 } },
+      { commanderId: 'void_acolyte', position: { x: 19, y: 8 } },
     ],
     victoryCondition: 'rout',
   },
@@ -389,21 +456,29 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
       'M..F........FM.....M..',
     ],
     deployments: [
+      // 玩家英雄 + 普通兵
       { commanderId: 'arthur', position: { x: 0, y: 7 } },
       { commanderId: 'rosa', position: { x: 0, y: 8 } },
       { commanderId: 'gary', position: { x: 0, y: 6 } },
       { commanderId: 'sharon', position: { x: 0, y: 9 } },
       { commanderId: 'rain', position: { x: 0, y: 5 } },
-      // 副教主・凜（中央血祭祭壇）
+      { commanderId: 'knight_recruit', position: { x: 0, y: 4 } },
+      { commanderId: 'spear_recruit', position: { x: 0, y: 10 } },
+      { commanderId: 'archer_recruit', position: { x: 0, y: 11 } },
+      { commanderId: 'horse_scout', position: { x: 1, y: 4 } },
+      { commanderId: 'apprentice_mage', position: { x: 1, y: 11 } },
+      // 副教主・凜（中央血祭祭壇）+ 護衛（7 → 11）
       { commanderId: 'sub_priest', position: { x: 20, y: 7 } },
-      // 狂信者護衛
       { commanderId: 'zealot_1', position: { x: 17, y: 6 } },
       { commanderId: 'zealot_2', position: { x: 17, y: 8 } },
-      // 教徒散佈
       { commanderId: 'cultist_1', position: { x: 14, y: 5 } },
       { commanderId: 'cultist_2', position: { x: 14, y: 9 } },
       { commanderId: 'cultist_3', position: { x: 19, y: 11 } },
       { commanderId: 'cult_assassin', position: { x: 11, y: 7 } },
+      { commanderId: 'shadow_minion', position: { x: 16, y: 7 } },
+      { commanderId: 'void_acolyte', position: { x: 18, y: 5 } },
+      { commanderId: 'void_acolyte', position: { x: 18, y: 9 } },
+      { commanderId: 'sniper', position: { x: 21, y: 11 } },
     ],
     victoryCondition: 'rout',
   },
@@ -436,21 +511,29 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
       'MMM.MM.MMMM..MMMMM.MMM',
     ],
     deployments: [
+      // 玩家英雄 + 普通兵
       { commanderId: 'arthur', position: { x: 0, y: 7 } },
       { commanderId: 'rosa', position: { x: 0, y: 8 } },
       { commanderId: 'gary', position: { x: 0, y: 6 } },
       { commanderId: 'sharon', position: { x: 0, y: 9 } },
       { commanderId: 'rain', position: { x: 0, y: 5 } },
-      // 邪神碎片本體（中央深處）
+      { commanderId: 'knight_recruit', position: { x: 0, y: 4 } },
+      { commanderId: 'spear_recruit', position: { x: 0, y: 10 } },
+      { commanderId: 'archer_recruit', position: { x: 0, y: 11 } },
+      { commanderId: 'horse_scout', position: { x: 1, y: 4 } },
+      { commanderId: 'apprentice_mage', position: { x: 1, y: 11 } },
+      // 邪神碎片本體 + BOSS 群 + 虛空使徒（7 → 11）
       { commanderId: 'dark_god_shard', position: { x: 20, y: 7 } },
-      // 復活的 BOSS 群（虛空之主使徒）
       { commanderId: 'cult_leader', position: { x: 18, y: 7 } },
       { commanderId: 'shadow', position: { x: 18, y: 5 } },
       { commanderId: 'high_priest', position: { x: 18, y: 9 } },
       { commanderId: 'eo', position: { x: 16, y: 7 } },
-      // 虛空魔影（飛兵）
       { commanderId: 'void_wraith', position: { x: 15, y: 5 } },
       { commanderId: 'void_wraith', position: { x: 15, y: 9 } },
+      { commanderId: 'void_acolyte', position: { x: 13, y: 5 } },
+      { commanderId: 'void_acolyte', position: { x: 13, y: 9 } },
+      { commanderId: 'shadow_minion', position: { x: 11, y: 7 } },
+      { commanderId: 'sub_priest', position: { x: 17, y: 11 } },
     ],
     victoryCondition: 'rout',
   },
@@ -483,12 +566,18 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
       'M.MM.M.MM.M.M.MM.M.MMM',
     ],
     deployments: [
+      // 玩家英雄 + 普通兵（修羅最高難度，全員上陣）
       { commanderId: 'arthur', position: { x: 0, y: 7 } },
       { commanderId: 'rosa', position: { x: 0, y: 8 } },
       { commanderId: 'gary', position: { x: 0, y: 6 } },
       { commanderId: 'sharon', position: { x: 0, y: 9 } },
       { commanderId: 'rain', position: { x: 0, y: 5 } },
-      // 全員 BOSS（含伊歐、副教主）
+      { commanderId: 'knight_recruit', position: { x: 0, y: 4 } },
+      { commanderId: 'spear_recruit', position: { x: 0, y: 10 } },
+      { commanderId: 'archer_recruit', position: { x: 0, y: 11 } },
+      { commanderId: 'horse_scout', position: { x: 1, y: 4 } },
+      { commanderId: 'apprentice_mage', position: { x: 1, y: 11 } },
+      // 全員 BOSS + 虛空使徒（7 → 11）
       { commanderId: 'cult_leader', position: { x: 20, y: 7 } },
       { commanderId: 'baron', position: { x: 20, y: 4 } },
       { commanderId: 'carl', position: { x: 20, y: 10 } },
@@ -496,6 +585,10 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
       { commanderId: 'high_priest', position: { x: 18, y: 8 } },
       { commanderId: 'eo', position: { x: 16, y: 7 } },
       { commanderId: 'sub_priest', position: { x: 17, y: 7 } },
+      { commanderId: 'void_acolyte', position: { x: 14, y: 6 } },
+      { commanderId: 'void_acolyte', position: { x: 14, y: 8 } },
+      { commanderId: 'shadow_minion', position: { x: 12, y: 7 } },
+      { commanderId: 'berserker', position: { x: 13, y: 5 } },
     ],
     victoryCondition: 'rout',
   },
