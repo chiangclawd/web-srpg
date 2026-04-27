@@ -559,6 +559,12 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
 
+    // 已選擇某單位 → 點同一單位 = 原地不動進攻擊選擇（unit 的 hitArea 蓋住其腳下 tile）
+    if (this.selection.kind === 'unit_selected' && this.selection.unit === unit) {
+      this.onTileClicked(unit.position);
+      return;
+    }
+
     if (unit.faction === 'player' && !unit.hasActed) {
       this.selectUnit(unit);
     } else {
@@ -602,19 +608,17 @@ export class BattleScene extends Phaser.Scene {
 
   private selectUnit(unit: Unit): void {
     const blocked = this.collectBlockedTiles(unit);
-    const reachable = bfsReachable(unit.position, unit.moveRange, blocked).filter(
+    const moveTiles = bfsReachable(unit.position, unit.moveRange, blocked).filter(
       (c) => !this.units.some((u) => u !== unit && u.isAlive() && coordEq(u.position, c))
     );
-    if (reachable.length === 0) {
-      this.enterActionChoice(unit);
-      return;
-    }
+    // 把單位目前格子也算進可選範圍 → 點原格 = 原地不動，直接進攻擊選擇
+    const reachable: Coord[] = [{ ...unit.position }, ...moveTiles];
     this.selection = { kind: 'unit_selected', unit, reachable };
-    this.drawMoveHighlights(reachable);
+    this.drawMoveHighlights(moveTiles, unit.position);
     this.cancelBtn.setVisible(true);
     this.waitBtn.setVisible(false);
     this.showUnitInfo(unit);
-    this.hintText.setText(`已選擇「${unit.name}」\n點綠格移動，或按取消。`);
+    this.hintText.setText(`已選擇「${unit.name}」\n點綠格移動 / 點黃格原地不動，或按取消。`);
   }
 
   private enterActionChoice(unit: Unit): void {
@@ -853,12 +857,23 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ===== 高亮 =====
-  private drawMoveHighlights(tiles: Coord[]): void {
+  private drawMoveHighlights(tiles: Coord[], stayTile?: Coord): void {
     this.clearHighlights();
+    // 一般可移動格：綠色
     this.highlightGfx.fillStyle(0x4ae26a, 0.32);
     this.highlightGfx.lineStyle(2, 0x4ae26a, 0.9);
     for (const t of tiles) {
       const center = hexCenterPx(t);
+      tracePointyHexPath(this.highlightGfx, center.x, center.y, HEX_SIZE - 2);
+      this.highlightGfx.fillPath();
+      tracePointyHexPath(this.highlightGfx, center.x, center.y, HEX_SIZE - 2);
+      this.highlightGfx.strokePath();
+    }
+    // 原地不動格：黃色（提醒玩家可以原地行動 = 直接攻擊/治療/待命）
+    if (stayTile) {
+      const center = hexCenterPx(stayTile);
+      this.highlightGfx.fillStyle(0xffd700, 0.28);
+      this.highlightGfx.lineStyle(2, 0xffd700, 0.95);
       tracePointyHexPath(this.highlightGfx, center.x, center.y, HEX_SIZE - 2);
       this.highlightGfx.fillPath();
       tracePointyHexPath(this.highlightGfx, center.x, center.y, HEX_SIZE - 2);
