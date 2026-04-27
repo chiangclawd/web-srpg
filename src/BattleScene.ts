@@ -72,6 +72,8 @@ export class BattleScene extends Phaser.Scene {
   private scenarioIdOverride: string | null = null;
   /** 玩家回合計數（從 1 起算）；用於 survive 條件判定與 UI 顯示 */
   private playerTurnNumber = 1;
+  /** UI 元素清單（縮放時用反比 scale 維持視覺大小） */
+  private uiElements: Phaser.GameObjects.GameObject[] = [];
   /** 拖曳平移用：pointerdown 起點（用來判斷是否超過 click 閾值）*/
   private dragStart: { x: number; y: number } | null = null;
   /** 拖曳平移用：上一個 pointermove 位置（用來算每幀 delta，比 pointer.movementX 可靠）*/
@@ -307,24 +309,28 @@ export class BattleScene extends Phaser.Scene {
     const sideX = Math.min(BOARD_OFFSET_X + boardWidthPx() + 30, viewportW - 250);
     const logY = Math.min(BOARD_OFFSET_Y + boardHeightPx() + 14, viewportH - 100);
 
-    this.turnText = this.add
-      .text(BOARD_OFFSET_X, 28, '', {
-        fontSize: '24px',
-        color: '#ffffff',
-        fontStyle: 'bold',
-      })
-      .setScrollFactor(0);
+    this.turnText = this.registerUI(
+      this.add
+        .text(BOARD_OFFSET_X, 28, '', {
+          fontSize: '24px',
+          color: '#ffffff',
+          fontStyle: 'bold',
+        })
+        .setScrollFactor(0)
+    );
 
     let y = BOARD_OFFSET_Y;
 
-    this.hintText = this.add
-      .text(sideX, y, '', {
-        fontSize: '15px',
-        color: '#bbbbbb',
-        lineSpacing: 4,
-        wordWrap: { width: 220 },
-      })
-      .setScrollFactor(0);
+    this.hintText = this.registerUI(
+      this.add
+        .text(sideX, y, '', {
+          fontSize: '15px',
+          color: '#bbbbbb',
+          lineSpacing: 4,
+          wordWrap: { width: 220 },
+        })
+        .setScrollFactor(0)
+    );
     y += 96;
 
     this.makeButton(sideX, y, '結束我方回合', 0x4a90e2, () => {
@@ -360,30 +366,36 @@ export class BattleScene extends Phaser.Scene {
     y += 56;
 
     // 藥草庫存顯示（永久顯示）
-    this.potionText = this.add
-      .text(sideX, y, `藥草庫存：${this.potionCount}`, {
-        fontSize: '15px',
-        color: '#90c8a0',
-      })
-      .setScrollFactor(0);
+    this.potionText = this.registerUI(
+      this.add
+        .text(sideX, y, `藥草庫存：${this.potionCount}`, {
+          fontSize: '15px',
+          color: '#90c8a0',
+        })
+        .setScrollFactor(0)
+    );
     y += 24;
 
-    this.infoText = this.add
-      .text(sideX, y, '', {
-        fontSize: '14px',
-        color: '#dddddd',
-        lineSpacing: 5,
-        wordWrap: { width: 220 },
-      })
-      .setScrollFactor(0);
+    this.infoText = this.registerUI(
+      this.add
+        .text(sideX, y, '', {
+          fontSize: '14px',
+          color: '#dddddd',
+          lineSpacing: 5,
+          wordWrap: { width: 220 },
+        })
+        .setScrollFactor(0)
+    );
 
-    this.logText = this.add
-      .text(BOARD_OFFSET_X, logY, '', {
-        fontSize: '14px',
-        color: '#cccccc',
-        lineSpacing: 5,
-      })
-      .setScrollFactor(0);
+    this.logText = this.registerUI(
+      this.add
+        .text(BOARD_OFFSET_X, logY, '', {
+          fontSize: '14px',
+          color: '#cccccc',
+          lineSpacing: 5,
+        })
+        .setScrollFactor(0)
+    );
 
     // === 縮放按鈕（畫面右上角，scroll-locked）===
     // 順序：+（放大）/ ⌂（重置）/ −（縮小）
@@ -403,6 +415,7 @@ export class BattleScene extends Phaser.Scene {
     bg.setStrokeStyle(2, 0x4a90e2);
     bg.setScrollFactor(0);
     bg.setDepth(110);
+    this.registerUI(bg);
     const txt = this.add
       .text(cx, cy - 1, label, {
         fontSize: '20px',
@@ -412,10 +425,12 @@ export class BattleScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(111);
+    this.registerUI(txt);
     const hit = this.add.rectangle(cx, cy, size, size, 0x000000, 0);
     hit.setInteractive({ useHandCursor: true });
     hit.setScrollFactor(0);
     hit.setDepth(112);
+    this.registerUI(hit);
     hit.on('pointerover', () => {
       bg.setFillStyle(0x2a4055);
       txt.setColor('#ffffff');
@@ -454,6 +469,7 @@ export class BattleScene extends Phaser.Scene {
     c.setSize(w, h);
     c.setDepth(20);
     c.setScrollFactor(0); // UI 鎖在畫面，不隨相機移動
+    this.registerUI(c); // 縮放時反比 scale，按鈕視覺大小不變
     hit.on('pointerover', () => bg.setFillStyle(this.tint(color, 1.2)));
     hit.on('pointerout', () => bg.setFillStyle(color));
     hit.on('pointerdown', onClick);
@@ -1158,6 +1174,25 @@ export class BattleScene extends Phaser.Scene {
     // 把鏡頭推回去，讓焦點世界座標一致
     cam.scrollX += worldBefore.x - worldAfter.x;
     cam.scrollY += worldBefore.y - worldAfter.y;
+    // UI 反比縮放：讓按鈕／側欄不會跟著相機放大縮小（夾住下限避免按鈕變太小不能點）
+    this.refreshUIScale();
+  }
+
+  /** 把 UI 套用反比 scale，讓相機縮放不影響 UI 視覺大小 */
+  private refreshUIScale(): void {
+    const inv = Math.max(0.85, 1 / this.cameras.main.zoom);
+    for (const el of this.uiElements) {
+      const obj = el as Phaser.GameObjects.GameObject & {
+        setScale?: (s: number) => unknown;
+      };
+      if (obj.setScale) obj.setScale(inv);
+    }
+  }
+
+  /** 把一個 UI 元件登記到清單，之後縮放時會自動反比 */
+  private registerUI<T extends Phaser.GameObjects.GameObject>(el: T): T {
+    this.uiElements.push(el);
+    return el;
   }
 
   /** 從 UI 按鈕呼叫：以視窗中心為焦點縮放 */
