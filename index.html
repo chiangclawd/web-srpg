@@ -2,8 +2,17 @@
 <html lang="zh-TW">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>戰術 SRPG 原型 — Phase 1</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- 禁用 HTML 快取 → iPhone 加到主畫面、桌機重訪都會抓最新版本 -->
+    <!-- 帶 hash 的 JS/CSS 檔名仍可正常 cache，所以實際只會多抓 ~1KB HTML -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <!-- iOS 加到主畫面時用 Web App 模式（隱藏 Safari UI） -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="西方戰術 SRPG" />
+    <title>西方戰術 SRPG</title>
     <style>
       html, body {
         margin: 0;
