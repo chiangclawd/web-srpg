@@ -54,8 +54,56 @@ export const CG_ASSETS: AssetEntry[] = [
 ];
 
 /**
+ * 戰場單位 sprite（建議 256×256 PNG，去背、Q 版/全身像）。
+ *
+ * 命名規則（兩種，依優先序）：
+ *   1. sprite_<commanderId>           → 個別武將專用 sprite（player 5 個主角 + 主要 BOSS）
+ *   2. sprite_enemy_<unitType>        → 敵方泛用兵種 sprite（雜兵用）
+ *
+ * 找不到 1 也找不到 2 → 自動 fallback 到原本的色塊形狀（不影響遊戲）。
+ */
+export const SPRITE_ASSETS: AssetEntry[] = [
+  // === 玩家陣營（5 個主角專用 sprite）===
+  // { key: 'sprite_arthur', url: 'assets/sprites/arthur.png' },
+  // { key: 'sprite_rosa',   url: 'assets/sprites/rosa.png' },
+  // { key: 'sprite_gary',   url: 'assets/sprites/gary.png' },
+  // { key: 'sprite_sharon', url: 'assets/sprites/sharon.png' },
+  // { key: 'sprite_rain',   url: 'assets/sprites/rain.png' },
+
+  // === 敵方泛用兵種 sprite（6 種 unitType）===
+  // { key: 'sprite_enemy_sword',   url: 'assets/sprites/enemy_sword.png' },
+  // { key: 'sprite_enemy_lance',   url: 'assets/sprites/enemy_lance.png' },
+  // { key: 'sprite_enemy_archer',  url: 'assets/sprites/enemy_archer.png' },
+  // { key: 'sprite_enemy_mage',    url: 'assets/sprites/enemy_mage.png' },
+  // { key: 'sprite_enemy_cavalry', url: 'assets/sprites/enemy_cavalry.png' },
+  // { key: 'sprite_enemy_flier',   url: 'assets/sprites/enemy_flier.png' },
+
+  // === 主要 BOSS 專用 sprite（之後可加，目前先用泛用版）===
+  // { key: 'sprite_baron',       url: 'assets/sprites/baron.png' },
+  // { key: 'sprite_eo',          url: 'assets/sprites/eo.png' },
+  // { key: 'sprite_cult_leader', url: 'assets/sprites/cult_leader.png' },
+];
+
+/**
  * 取得武將對應的 portrait texture key（若有設定）。
  */
 export function getPortraitKey(commanderId: string): string {
   return `portrait_${commanderId}`;
+}
+
+/**
+ * 取得戰場 sprite texture key（依優先序回傳，scene 端再用 textures.exists 判斷）。
+ *   1. sprite_<commanderId>
+ *   2. sprite_enemy_<unitType>（僅 enemy faction）
+ */
+export function getSpriteKeyCandidates(
+  commanderId: string,
+  unitType: string,
+  faction: 'player' | 'enemy'
+): string[] {
+  const keys = [`sprite_${commanderId}`];
+  if (faction === 'enemy') {
+    keys.push(`sprite_enemy_${unitType}`);
+  }
+  return keys;
 }

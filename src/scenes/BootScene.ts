@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PORTRAIT_ASSETS, CG_ASSETS } from '../data/assetManifest';
+import { PORTRAIT_ASSETS, CG_ASSETS, SPRITE_ASSETS } from '../data/assetManifest';
 
 /**
  * BootScene — 第一個跑的場景，預載所有美術素材後跳到 TitleScene。
@@ -20,6 +20,10 @@ export class BootScene extends Phaser.Scene {
     }
     // CG 大圖（標題、章節入場）
     for (const asset of CG_ASSETS) {
+      this.load.image(asset.key, asset.url);
+    }
+    // 戰場 sprite（單位本體）
+    for (const asset of SPRITE_ASSETS) {
       this.load.image(asset.key, asset.url);
     }
 

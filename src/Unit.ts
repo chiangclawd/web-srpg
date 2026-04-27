@@ -11,6 +11,7 @@ import type {
 import { HEX_W, HEX_H, hexCenterPx, hexDistance } from './Grid';
 import { UNIT_TYPES } from './data/unitTypes';
 import { EQUIPMENT } from './data/equipment';
+import { getSpriteKeyCandidates } from './data/assetManifest';
 import {
   EXP_PER_LEVEL,
   MAX_LEVEL,
@@ -53,7 +54,7 @@ export class Unit {
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container;
   private hitArea: Phaser.GameObjects.Rectangle;
-  private body: Phaser.GameObjects.Graphics;
+  private body: Phaser.GameObjects.Graphics | Phaser.GameObjects.Image;
   private label: Phaser.GameObjects.Text;
   private levelBadge: Phaser.GameObjects.Container;
   private typeBadge: Phaser.GameObjects.Container;
@@ -121,12 +122,25 @@ export class Unit {
     this.hitArea = scene.add.rectangle(0, 0, HEX_W * 0.92, HEX_H * 0.86, 0x000000, 0);
     this.hitArea.setInteractive({ useHandCursor: true });
 
-    // 本體：依兵種畫不同形狀
+    // 本體：優先用 sprite 圖；找不到就 fallback 到色塊形狀
     const bodyW = HEX_W * 0.7;
     const bodyH = HEX_H * 0.6;
-    this.body = scene.add.graphics();
-    this.body.y = 2;
-    this.drawBodyShape(this.body, factionColor, bodyW, bodyH);
+    const spriteKey = this.findSpriteKey(commander.id, commander.unitType, commander.faction);
+    if (spriteKey) {
+      const img = scene.add.image(0, 2, spriteKey);
+      // 等比縮放到剛好填入單位框
+      const targetH = bodyH * 1.15; // 稍微超出 hex 框，視覺上更立體
+      const scale = Math.min(targetH / img.height, (bodyW * 1.1) / img.width);
+      img.setScale(scale);
+      // 敵方水平翻轉，視覺上會朝玩家陣營
+      if (this.faction === 'enemy') img.setFlipX(true);
+      this.body = img;
+    } else {
+      const g = scene.add.graphics();
+      g.y = 2;
+      this.drawBodyShape(g, factionColor, bodyW, bodyH);
+      this.body = g;
+    }
 
     // 武將名（中央）
     this.label = scene.add.text(0, -2, this.name, {
@@ -280,6 +294,19 @@ export class Unit {
       yoyo: true,
       repeat: 2,
     });
+  }
+
+  /** 找到第一個存在的 sprite texture key，沒找到回 null */
+  private findSpriteKey(
+    commanderId: string,
+    unitType: UnitTypeId,
+    faction: Faction
+  ): string | null {
+    const candidates = getSpriteKeyCandidates(commanderId, unitType, faction);
+    for (const k of candidates) {
+      if (this.scene.textures.exists(k)) return k;
+    }
+    return null;
   }
 
   /** 依兵種繪製獨特身體形狀 */
