@@ -76,6 +76,13 @@ export class BattleScene extends Phaser.Scene {
   private dragStart: { x: number; y: number } | null = null;
   /** 拖曳平移用：本次按壓中是否曾經拖曳超過閾值；click handler 用來判斷是否該抑制 */
   private didDrag = false;
+  /** 雙指捏合縮放：起始兩指距離 */
+  private pinchStartDist = 0;
+  /** 雙指捏合縮放：起始 zoom */
+  private pinchStartZoom = 1;
+  /** 縮放範圍邊界 */
+  private static readonly ZOOM_MIN = 0.4;
+  private static readonly ZOOM_MAX = 2.0;
 
   private highlightGfx!: Phaser.GameObjects.Graphics;
   private turnText!: Phaser.GameObjects.Text;
@@ -375,6 +382,50 @@ export class BattleScene extends Phaser.Scene {
         lineSpacing: 5,
       })
       .setScrollFactor(0);
+
+    // === 縮放按鈕（畫面右上角，scroll-locked）===
+    // 順序：+（放大）/ ⌂（重置）/ −（縮小）
+    const zoomX = viewportW - 50;
+    let zoomY = 28;
+    this.makeZoomButton(zoomX, zoomY, '＋', () => this.zoomBy(1.25));
+    zoomY += 44;
+    this.makeZoomButton(zoomX, zoomY, '⌂', () => this.applyZoom(1.0, viewportW / 2, viewportH / 2));
+    zoomY += 44;
+    this.makeZoomButton(zoomX, zoomY, '－', () => this.zoomBy(0.8));
+  }
+
+  /** 小型 36x36 縮放按鈕（鎖在畫面右上角） */
+  private makeZoomButton(cx: number, cy: number, label: string, onClick: () => void): void {
+    const size = 36;
+    const bg = this.add.rectangle(cx, cy, size, size, 0x1a2535, 0.92);
+    bg.setStrokeStyle(2, 0x4a90e2);
+    bg.setScrollFactor(0);
+    bg.setDepth(110);
+    const txt = this.add
+      .text(cx, cy - 1, label, {
+        fontSize: '20px',
+        color: '#7ed1ff',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(111);
+    const hit = this.add.rectangle(cx, cy, size, size, 0x000000, 0);
+    hit.setInteractive({ useHandCursor: true });
+    hit.setScrollFactor(0);
+    hit.setDepth(112);
+    hit.on('pointerover', () => {
+      bg.setFillStyle(0x2a4055);
+      txt.setColor('#ffffff');
+    });
+    hit.on('pointerout', () => {
+      bg.setFillStyle(0x1a2535);
+      txt.setColor('#7ed1ff');
+    });
+    hit.on('pointerup', () => {
+      if (this.didDrag) return;
+      onClick();
+    });
   }
 
   private makeButton(
@@ -412,6 +463,9 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private bindGlobalInput(): void {
+    // 啟用第 2 指 pointer，否則手機上 pinch 抓不到（Phaser 預設只啟用 1 個觸控指標）
+    this.input.addPointer(1);
+
     // 全域 pointerup → tile click（沒打到任何 GameObject 時觸發）
     // 改用 pointerup + didDrag 檢查，讓拖曳平移不會誤觸點擊
     this.input.on(
@@ -424,11 +478,10 @@ export class BattleScene extends Phaser.Scene {
         if (this.didDrag) return;
         if (gameObjects.length > 0) return;
         if (this.gameState !== 'player_turn') return;
-        // 把螢幕座標轉成世界座標（考量相機 scroll）
+        // 把螢幕座標轉成世界座標（自動考量相機 scroll + zoom）
         const cam = this.cameras.main;
-        const worldX = pointer.x + cam.scrollX;
-        const worldY = pointer.y + cam.scrollY;
-        const tile = pixelToTile(worldX, worldY);
+        const world = cam.getWorldPoint(pointer.x, pointer.y);
+        const tile = pixelToTile(world.x, world.y);
         if (!tile) {
           this.deselect();
           return;
@@ -438,11 +491,39 @@ export class BattleScene extends Phaser.Scene {
     );
 
     // === 拖曳平移：超過 8px 視為 pan，不觸發 click ===
+    // === 雙指捏合縮放：兩指同時按下時改成 zoom，不再 pan ===
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       this.dragStart = { x: p.x, y: p.y };
       this.didDrag = false;
+      // 第二指落下 → 進入 pinch 模式，記錄初始距離與 zoom
+      const p1 = this.input.pointer1;
+      const p2 = this.input.pointer2;
+      if (p1.isDown && p2.isDown) {
+        this.pinchStartDist = Phaser.Math.Distance.Between(p1.x, p1.y, p2.x, p2.y);
+        this.pinchStartZoom = this.cameras.main.zoom;
+        this.didDrag = true; // 抑制 click（pinch 期間）
+      }
     });
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+      const p1 = this.input.pointer1;
+      const p2 = this.input.pointer2;
+      // 雙指縮放優先於拖曳平移
+      if (p1.isDown && p2.isDown && this.pinchStartDist > 0) {
+        const cur = Phaser.Math.Distance.Between(p1.x, p1.y, p2.x, p2.y);
+        const ratio = cur / this.pinchStartDist;
+        const newZoom = Phaser.Math.Clamp(
+          this.pinchStartZoom * ratio,
+          BattleScene.ZOOM_MIN,
+          BattleScene.ZOOM_MAX
+        );
+        // 以兩指中點為焦點縮放
+        const fx = (p1.x + p2.x) / 2;
+        const fy = (p1.y + p2.y) / 2;
+        this.applyZoom(newZoom, fx, fy);
+        this.didDrag = true;
+        return;
+      }
+      // 單指拖曳平移
       if (!this.dragStart || !p.isDown) return;
       const dx = p.x - this.dragStart.x;
       const dy = p.y - this.dragStart.y;
@@ -451,15 +532,37 @@ export class BattleScene extends Phaser.Scene {
       }
       if (this.didDrag) {
         const cam = this.cameras.main;
-        // movementX/Y 是這次 move 的增量；用負值讓拖曳方向 = 視角移動方向
-        cam.scrollX -= p.movementX || 0;
-        cam.scrollY -= p.movementY || 0;
+        // 拖曳量除以 zoom，視覺上才會跟手指一致
+        cam.scrollX -= (p.movementX || 0) / cam.zoom;
+        cam.scrollY -= (p.movementY || 0) / cam.zoom;
       }
     });
     this.input.on('pointerup', () => {
       this.dragStart = null;
+      this.pinchStartDist = 0;
       // didDrag 不在這裡 reset；讓對應的 click handler 看到後再由下次 pointerdown 重置
     });
+
+    // === 滾輪縮放（桌機） ===
+    this.input.on(
+      'wheel',
+      (
+        pointer: Phaser.Input.Pointer,
+        _gameObjects: Phaser.GameObjects.GameObject[],
+        _deltaX: number,
+        deltaY: number
+      ) => {
+        const cam = this.cameras.main;
+        // 滾輪向上 = zoom in；step 每格約 12% 變化
+        const step = Math.exp(-deltaY * 0.0015);
+        const newZoom = Phaser.Math.Clamp(
+          cam.zoom * step,
+          BattleScene.ZOOM_MIN,
+          BattleScene.ZOOM_MAX
+        );
+        this.applyZoom(newZoom, pointer.x, pointer.y);
+      }
+    );
 
     this.input.keyboard?.on('keydown-R', () => {
       if (this.isPaused) return;
@@ -1021,6 +1124,33 @@ export class BattleScene extends Phaser.Scene {
     const cam = this.cameras.main;
     // pan 期間若使用者在拖曳，pan 會被繼續的 scroll 蓋掉，沒關係
     cam.pan(c.x, c.y, 280, 'Sine.easeInOut');
+  }
+
+  /**
+   * 改變 zoom 同時保持指定螢幕點（focal）對應的世界座標不變。
+   * 縮放才不會讓焦點飄走。
+   */
+  private applyZoom(newZoom: number, focalScreenX: number, focalScreenY: number): void {
+    const cam = this.cameras.main;
+    // 縮放前焦點對應的世界座標
+    const worldBefore = cam.getWorldPoint(focalScreenX, focalScreenY);
+    cam.zoom = newZoom;
+    // 縮放後重新算焦點對應的世界座標
+    const worldAfter = cam.getWorldPoint(focalScreenX, focalScreenY);
+    // 把鏡頭推回去，讓焦點世界座標一致
+    cam.scrollX += worldBefore.x - worldAfter.x;
+    cam.scrollY += worldBefore.y - worldAfter.y;
+  }
+
+  /** 從 UI 按鈕呼叫：以視窗中心為焦點縮放 */
+  private zoomBy(factor: number): void {
+    const cam = this.cameras.main;
+    const newZoom = Phaser.Math.Clamp(
+      cam.zoom * factor,
+      BattleScene.ZOOM_MIN,
+      BattleScene.ZOOM_MAX
+    );
+    this.applyZoom(newZoom, this.scale.width / 2, this.scale.height / 2);
   }
 
   // ===== 高亮 =====
