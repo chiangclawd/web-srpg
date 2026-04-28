@@ -1,11 +1,18 @@
 import type { TerrainTypeDef, TerrainTypeId } from '../types';
 
+// 配色（fallback 色塊；實際視覺由 public/assets/tiles/<terrain>_<variant>.png
+// 決定）。色調往「painterly anime」方向調整：
+//   - 平原：暖調晨光草地（陽光感而非陰沉）
+//   - 森林：藍綠調濃密針葉林（區別於平原的黃綠）
+//   - 山地：暖石棕（陽光下的岩體，非泥灰）
+//   - 河流：明亮青藍（活水而非死水）
+// 缺 tile PNG 時這些色塊就是視覺；補完 tile PNG 後色塊只當 1ms 載入空檔的 fallback。
 export const TERRAIN_TYPES: Record<TerrainTypeId, TerrainTypeDef> = {
   plain: {
     id: 'plain',
     name: '平原',
     shortName: '平',
-    color: 0x4a5a4a,
+    color: 0x6e8a5a,
     moveCost: 1,
     defBonus: 0,
     blocked: false,
@@ -14,7 +21,7 @@ export const TERRAIN_TYPES: Record<TerrainTypeId, TerrainTypeDef> = {
     id: 'forest',
     name: '森林',
     shortName: '林',
-    color: 0x2a5a3a,
+    color: 0x305a4a,
     moveCost: 2,
     defBonus: 3,
     blocked: false,
@@ -23,7 +30,7 @@ export const TERRAIN_TYPES: Record<TerrainTypeId, TerrainTypeDef> = {
     id: 'mountain',
     name: '山地',
     shortName: '山',
-    color: 0x6a5a4a,
+    color: 0x7e6a52,
     moveCost: 3,
     defBonus: 5,
     blocked: false,
@@ -32,7 +39,7 @@ export const TERRAIN_TYPES: Record<TerrainTypeId, TerrainTypeDef> = {
     id: 'water',
     name: '河流',
     shortName: '川',
-    color: 0x3a5a8a,
+    color: 0x4a78a8,
     moveCost: 99,
     defBonus: 0,
     blocked: true,
