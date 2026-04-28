@@ -10,6 +10,7 @@ export const RECRUIT_AT_CHAPTER: Record<string, number> = {
   gary: 1,
   sharon: 5, // ch4 救出後，ch5 起可用
   rain: 8,   // ch7 救出後，ch8 起可用
+  aria: 12,  // ch12 後日談 — 第 12 章救援戰後加入
   // 普通兵種：第 1 章起即可調度，補陣容厚度
   knight_recruit: 1,
   spear_recruit: 1,
@@ -351,5 +352,42 @@ export const COMMANDERS: Record<string, CommanderDef> = {
     skill: { id: 'dark_prayer', name: '虛空禱詞', desc: '攻擊 ×1.3' },
     startingLevel: 12, growthRates: { hp: 3, attack: 3, defense: 0 },
     startingEquipment: { weapon: 'ice_tome', armor: 'robe' },
+  },
+
+  // ============================================
+  // 第 12 章 後日談 — 鐵礦山的虛空殘渣
+  // ============================================
+
+  // 玩家：艾莉雅 — 獵鷲山民族出身的飛兵斥候，玩家陣營首位 flier
+  aria: {
+    id: 'aria', name: '艾莉雅', faction: 'player', unitType: 'flier',
+    statBonus: { hp: 2, attack: 2, defense: 1 },
+    skill: { id: 'wind_rider', name: '御風', desc: '移動 ≥ 4 格時，攻擊 ×1.25' },
+    startingLevel: 12, growthRates: { hp: 3, attack: 2, defense: 1 },
+    startingEquipment: { weapon: 'sky_lance', armor: 'storm_armor' },
+  },
+  // 敵方 BOSS：澤林博士 — 王立研究院禁忌學者，研究虛空殘渣再煉化
+  zerin: {
+    id: 'zerin', name: '澤林博士', faction: 'enemy', unitType: 'mage',
+    statBonus: { hp: 8, attack: 4, defense: 2 },
+    skill: { id: 'shard_infusion', name: '殘渣注入', desc: '對 HP > 50% 的目標 ×1.35' },
+    startingLevel: 14, growthRates: { hp: 3, attack: 2, defense: 1 },
+    startingEquipment: { weapon: 'arcane_tome', armor: 'magus_robe' },
+  },
+  // 敵方雜兵：碎片狼獸 — 被虛空殘渣感染的山犬，亂衝亂咬
+  shard_wolf: {
+    id: 'shard_wolf', name: '碎片狼獸', faction: 'enemy', unitType: 'cavalry',
+    statBonus: { hp: 0, attack: 1, defense: 0 },
+    skill: { id: 'cavalry_charge', name: '突擊', desc: '移動 ≥ 3 格時 ×1.2' },
+    startingLevel: 8, growthRates: { hp: 3, attack: 2, defense: 1 },
+    startingEquipment: { weapon: 'cavalry_blade', armor: 'cavalry_leather' },
+  },
+  // 敵方雜兵：感染礦工 — 虛空黑霧污染、揮舞鶴嘴鋤的礦工
+  infected_miner: {
+    id: 'infected_miner', name: '感染礦工', faction: 'enemy', unitType: 'sword',
+    statBonus: { hp: 2, attack: 0, defense: 0 },
+    skill: { id: 'last_stand', name: '殊死', desc: 'HP < 35% ×1.5' },
+    startingLevel: 7, growthRates: { hp: 3, attack: 1, defense: 1 },
+    startingEquipment: { weapon: 'iron_sword', armor: 'leather_armor' },
   },
 };

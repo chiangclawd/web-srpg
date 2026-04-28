@@ -115,6 +115,16 @@ export class TitleScene extends Phaser.Scene {
         () => this.startChallengeChapter(),
         '#ff6688'
       );
+      y += 56;
+
+      // 後日談：完成 TRUE END 後解鎖 Ch12+ 線
+      this.makeMenuButton(
+        width / 2,
+        y,
+        '📜 後日談（Ch12+）',
+        () => this.startEpilogueChapter(),
+        '#7ec8ff'
+      );
     }
 
     this.add
@@ -251,6 +261,19 @@ export class TitleScene extends Phaser.Scene {
 
   private startChallengeChapter(): void {
     const ch = CHAPTERS['chapter11'];
+    if (!ch) return;
+    this.scene.start('CutsceneScene', {
+      cutsceneId: ch.prologueCutsceneId,
+      next: {
+        scene: 'HubScene',
+        data: { chapterId: ch.id },
+      },
+    });
+  }
+
+  /** 後日談入口（TRUE END 後從主畫面進入；不會打到主線存檔的 nextChapterId） */
+  private startEpilogueChapter(): void {
+    const ch = CHAPTERS['chapter12'];
     if (!ch) return;
     this.scene.start('CutsceneScene', {
       cutsceneId: ch.prologueCutsceneId,
