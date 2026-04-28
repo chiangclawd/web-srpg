@@ -104,7 +104,15 @@ export const CHAPTERS: Record<string, ChapterDef> = {
     scenarioId: 'royal_archives',
     victoryCutsceneId: 'ch13_victory',
     defeatCutsceneId: 'ch13_defeat',
-    // 後日談 Ch13 — Ch14（貴族議院）會接上
+    nextChapterId: 'chapter14',
+  },
+  chapter14: {
+    id: 'chapter14', number: 14, title: '議院的永生',
+    prologueCutsceneId: 'ch14_prologue',
+    scenarioId: 'council_chamber',
+    victoryCutsceneId: 'ch14_victory',
+    defeatCutsceneId: 'ch14_defeat',
+    // 後日談收尾 — 無 next（碎片計畫已了結）
   },
   // C3 變體：次要試煉（Boss Rush）— 解 mine_cleared 後 TitleScene 顯示專屬入口
   chapter_trial: {

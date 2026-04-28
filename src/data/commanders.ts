@@ -438,4 +438,17 @@ export const COMMANDERS: Record<string, CommanderDef> = {
     startingLevel: 14, growthRates: { hp: 3, attack: 2, defense: 1 },
     startingEquipment: { weapon: 'arcane_tome', armor: 'magus_robe' },
   },
+
+  // ============================================
+  // Ch14 議院的永生 — BOSS 席爾凡議長（碎片計畫第三支 + 真正策劃者）
+  // ============================================
+  // 王都議院議長，五十年來用碎片粉末延壽。表面老紳士、實則半人半虛空。
+  // 他是給澤林、克勞德資金的人 — 碎片計畫的金主與策劃者。
+  sylvain_speaker: {
+    id: 'sylvain_speaker', name: '席爾凡議長', faction: 'enemy', unitType: 'mage',
+    statBonus: { hp: 10, attack: 5, defense: 3 },
+    skill: { id: 'eternal_pact', name: '永生契約', desc: 'HP < 50% 時受到傷害 ×0.5' },
+    startingLevel: 16, growthRates: { hp: 3, attack: 2, defense: 1 },
+    startingEquipment: { weapon: 'arcane_tome', armor: 'magus_robe' },
+  },
 };

@@ -707,6 +707,64 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
   },
 
   // ============================================
+  // Ch14：議院的永生（council_chamber）— 王都議院大廳
+  // ============================================
+  // 室內大廳：兩排對稱柱廊（MM 塊作為議院石柱），中央議事大殿為開闊空間，
+  // 議長席位於最東側高台。玩家從西側入口攻入。
+  council_chamber: {
+    id: 'council_chamber', name: '王都議院大廳',
+    description: '王都議院議事大殿。席爾凡議長半人半虛空，用碎片粉末延壽五十年。',
+    gridWidth: 22, gridHeight: 16,
+    bgColor: 0x1a1828,
+    // 議院柱廊：上下兩排對稱石柱（MM 塊），中央走道開闊；周圍石階
+    terrain: [
+      'MMMMMM........MMMMMMMM',
+      'MM..............F...MM',
+      'M..F..............F..M',
+      '....MM.MM..MM.MM......',
+      '....MM.MM..MM.MM......',
+      '.F..................F.',
+      '....F.....F.....F.....',
+      'F....................M',
+      'F....................M',
+      '....F.....F.....F.....',
+      '.F..................F.',
+      '....MM.MM..MM.MM......',
+      '....MM.MM..MM.MM......',
+      'M..F..............F..M',
+      'MM..............F...MM',
+      'MMMMMM........MMMMMMMM',
+    ],
+    deployments: [
+      // 玩家西側入口
+      { commanderId: 'arthur', position: { x: 0, y: 7 } },
+      { commanderId: 'rosa', position: { x: 0, y: 8 } },
+      { commanderId: 'gary', position: { x: 0, y: 6 } },
+      { commanderId: 'sharon', position: { x: 0, y: 9 } },
+      { commanderId: 'rain', position: { x: 0, y: 5 } },
+      { commanderId: 'aria', position: { x: 0, y: 10 } },
+      { commanderId: 'viktor', position: { x: 1, y: 4 } },
+      { commanderId: 'lila', position: { x: 1, y: 11 } },
+      { commanderId: 'elena', position: { x: 1, y: 6 } },
+
+      // 敵方東側議長席 — 席爾凡 + 半虛空化議員衛隊
+      { commanderId: 'sylvain_speaker', position: { x: 21, y: 8 } },
+      { commanderId: 'void_acolyte', position: { x: 19, y: 5 } },
+      { commanderId: 'void_acolyte', position: { x: 19, y: 11 } },
+      { commanderId: 'shadow_minion', position: { x: 18, y: 7 } },
+      { commanderId: 'shadow_minion', position: { x: 18, y: 9 } },
+      { commanderId: 'void_wraith', position: { x: 17, y: 6 } },
+      { commanderId: 'void_wraith', position: { x: 17, y: 10 } },
+      { commanderId: 'spear_militia', position: { x: 16, y: 7 } },
+      { commanderId: 'spear_militia', position: { x: 16, y: 9 } },
+      { commanderId: 'scout_archer', position: { x: 20, y: 4 } },
+      { commanderId: 'scout_archer', position: { x: 20, y: 12 } },
+    ],
+    victoryCondition: 'kill_boss',
+    bossId: 'sylvain_speaker',
+  },
+
+  // ============================================
   // C3 變體：次要試煉（hero_trial）— Boss Rush 風格的單場挑戰
   // ============================================
   // 一張圓形 arena 地圖，敵方全是 5 位次要 BOSS（vlad / morden / selene / carl /
