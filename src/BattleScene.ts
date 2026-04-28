@@ -181,7 +181,7 @@ export class BattleScene extends Phaser.Scene {
 
     // 相機：邊界 = 完整棋盤 + UI 區域；初始置中於第一個我方單位
     const cam = this.cameras.main;
-    const fullW = BOARD_OFFSET_X + boardWidthPx() + 280; // 留 UI 寬度的緩衝
+    const fullW = BOARD_OFFSET_X + boardWidthPx() + 400; // 留右側 UI 寬度緩衝（面板 + 按鈕）
     const fullH = BOARD_OFFSET_Y + boardHeightPx() + 130;
     cam.setBounds(0, 0, Math.max(fullW, this.scale.width), Math.max(fullH, this.scale.height));
     const firstAlly = this.units.find((u) => u.faction === 'player' && u.isAlive());
@@ -307,16 +307,19 @@ export class BattleScene extends Phaser.Scene {
   // ===== UI =====
   private createUI(): void {
     // UI 一律 scrollFactor(0) → 鎖在畫面，不隨相機平移
-    // 並把側欄/底欄位置 clamp 到 viewport 內，避免大地圖 UI 跑到畫面外
+    // 右側面板永遠錨在 viewport 右邊（不隨棋盤位置漂移），避免 iPhone 螢幕被
+    // pinch-zoom 時按鈕被推出可點區域；text 同步加大一倍（28~30px）以利手機點擊。
     const viewportW = this.scale.width;
     const viewportH = this.scale.height;
-    const sideX = Math.min(BOARD_OFFSET_X + boardWidthPx() + 30, viewportW - 250);
-    const logY = Math.min(BOARD_OFFSET_Y + boardHeightPx() + 14, viewportH - 100);
+    // 右側面板寬度（= 按鈕寬 300 + 文字 wordWrap 320 取大；多留 40px 邊距）
+    const RIGHT_PANEL_RESERVE = 360;
+    const sideX = viewportW - RIGHT_PANEL_RESERVE;
+    const logY = Math.min(BOARD_OFFSET_Y + boardHeightPx() + 14, viewportH - 110);
 
     this.turnText = this.registerUI(
       this.add
         .text(BOARD_OFFSET_X, 28, '', {
-          fontSize: '24px',
+          fontSize: '32px',
           color: '#ffffff',
           fontStyle: 'bold',
         })
@@ -328,21 +331,21 @@ export class BattleScene extends Phaser.Scene {
     this.hintText = this.registerUI(
       this.add
         .text(sideX, y, '', {
-          fontSize: '15px',
+          fontSize: '28px',
           color: '#bbbbbb',
-          lineSpacing: 4,
-          wordWrap: { width: 220 },
+          lineSpacing: 6,
+          wordWrap: { width: 320 },
         })
         .setScrollFactor(0)
     );
-    y += 96;
+    y += 150;
 
     this.makeButton(sideX, y, '結束我方回合', 0x4a90e2, () => {
       if (this.gameState === 'player_turn' && this.selection.kind === 'idle') {
         this.endPlayerTurn();
       }
     });
-    y += 52;
+    y += 72;
 
     this.waitBtn = this.makeButton(sideX, y, '原地待命', 0x90884a, () => {
       if (this.selection.kind === 'action_choice') {
@@ -354,39 +357,39 @@ export class BattleScene extends Phaser.Scene {
       }
     });
     this.waitBtn.setVisible(false);
-    y += 52;
+    y += 72;
 
     this.cancelBtn = this.makeButton(sideX, y, '取消選擇', 0x666666, () => {
       this.deselect();
     });
     this.cancelBtn.setVisible(false);
-    y += 52;
+    y += 72;
 
     // 藥草按鈕：選中武將時可用，治療 12 HP 並結束行動
     this.potionBtn = this.makeButton(sideX, y, `藥草 ×${this.potionCount}`, 0x66bb88, () => {
       this.usePotion();
     });
     this.potionBtn.setVisible(false);
-    y += 56;
+    y += 78;
 
     // 藥草庫存顯示（永久顯示）
     this.potionText = this.registerUI(
       this.add
         .text(sideX, y, `藥草庫存：${this.potionCount}`, {
-          fontSize: '15px',
+          fontSize: '28px',
           color: '#90c8a0',
         })
         .setScrollFactor(0)
     );
-    y += 24;
+    y += 40;
 
     this.infoText = this.registerUI(
       this.add
         .text(sideX, y, '', {
-          fontSize: '14px',
+          fontSize: '26px',
           color: '#dddddd',
-          lineSpacing: 5,
-          wordWrap: { width: 220 },
+          lineSpacing: 6,
+          wordWrap: { width: 320 },
         })
         .setScrollFactor(0)
     );
@@ -394,27 +397,27 @@ export class BattleScene extends Phaser.Scene {
     this.logText = this.registerUI(
       this.add
         .text(BOARD_OFFSET_X, logY, '', {
-          fontSize: '14px',
+          fontSize: '26px',
           color: '#cccccc',
-          lineSpacing: 5,
+          lineSpacing: 6,
         })
         .setScrollFactor(0)
     );
 
     // === 縮放按鈕（畫面右上角，scroll-locked）===
     // 順序：+（放大）/ ⌂（重置）/ −（縮小）
-    const zoomX = viewportW - 50;
-    let zoomY = 28;
+    const zoomX = viewportW - 70;
+    let zoomY = 40;
     this.makeZoomButton(zoomX, zoomY, '＋', () => this.zoomBy(1.25));
-    zoomY += 44;
+    zoomY += 64;
     this.makeZoomButton(zoomX, zoomY, '⌂', () => this.applyZoom(1.0, viewportW / 2, viewportH / 2));
-    zoomY += 44;
+    zoomY += 64;
     this.makeZoomButton(zoomX, zoomY, '－', () => this.zoomBy(0.8));
   }
 
-  /** 小型 36x36 縮放按鈕（鎖在畫面右上角） */
+  /** 縮放按鈕（鎖在畫面右上角；尺寸放大方便手指點） */
   private makeZoomButton(cx: number, cy: number, label: string, onClick: () => void): void {
-    const size = 36;
+    const size = 56;
     const bg = this.add.rectangle(cx, cy, size, size, 0x1a2535, 0.92);
     bg.setStrokeStyle(2, 0x4a90e2);
     bg.setScrollFactor(0);
@@ -422,7 +425,7 @@ export class BattleScene extends Phaser.Scene {
     this.registerUI(bg);
     const txt = this.add
       .text(cx, cy - 1, label, {
-        fontSize: '20px',
+        fontSize: '32px',
         color: '#7ed1ff',
         fontStyle: 'bold',
       })
@@ -456,12 +459,12 @@ export class BattleScene extends Phaser.Scene {
     color: number,
     onClick: () => void
   ): Phaser.GameObjects.Container {
-    const w = 220;
-    const h = 40;
+    const w = 300;
+    const h = 60;
     const bg = this.add.rectangle(0, 0, w, h, color);
     bg.setStrokeStyle(2, 0x000000);
     const txt = this.add.text(0, 0, label, {
-      fontSize: '15px',
+      fontSize: '28px',
       color: '#ffffff',
       fontStyle: 'bold',
     });
