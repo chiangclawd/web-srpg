@@ -125,7 +125,9 @@ export class BattleScene extends Phaser.Scene {
   private potionCount = 3;
   private potionText!: Phaser.GameObjects.Text;
   private potionBtn!: Phaser.GameObjects.Container;
-  private static readonly POTION_HEAL = 12;
+  /** 藥草最低恢復量；高等級單位會用 max HP 的 30% 取代之 */
+  private static readonly POTION_HEAL_MIN = 12;
+  private static readonly POTION_HEAL_PCT = 0.30;
   private static readonly MVP_BONUS_EXP = 5;
 
   constructor() {
@@ -1017,7 +1019,12 @@ export class BattleScene extends Phaser.Scene {
     if (this.potionCount <= 0) return;
     const u = this.selection.unit;
     if (u.faction !== 'player' || u.hp >= u.maxHp) return;
-    const heal = Math.min(BattleScene.POTION_HEAL, u.maxHp - u.hp);
+    // 隨等級伸縮：max(12, 30% maxHp)，再 cap 在「實際缺多少」
+    const scaled = Math.max(
+      BattleScene.POTION_HEAL_MIN,
+      Math.ceil(u.maxHp * BattleScene.POTION_HEAL_PCT)
+    );
+    const heal = Math.min(scaled, u.maxHp - u.hp);
     u.hp += heal;
     u.applyDamage(0); // refresh hp bar via Unit's existing logic
     u.showFloatingText(`+${heal} HP`, '#90ff90', '14px');
