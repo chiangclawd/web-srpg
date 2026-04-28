@@ -590,7 +590,11 @@ export const CUTSCENES: Record<string, CutsceneScript> = {
       { speaker: '旁白', text: '★ 艾莉雅 加入了隊伍！' },
       { speaker: '蓋瑞', text: '看來這把槍還得再陪我幾年。' },
       { speaker: '雷恩', text: '王都之事——待我們再聚一次。' },
-      { speaker: '旁白', text: '——五人加一，再次踏上征途——' },
+      { speaker: '旁白', text: '——回王都述職時，王國已得知碎片計畫的存在。' },
+      { speaker: '旁白', text: '王都派來三位支援武將：王都騎士團長 維克托、新晉魔法學院教師 莉拉、' },
+      { speaker: '旁白', text: '退役第二代元帥之女 艾蓮娜——三人加入了你們的隊伍。' },
+      { speaker: '亞瑟', text: '感謝。下一站——就是揪出王都那兩支「碎片計畫」的同志。' },
+      { speaker: '旁白', text: '★ 維克托 / 莉拉 / 艾蓮娜 加入了隊伍！（可在 Hub 中選擇出陣）' },
     ],
   },
   ch12_defeat: {

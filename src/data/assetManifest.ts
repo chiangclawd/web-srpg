@@ -42,6 +42,11 @@ export const PORTRAIT_ASSETS: AssetEntry[] = [
   // === 後日談（Ch12+）===
   { key: 'portrait_aria', url: 'assets/portraits/aria.png' },
   { key: 'portrait_zerin', url: 'assets/portraits/zerin.png' },
+
+  // === 後日談 同盟陣營（C2）===
+  { key: 'portrait_viktor', url: 'assets/portraits/viktor.png' },
+  { key: 'portrait_lila', url: 'assets/portraits/lila.png' },
+  { key: 'portrait_elena', url: 'assets/portraits/elena.png' },
 ];
 
 /**
@@ -118,6 +123,11 @@ export const SPRITE_ASSETS: AssetEntry[] = [
   // === 後日談（Ch12+）— 新角色專用 sprite ===
   { key: 'sprite_aria', url: 'assets/sprites/aria.png' },
   { key: 'sprite_zerin', url: 'assets/sprites/zerin.png' },
+
+  // === 後日談 同盟陣營（C2）— sprite（缺檔自動 fallback 到 sprite_player_<unitType>）===
+  { key: 'sprite_viktor', url: 'assets/sprites/viktor.png' },
+  { key: 'sprite_lila', url: 'assets/sprites/lila.png' },
+  { key: 'sprite_elena', url: 'assets/sprites/elena.png' },
 ];
 
 /**

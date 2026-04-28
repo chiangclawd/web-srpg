@@ -16,6 +16,8 @@ export interface DamageContext {
   attackerFaction?: Faction;
   defenderFaction?: Faction;
   attackerMovedDistance?: number;
+  /** 攻擊方目前 HP 比例（0-1）。給「自身 HP > X% 才生效」這類技能用 */
+  attackerHpRatio?: number;
   defenderHpRatio?: number;
   /** 難度倍率（敵方攻擊額外乘）：休閒 0.7、普通 1.0、困難 1.3 */
   enemyAttackMul?: number;

@@ -7,6 +7,8 @@ export interface SkillContext {
   attackerFaction?: Faction;
   defenderFaction?: Faction;
   attackerMovedDistance?: number;
+  /** 攻擊方目前 HP 比例（0-1）。給「自身 HP > X% 才生效」這類技能用 */
+  attackerHpRatio?: number;
   defenderHpRatio?: number;
 }
 
@@ -190,5 +192,19 @@ export const SKILL_EFFECTS: Record<string, SkillEffect> = {
   // 殘渣注入：對 HP > 50% 的目標 +35%（澤林 BOSS 技；碎片穿透健康者，殘血者抵抗較強）
   shard_infusion: {
     outgoingMul: (ctx) => ((ctx.defenderHpRatio ?? 1) > 0.5 ? 1.35 : 1.0),
+  },
+
+  // === 後日談 同盟陣營（C2）===
+  // 防禦壁壘：受到傷害 ×0.6（維克托，比 shield_wall 0.7 更硬，純鋼盾型）
+  bulwark: {
+    incomingMul: () => 0.6,
+  },
+  // 秘術專注：自身 HP > 70% 時攻擊 +30%（莉拉，鼓勵保護法師滿血開大）
+  arcane_focus: {
+    outgoingMul: (ctx) => ((ctx.attackerHpRatio ?? 1) > 0.7 ? 1.3 : 1.0),
+  },
+  // 神射手：對 HP < 40% 目標 ×1.5（艾蓮娜，finisher 補刀型弓手）
+  marksman: {
+    outgoingMul: (ctx) => ((ctx.defenderHpRatio ?? 1) < 0.4 ? 1.5 : 1.0),
   },
 };

@@ -11,6 +11,10 @@ export const RECRUIT_AT_CHAPTER: Record<string, number> = {
   sharon: 5, // ch4 救出後，ch5 起可用
   rain: 8,   // ch7 救出後，ch8 起可用
   aria: 12,  // ch12 後日談 — 第 12 章救援戰後加入
+  // 後日談 同盟陣營（C2）— ch12 通過後王都派來/推薦的支援武將
+  viktor: 12,
+  lila: 12,
+  elena: 12,
   // 普通兵種：第 1 章起即可調度，補陣容厚度
   knight_recruit: 1,
   spear_recruit: 1,
@@ -389,5 +393,36 @@ export const COMMANDERS: Record<string, CommanderDef> = {
     skill: { id: 'last_stand', name: '殊死', desc: 'HP < 35% ×1.5' },
     startingLevel: 7, growthRates: { hp: 3, attack: 1, defense: 1 },
     startingEquipment: { weapon: 'iron_sword', armor: 'leather_armor' },
+  },
+
+  // ============================================
+  // 後日談 同盟陣營（C2）— Ch12 通過後王都派來/推薦的支援武將
+  // ============================================
+
+  // 維克托 — 王都騎士團長，鋼盾型槍兵
+  viktor: {
+    id: 'viktor', name: '維克托', faction: 'player', unitType: 'lance',
+    statBonus: { hp: 6, attack: 0, defense: 3 },
+    skill: { id: 'bulwark', name: '防禦壁壘', desc: '受到傷害 ×0.6' },
+    startingLevel: 12, growthRates: { hp: 4, attack: 1, defense: 2 },
+    startingEquipment: { weapon: 'holy_lance', armor: 'chain_mail' },
+  },
+
+  // 莉拉 — 法米爾魔法學院新晉教師，滿血爆發法師
+  lila: {
+    id: 'lila', name: '莉拉', faction: 'player', unitType: 'mage',
+    statBonus: { hp: 0, attack: 3, defense: 0 },
+    skill: { id: 'arcane_focus', name: '秘術專注', desc: '自身 HP > 70% 時攻擊 ×1.3' },
+    startingLevel: 12, growthRates: { hp: 2, attack: 3, defense: 0 },
+    startingEquipment: { weapon: 'ice_tome', armor: 'magus_robe' },
+  },
+
+  // 艾蓮娜 — 退役元帥之女，收割型弓手
+  elena: {
+    id: 'elena', name: '艾蓮娜', faction: 'player', unitType: 'archer',
+    statBonus: { hp: 0, attack: 3, defense: 0 },
+    skill: { id: 'marksman', name: '神射手', desc: '對 HP < 40% 目標 ×1.5' },
+    startingLevel: 12, growthRates: { hp: 2, attack: 3, defense: 1 },
+    startingEquipment: { weapon: 'elven_bow', armor: 'ranger_cloak' },
   },
 };
