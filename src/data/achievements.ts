@@ -96,6 +96,12 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     desc: '完成第 13 章「王都的影子」',
     hidden: true,
   },
+  shard_arc_complete: {
+    id: 'shard_arc_complete',
+    name: '碎片計畫終結',
+    desc: '完成第 14 章「議院的永生」— 後日談落幕',
+    hidden: true,
+  },
 };
 
 /** 章節 id → 完成解鎖的成就 id */
@@ -112,5 +118,6 @@ export const CHAPTER_COMPLETE_ACHIEVEMENT: Record<string, string> = {
   chapter10: 'true_end',
   chapter12: 'mine_cleared',
   chapter13: 'archive_cleared',
+  chapter14: 'shard_arc_complete',
   chapter_trial: 'trial_complete',
 };

@@ -50,6 +50,9 @@ export const PORTRAIT_ASSETS: AssetEntry[] = [
 
   // === 後日談 Ch13 BOSS ===
   { key: 'portrait_claude_steward', url: 'assets/portraits/claude_steward.png' },
+
+  // === 後日談 Ch14 BOSS ===
+  { key: 'portrait_sylvain_speaker', url: 'assets/portraits/sylvain_speaker.png' },
 ];
 
 /**
@@ -76,6 +79,7 @@ export const CG_ASSETS: AssetEntry[] = [
   // === 後日談 ===
   { key: 'cg_chapter12', url: 'assets/cg/chapter12.png' },
   { key: 'cg_chapter13', url: 'assets/cg/chapter13.png' },
+  { key: 'cg_chapter14', url: 'assets/cg/chapter14.png' },
 ];
 
 /**
@@ -135,6 +139,9 @@ export const SPRITE_ASSETS: AssetEntry[] = [
 
   // === 後日談 Ch13 BOSS — sprite（缺檔 fallback 到 sprite_enemy_mage）===
   { key: 'sprite_claude_steward', url: 'assets/sprites/claude_steward.png' },
+
+  // === 後日談 Ch14 BOSS — sprite（缺檔 fallback 到 sprite_enemy_mage）===
+  { key: 'sprite_sylvain_speaker', url: 'assets/sprites/sylvain_speaker.png' },
 ];
 
 /**

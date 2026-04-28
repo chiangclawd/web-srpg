@@ -214,4 +214,10 @@ export const SKILL_EFFECTS: Record<string, SkillEffect> = {
     outgoingMul: (ctx) =>
       ctx.defenderType === 'mage' || ctx.defenderType === 'archer' ? 1.4 : 1.0,
   },
+
+  // === Ch14 後日談（碎片計畫終局）===
+  // 永生契約：HP < 50% 時受到傷害 ×0.5（席爾凡議長 — 後期超難打，仿王者意志的更兇版）
+  eternal_pact: {
+    incomingMul: (ctx) => ((ctx.defenderHpRatio ?? 1) < 0.5 ? 0.5 : 1.0),
+  },
 };
