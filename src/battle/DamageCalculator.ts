@@ -45,7 +45,7 @@ export interface ResolvedAttack {
   crit: boolean;
 }
 
-export const CRIT_MULTIPLIER = 1.5;
+export const CRIT_MULTIPLIER = 2.0;
 
 /** 每點 DEF 抵 5% 傷害；上限 70%（避免 BOSS 完全無敵） */
 const DEF_REDUCTION_PER_POINT = 0.05;

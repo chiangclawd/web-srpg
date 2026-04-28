@@ -16,7 +16,7 @@ export const TERRAIN_TYPES: Record<TerrainTypeId, TerrainTypeDef> = {
     shortName: '林',
     color: 0x2a5a3a,
     moveCost: 2,
-    defBonus: 2,
+    defBonus: 3,
     blocked: false,
   },
   mountain: {
@@ -25,7 +25,7 @@ export const TERRAIN_TYPES: Record<TerrainTypeId, TerrainTypeDef> = {
     shortName: '山',
     color: 0x6a5a4a,
     moveCost: 3,
-    defBonus: 3,
+    defBonus: 5,
     blocked: false,
   },
   water: {
