@@ -21,7 +21,7 @@ export const UNIT_TYPES: Record<UnitTypeId, UnitTypeDef> = {
     moveRange: 3,
     baseStats: { hp: 30, attack: 7, defense: 5 },
     hitRate: 95,
-    critRate: 3, // 沉穩刺擊，爆擊偏低
+    critRate: 5, // 穩重但仍會偶有刺破甲
   },
   cavalry: {
     id: 'cavalry',
@@ -42,7 +42,7 @@ export const UNIT_TYPES: Record<UnitTypeId, UnitTypeDef> = {
     attackRange: 2,
     moveRange: 3,
     baseStats: { hp: 22, attack: 8, defense: 2 },
-    hitRate: 85, // 遠程命中略低
+    hitRate: 88, // 遠程：略低於近戰，但 88 才不會 miss 太頻繁
     critRate: 12, // 但會瞄準弱點
   },
   mage: {
