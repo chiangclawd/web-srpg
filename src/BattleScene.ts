@@ -341,9 +341,15 @@ export class BattleScene extends Phaser.Scene {
     y += 150;
 
     this.makeButton(sideX, y, '結束我方回合', 0x4a90e2, () => {
-      if (this.gameState === 'player_turn' && this.selection.kind === 'idle') {
-        this.endPlayerTurn();
+      if (this.gameState !== 'player_turn') {
+        this.flashHint('現在不是我方回合');
+        return;
       }
+      if (this.selection.kind !== 'idle') {
+        this.flashHint('請先完成或取消選中的武將');
+        return;
+      }
+      this.endPlayerTurn();
     });
     y += 72;
 
@@ -477,10 +483,55 @@ export class BattleScene extends Phaser.Scene {
     c.setDepth(20);
     c.setScrollFactor(0); // UI 鎖在畫面，不隨相機移動
     this.registerUI(c); // 縮放時反比 scale，按鈕視覺大小不變
-    hit.on('pointerover', () => bg.setFillStyle(this.tint(color, 1.2)));
-    hit.on('pointerout', () => bg.setFillStyle(color));
-    hit.on('pointerdown', onClick);
+
+    // 觸控回饋：按下時縮放 0.94 + 變暗 + 點擊音；放開才觸發 onClick；
+    // 拖出按鈕區域則取消（避免誤觸）。沒有這層回饋使用者在手機上常常
+    // 會懷疑「我到底有沒有點到」。
+    let pressed = false;
+    const setHover = () => {
+      if (!pressed) bg.setFillStyle(this.tint(color, 1.2));
+    };
+    const setNormal = () => {
+      bg.setFillStyle(color);
+      bg.setScale(1);
+      txt.setScale(1);
+    };
+    const setPressed = () => {
+      bg.setFillStyle(this.tint(color, 0.65));
+      bg.setScale(0.94);
+      txt.setScale(0.94);
+    };
+    hit.on('pointerover', setHover);
+    hit.on('pointerout', () => {
+      pressed = false;
+      setNormal();
+    });
+    hit.on('pointerdown', () => {
+      pressed = true;
+      setPressed();
+      audio.playClick();
+    });
+    hit.on('pointerup', () => {
+      if (!pressed) return;
+      pressed = false;
+      setNormal();
+      onClick();
+    });
     return c;
+  }
+
+  /** 在 hintText 暫時顯示一段紅色提示（給「按了沒反應」的場合用）*/
+  private flashHint(msg: string, ms = 1400): void {
+    const wasText = this.hintText.text;
+    this.hintText.setText(msg);
+    this.hintText.setColor('#ff9090');
+    this.time.delayedCall(ms, () => {
+      // 還原前確認沒被其他邏輯（選單刷新等）覆寫過
+      if (this.hintText.text === msg) {
+        this.hintText.setText(wasText);
+        this.hintText.setColor('#bbbbbb');
+      }
+    });
   }
 
   private tint(color: number, factor: number): number {
