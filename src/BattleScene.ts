@@ -495,7 +495,12 @@ export class BattleScene extends Phaser.Scene {
     const c = this.add.container(x + size / 2, y + size / 2, [bg, txt, hit]);
     c.setSize(size, size);
     c.setDepth(20);
-    c.setScrollFactor(0);
+    // 重要：Container.setScrollFactor 預設不會傳給子物件，但 Phaser 的 hit
+    // test 用的是子物件自己的 scrollFactor，不是 container 的。如果只設
+    // container 而不設子物件，相機 scrollY != 0（戰鬥開始相機會 centerOn
+    // 第一個玩家單位）時 hit area 會跟視覺差一個 scrollY，使用者得點按鈕
+    // 上方才會中。第三個 true 參數讓 scrollFactor 同步套到 bg/txt/hit。
+    c.setScrollFactor(0, 0, true);
     this.registerUI(c);
 
     let pressed = false;
