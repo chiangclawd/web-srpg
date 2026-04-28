@@ -87,6 +87,13 @@ export const SPRITE_ASSETS: AssetEntry[] = [
   { key: 'sprite_enemy_cavalry', url: 'assets/sprites/enemy_cavalry.png' },
   { key: 'sprite_enemy_flier', url: 'assets/sprites/enemy_flier.png' },
 
+  // === 玩家泛用兵種 sprite（王國雜兵：劍/槍/騎/弓/法）===
+  { key: 'sprite_player_sword', url: 'assets/sprites/player_sword.png' },
+  { key: 'sprite_player_lance', url: 'assets/sprites/player_lance.png' },
+  { key: 'sprite_player_cavalry', url: 'assets/sprites/player_cavalry.png' },
+  { key: 'sprite_player_archer', url: 'assets/sprites/player_archer.png' },
+  { key: 'sprite_player_mage', url: 'assets/sprites/player_mage.png' },
+
   // === 主要 BOSS 專用 sprite ===
   { key: 'sprite_baron', url: 'assets/sprites/baron.png' },
   { key: 'sprite_eo', url: 'assets/sprites/eo.png' },
@@ -111,17 +118,16 @@ export function getPortraitKey(commanderId: string): string {
 
 /**
  * 取得戰場 sprite texture key（依優先序回傳，scene 端再用 textures.exists 判斷）。
- *   1. sprite_<commanderId>
- *   2. sprite_enemy_<unitType>（僅 enemy faction）
+ *   1. sprite_<commanderId>           — 個別專用（主角 / BOSS）
+ *   2. sprite_<faction>_<unitType>    — 該陣營該兵種的泛用 sprite（王國劍兵 / 敵方法師）
  */
 export function getSpriteKeyCandidates(
   commanderId: string,
   unitType: string,
   faction: 'player' | 'enemy'
 ): string[] {
-  const keys = [`sprite_${commanderId}`];
-  if (faction === 'enemy') {
-    keys.push(`sprite_enemy_${unitType}`);
-  }
-  return keys;
+  return [
+    `sprite_${commanderId}`,
+    `sprite_${faction}_${unitType}`,
+  ];
 }
