@@ -88,8 +88,8 @@ export class CutsceneScene extends Phaser.Scene {
       .setOrigin(0.5);
     if (this.hasBgImage) this.placeholderText.setVisible(false);
 
-    // 對話框（boxH 加高以容納 2x 字體）
-    const boxH = 320;
+    // 對話框：壓縮高度（多數對話 1-2 行為主），把畫面留給立繪/CG
+    const boxH = 160;
     const boxX = 40;
     const boxY = height - boxH - 30;
     this.dialogBoxTopY = boxY;
@@ -97,17 +97,17 @@ export class CutsceneScene extends Phaser.Scene {
     box.setOrigin(0);
     box.setStrokeStyle(2, 0x4a90e2);
 
-    this.speakerText = this.add.text(boxX + 28, boxY + 24, '', {
+    this.speakerText = this.add.text(boxX + 28, boxY + 14, '', {
       fontSize: '40px',
       color: '#7ed1ff',
       fontStyle: 'bold',
     });
 
-    this.bodyText = this.add.text(boxX + 28, boxY + 96, '', {
+    this.bodyText = this.add.text(boxX + 28, boxY + 70, '', {
       fontSize: '36px',
       color: '#ffffff',
       wordWrap: { width: width - 140 },
-      lineSpacing: 12,
+      lineSpacing: 8,
     });
 
     // 進度提示
