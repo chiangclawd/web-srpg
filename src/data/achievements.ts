@@ -78,6 +78,12 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     name: '五人成軍',
     desc: '招募所有 5 位玩家武將',
   },
+  mine_cleared: {
+    id: 'mine_cleared',
+    name: '碎片計畫一支',
+    desc: '完成第 12 章「鐵礦山的虛空殘渣」',
+    hidden: true,
+  },
 };
 
 /** 章節 id → 完成解鎖的成就 id */
@@ -92,4 +98,5 @@ export const CHAPTER_COMPLETE_ACHIEVEMENT: Record<string, string> = {
   chapter8: 'main_complete',
   chapter9: 'remnants_done',
   chapter10: 'true_end',
+  chapter12: 'mine_cleared',
 };

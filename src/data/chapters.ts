@@ -87,7 +87,16 @@ export const CHAPTERS: Record<string, ChapterDef> = {
     scenarioId: 'gauntlet',
     victoryCutsceneId: 'ch11_victory',
     defeatCutsceneId: 'ch11_defeat',
-    // 終 — 無 next
+    // 隱藏終 — 無 next
+  },
+  // 後日談（TRUE END 後解鎖；TitleScene 從專屬入口進）
+  chapter12: {
+    id: 'chapter12', number: 12, title: '鐵礦山的虛空殘渣',
+    prologueCutsceneId: 'ch12_prologue',
+    scenarioId: 'mine_outskirts',
+    victoryCutsceneId: 'ch12_victory',
+    defeatCutsceneId: 'ch12_defeat',
+    // 後日談首章 — 暫無 next（之後 Ch13+ 接上）
   },
 };
 

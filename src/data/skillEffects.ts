@@ -181,4 +181,14 @@ export const SKILL_EFFECTS: Record<string, SkillEffect> = {
   steady_aim: {
     outgoingMul: () => 1.2,
   },
+
+  // === 第 12 章（後日談）===
+  // 御風：移動 ≥ 4 格 攻擊 +25%（艾莉雅的飛兵高機動 payoff）
+  wind_rider: {
+    outgoingMul: (ctx) => ((ctx.attackerMovedDistance ?? 0) >= 4 ? 1.25 : 1.0),
+  },
+  // 殘渣注入：對 HP > 50% 的目標 +35%（澤林 BOSS 技；碎片穿透健康者，殘血者抵抗較強）
+  shard_infusion: {
+    outgoingMul: (ctx) => ((ctx.defenderHpRatio ?? 1) > 0.5 ? 1.35 : 1.0),
+  },
 };

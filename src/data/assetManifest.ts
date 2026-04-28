@@ -38,6 +38,10 @@ export const PORTRAIT_ASSETS: AssetEntry[] = [
   { key: 'portrait_morden', url: 'assets/portraits/morden.png' },
   { key: 'portrait_selene', url: 'assets/portraits/selene.png' },
   { key: 'portrait_sub_priest', url: 'assets/portraits/sub_priest.png' },
+
+  // === 後日談（Ch12+）===
+  { key: 'portrait_aria', url: 'assets/portraits/aria.png' },
+  { key: 'portrait_zerin', url: 'assets/portraits/zerin.png' },
 ];
 
 /**
@@ -60,6 +64,9 @@ export const CG_ASSETS: AssetEntry[] = [
   { key: 'cg_chapter9', url: 'assets/cg/chapter9.png' },
   { key: 'cg_chapter10', url: 'assets/cg/chapter10.png' },
   { key: 'cg_chapter11', url: 'assets/cg/chapter11.png' },
+
+  // === 後日談 ===
+  { key: 'cg_chapter12', url: 'assets/cg/chapter12.png' },
 ];
 
 /**
@@ -107,6 +114,10 @@ export const SPRITE_ASSETS: AssetEntry[] = [
   { key: 'sprite_selene', url: 'assets/sprites/selene.png' },
   { key: 'sprite_carl', url: 'assets/sprites/carl.png' },
   { key: 'sprite_sub_priest', url: 'assets/sprites/sub_priest.png' },
+
+  // === 後日談（Ch12+）— 新角色專用 sprite ===
+  { key: 'sprite_aria', url: 'assets/sprites/aria.png' },
+  { key: 'sprite_zerin', url: 'assets/sprites/zerin.png' },
 ];
 
 /**

@@ -592,6 +592,63 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
     ],
     victoryCondition: 'rout',
   },
+  // ============================================
+  // 第 12 章（後日談）：鐵礦山的虛空殘渣（mine_outskirts）
+  // ============================================
+  mine_outskirts: {
+    id: 'mine_outskirts', name: '鐵礦山的虛空殘渣',
+    description: '北山鐵礦坑湧出虛空黑霧，受感染的山犬與礦工攻擊村莊。深處有禁忌學者澤林博士。',
+    gridWidth: 22, gridHeight: 16,
+    bgColor: 0x1a1818,
+    // 山地圍著礦坑（東側）；中段一條溪流；左側是村莊外圍（森林散布）
+    terrain: [
+      'MMMM..............MMMM',
+      'MMM.F............F.MMM',
+      'MM...F.........F....MM',
+      'M..F....F.....F....F.M',
+      '....F......WW......F.M',
+      '.F.....FF..WW....FFF.M',
+      '.....F.....WWW.......M',
+      'F....F.....WWW.......M',
+      'F..F.......WWWW.....MM',
+      'F....F.....WWW.......M',
+      '.....F.....WWW.......M',
+      '.F.....FF..WW....FFF.M',
+      '....F......WW......F.M',
+      'M..F....F.....F....F.M',
+      'MM...F.........F....MM',
+      'MMMM..............MMMM',
+    ],
+    deployments: [
+      // 玩家英雄（5 人重聚）
+      { commanderId: 'arthur', position: { x: 0, y: 7 } },
+      { commanderId: 'rosa', position: { x: 0, y: 8 } },
+      { commanderId: 'gary', position: { x: 0, y: 6 } },
+      { commanderId: 'sharon', position: { x: 0, y: 9 } },
+      { commanderId: 'rain', position: { x: 0, y: 5 } },
+      // 王國雜兵 — 可選擇出陣（玩家可在 Hub 換成艾莉雅或他人）
+      { commanderId: 'knight_recruit', position: { x: 1, y: 4 } },
+      { commanderId: 'spear_recruit', position: { x: 1, y: 10 } },
+      // 艾莉雅 — 從天空降下加入（中段獨立出陣，敘事登場）
+      { commanderId: 'aria', position: { x: 10, y: 2 } },
+      // 敵方：澤林博士在最東側（礦坑深處）
+      { commanderId: 'zerin', position: { x: 20, y: 8 } },
+      // 碎片狼獸 — 散布在村莊與礦坑之間（cavalry，移動快壓迫）
+      { commanderId: 'shard_wolf', position: { x: 14, y: 3 } },
+      { commanderId: 'shard_wolf', position: { x: 14, y: 12 } },
+      { commanderId: 'shard_wolf', position: { x: 16, y: 6 } },
+      { commanderId: 'shard_wolf', position: { x: 16, y: 10 } },
+      { commanderId: 'shard_wolf', position: { x: 12, y: 8 } },
+      // 感染礦工 — 礦坑入口附近（sword）
+      { commanderId: 'infected_miner', position: { x: 18, y: 6 } },
+      { commanderId: 'infected_miner', position: { x: 18, y: 10 } },
+      { commanderId: 'infected_miner', position: { x: 17, y: 8 } },
+      { commanderId: 'infected_miner', position: { x: 19, y: 7 } },
+      { commanderId: 'infected_miner', position: { x: 19, y: 9 } },
+    ],
+    victoryCondition: 'kill_boss',
+    bossId: 'zerin',
+  },
 };
 
 export const DEFAULT_SCENARIO_ID = 'intro';
