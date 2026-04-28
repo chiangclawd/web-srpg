@@ -128,16 +128,6 @@ export class BattleScene extends Phaser.Scene {
   private static readonly POTION_HEAL = 12;
   private static readonly MVP_BONUS_EXP = 5;
 
-  // === 按鈕 debug overlay（暫時開啟以排查 iPhone 上按鈕誤觸 / 失效）===
-  // 跑穩之後可把 BTN_DEBUG 切回 false 或整段移除。
-  private static readonly BTN_DEBUG = true;
-  private debugText: Phaser.GameObjects.Text | null = null;
-  private debugLines: string[] = [];
-  private squareButtons: Array<{
-    label: string;
-    c: Phaser.GameObjects.Container;
-  }> = [];
-
   constructor() {
     super({ key: 'BattleScene' });
   }
@@ -331,25 +321,6 @@ export class BattleScene extends Phaser.Scene {
     this.potionText = this.add.text(0, 0, '', { fontSize: '1px' }).setVisible(false);
     this.logText = this.add.text(0, 0, '', { fontSize: '1px' }).setVisible(false);
 
-    // Debug overlay（top-center，最高 depth）：即時顯示 pointer / 按鈕事件、
-    // 拖曳/縮放狀態、相機 scroll/zoom，使用者截圖貼回來就能定位失效原因。
-    if (BattleScene.BTN_DEBUG) {
-      this.debugText = this.add
-        .text(viewportW / 2, 10, '(debug)', {
-          fontSize: '16px',
-          fontFamily: 'Courier New, monospace',
-          color: '#9fff9f',
-          backgroundColor: '#000000cc',
-          padding: { x: 10, y: 6 },
-          align: 'left',
-        })
-        .setOrigin(0.5, 0)
-        .setScrollFactor(0)
-        .setDepth(500);
-      this.registerUI(this.debugText);
-      this.dlog(`scene ready w=${viewportW} h=${viewportH}`);
-    }
-
     // === 上左：hintText（狀態 / 紅字錯誤）===
     this.hintText = this.registerUI(
       this.add
@@ -531,10 +502,6 @@ export class BattleScene extends Phaser.Scene {
     c.setDepth(20);
     c.setScrollFactor(0, 0, true);
     this.registerUI(c);
-    if (BattleScene.BTN_DEBUG) {
-      this.squareButtons.push({ label: label.replace(/\s+/g, ''), c });
-    }
-
     let pressed = false;
     const setNormal = () => {
       bg.setFillStyle(color);
@@ -546,61 +513,32 @@ export class BattleScene extends Phaser.Scene {
       bg.setScale(0.94);
       txt.setScale(0.94);
     };
-    // 取單行純文字 label（去掉換行）給 debug 用
-    const dbgLabel = label.replace(/\s+/g, '');
-    hit.on('pointerover', (p: Phaser.Input.Pointer) => {
-      this.dlog(`btn[${dbgLabel}] OVER pressed=${pressed} p=${p.x.toFixed(0)},${p.y.toFixed(0)}`);
+    hit.on('pointerover', () => {
       if (!pressed) bg.setFillStyle(this.tint(color, 1.2));
     });
-    hit.on('pointerout', (p: Phaser.Input.Pointer) => {
-      this.dlog(`btn[${dbgLabel}] OUT  pressed=${pressed} p=${p.x.toFixed(0)},${p.y.toFixed(0)}`);
-      // 重要：不取消 press（觸控微抖動會頻繁觸發 over/out）。
-      // 只還原 hover 顏色；press 視覺繼續維持，等 pointerup 或
-      // pointerupoutside 才結束。
+    hit.on('pointerout', () => {
+      // 不取消 press（觸控微抖動會頻繁觸發 over/out）。只還原 hover 顏色；
+      // press 視覺繼續維持，等 pointerup 或 pointerupoutside 才結束。
       if (!pressed) bg.setFillStyle(color);
     });
-    hit.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      this.dlog(`btn[${dbgLabel}] DOWN p=${p.x.toFixed(0)},${p.y.toFixed(0)}`);
+    hit.on('pointerdown', () => {
       pressed = true;
       setPressed();
       audio.playClick();
     });
-    hit.on('pointerup', (p: Phaser.Input.Pointer) => {
-      this.dlog(`btn[${dbgLabel}] UP   pressed=${pressed} p=${p.x.toFixed(0)},${p.y.toFixed(0)} → ${pressed ? 'CLICK' : 'noop'}`);
+    hit.on('pointerup', () => {
       if (!pressed) return;
       pressed = false;
       setNormal();
       onClick();
     });
-    hit.on('pointerupoutside', (p: Phaser.Input.Pointer) => {
-      this.dlog(`btn[${dbgLabel}] UPOUT pressed=${pressed} p=${p.x.toFixed(0)},${p.y.toFixed(0)}`);
+    hit.on('pointerupoutside', () => {
       if (!pressed) return;
       pressed = false;
       setNormal();
       // 不觸發 onClick（手指離開按鈕區才放）
     });
     return c;
-  }
-
-  /** Debug overlay：把訊息推到 debugText，最新在最上面，保留最近 14 行 */
-  private dlog(msg: string): void {
-    if (!BattleScene.BTN_DEBUG || !this.debugText) return;
-    const t = (this.time.now / 1000).toFixed(2);
-    this.debugLines.unshift(`${t.padStart(7)} ${msg}`);
-    if (this.debugLines.length > 14) this.debugLines.length = 14;
-    this.debugText.setText(this.debugLines.join('\n'));
-  }
-
-  /** Diagnostic：印出每個可見方形按鈕的 getBounds() 跟 (px, py) 是否在裡面 */
-  private dumpVisibleBtnBounds(px: number, py: number): void {
-    for (const { label, c } of this.squareButtons) {
-      if (!c.visible) continue;
-      const b = c.getBounds();
-      const inside = px >= b.x && px <= b.right && py >= b.y && py <= b.bottom;
-      this.dlog(
-        `  ${label} b=${b.x.toFixed(0)},${b.y.toFixed(0)} ${b.width.toFixed(0)}x${b.height.toFixed(0)} inside=${inside}`
-      );
-    }
   }
 
   /** 在 hintText 暫時顯示一段紅色提示（給「按了沒反應」的場合用）*/
@@ -633,7 +571,6 @@ export class BattleScene extends Phaser.Scene {
         pointer: Phaser.Input.Pointer,
         gameObjects: Phaser.GameObjects.GameObject[]
       ) => {
-        this.dlog(`G-UP   objs=${gameObjects.length} drag=${this.didDrag} p=${pointer.x.toFixed(0)},${pointer.y.toFixed(0)}`);
         if (this.isPaused) return;
         if (this.didDrag) return;
         if (gameObjects.length > 0) return;
@@ -655,12 +592,6 @@ export class BattleScene extends Phaser.Scene {
     this.input.on(
       'pointerdown',
       (p: Phaser.Input.Pointer, gameObjects: Phaser.GameObjects.GameObject[]) => {
-        this.dlog(`G-DOWN objs=${gameObjects.length} p=${p.x.toFixed(0)},${p.y.toFixed(0)} pid=${p.id}`);
-        // objs=0 但落在按鈕視覺區域 → 把可見按鈕的 getBounds() 印出來，看
-        // hit-test 認知的座標跟實際視覺差多少（diagnostic）
-        if (BattleScene.BTN_DEBUG && gameObjects.length === 0) {
-          this.dumpVisibleBtnBounds(p.x, p.y);
-        }
         // 落點在 UI 元件（按鈕 hit area）上 → 不啟動單指拖曳。
         // 這修掉「手指微抖動觸發 pan，按鈕 pointerout 取消 press」這條
         // 在手機上常常按不到結束/待命按鈕的根因。
@@ -679,7 +610,6 @@ export class BattleScene extends Phaser.Scene {
           this.pinchStartDist = Phaser.Math.Distance.Between(p1.x, p1.y, p2.x, p2.y);
           this.pinchStartZoom = this.cameras.main.zoom;
           this.didDrag = true; // 抑制 click（pinch 期間）
-          this.dlog(`pinch START dist=${this.pinchStartDist.toFixed(0)}`);
         }
       }
     );
@@ -710,7 +640,6 @@ export class BattleScene extends Phaser.Scene {
       const dy = p.y - this.dragStart.y;
       if (!this.didDrag && dx * dx + dy * dy > 64) {
         this.didDrag = true;
-        this.dlog(`PAN start dx=${dx.toFixed(0)} dy=${dy.toFixed(0)}`);
       }
       if (this.didDrag && this.prevPointerPos) {
         const cam = this.cameras.main;
@@ -1348,7 +1277,6 @@ export class BattleScene extends Phaser.Scene {
     cam.scrollY += worldBefore.y - worldAfter.y;
     // UI 反比縮放：讓按鈕／側欄不會跟著相機放大縮小（夾住下限避免按鈕變太小不能點）
     this.refreshUIScale();
-    this.dlog(`ZOOM ${newZoom.toFixed(2)} scroll=${cam.scrollX.toFixed(0)},${cam.scrollY.toFixed(0)}`);
   }
 
   /**
