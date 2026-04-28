@@ -11,20 +11,16 @@ loadSettings();
 loadLang();
 
 /**
- * 依視窗 aspect ratio 動態決定 canvas 大小：
- *   - 手機橫屏（~2.17:1）→ canvas 寬一點，填滿不留黑邊
- *   - 桌機（~1.78:1）→ canvas 較方，剛好 fit
+ * 主要 QA 平台是 iPhone X 之後的全螢幕機種（19.5:9 橫屏）→ canvas aspect
+ * 固定在 19.5:9，避免動態 aspect 在「先直拿開啟、再轉橫」這種啟動順序下
+ * 抓到直屏比例導致大量黑邊。其他比例的視窗（桌機 16:9、iPad 4:3）會有
+ * letterbox，可接受。
  *
- * 用較小的基準高度（720）讓文字相對放大、手機上更好讀。
  * 22×16 大地圖會超出 viewport，由 BattleScene 相機 scroll/zoom 處理。
  */
-const winW = typeof window !== 'undefined' ? window.innerWidth : 1280;
-const winH = typeof window !== 'undefined' ? window.innerHeight : 720;
-const winAspect = winW / winH;
-// 過寬或過高都做合理 clamp（避免極端視窗）
-const aspect = Math.max(1.4, Math.min(2.4, winAspect));
+const ASPECT = 19.5 / 9;
 const BASE_HEIGHT = 720;
-const BASE_WIDTH = Math.round(BASE_HEIGHT * aspect);
+const BASE_WIDTH = Math.round(BASE_HEIGHT * ASPECT); // 1560
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
