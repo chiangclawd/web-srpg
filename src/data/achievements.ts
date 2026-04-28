@@ -84,6 +84,12 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     desc: '完成第 12 章「鐵礦山的虛空殘渣」',
     hidden: true,
   },
+  trial_complete: {
+    id: 'trial_complete',
+    name: '老兵之證',
+    desc: '完成「次要試煉（Boss Rush）」',
+    hidden: true,
+  },
 };
 
 /** 章節 id → 完成解鎖的成就 id */
@@ -99,4 +105,5 @@ export const CHAPTER_COMPLETE_ACHIEVEMENT: Record<string, string> = {
   chapter9: 'remnants_done',
   chapter10: 'true_end',
   chapter12: 'mine_cleared',
+  chapter_trial: 'trial_complete',
 };

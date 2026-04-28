@@ -125,6 +125,18 @@ export class TitleScene extends Phaser.Scene {
         () => this.startEpilogueChapter(),
         '#7ec8ff'
       );
+      y += 56;
+    }
+
+    // 次要試煉（Boss Rush）— Ch12 通關後的可重複挑戰
+    if (unlocked.has('mine_cleared')) {
+      this.makeMenuButton(
+        width / 2,
+        y,
+        '⚔ 次要試煉（Boss Rush）',
+        () => this.startBossRushTrial(),
+        '#ffd23a'
+      );
     }
 
     this.add
@@ -274,6 +286,19 @@ export class TitleScene extends Phaser.Scene {
   /** 後日談入口（TRUE END 後從主畫面進入；不會打到主線存檔的 nextChapterId） */
   private startEpilogueChapter(): void {
     const ch = CHAPTERS['chapter12'];
+    if (!ch) return;
+    this.scene.start('CutsceneScene', {
+      cutsceneId: ch.prologueCutsceneId,
+      next: {
+        scene: 'HubScene',
+        data: { chapterId: ch.id },
+      },
+    });
+  }
+
+  /** 次要試煉入口（Ch12 通過後從主畫面進入，可重複挑戰；同樣不動主線 nextChapterId） */
+  private startBossRushTrial(): void {
+    const ch = CHAPTERS['chapter_trial'];
     if (!ch) return;
     this.scene.start('CutsceneScene', {
       cutsceneId: ch.prologueCutsceneId,

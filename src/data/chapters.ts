@@ -98,6 +98,15 @@ export const CHAPTERS: Record<string, ChapterDef> = {
     defeatCutsceneId: 'ch12_defeat',
     // 後日談首章 — 暫無 next（之後 Ch13+ 接上）
   },
+  // C3 變體：次要試煉（Boss Rush）— 解 mine_cleared 後 TitleScene 顯示專屬入口
+  chapter_trial: {
+    id: 'chapter_trial', number: 99, title: '次要試煉（Boss Rush）',
+    prologueCutsceneId: 'trial_prologue',
+    scenarioId: 'hero_trial',
+    victoryCutsceneId: 'trial_victory',
+    defeatCutsceneId: 'trial_defeat',
+    // 變體挑戰 — 無 next，可重複進入
+  },
 };
 
 export const FIRST_CHAPTER_ID = 'chapter1';
