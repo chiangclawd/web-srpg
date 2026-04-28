@@ -44,6 +44,8 @@ export class HubScene extends Phaser.Scene {
   private cards: Phaser.GameObjects.Container[] = [];
   private infoText!: Phaser.GameObjects.Text;
   private equipPicker: Phaser.GameObjects.Container | null = null;
+  /** 卡片捲動時設為 true，讓卡片 click handler 知道剛才是 drag 不是 tap */
+  private cardsDidDrag = false;
 
   constructor() {
     super({ key: 'HubScene' });
@@ -102,12 +104,16 @@ export class HubScene extends Phaser.Scene {
     const cardsX0 = 30;
     const cardsY0 = 110;
     const maxPerRow = 3;
+    // 卡片包進 cardsContainer（之後好做 mask + 垂直捲動）
+    const cardsContainer = this.add.container(0, 0);
+    cardsContainer.setDepth(2);
     this.playerCommanders.forEach((cmd, idx) => {
       const row = Math.floor(idx / maxPerRow);
       const col = idx % maxPerRow;
       const x = cardsX0 + col * (cardW + cardGap);
       const y = cardsY0 + row * (cardH + cardGap);
       const card = this.makeCommanderCard(cmd, x, y, cardW, cardH, idx);
+      cardsContainer.add(card); // 從 scene root 移到 cardsContainer 下
       this.cards.push(card);
     });
 
@@ -145,6 +151,84 @@ export class HubScene extends Phaser.Scene {
     this.makeButton(20, 16, 140, 44, '◀ 回標題', 0x444444, '22px', () => {
       this.scene.start('TitleScene');
     });
+
+    // === 卡片區垂直捲動 ===
+    // 設計：以 swapY 上方留 12px 為視覺底界，超過視窗就 mask + 拖曳
+    const rows = Math.ceil(this.playerCommanders.length / maxPerRow);
+    const totalCardsH = rows * (cardH + cardGap) - cardGap;
+    const cardsViewportTop = cardsY0;
+    const cardsViewportH = swapY - cardsY0 - 12;
+    const cardsViewportRight = infoX - 12; // 不要蓋到右側 info / 出陣按鈕
+    const maxScroll = Math.max(0, totalCardsH - cardsViewportH);
+
+    if (maxScroll > 0) {
+      // Geometry mask — 只顯示卡片視窗範圍內的內容
+      const m = this.make.graphics({ x: 0, y: 0 }, false);
+      m.fillStyle(0xffffff);
+      m.fillRect(0, cardsViewportTop - 6, cardsViewportRight, cardsViewportH + 12);
+      cardsContainer.setMask(m.createGeometryMask());
+
+      // 拖曳捲動
+      let scrollY = 0;
+      let dragActive = false;
+      let dragStartScroll = 0;
+      let dragStartPointerY = 0;
+      const inCardsRegion = (p: Phaser.Input.Pointer): boolean =>
+        p.x <= cardsViewportRight &&
+        p.y >= cardsViewportTop - 6 &&
+        p.y <= cardsViewportTop + cardsViewportH + 6;
+
+      this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+        if (!inCardsRegion(p)) return;
+        dragActive = true;
+        dragStartScroll = scrollY;
+        dragStartPointerY = p.y;
+        this.cardsDidDrag = false;
+      });
+      this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+        if (!dragActive || !p.isDown) return;
+        const dy = p.y - dragStartPointerY;
+        if (Math.abs(dy) > 8) this.cardsDidDrag = true;
+        scrollY = Phaser.Math.Clamp(dragStartScroll + dy, -maxScroll, 0);
+        cardsContainer.y = scrollY;
+      });
+      this.input.on('pointerup', () => {
+        dragActive = false;
+        // 不立刻清 cardsDidDrag — 讓 cardHit pointerup 能讀到，下一次 pointerdown 才重置
+      });
+
+      // 滑鼠滾輪（桌機）
+      this.input.on(
+        'wheel',
+        (p: Phaser.Input.Pointer, _objs: unknown[], _dx: number, dy: number) => {
+          if (!inCardsRegion(p)) return;
+          scrollY = Phaser.Math.Clamp(scrollY - dy * 0.5, -maxScroll, 0);
+          cardsContainer.y = scrollY;
+        }
+      );
+
+      // 右側捲軸提示（細長軌道 + 把手）
+      const trackX = cardsViewportRight - 6;
+      const track = this.add.rectangle(
+        trackX,
+        cardsViewportTop,
+        4,
+        cardsViewportH,
+        0x444444,
+        0.4
+      );
+      track.setOrigin(0, 0);
+      track.setDepth(3);
+      const thumbH = Math.max(40, cardsViewportH * (cardsViewportH / totalCardsH));
+      const thumb = this.add.rectangle(trackX, cardsViewportTop, 4, thumbH, 0x7ed1ff, 0.8);
+      thumb.setOrigin(0, 0);
+      thumb.setDepth(3);
+      // 把手位置隨 scrollY 移動
+      this.events.on('postupdate', () => {
+        const ratio = maxScroll > 0 ? -scrollY / maxScroll : 0;
+        thumb.y = cardsViewportTop + ratio * (cardsViewportH - thumbH);
+      });
+    }
 
     this.selectCommander(0);
   }
@@ -247,9 +331,14 @@ export class HubScene extends Phaser.Scene {
     cardHit.on('pointerout', () => {
       bg.setStrokeStyle(this.selectedIdx === idx ? 3 : 2, this.selectedIdx === idx ? 0xffd700 : 0x444444);
     });
-    cardHit.on('pointerdown', () => this.selectCommander(idx));
+    // 改用 pointerup + cardsDidDrag 檢查，讓垂直拖曳捲動時不會誤觸卡片選取
+    cardHit.on('pointerup', () => {
+      if (this.cardsDidDrag) return;
+      this.selectCommander(idx);
+    });
 
-    toggleHit.on('pointerdown', () => {
+    toggleHit.on('pointerup', () => {
+      if (this.cardsDidDrag) return;
       const nowDeployed = toggleCommanderDeploy(cmd.id);
       deployTxt.setText(nowDeployed ? '✓ 出陣中' : '✗ 候補');
       deployTxt.setColor(nowDeployed ? '#7ed17e' : '#aa6666');
