@@ -338,14 +338,17 @@ export class BattleScene extends Phaser.Scene {
     this.logText = this.add.text(0, 0, '', { fontSize: '1px' }).setVisible(false);
 
     // === 上左：hintText（狀態 / 紅字錯誤）===
+    // 加深色 backdrop 避免被 painterly 地圖底色吃掉文字
     this.hintText = this.registerUI(
       this.add
         .text(20, 20, '', {
           fontSize: '26px',
-          color: '#bbbbbb',
+          color: '#ffffff',
           lineSpacing: 6,
           wordWrap: { width: 800 },
           fontStyle: 'bold',
+          backgroundColor: '#000000bb',
+          padding: { left: 14, right: 14, top: 8, bottom: 8 },
         })
         .setScrollFactor(0)
     );
@@ -367,11 +370,14 @@ export class BattleScene extends Phaser.Scene {
       this.add
         .text(infoX, infoY, '', {
           fontSize: '22px',
-          color: '#dddddd',
+          color: '#ffffff',
           lineSpacing: 6,
           wordWrap: { width: infoW },
+          backgroundColor: '#000000bb',
+          padding: { left: 14, right: 14, top: 8, bottom: 8 },
         })
         .setScrollFactor(0)
+        .setVisible(false) // 預設無單位被選 → 隱藏 backdrop；選中後 showUnitInfo 會打開
     );
 
     // === 右下方 2x2 大正方形按鈕 ===
@@ -566,7 +572,7 @@ export class BattleScene extends Phaser.Scene {
       // 還原前確認沒被其他邏輯（選單刷新等）覆寫過
       if (this.hintText.text === msg) {
         this.hintText.setText(wasText);
-        this.hintText.setColor('#bbbbbb');
+        this.hintText.setColor('#ffffff'); // 對齊新的 hintText 預設色（之前是 #bbbbbb）
       }
     });
   }
@@ -1026,6 +1032,7 @@ export class BattleScene extends Phaser.Scene {
       this.hintText.setText('點我方單位（藍）行動，\n或按「結束回合」。');
     }
     this.infoText.setText('');
+    this.infoText.setVisible(false); // 沒選單位 → 連 backdrop 也藏起來
   }
 
   private usePotion(): void {
@@ -1540,6 +1547,7 @@ export class BattleScene extends Phaser.Scene {
       `特技：${unit.skillName}　${unit.skillDesc}`,
     ];
     this.infoText.setText(lines.join('\n'));
+    this.infoText.setVisible(true);
   }
 
   // ===== 回合制 =====
