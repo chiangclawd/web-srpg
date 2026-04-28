@@ -129,6 +129,21 @@ export class TitleScene extends Phaser.Scene {
       )
       .setOrigin(0.5);
 
+    // 版本戳記（右下角）：build 時 vite.config 注入 package version + git
+    // short SHA + build 日期。使用者可在主畫面對照剛 push 的 commit hash
+    // 確認 GitHub Pages 是否已抓到新版本。
+    this.add
+      .text(
+        width - 14,
+        height - 12,
+        `v${__APP_VERSION__} · ${__GIT_SHA__} · ${__BUILD_DATE__} UTC`,
+        {
+          fontSize: '16px',
+          color: '#666666',
+        }
+      )
+      .setOrigin(1, 1);
+
     this.input.keyboard?.once('keydown', () => {
       if (hasExisting) this.continueGame();
       else this.startNewGame();
