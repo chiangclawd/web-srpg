@@ -133,6 +133,10 @@ export class BattleScene extends Phaser.Scene {
   private static readonly BTN_DEBUG = true;
   private debugText: Phaser.GameObjects.Text | null = null;
   private debugLines: string[] = [];
+  private squareButtons: Array<{
+    label: string;
+    c: Phaser.GameObjects.Container;
+  }> = [];
 
   constructor() {
     super({ key: 'BattleScene' });
@@ -517,16 +521,19 @@ export class BattleScene extends Phaser.Scene {
     txt.setOrigin(0.5);
     const hit = this.add.rectangle(0, 0, size, size, 0x000000, 0);
     hit.setInteractive({ useHandCursor: true });
+    // 顯式對每個子物件設 scrollFactor=0（不依賴 Container 第三參數的傳播；
+    // 部分 Phaser 版本 hit-test 對 child 仍讀子物件自己的 scrollFactor）
+    bg.setScrollFactor(0);
+    txt.setScrollFactor(0);
+    hit.setScrollFactor(0);
     const c = this.add.container(x + size / 2, y + size / 2, [bg, txt, hit]);
     c.setSize(size, size);
     c.setDepth(20);
-    // 重要：Container.setScrollFactor 預設不會傳給子物件，但 Phaser 的 hit
-    // test 用的是子物件自己的 scrollFactor，不是 container 的。如果只設
-    // container 而不設子物件，相機 scrollY != 0（戰鬥開始相機會 centerOn
-    // 第一個玩家單位）時 hit area 會跟視覺差一個 scrollY，使用者得點按鈕
-    // 上方才會中。第三個 true 參數讓 scrollFactor 同步套到 bg/txt/hit。
     c.setScrollFactor(0, 0, true);
     this.registerUI(c);
+    if (BattleScene.BTN_DEBUG) {
+      this.squareButtons.push({ label: label.replace(/\s+/g, ''), c });
+    }
 
     let pressed = false;
     const setNormal = () => {
@@ -584,6 +591,18 @@ export class BattleScene extends Phaser.Scene {
     this.debugText.setText(this.debugLines.join('\n'));
   }
 
+  /** Diagnostic：印出每個可見方形按鈕的 getBounds() 跟 (px, py) 是否在裡面 */
+  private dumpVisibleBtnBounds(px: number, py: number): void {
+    for (const { label, c } of this.squareButtons) {
+      if (!c.visible) continue;
+      const b = c.getBounds();
+      const inside = px >= b.x && px <= b.right && py >= b.y && py <= b.bottom;
+      this.dlog(
+        `  ${label} b=${b.x.toFixed(0)},${b.y.toFixed(0)} ${b.width.toFixed(0)}x${b.height.toFixed(0)} inside=${inside}`
+      );
+    }
+  }
+
   /** 在 hintText 暫時顯示一段紅色提示（給「按了沒反應」的場合用）*/
   private flashHint(msg: string, ms = 1400): void {
     const wasText = this.hintText.text;
@@ -637,6 +656,11 @@ export class BattleScene extends Phaser.Scene {
       'pointerdown',
       (p: Phaser.Input.Pointer, gameObjects: Phaser.GameObjects.GameObject[]) => {
         this.dlog(`G-DOWN objs=${gameObjects.length} p=${p.x.toFixed(0)},${p.y.toFixed(0)} pid=${p.id}`);
+        // objs=0 但落在按鈕視覺區域 → 把可見按鈕的 getBounds() 印出來，看
+        // hit-test 認知的座標跟實際視覺差多少（diagnostic）
+        if (BattleScene.BTN_DEBUG && gameObjects.length === 0) {
+          this.dumpVisibleBtnBounds(p.x, p.y);
+        }
         // 落點在 UI 元件（按鈕 hit area）上 → 不啟動單指拖曳。
         // 這修掉「手指微抖動觸發 pan，按鈕 pointerout 取消 press」這條
         // 在手機上常常按不到結束/待命按鈕的根因。
