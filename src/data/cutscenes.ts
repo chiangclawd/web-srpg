@@ -605,4 +605,38 @@ export const CUTSCENES: Record<string, CutsceneScript> = {
       { speaker: '旁白', text: '——戰敗——' },
     ],
   },
+
+  // ============= C3 變體：次要試煉（Boss Rush）=============
+  trial_prologue: {
+    id: 'trial_prologue',
+    lines: [
+      { speaker: '旁白', text: '——王國重建期 · 邊境訓練場——' },
+      { speaker: '旁白', text: '王都允諾的「老兵試煉」開放：將過往倖存的次要敵首化身集結，' },
+      { speaker: '旁白', text: '作為英雄們繼續鍛鍊的對手。' },
+      { speaker: '亞瑟', text: '弗拉德、莫頓、賽琳——故人都在了。' },
+      { speaker: '蓋瑞', text: '卡爾將軍也來了？這真是「老熟人聚會」。' },
+      { speaker: '夏倫', text: '副教主・凜的化身——表示連教派殘部都被拉了進來。' },
+      { speaker: '蘿莎', text: '不是真人——是用碎片殘渣模擬的「投影」。打倒了不會留下血債。' },
+      { speaker: '亞瑟', text: '剛好。讓我們看看，這些年來鍛鍊到什麼程度。' },
+      { speaker: '亞瑟', text: '出擊！' },
+    ],
+  },
+  trial_victory: {
+    id: 'trial_victory',
+    lines: [
+      { speaker: '旁白', text: '5 位次要 BOSS 的化身與雜兵全數倒下。' },
+      { speaker: '蓋瑞', text: '比想像中的——還快。' },
+      { speaker: '蘿莎', text: '看來這些年沒白練。' },
+      { speaker: '亞瑟', text: '——下一個試煉，等我們回王都揪出最後兩支「碎片計畫」。' },
+      { speaker: '旁白', text: '★ 試煉達成！' },
+    ],
+  },
+  trial_defeat: {
+    id: 'trial_defeat',
+    lines: [
+      { speaker: '旁白', text: '次要敵首的化身合擊過於猛烈……' },
+      { speaker: '亞瑟', text: '退！再練幾年回來。' },
+      { speaker: '旁白', text: '——試煉失敗——' },
+    ],
+  },
 };

@@ -649,6 +649,67 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
     victoryCondition: 'kill_boss',
     bossId: 'zerin',
   },
+  // ============================================
+  // C3 變體：次要試煉（hero_trial）— Boss Rush 風格的單場挑戰
+  // ============================================
+  // 一張圓形 arena 地圖，敵方全是 5 位次要 BOSS（vlad / morden / selene / carl /
+  // sub_priest）+ 5 名強化雜兵；rout 條件，迫使全清。重用既有 commander，零新美術。
+  hero_trial: {
+    id: 'hero_trial', name: '次要試煉 — 訓練場',
+    description: '次要敵首的化身齊聚訓練場：弗拉德、莫頓、賽琳、卡爾、副教主・凜，加上強化雜兵的 Boss Rush。',
+    gridWidth: 22, gridHeight: 16,
+    bgColor: 0x14181f,
+    // 圓形戰場：山地圍邊、中央平原、零星森林障礙
+    terrain: [
+      'MMMMMM........MMMMMMMM',
+      'MMM..............MMMMM',
+      'MM................FMMM',
+      'M..F..............F.MM',
+      '....F....F....F.....FM',
+      '.F.....FF...F....FFF.M',
+      '....F.....FF........MM',
+      'F....F..............MM',
+      'F..F................MM',
+      'F....F..............MM',
+      '....F.....FF........MM',
+      '.F.....FF...F....FFF.M',
+      '....F....F....F.....FM',
+      'M..F..............F.MM',
+      'MM................FMMM',
+      'MMMMMM........MMMMMMMM',
+    ],
+    deployments: [
+      // 玩家 — 西側全隊伍（玩家在 Hub 自選 8 位以內）
+      { commanderId: 'arthur', position: { x: 0, y: 7 } },
+      { commanderId: 'rosa', position: { x: 0, y: 8 } },
+      { commanderId: 'gary', position: { x: 0, y: 6 } },
+      { commanderId: 'sharon', position: { x: 0, y: 9 } },
+      { commanderId: 'rain', position: { x: 0, y: 5 } },
+      { commanderId: 'aria', position: { x: 0, y: 10 } },
+      { commanderId: 'viktor', position: { x: 1, y: 4 } },
+      { commanderId: 'lila', position: { x: 1, y: 11 } },
+      { commanderId: 'elena', position: { x: 1, y: 6 } },
+      { commanderId: 'knight_recruit', position: { x: 0, y: 4 } },
+      { commanderId: 'spear_recruit', position: { x: 0, y: 11 } },
+      { commanderId: 'horse_scout', position: { x: 0, y: 3 } },
+      { commanderId: 'archer_recruit', position: { x: 0, y: 12 } },
+      { commanderId: 'apprentice_mage', position: { x: 1, y: 9 } },
+
+      // 敵方 — 東側集結 5 位次要 BOSS + 5 強化雜兵
+      { commanderId: 'vlad', position: { x: 20, y: 5 } },
+      { commanderId: 'morden', position: { x: 20, y: 10 } },
+      { commanderId: 'selene', position: { x: 21, y: 7 } },
+      { commanderId: 'carl', position: { x: 21, y: 8 } },
+      { commanderId: 'sub_priest', position: { x: 19, y: 7 } },
+      // 強化雜兵 — 補陣容厚度
+      { commanderId: 'bandit_thug', position: { x: 18, y: 4 } },
+      { commanderId: 'raider_horseman', position: { x: 18, y: 12 } },
+      { commanderId: 'spear_militia', position: { x: 17, y: 6 } },
+      { commanderId: 'scout_archer', position: { x: 17, y: 9 } },
+      { commanderId: 'void_acolyte', position: { x: 19, y: 11 } },
+    ],
+    victoryCondition: 'rout',
+  },
 };
 
 export const DEFAULT_SCENARIO_ID = 'intro';
