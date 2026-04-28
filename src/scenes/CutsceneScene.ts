@@ -88,8 +88,8 @@ export class CutsceneScene extends Phaser.Scene {
       .setOrigin(0.5);
     if (this.hasBgImage) this.placeholderText.setVisible(false);
 
-    // 對話框
-    const boxH = 180;
+    // 對話框（boxH 加高以容納 2x 字體）
+    const boxH = 320;
     const boxX = 40;
     const boxY = height - boxH - 30;
     this.dialogBoxTopY = boxY;
@@ -97,23 +97,23 @@ export class CutsceneScene extends Phaser.Scene {
     box.setOrigin(0);
     box.setStrokeStyle(2, 0x4a90e2);
 
-    this.speakerText = this.add.text(boxX + 24, boxY + 18, '', {
-      fontSize: '20px',
+    this.speakerText = this.add.text(boxX + 28, boxY + 24, '', {
+      fontSize: '40px',
       color: '#7ed1ff',
       fontStyle: 'bold',
     });
 
-    this.bodyText = this.add.text(boxX + 24, boxY + 60, '', {
-      fontSize: '18px',
+    this.bodyText = this.add.text(boxX + 28, boxY + 96, '', {
+      fontSize: '36px',
       color: '#ffffff',
-      wordWrap: { width: width - 130 },
-      lineSpacing: 8,
+      wordWrap: { width: width - 140 },
+      lineSpacing: 12,
     });
 
     // 進度提示
     const prog = this.add
-      .text(width - 50, height - 18, '', {
-        fontSize: '13px',
+      .text(width - 60, height - 30, '', {
+        fontSize: '26px',
         color: '#888888',
       })
       .setOrigin(1, 1);

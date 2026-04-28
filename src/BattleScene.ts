@@ -1188,15 +1188,22 @@ export class BattleScene extends Phaser.Scene {
   /**
    * 把 UI 套用反比 scale + 反比 position，讓相機縮放完全不影響 UI 視覺。
    *
-   * 推導：cam.zoom = z 時，scrollFactor=0 物件的螢幕 = obj.x * z（且 size = scale*z）
-   * 想固定螢幕位置 = baseX、固定 size = 1：
-   *    obj.x = baseX / z, obj.scale = 1 / z
-   *    → 螢幕 x = (baseX/z)*z = baseX ✓
-   *    → 螢幕 size = (1/z) * intrinsic * z = intrinsic ✓
+   * Phaser 相機預設 origin (0.5, 0.5) → zoom 是從畫面「中心」擴張，
+   * 所以 scrollFactor=0 物件在螢幕的位置是：
+   *    sx = (objX - cx) * z + cx        其中 cx = canvas 中心 x
+   *
+   * 反推「想固定螢幕位置 = baseX」需要：
+   *    objX = cx + (baseX - cx) / z
+   *    objScale = 1 / z
+   *
+   * 之前寫成 objX = baseX / z（誤以為相機從 (0,0) 擴張），導致按 + 後
+   * 所有 UI 往畫面中央縮 ~zoom 倍距離。
    */
   private refreshUIScale(): void {
     const z = this.cameras.main.zoom;
     const inv = 1 / z;
+    const cx = this.scale.width / 2;
+    const cy = this.scale.height / 2;
     for (const item of this.uiElements) {
       const obj = item.obj as Phaser.GameObjects.GameObject & {
         setScale?: (s: number) => unknown;
@@ -1204,8 +1211,8 @@ export class BattleScene extends Phaser.Scene {
         y?: number;
       };
       if (obj.setScale) obj.setScale(inv);
-      if ('x' in obj) obj.x = item.baseX * inv;
-      if ('y' in obj) obj.y = item.baseY * inv;
+      if ('x' in obj) obj.x = cx + (item.baseX - cx) * inv;
+      if ('y' in obj) obj.y = cy + (item.baseY - cy) * inv;
     }
   }
 

@@ -82,58 +82,65 @@ export class HubScene extends Phaser.Scene {
 
     const chTitle = tn(`chapter.${ch.id}.title`, ch.title);
     this.add
-      .text(width / 2, 50, t('hub.chapterTitle', { n: ch.number, title: chTitle }), {
-        fontSize: '30px',
+      .text(width / 2, 32, t('hub.chapterTitle', { n: ch.number, title: chTitle }), {
+        fontSize: '36px',
         color: '#ffffff',
         fontStyle: 'bold',
       })
       .setOrigin(0.5);
     this.add
-      .text(width / 2, 88, '出陣前確認 · 點擊武將檢視詳細資訊 · 可換裝', {
-        fontSize: '13px',
+      .text(width / 2, 74, '出陣前確認 · 點擊武將檢視詳細資訊 · 可換裝', {
+        fontSize: '22px',
         color: '#888888',
       })
       .setOrigin(0.5);
 
-    const cardW = 150;
-    const cardH = 200;
-    const startX = 60;
-    const cardY = 130;
+    // 卡片 grid：每排最多 3 張，超過自動換行（避免 5 張單排在 iPhone 橫屏被切掉）
+    const cardW = 220;
+    const cardH = 220;
+    const cardGap = 18;
+    const cardsX0 = 30;
+    const cardsY0 = 110;
+    const maxPerRow = 3;
     this.playerCommanders.forEach((cmd, idx) => {
-      const x = startX + idx * (cardW + 20);
-      const card = this.makeCommanderCard(cmd, x, cardY, cardW, cardH, idx);
+      const row = Math.floor(idx / maxPerRow);
+      const col = idx % maxPerRow;
+      const x = cardsX0 + col * (cardW + cardGap);
+      const y = cardsY0 + row * (cardH + cardGap);
+      const card = this.makeCommanderCard(cmd, x, y, cardW, cardH, idx);
       this.cards.push(card);
     });
 
-    const infoX = startX + this.playerCommanders.length * (cardW + 20) + 30;
-    this.add
-      .text(infoX, cardY, '武將資訊', {
-        fontSize: '16px',
-        color: '#7ed1ff',
-        fontStyle: 'bold',
-      });
-    this.infoText = this.add.text(infoX, cardY + 30, '', {
-      fontSize: '13px',
+    // 武將資訊欄：放在卡片區右側，避開卡片寬度後始終貼齊
+    const infoX = cardsX0 + maxPerRow * (cardW + cardGap) + 8;
+    this.add.text(infoX, cardsY0, '武將資訊', {
+      fontSize: '32px',
+      color: '#7ed1ff',
+      fontStyle: 'bold',
+    });
+    this.infoText = this.add.text(infoX, cardsY0 + 50, '', {
+      fontSize: '24px',
       color: '#dddddd',
-      lineSpacing: 6,
-      wordWrap: { width: width - infoX - 30 },
+      lineSpacing: 8,
+      wordWrap: { width: width - infoX - 20 },
     });
 
-    // 換裝按鈕（位於 info 下方）
-    const swapY = cardY + 30 + 230;
+    // 換裝按鈕（資訊欄下方）
+    const swapY = cardsY0 + 50 + 360;
     this.makeInlineButton(infoX, swapY, '▸ 換武器', '#ffaa66', () => {
       const cmd = this.playerCommanders[this.selectedIdx];
       if (cmd) this.openEquipPicker('weapon', cmd.id);
     });
-    this.makeInlineButton(infoX + 100, swapY, '▸ 換防具', '#88ccff', () => {
+    this.makeInlineButton(infoX + 180, swapY, '▸ 換防具', '#88ccff', () => {
       const cmd = this.playerCommanders[this.selectedIdx];
       if (cmd) this.openEquipPicker('armor', cmd.id);
     });
 
-    this.makeButton(width / 2 - 110, height - 80, 220, 52, '▶ 出陣', 0xe24a4a, () => {
+    // 出陣按鈕（畫面底端置中，加大方便手指點）
+    this.makeButton(width / 2 - 170, height - 100, 340, 84, '▶ 出陣', 0xe24a4a, '36px', () => {
       this.scene.start('BattleScene', { chapterId: this.chapterId });
     });
-    this.makeButton(20, 16, 100, 32, '◀ 回標題', 0x444444, () => {
+    this.makeButton(20, 16, 140, 44, '◀ 回標題', 0x444444, '22px', () => {
       this.scene.start('TitleScene');
     });
 
@@ -158,49 +165,49 @@ export class HubScene extends Phaser.Scene {
     const hasPortrait = this.textures.exists(portraitKey);
     let portrait: Phaser.GameObjects.GameObject;
     if (hasPortrait) {
-      const img = this.add.image(0, -36, portraitKey);
-      img.setDisplaySize(88, 88);
+      const img = this.add.image(0, -48, portraitKey);
+      img.setDisplaySize(80, 80);
       portrait = img;
     } else {
-      const r = this.add.rectangle(0, -36, 88, 88, 0x4a90e2);
+      const r = this.add.rectangle(0, -48, 80, 80, 0x4a90e2);
       r.setStrokeStyle(2, 0x000000);
       portrait = r;
     }
     const dispName = tn(`commander.${cmd.id}.name`, cmd.name);
-    const nameY = hasPortrait ? 14 : -36;
+    const nameY = hasPortrait ? 6 : -48;
     const portraitName = this.add.text(0, nameY, dispName, {
-      fontSize: hasPortrait ? '14px' : '22px',
+      fontSize: hasPortrait ? '26px' : '40px',
       color: '#ffffff',
       fontStyle: 'bold',
     });
     portraitName.setOrigin(0.5);
 
-    const badgeBg = this.add.circle(34, -68, 14, utype.color);
-    badgeBg.setStrokeStyle(1, 0x000000);
-    const badgeText = this.add.text(34, -69, utype.shortName, {
-      fontSize: '14px',
+    const badgeBg = this.add.circle(48, -86, 20, utype.color);
+    badgeBg.setStrokeStyle(2, 0x000000);
+    const badgeText = this.add.text(48, -87, utype.shortName, {
+      fontSize: '22px',
       color: '#000000',
       fontStyle: 'bold',
     });
     badgeText.setOrigin(0.5);
 
-    const lvBg = this.add.circle(-34, -68, 14, 0x222222);
-    lvBg.setStrokeStyle(1, 0xffffff);
-    const lvText = this.add.text(-34, -69, String(cmd.startingLevel), {
-      fontSize: '13px',
+    const lvBg = this.add.circle(-48, -86, 20, 0x222222);
+    lvBg.setStrokeStyle(2, 0xffffff);
+    const lvText = this.add.text(-48, -87, String(cmd.startingLevel), {
+      fontSize: '22px',
       color: '#ffffff',
       fontStyle: 'bold',
     });
     lvText.setOrigin(0.5);
 
-    const subtitle = this.add.text(0, 22, utype.name, {
-      fontSize: '14px',
+    const subtitle = this.add.text(0, 38, utype.name, {
+      fontSize: '22px',
       color: '#aaaaaa',
     });
     subtitle.setOrigin(0.5);
 
-    const skill = this.add.text(0, 48, `特技：${cmd.skill.name}`, {
-      fontSize: '12px',
+    const skill = this.add.text(0, 66, `特技：${cmd.skill.name}`, {
+      fontSize: '20px',
       color: '#7ed1ff',
     });
     skill.setOrigin(0.5);
@@ -210,10 +217,10 @@ export class HubScene extends Phaser.Scene {
     const isDeployed = !excluded.has(cmd.id);
     const deployTxt = this.add.text(
       0,
-      h / 2 - 18,
+      h / 2 - 24,
       isDeployed ? '✓ 出陣中' : '✗ 候補',
       {
-        fontSize: '13px',
+        fontSize: '24px',
         color: isDeployed ? '#7ed17e' : '#aa6666',
         fontStyle: 'bold',
       }
@@ -224,7 +231,7 @@ export class HubScene extends Phaser.Scene {
     // 透明 hit areas（卡片本體 + 出陣切換）
     const cardHit = this.add.rectangle(0, 0, w, h, 0x000000, 0);
     cardHit.setInteractive({ useHandCursor: true });
-    const toggleHit = this.add.rectangle(0, h / 2 - 18, 90, 22, 0x000000, 0);
+    const toggleHit = this.add.rectangle(0, h / 2 - 24, 150, 36, 0x000000, 0);
     toggleHit.setInteractive({ useHandCursor: true });
 
     // toggleHit 在 cardHit 之上 → 點擊出陣按鈕優先
@@ -318,10 +325,10 @@ export class HubScene extends Phaser.Scene {
     const title = this.add
       .text(
         width / 2,
-        50,
+        60,
         `${kind === 'weapon' ? '— 選擇武器 —' : '— 選擇防具 —'}\n${cmd.name}（${cmd.unitType}）LV ${cmdLevel}`,
         {
-          fontSize: '20px',
+          fontSize: '32px',
           color: '#7ed1ff',
           fontStyle: 'bold',
           align: 'center',
@@ -341,23 +348,23 @@ export class HubScene extends Phaser.Scene {
         (e.requiredLevel ?? 0) > cmdLevel
     );
 
-    let itemY = 110;
+    let itemY = 140;
     items.push(
       this.makePickerItem(width / 2, itemY, '【無 — 卸下裝備】', '#aaaaaa', () => {
         this.equipItem(cmdId, kind, null);
       })
     );
-    itemY += 30;
+    itemY += 46;
 
     if (equippable.length === 0 && locked.length === 0) {
       const t = this.add
         .text(width / 2, itemY, `（${cmd.unitType} 沒有可用的此類裝備）`, {
-          fontSize: '14px',
+          fontSize: '22px',
           color: '#888888',
         })
         .setOrigin(0.5);
       items.push(t);
-      itemY += 30;
+      itemY += 44;
     }
 
     for (const item of equippable) {
@@ -368,36 +375,36 @@ export class HubScene extends Phaser.Scene {
           this.equipItem(cmdId, kind, item.id);
         })
       );
-      itemY += 28;
+      itemY += 44;
     }
 
     if (locked.length > 0) {
-      itemY += 8;
+      itemY += 12;
       const sep = this.add
         .text(width / 2, itemY, '— 尚未解鎖 —', {
-          fontSize: '13px',
+          fontSize: '20px',
           color: '#666666',
         })
         .setOrigin(0.5);
       items.push(sep);
-      itemY += 24;
+      itemY += 36;
 
       for (const item of locked) {
         const stats = formatStats(kind, item);
         const label = `🔒 ${item.name}（${stats}）　LV ${item.requiredLevel} 解鎖`;
         const lockTxt = this.add
           .text(width / 2, itemY, label, {
-            fontSize: '14px',
+            fontSize: '22px',
             color: '#666666',
           })
           .setOrigin(0.5);
         items.push(lockTxt);
-        itemY += 26;
+        itemY += 40;
       }
     }
 
     items.push(
-      this.makePickerItem(width / 2, itemY + 20, '✕ 取消', '#cc7777', () => this.closeEquipPicker())
+      this.makePickerItem(width / 2, itemY + 30, '✕ 取消', '#cc7777', () => this.closeEquipPicker())
     );
 
     this.equipPicker = this.add.container(0, 0, items);
@@ -432,13 +439,13 @@ export class HubScene extends Phaser.Scene {
     onClick: () => void
   ): Phaser.GameObjects.Text {
     const txt = this.add.text(x, y, label, {
-      fontSize: '15px',
+      fontSize: '24px',
       color,
       fontStyle: 'bold',
     });
     txt.setOrigin(0.5);
-    const w = Math.max(txt.width + 30, 200);
-    const h = txt.height + 10;
+    const w = Math.max(txt.width + 40, 280);
+    const h = txt.height + 16;
     const hit = addHitRect(
       this,
       x,
@@ -462,12 +469,12 @@ export class HubScene extends Phaser.Scene {
     onClick: () => void
   ): Phaser.GameObjects.Text {
     const txt = this.add.text(x, y, label, {
-      fontSize: '14px',
+      fontSize: '26px',
       color,
       fontStyle: 'bold',
     });
-    const w = Math.max(txt.width + 16, 80);
-    const h = txt.height + 10;
+    const w = Math.max(txt.width + 24, 140);
+    const h = txt.height + 16;
     addHitRect(
       this,
       x + txt.width / 2,
@@ -488,12 +495,13 @@ export class HubScene extends Phaser.Scene {
     h: number,
     label: string,
     color: number,
+    fontSize: string,
     onClick: () => void
   ): Phaser.GameObjects.Container {
     const bg = this.add.rectangle(0, 0, w, h, color);
     bg.setStrokeStyle(2, 0x000000);
     const txt = this.add.text(0, 0, label, {
-      fontSize: '17px',
+      fontSize,
       color: '#ffffff',
       fontStyle: 'bold',
     });
