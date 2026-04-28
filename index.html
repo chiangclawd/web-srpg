@@ -2,7 +2,7 @@
 <html lang="zh-TW">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <!-- 禁用 HTML 快取 → iPhone 加到主畫面、桌機重訪都會抓最新版本 -->
     <!-- 帶 hash 的 JS/CSS 檔名仍可正常 cache，所以實際只會多抓 ~1KB HTML -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -33,6 +33,7 @@
       }
       #game canvas {
         display: block;
+        touch-action: manipulation; /* 關閉 double-tap zoom，讓遊戲自己處理觸控 */
       }
 
       /* 直屏（手機豎著拿）→ 顯示「請旋轉」遮罩，蓋住整個遊戲 */
