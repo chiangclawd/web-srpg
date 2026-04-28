@@ -125,19 +125,21 @@ export class HubScene extends Phaser.Scene {
       wordWrap: { width: width - infoX - 20 },
     });
 
-    // 換裝按鈕（資訊欄下方）
-    const swapY = cardsY0 + 50 + 360;
+    // 出陣 + 換裝按鈕都放在右側欄底部，避免和 infoText 的「成長率」這幾行打架
+    const sortieH = 80;
+    const sortieY = height - sortieH - 24;
+    const swapY = sortieY - 56;
     this.makeInlineButton(infoX, swapY, '▸ 換武器', '#ffaa66', () => {
       const cmd = this.playerCommanders[this.selectedIdx];
       if (cmd) this.openEquipPicker('weapon', cmd.id);
     });
-    this.makeInlineButton(infoX + 180, swapY, '▸ 換防具', '#88ccff', () => {
+    this.makeInlineButton(infoX + 200, swapY, '▸ 換防具', '#88ccff', () => {
       const cmd = this.playerCommanders[this.selectedIdx];
       if (cmd) this.openEquipPicker('armor', cmd.id);
     });
 
-    // 出陣按鈕（畫面底端置中，加大方便手指點）
-    this.makeButton(width / 2 - 170, height - 100, 340, 84, '▶ 出陣', 0xe24a4a, '36px', () => {
+    const sortieW = Math.min(420, width - infoX - 30);
+    this.makeButton(infoX, sortieY, sortieW, sortieH, '▶ 出陣', 0xe24a4a, '36px', () => {
       this.scene.start('BattleScene', { chapterId: this.chapterId });
     });
     this.makeButton(20, 16, 140, 44, '◀ 回標題', 0x444444, '22px', () => {
