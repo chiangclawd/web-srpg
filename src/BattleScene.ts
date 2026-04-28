@@ -826,6 +826,9 @@ export class BattleScene extends Phaser.Scene {
           if (this.checkBattleEnd()) return;
           this.checkPlayerTurnEnd();
         });
+      } else {
+        // 點到不能打的單位：別默默吃掉、也別 deselect（會留下沒 exhaust 的 bug）
+        this.flashHint('請選攻擊範圍內的敵人，或按「原地待命」');
       }
       return;
     }
@@ -880,6 +883,13 @@ export class BattleScene extends Phaser.Scene {
 
   private onTileClicked(tile: Coord): void {
     if (this.isPaused) return;
+    if (this.selection.kind === 'busy') return;
+    if (this.selection.kind === 'action_choice') {
+      // 移動已執行，必須明確選攻擊目標 / 原地待命 / 用藥草。否則重置會
+      // 讓 hasActed 沒被設、單位可以二度被選並再移動（單回合多次移動 bug）
+      this.flashHint('請選攻擊目標，或按「原地待命」結束行動');
+      return;
+    }
     if (this.selection.kind !== 'unit_selected') {
       this.deselect();
       return;
