@@ -207,4 +207,11 @@ export const SKILL_EFFECTS: Record<string, SkillEffect> = {
   marksman: {
     outgoingMul: (ctx) => ((ctx.defenderHpRatio ?? 1) < 0.4 ? 1.5 : 1.0),
   },
+
+  // === Ch13 後日談 ===
+  // 檔案禁咒：對 mage / archer ×1.4（克勞德總管，文書詛咒專剋後排）
+  archive_curse: {
+    outgoingMul: (ctx) =>
+      ctx.defenderType === 'mage' || ctx.defenderType === 'archer' ? 1.4 : 1.0,
+  },
 };

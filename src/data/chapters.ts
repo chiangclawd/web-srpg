@@ -96,7 +96,15 @@ export const CHAPTERS: Record<string, ChapterDef> = {
     scenarioId: 'mine_outskirts',
     victoryCutsceneId: 'ch12_victory',
     defeatCutsceneId: 'ch12_defeat',
-    // 後日談首章 — 暫無 next（之後 Ch13+ 接上）
+    nextChapterId: 'chapter13',
+  },
+  chapter13: {
+    id: 'chapter13', number: 13, title: '王都的影子',
+    prologueCutsceneId: 'ch13_prologue',
+    scenarioId: 'royal_archives',
+    victoryCutsceneId: 'ch13_victory',
+    defeatCutsceneId: 'ch13_defeat',
+    // 後日談 Ch13 — Ch14（貴族議院）會接上
   },
   // C3 變體：次要試煉（Boss Rush）— 解 mine_cleared 後 TitleScene 顯示專屬入口
   chapter_trial: {

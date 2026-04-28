@@ -47,6 +47,9 @@ export const PORTRAIT_ASSETS: AssetEntry[] = [
   { key: 'portrait_viktor', url: 'assets/portraits/viktor.png' },
   { key: 'portrait_lila', url: 'assets/portraits/lila.png' },
   { key: 'portrait_elena', url: 'assets/portraits/elena.png' },
+
+  // === 後日談 Ch13 BOSS ===
+  { key: 'portrait_claude_steward', url: 'assets/portraits/claude_steward.png' },
 ];
 
 /**
@@ -72,6 +75,7 @@ export const CG_ASSETS: AssetEntry[] = [
 
   // === 後日談 ===
   { key: 'cg_chapter12', url: 'assets/cg/chapter12.png' },
+  { key: 'cg_chapter13', url: 'assets/cg/chapter13.png' },
 ];
 
 /**
@@ -128,6 +132,9 @@ export const SPRITE_ASSETS: AssetEntry[] = [
   { key: 'sprite_viktor', url: 'assets/sprites/viktor.png' },
   { key: 'sprite_lila', url: 'assets/sprites/lila.png' },
   { key: 'sprite_elena', url: 'assets/sprites/elena.png' },
+
+  // === 後日談 Ch13 BOSS — sprite（缺檔 fallback 到 sprite_enemy_mage）===
+  { key: 'sprite_claude_steward', url: 'assets/sprites/claude_steward.png' },
 ];
 
 /**

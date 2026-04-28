@@ -90,6 +90,12 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     desc: '完成「次要試煉（Boss Rush）」',
     hidden: true,
   },
+  archive_cleared: {
+    id: 'archive_cleared',
+    name: '碎片計畫二支',
+    desc: '完成第 13 章「王都的影子」',
+    hidden: true,
+  },
 };
 
 /** 章節 id → 完成解鎖的成就 id */
@@ -105,5 +111,6 @@ export const CHAPTER_COMPLETE_ACHIEVEMENT: Record<string, string> = {
   chapter9: 'remnants_done',
   chapter10: 'true_end',
   chapter12: 'mine_cleared',
+  chapter13: 'archive_cleared',
   chapter_trial: 'trial_complete',
 };

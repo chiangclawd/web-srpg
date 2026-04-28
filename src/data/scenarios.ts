@@ -650,6 +650,63 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
     bossId: 'zerin',
   },
   // ============================================
+  // Ch13：王都的影子（royal_archives）— 王立研究院地下檔案庫
+  // ============================================
+  // 室內戰場：石製書架走道。地形以 M（書架石壁）製造視野阻礙與行進通道。
+  // BOSS 克勞德在最東側辦公室，玩家從西側檔案庫入口攻入。
+  royal_archives: {
+    id: 'royal_archives', name: '王立研究院地下檔案庫',
+    description: '王立研究院檔案庫深處。克勞德總管召喚虛空生物作為實驗體。',
+    gridWidth: 22, gridHeight: 16,
+    bgColor: 0x121828,
+    // 邊牆 + 中央書架（MM 塊作為書架石壁）+ 零星木質書架（F）
+    terrain: [
+      'MMMMM..........MMMMMMM',
+      'MM..............F...MM',
+      'M..F..............F..M',
+      '..F....MM....MM......M',
+      '.....F.MM....MM......M',
+      'F............F.....F.M',
+      'F....F....F.......F..M',
+      'F.....MM......MM.....M',
+      'F.....MM......MM.....M',
+      'F....F....F.......F..M',
+      'F............F.....F.M',
+      '.....F.MM....MM......M',
+      '..F....MM....MM......M',
+      'M..F..............F..M',
+      'MM..............F...MM',
+      'MMMMM..........MMMMMMM',
+    ],
+    deployments: [
+      // 玩家西側入口
+      { commanderId: 'arthur', position: { x: 0, y: 7 } },
+      { commanderId: 'rosa', position: { x: 0, y: 8 } },
+      { commanderId: 'gary', position: { x: 0, y: 6 } },
+      { commanderId: 'sharon', position: { x: 0, y: 9 } },
+      { commanderId: 'rain', position: { x: 0, y: 5 } },
+      { commanderId: 'aria', position: { x: 0, y: 10 } },
+      { commanderId: 'viktor', position: { x: 1, y: 4 } },
+      { commanderId: 'lila', position: { x: 1, y: 11 } },
+      { commanderId: 'elena', position: { x: 1, y: 6 } },
+
+      // 敵方東側 — 克勞德 + 虛空生物 + 受感染研究員
+      { commanderId: 'claude_steward', position: { x: 20, y: 8 } },
+      { commanderId: 'void_acolyte', position: { x: 18, y: 5 } },
+      { commanderId: 'void_acolyte', position: { x: 18, y: 11 } },
+      { commanderId: 'shadow_minion', position: { x: 17, y: 7 } },
+      { commanderId: 'shadow_minion', position: { x: 17, y: 9 } },
+      { commanderId: 'shadow_minion', position: { x: 16, y: 8 } },
+      { commanderId: 'void_wraith', position: { x: 15, y: 4 } },
+      { commanderId: 'infected_miner', position: { x: 19, y: 6 } },
+      { commanderId: 'infected_miner', position: { x: 19, y: 10 } },
+      { commanderId: 'shard_wolf', position: { x: 14, y: 8 } },
+    ],
+    victoryCondition: 'kill_boss',
+    bossId: 'claude_steward',
+  },
+
+  // ============================================
   // C3 變體：次要試煉（hero_trial）— Boss Rush 風格的單場挑戰
   // ============================================
   // 一張圓形 arena 地圖，敵方全是 5 位次要 BOSS（vlad / morden / selene / carl /
