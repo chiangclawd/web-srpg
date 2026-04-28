@@ -52,9 +52,14 @@ export const CG_ASSETS: AssetEntry[] = [
   { key: 'cg_chapter1', url: 'assets/cg/chapter1.png' },
   { key: 'cg_chapter2', url: 'assets/cg/chapter2.png' },
   { key: 'cg_chapter3', url: 'assets/cg/chapter3.png' },
+  { key: 'cg_chapter4', url: 'assets/cg/chapter4.png' },
+  { key: 'cg_chapter5', url: 'assets/cg/chapter5.png' },
   { key: 'cg_chapter6', url: 'assets/cg/chapter6.png' },
+  { key: 'cg_chapter7', url: 'assets/cg/chapter7.png' },
   { key: 'cg_chapter8', url: 'assets/cg/chapter8.png' },
+  { key: 'cg_chapter9', url: 'assets/cg/chapter9.png' },
   { key: 'cg_chapter10', url: 'assets/cg/chapter10.png' },
+  { key: 'cg_chapter11', url: 'assets/cg/chapter11.png' },
 ];
 
 /**
