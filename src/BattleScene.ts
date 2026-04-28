@@ -1719,11 +1719,16 @@ export class BattleScene extends Phaser.Scene {
         // 預期反擊每點 -2 分 → 遠程兵自然偏好「打到目標但不在反擊範圍內」的位置（kite）
         score -= counterDmg * 2;
         score += tileTerrain.defBonus * 4; // 偏好高 DEF 地形
-        score += 50; // 比起逼近，能攻擊就直接攻擊
+        score += 100; // 能攻擊的位置壓倒性優於 approach 分支（避免「逼近但不攻擊」）
       } else {
         // 不能攻擊 → 越接近目標越好（負距離，越大越好）
-        score = -manhattan(tile, target.position) * 4;
-        score += tileTerrain.defBonus * 2; // 仍輕微偏好掩體
+        // 距離權重比 defBonus 大，避免敵兵「窩在山地掩體不下山」(camp 行為)
+        score = -manhattan(tile, target.position) * 6;
+        score += tileTerrain.defBonus * 1; // 仍輕微偏好掩體，但不敵接近
+        if (coordEq(tile, enemy.position)) {
+          // 不能攻擊又選擇原地不動：再扣 12 分迫使 AI 至少向目標推進
+          score -= 12;
+        }
       }
       if (score > bestTileScore) {
         bestTileScore = score;
