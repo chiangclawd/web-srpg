@@ -1636,10 +1636,10 @@ export class BattleScene extends Phaser.Scene {
     for (const p of players) {
       const counter = getCounter(enemy.unitType, p.unitType);
       const dist = manhattan(enemy.position, p.position);
-      const lowHpBonus = (1 - p.hp / p.maxHp) * 25; // 殘血加成提高，鼓勵集火
+      const lowHpBonus = (1 - p.hp / p.maxHp) * 40; // 殘血加成提高，鼓勵集火
       // 預判從目前位置直接打他能造成多少傷害（不考慮位移加成）
       const pred = predictDamage(enemy, p, 0);
-      let s = pred.expected * 4 + (counter.multiplier - 1) * 60 - dist + lowHpBonus;
+      let s = pred.expected * 5 + (counter.multiplier - 1) * 60 - dist + lowHpBonus;
       if (pred.canKill) s += 200; // 殘血可一擊必殺 → 強烈優先
       if (s > bestScore) {
         bestScore = s;
@@ -1677,8 +1677,10 @@ export class BattleScene extends Phaser.Scene {
         const willDie = counterDmg >= enemy.hp;
 
         score += myDmg.expected * 5;
-        if (willKill) score += 300;
-        if (willDie && !willKill) score -= 250; // 自殺式進攻嚴懲
+        if (willKill) score += 350;
+        if (willDie && !willKill) score -= 400; // 自殺式進攻嚴懲（不殺不換）
+        // 預期反擊每點 -2 分 → 遠程兵自然偏好「打到目標但不在反擊範圍內」的位置（kite）
+        score -= counterDmg * 2;
         score += tileTerrain.defBonus * 4; // 偏好高 DEF 地形
         score += 50; // 比起逼近，能攻擊就直接攻擊
       } else {
