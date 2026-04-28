@@ -425,4 +425,17 @@ export const COMMANDERS: Record<string, CommanderDef> = {
     startingLevel: 12, growthRates: { hp: 2, attack: 3, defense: 1 },
     startingEquipment: { weapon: 'elven_bow', armor: 'ranger_cloak' },
   },
+
+  // ============================================
+  // Ch13 王都的影子 — BOSS 克勞德總管
+  // ============================================
+  // 王立研究院總管，碎片計畫第二支同志（澤林是第一支，克勞德是第二支）。
+  // 用文書權力私下蒐集碎片殘渣，召喚虛空生物作為實驗體。
+  claude_steward: {
+    id: 'claude_steward', name: '克勞德總管', faction: 'enemy', unitType: 'mage',
+    statBonus: { hp: 8, attack: 4, defense: 2 },
+    skill: { id: 'archive_curse', name: '檔案禁咒', desc: '對法師/弓兵 ×1.4（剋後排）' },
+    startingLevel: 14, growthRates: { hp: 3, attack: 2, defense: 1 },
+    startingEquipment: { weapon: 'arcane_tome', armor: 'magus_robe' },
+  },
 };
