@@ -306,112 +306,117 @@ export class BattleScene extends Phaser.Scene {
 
   // ===== UI =====
   private createUI(): void {
-    // UI 一律 scrollFactor(0) → 鎖在畫面，不隨相機平移
-    // 右側面板永遠錨在 viewport 右邊（不隨棋盤位置漂移），避免 iPhone 螢幕被
-    // pinch-zoom 時按鈕被推出可點區域；text 同步加大一倍（28~30px）以利手機點擊。
+    // HUD 重設計（手機優先）：
+    //   - 上左：hintText（狀態 / 紅字錯誤回饋）
+    //   - 上右：縮放鈕
+    //   - 下方資訊條：選中單位的數據（避開右下按鈕區）
+    //   - 下右：2x2 大正方形按鈕（結束 / 取消 / 待命 / 藥草），方便手指點擊
+    //   - 隱藏：turnText（回合資訊）、potionText（庫存標籤）、logText —
+    //     使用者要求簡化 HUD；欄位仍保留以避免 update 點全面改動
     const viewportW = this.scale.width;
     const viewportH = this.scale.height;
-    // 右側面板寬度（= 按鈕寬 300 + 文字 wordWrap 320 取大；多留 40px 邊距）
-    const RIGHT_PANEL_RESERVE = 360;
-    const sideX = viewportW - RIGHT_PANEL_RESERVE;
-    const logY = Math.min(BOARD_OFFSET_Y + boardHeightPx() + 14, viewportH - 110);
 
-    this.turnText = this.registerUI(
+    // 隱藏文字：保留欄位 → 既有 setText 點不需要改
+    this.turnText = this.add.text(0, 0, '', { fontSize: '1px' }).setVisible(false);
+    this.potionText = this.add.text(0, 0, '', { fontSize: '1px' }).setVisible(false);
+    this.logText = this.add.text(0, 0, '', { fontSize: '1px' }).setVisible(false);
+
+    // === 上左：hintText（狀態 / 紅字錯誤）===
+    this.hintText = this.registerUI(
       this.add
-        .text(BOARD_OFFSET_X, 28, '', {
-          fontSize: '32px',
-          color: '#ffffff',
+        .text(20, 20, '', {
+          fontSize: '26px',
+          color: '#bbbbbb',
+          lineSpacing: 6,
+          wordWrap: { width: 800 },
           fontStyle: 'bold',
         })
         .setScrollFactor(0)
     );
 
-    let y = BOARD_OFFSET_Y;
+    // === 下方資訊條：選中武將時顯示數據；避開右下按鈕區 ===
+    const BTN_SIZE = 130;
+    const BTN_GAP = 16;
+    const BTN_GRID_W = BTN_SIZE * 2 + BTN_GAP;
+    const BTN_GRID_H = BTN_SIZE * 2 + BTN_GAP;
+    const BTN_RIGHT_MARGIN = 24;
+    const BTN_BOTTOM_MARGIN = 24;
+    const btnGridX = viewportW - BTN_GRID_W - BTN_RIGHT_MARGIN;
+    const btnGridY = viewportH - BTN_GRID_H - BTN_BOTTOM_MARGIN;
 
-    this.hintText = this.registerUI(
-      this.add
-        .text(sideX, y, '', {
-          fontSize: '28px',
-          color: '#bbbbbb',
-          lineSpacing: 6,
-          wordWrap: { width: 320 },
-        })
-        .setScrollFactor(0)
-    );
-    y += 150;
-
-    this.makeButton(sideX, y, '結束我方回合', 0x4a90e2, () => {
-      if (this.gameState !== 'player_turn') {
-        this.flashHint('現在不是我方回合');
-        return;
-      }
-      if (this.selection.kind !== 'idle') {
-        this.flashHint('請先完成或取消選中的武將');
-        return;
-      }
-      this.endPlayerTurn();
-    });
-    y += 72;
-
-    this.waitBtn = this.makeButton(sideX, y, '原地待命', 0x90884a, () => {
-      if (this.selection.kind === 'action_choice') {
-        const u = this.selection.unit;
-        u.exhaust();
-        this.appendLog(`${u.name} 原地待命`);
-        this.deselect();
-        this.checkPlayerTurnEnd();
-      }
-    });
-    this.waitBtn.setVisible(false);
-    y += 72;
-
-    this.cancelBtn = this.makeButton(sideX, y, '取消選擇', 0x666666, () => {
-      this.deselect();
-    });
-    this.cancelBtn.setVisible(false);
-    y += 72;
-
-    // 藥草按鈕：選中武將時可用，治療 12 HP 並結束行動
-    this.potionBtn = this.makeButton(sideX, y, `藥草 ×${this.potionCount}`, 0x66bb88, () => {
-      this.usePotion();
-    });
-    this.potionBtn.setVisible(false);
-    y += 78;
-
-    // 藥草庫存顯示（永久顯示）
-    this.potionText = this.registerUI(
-      this.add
-        .text(sideX, y, `藥草庫存：${this.potionCount}`, {
-          fontSize: '28px',
-          color: '#90c8a0',
-        })
-        .setScrollFactor(0)
-    );
-    y += 40;
-
+    const infoX = 20;
+    const infoY = viewportH - 180;
+    const infoW = btnGridX - infoX - 16; // 留 16px 邊距和按鈕區隔開
     this.infoText = this.registerUI(
       this.add
-        .text(sideX, y, '', {
-          fontSize: '26px',
+        .text(infoX, infoY, '', {
+          fontSize: '22px',
           color: '#dddddd',
           lineSpacing: 6,
-          wordWrap: { width: 320 },
+          wordWrap: { width: infoW },
         })
         .setScrollFactor(0)
     );
 
-    this.logText = this.registerUI(
-      this.add
-        .text(BOARD_OFFSET_X, logY, '', {
-          fontSize: '26px',
-          color: '#cccccc',
-          lineSpacing: 6,
-        })
-        .setScrollFactor(0)
-    );
+    // === 右下方 2x2 大正方形按鈕 ===
+    // 佈局：[結束] [取消]
+    //       [待命] [藥草]
+    const btnAt = (col: number, row: number) => ({
+      x: btnGridX + col * (BTN_SIZE + BTN_GAP),
+      y: btnGridY + row * (BTN_SIZE + BTN_GAP),
+    });
 
-    // === 縮放按鈕（畫面右上角，scroll-locked）===
-    // 順序：+（放大）/ ⌂（重置）/ −（縮小）
+    {
+      const p = btnAt(0, 0);
+      this.makeSquareButton(p.x, p.y, BTN_SIZE, '結束\n回合', 0x4a90e2, () => {
+        if (this.gameState !== 'player_turn') {
+          this.flashHint('現在不是我方回合');
+          return;
+        }
+        if (this.selection.kind !== 'idle') {
+          this.flashHint('請先完成或取消選中的武將');
+          return;
+        }
+        this.endPlayerTurn();
+      });
+    }
+
+    {
+      const p = btnAt(1, 0);
+      this.cancelBtn = this.makeSquareButton(p.x, p.y, BTN_SIZE, '取消\n選擇', 0x666666, () => {
+        this.deselect();
+      });
+      this.cancelBtn.setVisible(false);
+    }
+
+    {
+      const p = btnAt(0, 1);
+      this.waitBtn = this.makeSquareButton(p.x, p.y, BTN_SIZE, '原地\n待命', 0x90884a, () => {
+        if (this.selection.kind === 'action_choice') {
+          const u = this.selection.unit;
+          u.exhaust();
+          this.appendLog(`${u.name} 原地待命`);
+          this.deselect();
+          this.checkPlayerTurnEnd();
+        }
+      });
+      this.waitBtn.setVisible(false);
+    }
+
+    {
+      const p = btnAt(1, 1);
+      this.potionBtn = this.makeSquareButton(
+        p.x,
+        p.y,
+        BTN_SIZE,
+        `藥草\n×${this.potionCount}`,
+        0x66bb88,
+        () => this.usePotion()
+      );
+      this.potionBtn.setVisible(false);
+    }
+
+    // === 縮放按鈕（畫面右上角）===
     const zoomX = viewportW - 70;
     let zoomY = 40;
     this.makeZoomButton(zoomX, zoomY, '＋', () => this.zoomBy(1.25));
@@ -420,6 +425,7 @@ export class BattleScene extends Phaser.Scene {
     zoomY += 64;
     this.makeZoomButton(zoomX, zoomY, '－', () => this.zoomBy(0.8));
   }
+
 
   /** 縮放按鈕（鎖在畫面右上角；尺寸放大方便手指點） */
   private makeZoomButton(cx: number, cy: number, label: string, onClick: () => void): void {
@@ -458,39 +464,41 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  private makeButton(
+  /**
+   * 大正方形觸控按鈕（130x130 預設）。手機優先設計：
+   * 1. press 狀態只由 pointerdown / pointerup 控制，**不**靠 pointerover/out
+   *    來取消（觸控指尖微抖動會頻繁觸發 over/out 把 press 吃掉，過去手機上
+   *    「按了沒反應」就是被這條 over/out 吃掉的）。
+   * 2. 拖出按鈕後 pointerupoutside 才取消，符合 iOS / Android 原生按鈕觸感。
+   * 3. bindGlobalInput 偵測到 pointerdown 落在 UI 元件上時會略過拖曳追蹤，
+   *    避免微抖動觸發背景 pan 反向干擾。
+   */
+  private makeSquareButton(
     x: number,
     y: number,
+    size: number,
     label: string,
     color: number,
     onClick: () => void
   ): Phaser.GameObjects.Container {
-    const w = 300;
-    const h = 60;
-    const bg = this.add.rectangle(0, 0, w, h, color);
-    bg.setStrokeStyle(2, 0x000000);
+    const bg = this.add.rectangle(0, 0, size, size, color);
+    bg.setStrokeStyle(3, 0x000000);
     const txt = this.add.text(0, 0, label, {
-      fontSize: '28px',
+      fontSize: '26px',
       color: '#ffffff',
       fontStyle: 'bold',
+      align: 'center',
     });
     txt.setOrigin(0.5);
-    // 透明 hit area 子物件接管輸入（修正 Container hit area 偏移）
-    const hit = this.add.rectangle(0, 0, w, h, 0x000000, 0);
+    const hit = this.add.rectangle(0, 0, size, size, 0x000000, 0);
     hit.setInteractive({ useHandCursor: true });
-    const c = this.add.container(x + w / 2, y + h / 2, [bg, txt, hit]);
-    c.setSize(w, h);
+    const c = this.add.container(x + size / 2, y + size / 2, [bg, txt, hit]);
+    c.setSize(size, size);
     c.setDepth(20);
-    c.setScrollFactor(0); // UI 鎖在畫面，不隨相機移動
-    this.registerUI(c); // 縮放時反比 scale，按鈕視覺大小不變
+    c.setScrollFactor(0);
+    this.registerUI(c);
 
-    // 觸控回饋：按下時縮放 0.94 + 變暗 + 點擊音；放開才觸發 onClick；
-    // 拖出按鈕區域則取消（避免誤觸）。沒有這層回饋使用者在手機上常常
-    // 會懷疑「我到底有沒有點到」。
     let pressed = false;
-    const setHover = () => {
-      if (!pressed) bg.setFillStyle(this.tint(color, 1.2));
-    };
     const setNormal = () => {
       bg.setFillStyle(color);
       bg.setScale(1);
@@ -501,10 +509,14 @@ export class BattleScene extends Phaser.Scene {
       bg.setScale(0.94);
       txt.setScale(0.94);
     };
-    hit.on('pointerover', setHover);
+    hit.on('pointerover', () => {
+      if (!pressed) bg.setFillStyle(this.tint(color, 1.2));
+    });
     hit.on('pointerout', () => {
-      pressed = false;
-      setNormal();
+      // 重要：不取消 press（觸控微抖動會頻繁觸發 over/out）。
+      // 只還原 hover 顏色；press 視覺繼續維持，等 pointerup 或
+      // pointerupoutside 才結束。
+      if (!pressed) bg.setFillStyle(color);
     });
     hit.on('pointerdown', () => {
       pressed = true;
@@ -516,6 +528,12 @@ export class BattleScene extends Phaser.Scene {
       pressed = false;
       setNormal();
       onClick();
+    });
+    hit.on('pointerupoutside', () => {
+      if (!pressed) return;
+      pressed = false;
+      setNormal();
+      // 不觸發 onClick（手指離開按鈕區才放）
     });
     return c;
   }
@@ -568,19 +586,30 @@ export class BattleScene extends Phaser.Scene {
 
     // === 拖曳平移：超過 8px 視為 pan，不觸發 click ===
     // === 雙指捏合縮放：兩指同時按下時改成 zoom，不再 pan ===
-    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      this.dragStart = { x: p.x, y: p.y };
-      this.prevPointerPos = { x: p.x, y: p.y };
-      this.didDrag = false;
-      // 第二指落下 → 進入 pinch 模式，記錄初始距離與 zoom
-      const p1 = this.input.pointer1;
-      const p2 = this.input.pointer2;
-      if (p1.isDown && p2.isDown) {
-        this.pinchStartDist = Phaser.Math.Distance.Between(p1.x, p1.y, p2.x, p2.y);
-        this.pinchStartZoom = this.cameras.main.zoom;
-        this.didDrag = true; // 抑制 click（pinch 期間）
+    this.input.on(
+      'pointerdown',
+      (p: Phaser.Input.Pointer, gameObjects: Phaser.GameObjects.GameObject[]) => {
+        // 落點在 UI 元件（按鈕 hit area）上 → 不啟動單指拖曳。
+        // 這修掉「手指微抖動觸發 pan，按鈕 pointerout 取消 press」這條
+        // 在手機上常常按不到結束/待命按鈕的根因。
+        if (gameObjects.length > 0) {
+          this.dragStart = null;
+          this.didDrag = false;
+          return;
+        }
+        this.dragStart = { x: p.x, y: p.y };
+        this.prevPointerPos = { x: p.x, y: p.y };
+        this.didDrag = false;
+        // 第二指落下 → 進入 pinch 模式，記錄初始距離與 zoom
+        const p1 = this.input.pointer1;
+        const p2 = this.input.pointer2;
+        if (p1.isDown && p2.isDown) {
+          this.pinchStartDist = Phaser.Math.Distance.Between(p1.x, p1.y, p2.x, p2.y);
+          this.pinchStartZoom = this.cameras.main.zoom;
+          this.didDrag = true; // 抑制 click（pinch 期間）
+        }
       }
-    });
+    );
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
       const p1 = this.input.pointer1;
       const p2 = this.input.pointer2;
@@ -999,11 +1028,12 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private refreshPotionUI(): void {
+    // potionText 已隱藏（hud 重設計），但保留 setText 不出錯
     this.potionText.setText(`藥草庫存：${this.potionCount}`);
     const txt = this.potionBtn.list.find(
       (c): c is Phaser.GameObjects.Text => c instanceof Phaser.GameObjects.Text
     );
-    if (txt) txt.setText(`藥草 ×${this.potionCount}`);
+    if (txt) txt.setText(`藥草\n×${this.potionCount}`);
   }
 
   private collectBlockedTiles(self: Unit): Set<string> {
@@ -1469,25 +1499,17 @@ export class BattleScene extends Phaser.Scene {
     const factionLabel = unit.faction === 'player' ? '我方' : '敵方';
     const terrain = TERRAIN_TYPES[getTerrainAt(unit.position)];
     const weaponLine = unit.weapon
-      ? `武器：${unit.weapon.name}（+${unit.weapon.atk} 攻）`
-      : '武器：無';
+      ? `${unit.weapon.name}（+${unit.weapon.atk} 攻）`
+      : '無';
     const armorLine = unit.armor
-      ? `防具：${unit.armor.name}（+${unit.armor.def} 防 +${unit.armor.hpBonus} HP）`
-      : '防具：無';
+      ? `${unit.armor.name}（+${unit.armor.def} 防 +${unit.armor.hpBonus} HP）`
+      : '無';
+    // 緊湊 4 行格式，配合底部資訊條（約 160px 高）的有限縱空間
     const lines = [
-      `${unit.name}　LV ${unit.level}`,
-      `${factionLabel}　${utype.name}`,
-      `HP ${unit.hp}/${unit.maxHp}`,
-      `攻 ${unit.attack}　防 ${unit.defense}`,
-      `移 ${unit.moveRange}　射 ${unit.attackRange}`,
-      `EXP ${unit.exp}/20`,
-      `所在：${terrain.name}（防+${terrain.defBonus}）`,
-      ``,
-      weaponLine,
-      armorLine,
-      ``,
-      `特技：${unit.skillName}`,
-      `　${unit.skillDesc}`,
+      `${unit.name}　LV ${unit.level}　${factionLabel}　${utype.name}　所在：${terrain.name}（防+${terrain.defBonus}）`,
+      `HP ${unit.hp}/${unit.maxHp}　攻 ${unit.attack}　防 ${unit.defense}　移 ${unit.moveRange}　射 ${unit.attackRange}　EXP ${unit.exp}/20`,
+      `武器：${weaponLine}　／　防具：${armorLine}`,
+      `特技：${unit.skillName}　${unit.skillDesc}`,
     ];
     this.infoText.setText(lines.join('\n'));
   }
