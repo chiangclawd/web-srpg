@@ -139,6 +139,7 @@ export const CUTSCENES: Record<string, CutsceneScript> = {
   // ============= 第 4 章 =============
   ch4_prologue: {
     id: 'ch4_prologue',
+    bgImageKey: 'cg_chapter4',
     lines: [
       { speaker: '旁白', text: '——伊特拉河 · 黎明霧中——' },
       { speaker: '旁白', text: '從伯朗身上找到的地圖，指向北方法米爾魔法學院。' },
@@ -188,6 +189,7 @@ export const CUTSCENES: Record<string, CutsceneScript> = {
   // ============= 第 5 章 =============
   ch5_prologue: {
     id: 'ch5_prologue',
+    bgImageKey: 'cg_chapter5',
     lines: [
       { speaker: '旁白', text: '——艾斯瑞特城 · 第七日圍城——' },
       { speaker: '旁白', text: '王國北方要衝，有法米爾魔法學院的分院。' },
@@ -288,6 +290,7 @@ export const CUTSCENES: Record<string, CutsceneScript> = {
   // ============= 第 7 章 =============
   ch7_prologue: {
     id: 'ch7_prologue',
+    bgImageKey: 'cg_chapter7',
     lines: [
       { speaker: '旁白', text: '——黑暗山 · 山中遺跡——' },
       { speaker: '旁白', text: '據傳遠古時代，邪神「虛空之主」最後一次顯現的地方。' },
@@ -394,6 +397,7 @@ export const CUTSCENES: Record<string, CutsceneScript> = {
   // ============= 番外第 9 章 =============
   ch9_prologue: {
     id: 'ch9_prologue',
+    bgImageKey: 'cg_chapter9',
     lines: [
       { speaker: '旁白', text: '——擊敗教主・黯後 一個月——' },
       { speaker: '旁白', text: '王國各地恢復平靜。亞瑟回王都述職，蘿莎與雷恩留在邊境。' },
@@ -492,6 +496,7 @@ export const CUTSCENES: Record<string, CutsceneScript> = {
   // ============= 隱藏章節：修羅戰場 =============
   ch11_prologue: {
     id: 'ch11_prologue',
+    bgImageKey: 'cg_chapter11',
     lines: [
       { speaker: '旁白', text: '——TRUE END 之後 · 某夜——' },
       { speaker: '旁白', text: '亞瑟在夢中走入熟悉又陌生的浮島。' },
