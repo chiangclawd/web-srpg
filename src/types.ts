@@ -126,6 +126,12 @@ export interface CutsceneScript {
   lines: DialogueLine[];
   /** 背景大圖 texture key（如 'cg_chapter1'）。未設定 → 純黑底。 */
   bgImageKey?: string;
+  /**
+   * 進到指定行號（0-indexed）時切換背景大圖（cinematic transition）。
+   * 例：`{ 6: 'cg_chapter1_outpost' }` → 第 7 行起背景換成另一張 CG。
+   * 切換以 cross-fade 完成；指定 key 沒對應 texture 時保留當前背景不變。
+   */
+  lineBgKey?: Record<number, string>;
 }
 
 export interface ChapterDef {
