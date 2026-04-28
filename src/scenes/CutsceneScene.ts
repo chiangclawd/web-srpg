@@ -29,6 +29,7 @@ function findCommanderIdBySpeaker(speaker: string): string | null {
 export class CutsceneScene extends Phaser.Scene {
   private lines: DialogueLine[] = [];
   private bgImageKey: string | undefined;
+  private lineBgKey: Record<number, string> | undefined;
   private current = 0;
   private next!: CutsceneNext;
   private speakerText!: Phaser.GameObjects.Text;
@@ -39,6 +40,10 @@ export class CutsceneScene extends Phaser.Scene {
   private hasBgImage = false;
   /** 對話框上緣 y 座標（updatePortrait 用來把立繪底部貼齊）*/
   private dialogBoxTopY = 0;
+  /** 目前在畫面上的 CG bg image（cross-fade 時舊圖會 fade-out 再 destroy） */
+  private currentBgImage: Phaser.GameObjects.Image | null = null;
+  /** 目前載入的 bg key，避免同 key 重複切換 */
+  private currentBgKey: string | undefined;
 
   constructor() {
     super({ key: 'CutsceneScene' });
@@ -50,33 +55,33 @@ export class CutsceneScene extends Phaser.Scene {
       console.warn('Unknown cutscene id', data.cutsceneId);
       this.lines = [{ speaker: '系統', text: `（找不到劇本：${data.cutsceneId}）` }];
       this.bgImageKey = undefined;
+      this.lineBgKey = undefined;
     } else {
       this.lines = cs.lines;
       this.bgImageKey = cs.bgImageKey;
+      this.lineBgKey = cs.lineBgKey;
     }
     this.current = 0;
     this.next = data.next;
     this.portraitImage = null;
     this.currentSpeakerId = null;
     this.hasBgImage = false;
+    this.currentBgImage = null;
+    this.currentBgKey = undefined;
   }
 
   create(): void {
     const { width, height } = this.scale;
 
-    // 背景：優先用 CG 大圖（若 cutscene 有指定且 texture 已載入）
-    if (this.bgImageKey && this.textures.exists(this.bgImageKey)) {
-      const bg = this.add.image(width / 2, height / 2, this.bgImageKey);
-      // cover：縮到完全填滿畫布
-      const scale = Math.max(width / bg.width, height / bg.height);
-      bg.setScale(scale);
-      // 全螢幕半透明黑罩，讓對話框可讀但 CG 仍清楚
-      this.add.rectangle(0, 0, width, height, 0x000000, 0.35).setOrigin(0);
-      this.hasBgImage = true;
-    } else {
-      this.add.rectangle(0, 0, width, height, 0x0a0a0a).setOrigin(0);
-      this.hasBgImage = false;
-    }
+    // 純黑底（永遠先鋪一層，當 fallback / bg cross-fade 期間的襯底）
+    this.add.rectangle(0, 0, width, height, 0x0a0a0a).setOrigin(0);
+
+    // 嘗試載入 cutscene 指定的初始 bg；line 0 若有 lineBgKey 會 override
+    const initialKey = this.lineBgKey?.[0] ?? this.bgImageKey;
+    this.applyBg(initialKey, /*animate*/ false);
+
+    // 35% 黑罩（鋪在 bg 上面、立繪/對話框下面），讓對話框可讀
+    this.add.rectangle(0, 0, width, height, 0x000000, 0.35).setOrigin(0).setDepth(5);
 
     // 立繪舞台中央位置（無立繪時用 ◇ 佔位；有 CG 時不顯示 ◇）
     const stageY = height * 0.32;
@@ -85,7 +90,8 @@ export class CutsceneScene extends Phaser.Scene {
         fontSize: '120px',
         color: '#333333',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(8);
     if (this.hasBgImage) this.placeholderText.setVisible(false);
 
     // 對話框：壓縮高度（多數對話 1-2 行為主），把畫面留給立繪/CG
@@ -96,19 +102,20 @@ export class CutsceneScene extends Phaser.Scene {
     const box = this.add.rectangle(boxX, boxY, width - 80, boxH, 0x000000, 0.85);
     box.setOrigin(0);
     box.setStrokeStyle(2, 0x4a90e2);
+    box.setDepth(20);
 
     this.speakerText = this.add.text(boxX + 28, boxY + 14, '', {
       fontSize: '40px',
       color: '#7ed1ff',
       fontStyle: 'bold',
-    });
+    }).setDepth(21);
 
     this.bodyText = this.add.text(boxX + 28, boxY + 70, '', {
       fontSize: '36px',
       color: '#ffffff',
       wordWrap: { width: width - 140 },
       lineSpacing: 8,
-    });
+    }).setDepth(21);
 
     // 進度提示
     const prog = this.add
@@ -116,7 +123,8 @@ export class CutsceneScene extends Phaser.Scene {
         fontSize: '26px',
         color: '#888888',
       })
-      .setOrigin(1, 1);
+      .setOrigin(1, 1)
+      .setDepth(21);
     prog.setName('progressText');
 
     // 點擊或按鍵繼續
@@ -126,9 +134,56 @@ export class CutsceneScene extends Phaser.Scene {
     this.showLine();
   }
 
+  /**
+   * 套用 / 切換背景 CG。若 key 相同則 no-op；新 key 沒對應 texture 則保留當前 bg。
+   * `animate=true` 時做 350ms cross-fade；create() 第一次設定用 false 直接顯示。
+   */
+  private applyBg(key: string | undefined, animate: boolean): void {
+    if (key === this.currentBgKey) return;
+    if (!key || !this.textures.exists(key)) {
+      // 沒指定或 texture 不存在 → 不主動清掉現有 bg，保留視覺穩定（避免閃成黑底）
+      return;
+    }
+
+    const { width, height } = this.scale;
+    const next = this.add.image(width / 2, height / 2, key);
+    const scale = Math.max(width / next.width, height / next.height);
+    next.setScale(scale);
+    next.setDepth(0);
+
+    const oldImage = this.currentBgImage;
+    if (animate && oldImage) {
+      next.setAlpha(0);
+      this.tweens.add({
+        targets: next,
+        alpha: 1,
+        duration: 350,
+        ease: 'Cubic.easeOut',
+      });
+      this.tweens.add({
+        targets: oldImage,
+        alpha: 0,
+        duration: 350,
+        ease: 'Cubic.easeIn',
+        onComplete: () => oldImage.destroy(),
+      });
+    } else if (oldImage) {
+      oldImage.destroy();
+    }
+
+    this.currentBgImage = next;
+    this.currentBgKey = key;
+    this.hasBgImage = true;
+  }
+
   private showLine(): void {
     const line = this.lines[this.current];
     if (!line) return;
+    // 切換背景（若該行有指定 lineBgKey）
+    const bgForLine = this.lineBgKey?.[this.current];
+    if (bgForLine !== undefined) {
+      this.applyBg(bgForLine, /*animate*/ true);
+    }
     this.speakerText.setText(line.speaker);
     this.bodyText.setText(line.text);
     this.updatePortrait(line.speaker);
@@ -165,6 +220,7 @@ export class CutsceneScene extends Phaser.Scene {
         const scale = maxH / img.height;
         img.setScale(scale);
         img.setAlpha(0);
+        img.setDepth(10); // 蓋過 bg 與 35% 黑罩（depth 5）但低於對話框（depth 20）
         this.tweens.add({
           targets: img,
           alpha: 1,
