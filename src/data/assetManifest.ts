@@ -93,6 +93,13 @@ export const SPRITE_ASSETS: AssetEntry[] = [
   { key: 'sprite_shadow', url: 'assets/sprites/shadow.png' },
   { key: 'sprite_high_priest', url: 'assets/sprites/high_priest.png' },
   { key: 'sprite_cult_leader', url: 'assets/sprites/cult_leader.png' },
+
+  // === 次要 BOSS 專用 sprite（沒檔案時自動 fallback 到 sprite_enemy_<unitType>） ===
+  { key: 'sprite_vlad', url: 'assets/sprites/vlad.png' },
+  { key: 'sprite_morden', url: 'assets/sprites/morden.png' },
+  { key: 'sprite_selene', url: 'assets/sprites/selene.png' },
+  { key: 'sprite_carl', url: 'assets/sprites/carl.png' },
+  { key: 'sprite_sub_priest', url: 'assets/sprites/sub_priest.png' },
 ];
 
 /**
