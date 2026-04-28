@@ -351,6 +351,7 @@ export class BattleScene extends Phaser.Scene {
           padding: { left: 14, right: 14, top: 8, bottom: 8 },
         })
         .setScrollFactor(0)
+        .setDepth(15) // 高於 tile (0.5) / 格線 (1)，低於按鈕 (20)
     );
 
     // === 下方資訊條：選中武將時顯示數據；避開右下按鈕區 ===
@@ -377,6 +378,7 @@ export class BattleScene extends Phaser.Scene {
           padding: { left: 14, right: 14, top: 8, bottom: 8 },
         })
         .setScrollFactor(0)
+        .setDepth(15) // 高於 tile (0.5) / 格線 (1)，低於按鈕 (20)
         .setVisible(false) // 預設無單位被選 → 隱藏 backdrop；選中後 showUnitInfo 會打開
     );
 
