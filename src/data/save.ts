@@ -24,10 +24,15 @@ export function saveProgress(
   const existing = loadSave();
   const completedSet = new Set(existing?.completedChapterIds ?? []);
   completedSet.add(completedChapterId);
-  const mergedProgress = {
-    ...(existing?.commanderProgress ?? {}),
-    ...commanderProgress,
-  };
+  // 注意：必須對每位武將做「欄位 merge」而非整筆覆寫。BattleScene 結束時
+  // 只傳 { level, exp }，沒有帶 weaponId/armorId；如果用 {...existing, ...new}
+  // 整筆替換，已存的裝備會被擦掉，下一章開戰就 fallback 回 startingEquipment
+  // → 使用者反映「換好的裝備不見」就是這條路徑。
+  const existingProgress = existing?.commanderProgress ?? {};
+  const mergedProgress: Record<string, CommanderProgress> = { ...existingProgress };
+  for (const [id, prog] of Object.entries(commanderProgress)) {
+    mergedProgress[id] = { ...existingProgress[id], ...prog };
+  }
   const data: SaveData = {
     version: SAVE_VERSION,
     completedChapterIds: Array.from(completedSet),
