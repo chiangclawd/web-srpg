@@ -132,14 +132,18 @@ export class TitleScene extends Phaser.Scene {
     // 版本戳記（右下角）：build 時 vite.config 注入 package version + git
     // short SHA + build 日期。使用者可在主畫面對照剛 push 的 commit hash
     // 確認 GitHub Pages 是否已抓到新版本。
+    // 金黃醒目色 + 32px + 兩行排版（避免單行超出 viewport 右邊）。
     this.add
       .text(
         width - 14,
         height - 12,
-        `v${__APP_VERSION__} · ${__GIT_SHA__} · ${__BUILD_DATE__} UTC`,
+        `v${__APP_VERSION__} · ${__GIT_SHA__}\n${__BUILD_DATE__} UTC`,
         {
-          fontSize: '16px',
-          color: '#666666',
+          fontSize: '32px',
+          color: '#ffd700',
+          fontStyle: 'bold',
+          align: 'right',
+          lineSpacing: 4,
         }
       )
       .setOrigin(1, 1);
