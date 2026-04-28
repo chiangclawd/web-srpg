@@ -28,6 +28,7 @@ import { SCENARIOS, DEFAULT_SCENARIO_ID } from './data/scenarios';
 import { CHAPTERS } from './data/chapters';
 import { UNIT_TYPES } from './data/unitTypes';
 import { TERRAIN_TYPES, parseTerrain } from './data/terrainTypes';
+import { getTileTextureKey } from './data/assetManifest';
 import { computeDamage, rollAttack } from './battle/DamageCalculator';
 import { getCounter } from './battle/CounterSystem';
 import { EXP_PER_DAMAGE, EXP_PER_KILL } from './battle/Leveling';
@@ -226,22 +227,35 @@ export class BattleScene extends Phaser.Scene {
   private drawBoard(): void {
     const w = getGridWidth();
     const h = getGridHeight();
-    const g = this.add.graphics();
-    g.setDepth(0);
+    // 三層 depth：底色 (0) → tile PNG (0.5) → 格線 (1)
+    // 把 fill 與 stroke 拆兩個 graphics，這樣 tile 圖會夾在中間，格線仍可見。
+    const gFill = this.add.graphics();
+    gFill.setDepth(0);
+    const gStroke = this.add.graphics();
+    gStroke.setDepth(1);
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const center = hexCenterPx({ x, y });
         const terrain = TERRAIN_TYPES[getTerrainAt({ x, y })];
-        // 棋盤交錯色（依列 + 欄）讓相鄰 hex 易於分辨
+        // 底色 — tile PNG 載入時會被覆蓋；缺檔仍能看到色塊版
         const dark = (x + y) % 2 === 0;
         const color = this.shadeColor(terrain.color, dark ? 0.92 : 1.08);
-        g.fillStyle(color, 1);
-        tracePointyHexPath(g, center.x, center.y, HEX_SIZE);
-        g.fillPath();
+        gFill.fillStyle(color, 1);
+        tracePointyHexPath(gFill, center.x, center.y, HEX_SIZE);
+        gFill.fillPath();
 
-        g.lineStyle(1, 0x222222, 1);
-        tracePointyHexPath(g, center.x, center.y, HEX_SIZE);
-        g.strokePath();
+        // 中層：painterly anime tile（hex 形透明 PNG，3 變體依 (x,y) 散布）
+        const tileKey = getTileTextureKey(terrain.id, x, y);
+        if (this.textures.exists(tileKey)) {
+          const tile = this.add.image(center.x, center.y, tileKey);
+          tile.setDisplaySize(HEX_W, HEX_H);
+          tile.setDepth(0.5);
+        }
+
+        // 上層：格線（必在 tile 之上）
+        gStroke.lineStyle(1, 0x222222, 1);
+        tracePointyHexPath(gStroke, center.x, center.y, HEX_SIZE);
+        gStroke.strokePath();
 
         // 非平原 → 加小型地形標誌（hex 底部）
         if (terrain.id !== 'plain') {

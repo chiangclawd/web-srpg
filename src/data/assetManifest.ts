@@ -145,6 +145,41 @@ export const SPRITE_ASSETS: AssetEntry[] = [
 ];
 
 /**
+ * 戰場地形 tile（pointy-top hex 形狀，建議 138×160 PNG，**透明背景**）。
+ * 每種地形有 3 個變體（_1 / _2 / _3）打散重複感；BattleScene.drawBoard 依 (x, y)
+ * hash 挑變體。缺檔自動 fallback 到 TERRAIN_TYPES 的 color 色塊（zero regression）。
+ *
+ * key 規則：tile_<terrainId>_<variant>，variant = 1..3
+ */
+export const TILE_ASSETS: AssetEntry[] = [
+  // 平原
+  { key: 'tile_plain_1', url: 'assets/tiles/plain_1.png' },
+  { key: 'tile_plain_2', url: 'assets/tiles/plain_2.png' },
+  { key: 'tile_plain_3', url: 'assets/tiles/plain_3.png' },
+  // 森林
+  { key: 'tile_forest_1', url: 'assets/tiles/forest_1.png' },
+  { key: 'tile_forest_2', url: 'assets/tiles/forest_2.png' },
+  { key: 'tile_forest_3', url: 'assets/tiles/forest_3.png' },
+  // 山地
+  { key: 'tile_mountain_1', url: 'assets/tiles/mountain_1.png' },
+  { key: 'tile_mountain_2', url: 'assets/tiles/mountain_2.png' },
+  { key: 'tile_mountain_3', url: 'assets/tiles/mountain_3.png' },
+  // 河流
+  { key: 'tile_water_1', url: 'assets/tiles/water_1.png' },
+  { key: 'tile_water_2', url: 'assets/tiles/water_2.png' },
+  { key: 'tile_water_3', url: 'assets/tiles/water_3.png' },
+];
+
+/**
+ * 取得指定 (x, y) hex 應該用哪一個 tile texture key（依地形 + 位置 hash 挑變體）。
+ * 缺檔時呼叫端應自行檢查 textures.exists 再決定 fallback。
+ */
+export function getTileTextureKey(terrainId: string, x: number, y: number): string {
+  const variant = (Math.abs(x * 73 + y * 41) % 3) + 1;
+  return `tile_${terrainId}_${variant}`;
+}
+
+/**
  * 取得武將對應的 portrait texture key（若有設定）。
  */
 export function getPortraitKey(commanderId: string): string {
