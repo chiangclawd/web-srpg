@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { CHAPTERS } from '../data/chapters';
 import { COMMANDERS, RECRUIT_AT_CHAPTER } from '../data/commanders';
 import { UNIT_TYPES } from '../data/unitTypes';
-import { EQUIPMENT, getEquippableFor } from '../data/equipment';
+import { EQUIPMENT, getEquippableFor, unlockChapterFor } from '../data/equipment';
 import {
   getCommanderProgress,
   setCommanderEquipment,
@@ -428,16 +428,17 @@ export class HubScene extends Phaser.Scene {
       .setOrigin(0.5);
     items.push(title);
 
-    // 此兵種專屬可選裝備（已過 level）
-    const equippable = getEquippableFor(cmd.unitType, cmdLevel, kind);
-    // 還沒解鎖（兵種對但等級不夠）→ 顯示灰色「LV X 解鎖」提示
-    const locked = Object.values(EQUIPMENT).filter(
-      (e) =>
-        e.kind === kind &&
-        e.unitTypes &&
-        e.unitTypes.includes(cmd.unitType) &&
-        (e.requiredLevel ?? 0) > cmdLevel
-    );
+    // 此兵種專屬可選裝備（已過 level + 章節）
+    const currentChapterNumber = CHAPTERS[this.chapterId]?.number ?? 1;
+    const equippable = getEquippableFor(cmd.unitType, cmdLevel, kind, currentChapterNumber);
+    // 還沒解鎖（兵種對但 level / 章節有一項未到）→ 顯示灰色「Lv X / Ch Y 解鎖」提示
+    const locked = Object.values(EQUIPMENT).filter((e) => {
+      if (e.kind !== kind) return false;
+      if (!e.unitTypes || !e.unitTypes.includes(cmd.unitType)) return false;
+      const lvBlocked = (e.requiredLevel ?? 0) > cmdLevel;
+      const chBlocked = unlockChapterFor(e) > currentChapterNumber;
+      return lvBlocked || chBlocked;
+    });
 
     let itemY = 140;
     items.push(
@@ -482,7 +483,13 @@ export class HubScene extends Phaser.Scene {
 
       for (const item of locked) {
         const stats = formatStats(kind, item);
-        const label = `🔒 ${item.name}（${stats}）　LV ${item.requiredLevel} 解鎖`;
+        // 顯示哪一個門檻沒過：lv / 章節，兩個都沒過時兩個都標
+        const reasons: string[] = [];
+        if ((item.requiredLevel ?? 0) > cmdLevel) reasons.push(`LV ${item.requiredLevel}`);
+        if (unlockChapterFor(item) > currentChapterNumber) {
+          reasons.push(`第 ${unlockChapterFor(item)} 章`);
+        }
+        const label = `🔒 ${item.name}（${stats}）　${reasons.join(' / ')} 解鎖`;
         const lockTxt = this.add
           .text(width / 2, itemY, label, {
             fontSize: '22px',
