@@ -57,7 +57,7 @@ const CHAPTER_MOODS: Record<string, BgmMood> = {
 type UISelection =
   | { kind: 'idle' }
   | { kind: 'unit_selected'; unit: Unit; reachable: Coord[]; directTargets: Unit[] }
-  | { kind: 'action_choice'; unit: Unit; attackTargets: Coord[] }
+  | { kind: 'action_choice'; unit: Unit; attackTargets: Coord[]; preMovePos: Coord }
   | { kind: 'busy' };
 
 export interface BattleSceneInitData {
@@ -102,6 +102,8 @@ export class BattleScene extends Phaser.Scene {
   private logLines: string[] = [];
   private waitBtn!: Phaser.GameObjects.Container;
   private cancelBtn!: Phaser.GameObjects.Container;
+  /** 移動後反悔按鈕（與 cancelBtn 同 slot 互斥顯示）*/
+  private cancelMoveBtn!: Phaser.GameObjects.Container;
   private activeBtn!: Phaser.GameObjects.Container;
 
   // 攻擊預判 tooltip
@@ -444,9 +446,21 @@ export class BattleScene extends Phaser.Scene {
       });
       this.cancelBtn.setVisible(false);
 
-      // 主動特技按鈕（佔同位置，與 cancelBtn 互斥顯示）：unit_selected 時 cancel 顯示、
-      // action_choice 時若 unit 有 activeSkill 且尚有次數則顯示。紫色區別於既有 4 鈕。
-      this.activeBtn = this.makeSquareButton(p.x, p.y, BTN_SIZE, '特技', 0x9966cc, () => {
+      // 取消移動按鈕（與 cancelBtn 同位置；mutex by selection state）：
+      //   unit_selected → cancelBtn 顯示（取消選擇）
+      //   action_choice → cancelMoveBtn 顯示（撤回移動，回到原位）
+      this.cancelMoveBtn = this.makeSquareButton(p.x, p.y, BTN_SIZE, '取消\n移動', 0xb87a4a, () => {
+        this.cancelMove();
+      });
+      this.cancelMoveBtn.setVisible(false);
+    }
+
+    // 主動特技按鈕：移到 2x2 grid 上方（讓 (1,0) slot 給 cancelBtn / cancelMoveBtn 互斥用）。
+    // 紫色區別於既有 4 鈕。
+    {
+      const ax = btnGridX + (BTN_SIZE + BTN_GAP) / 2 + (BTN_SIZE + BTN_GAP) / 2; // 取 grid 中央 X
+      const ay = btnGridY - BTN_SIZE - BTN_GAP;
+      this.activeBtn = this.makeSquareButton(ax - BTN_SIZE / 2, ay, BTN_SIZE, '特技', 0x9966cc, () => {
         this.useActiveSkill();
       });
       this.activeBtn.setVisible(false);
@@ -1000,11 +1014,13 @@ export class BattleScene extends Phaser.Scene {
     );
     if (occupied) return;
     const unit = sel.unit;
+    // 保存移動前位置給「取消移動」反悔機制使用（在 enterActionChoice 階段顯示按鈕）
+    const preMovePos = { ...unit.position };
     this.selection = { kind: 'busy' };
     this.clearHighlights();
     this.cancelBtn.setVisible(false);
     void unit.moveTo(tile).then(() => {
-      this.enterActionChoice(unit);
+      this.enterActionChoice(unit, preMovePos);
     });
   }
 
@@ -1030,6 +1046,7 @@ export class BattleScene extends Phaser.Scene {
     this.selection = { kind: 'unit_selected', unit, reachable, directTargets };
     this.drawMoveHighlights(moveTiles, unit.position, directTargets.map((u) => u.position));
     this.cancelBtn.setVisible(true);
+    this.cancelMoveBtn.setVisible(false);
     this.waitBtn.setVisible(false);
     this.showUnitInfo(unit);
     const hintLines = ['已選擇「' + unit.name + '」'];
@@ -1038,12 +1055,15 @@ export class BattleScene extends Phaser.Scene {
     this.hintText.setText(hintLines.join('\n'));
   }
 
-  private enterActionChoice(unit: Unit): void {
+  private enterActionChoice(unit: Unit, preMovePos: Coord): void {
     const targets = this.findAttackTargets(unit);
-    this.selection = { kind: 'action_choice', unit, attackTargets: targets };
+    this.selection = { kind: 'action_choice', unit, attackTargets: targets, preMovePos };
     this.drawAttackHighlights(targets, unit);
     this.waitBtn.setVisible(true);
     this.cancelBtn.setVisible(false);
+    // 取消移動按鈕：原地不動的 case（preMovePos === 當前位置）就不需要反悔
+    const moved = !coordEq(preMovePos, unit.position);
+    this.cancelMoveBtn.setVisible(moved);
     // 玩家武將且尚有藥草且未滿 HP → 顯示藥草按鈕
     if (
       unit.faction === 'player' &&
@@ -1072,6 +1092,7 @@ export class BattleScene extends Phaser.Scene {
     this.hideTooltip();
     this.waitBtn.setVisible(false);
     this.cancelBtn.setVisible(false);
+    this.cancelMoveBtn.setVisible(false);
     this.potionBtn.setVisible(false);
     this.activeBtn.setVisible(false);
     if (this.gameState === 'player_turn') {
@@ -1079,6 +1100,28 @@ export class BattleScene extends Phaser.Scene {
     }
     this.infoText.setText('');
     this.infoText.setVisible(false); // 沒選單位 → 連 backdrop 也藏起來
+  }
+
+  /** 反悔：把當前 action_choice 的單位送回 preMovePos，回到 unit_selected */
+  private cancelMove(): void {
+    if (this.selection.kind !== 'action_choice') return;
+    const { unit, preMovePos } = this.selection;
+    // 已開始攻擊或完成行動 → 不允許 undo（防止 race / 蓄力後反悔）
+    if (unit.hasActed) return;
+    this.selection = { kind: 'busy' };
+    this.clearHighlights();
+    this.cancelMoveBtn.setVisible(false);
+    this.waitBtn.setVisible(false);
+    this.potionBtn.setVisible(false);
+    this.activeBtn.setVisible(false);
+    void unit.revertTo(preMovePos).then(() => {
+      // 還原蓄力狀態（如果玩家剛剛按了特技但還沒攻擊）
+      if (unit.pendingEmpower) {
+        unit.activeUsesLeft += 1;
+        unit.pendingEmpower = null;
+      }
+      this.selectUnit(unit);
+    });
   }
 
   /** 觸發當前選中單位的主動特技（按鈕呼叫） */
