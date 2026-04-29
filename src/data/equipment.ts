@@ -235,18 +235,38 @@ export const EQUIPMENT: Record<string, EquipmentDef> = {
 };
 
 /**
- * 取得某兵種＋等級可用的所有裝備（依 kind 過濾）。
+ * 取得某兵種＋等級＋章節可用的所有裝備（依 kind 過濾）。
  * 用於 HubScene 的裝備選單只顯示「我能用的」。
+ *
+ * 雙重 gating：
+ *   - 角色 LV 不足 → 鎖
+ *   - 劇情章節未到 → 鎖（避免一進遊戲就拿到頂裝備）
  */
 export function getEquippableFor(
   unitType: string,
   level: number,
-  kind: 'weapon' | 'armor'
+  kind: 'weapon' | 'armor',
+  currentChapter: number
 ): EquipmentDef[] {
   return Object.values(EQUIPMENT).filter((e) => {
     if (e.kind !== kind) return false;
     if (e.unitTypes && !e.unitTypes.includes(unitType as never)) return false;
     if ((e.requiredLevel ?? 0) > level) return false;
+    if (unlockChapterFor(e) > currentChapter) return false;
     return true;
   });
+}
+
+/**
+ * 把裝備的 requiredLevel 推算成章節解鎖點：
+ *   lv 1 → ch 1，lv 5 → ch 4，lv 10 → ch 7，lv 14 → ch 10。
+ * 若 EquipmentDef 顯式設了 requiredChapter，以該值優先。
+ */
+export function unlockChapterFor(item: EquipmentDef): number {
+  if (item.requiredChapter !== undefined) return item.requiredChapter;
+  const lv = item.requiredLevel ?? 1;
+  if (lv <= 1) return 1;
+  if (lv <= 5) return 4;
+  if (lv <= 10) return 7;
+  return 10;
 }

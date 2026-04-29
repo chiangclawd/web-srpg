@@ -38,6 +38,15 @@ export interface EquipmentDef {
   unitTypes?: UnitTypeId[];
   /** 解鎖等級門檻；undefined / 0 = 開局即可裝備 */
   requiredLevel?: number;
+  /**
+   * 解鎖章節門檻（顯式覆蓋）；不填則由 requiredLevel 自動推算：
+   *   lv 1 → ch 1（即遊戲開始）
+   *   lv 5 → ch 4
+   *   lv 10 → ch 7
+   *   lv 14 → ch 10（後日談 / 試煉場全開）
+   * 隱藏 / 後日談章節編號 ≥ 11，所有裝備都已解鎖。
+   */
+  requiredChapter?: number;
   /** 命中率加成（百分點，例：5 = +5%）*/
   hitBonus?: number;
   /** 爆擊率加成（百分點）*/
