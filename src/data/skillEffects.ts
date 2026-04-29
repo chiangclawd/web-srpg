@@ -10,6 +10,10 @@ export interface SkillContext {
   /** 攻擊方目前 HP 比例（0-1）。給「自身 HP > X% 才生效」這類技能用 */
   attackerHpRatio?: number;
   defenderHpRatio?: number;
+  /** 攻擊方周圍 6 格內同陣營友軍數（不含自己）。集團型攻擊技能用 */
+  attackerAdjacentAllies?: number;
+  /** 防守方周圍 6 格內同陣營友軍數（不含自己）。盾牆型防禦技能用 */
+  defenderAdjacentAllies?: number;
 }
 
 export interface SkillEffect {
@@ -22,20 +26,44 @@ export interface SkillEffect {
 export const SKILL_EFFECTS: Record<string, SkillEffect> = {
   // === 玩家 ===
   // 王者意志：HP < 50% 時，受到傷害 -30%
+  // 王者意志（亞瑟）：HP > 80% 攻擊 ×1.15（旺盛時氣勢攻），HP < 50% 受傷 ×0.7（殘血時防）
   kings_will: {
+    outgoingMul: (ctx) => ((ctx.attackerHpRatio ?? 1) > 0.8 ? 1.15 : 1.0),
     incomingMul: (ctx) => ((ctx.defenderHpRatio ?? 1) < 0.5 ? 0.7 : 1.0),
   },
-  // 神射：攻擊 +25%
+  // 神射（蘿莎）：對 flier 或 archer 滿血目標 ×1.5；其他維持 ×1.1（基本火力）
   sharp_shooter: {
-    outgoingMul: () => 1.25,
+    outgoingMul: (ctx) => {
+      const t = ctx.defenderType;
+      const fullHp = (ctx.defenderHpRatio ?? 1) > 0.95;
+      if ((t === 'flier' || t === 'archer') && fullHp) return 1.5;
+      return 1.1;
+    },
   },
-  // 不動如山：受到傷害 -10%
+  // 不動如山（蓋瑞）：原地不動攻擊 ×1.5（守點王）；移動後攻擊 ×0.85（鼓勵守陣不衝鋒）
   unmoving: {
-    incomingMul: () => 0.9,
+    outgoingMul: (ctx) => ((ctx.attackerMovedDistance ?? 0) === 0 ? 1.5 : 0.85),
   },
-  // 法米爾秘術：攻擊 +30%
+  // 法米爾秘術（夏倫）：條件式破甲 — 對 lance / sword ×1.4，對 archer / flier ×0.85
   fameel_arcana: {
-    outgoingMul: () => 1.3,
+    outgoingMul: (ctx) => {
+      const t = ctx.defenderType;
+      if (t === 'lance' || t === 'sword') return 1.4;
+      if (t === 'archer' || t === 'flier') return 0.85;
+      return 1.0;
+    },
+  },
+  // 盾牆陣（雜兵新技；蠻族長槍 / 王國槍兵雜兵用）：身邊有 ≥1 友軍時受傷 ×0.8
+  phalanx_wall: {
+    incomingMul: (ctx) => ((ctx.defenderAdjacentAllies ?? 0) >= 1 ? 0.8 : 1.0),
+  },
+  // 狂血突擊（雜兵新技；蠻族騎士 / 蠻族劫匪用）：HP > 70% 攻擊 ×1.25
+  frenzied_raid: {
+    outgoingMul: (ctx) => ((ctx.attackerHpRatio ?? 1) > 0.7 ? 1.25 : 1.0),
+  },
+  // 虛空毒爪（雜兵新技；碎片狼獸用）：對 mage 目標 ×1.4（剋後排）
+  tainted_bite: {
+    outgoingMul: (ctx) => (ctx.defenderType === 'mage' ? 1.4 : 1.0),
   },
   // 騎士榮耀：移動 ≥ 3 格 攻擊 +30%（原本 +50%，配合新 DEF 公式調降避免一刀秒殺）
   knight_charge: {

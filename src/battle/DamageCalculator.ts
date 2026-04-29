@@ -19,6 +19,10 @@ export interface DamageContext {
   /** 攻擊方目前 HP 比例（0-1）。給「自身 HP > X% 才生效」這類技能用 */
   attackerHpRatio?: number;
   defenderHpRatio?: number;
+  /** 攻擊方周圍 6 格內同陣營友軍數（不含自己）。集團型攻擊技能用 */
+  attackerAdjacentAllies?: number;
+  /** 防守方周圍 6 格內同陣營友軍數（不含自己）。盾牆型防禦技能用 */
+  defenderAdjacentAllies?: number;
   /** 難度倍率（敵方攻擊額外乘）：休閒 0.7、普通 1.0、困難 1.3 */
   enemyAttackMul?: number;
   /** 攻擊方武器的命中率加成（百分點，可省略）*/
