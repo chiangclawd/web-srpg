@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type {
+  ActiveSkillDef,
   Coord,
   CommanderDef,
   CommanderProgress,
@@ -45,6 +46,16 @@ export class Unit {
   hasActed = false;
   lastMoveDistance = 0;
 
+  // 主動特技狀態（Stage 2）
+  /** 該場戰鬥可用次數（每場 1，battle 重置）*/
+  activeUsesLeft = 1;
+  /** 當前儲存的「empower 攻擊」效果，下一次 attack 消耗 */
+  pendingEmpower: ActiveSkillDef | null = null;
+  /** 當前 stance 減傷 buff（剩 N 個我方回合）*/
+  stanceMods: { incomingMul: number; turnsLeft: number } | null = null;
+  /** 該武將的主動特技定義（從 commander 帶入）*/
+  readonly activeSkill: ActiveSkillDef | null;
+
   // base stats（含等級成長，不含裝備）
   private _baseMaxHp: number;
   private _baseAttack: number;
@@ -74,6 +85,7 @@ export class Unit {
     this.skillId = commander.skill.id;
     this.skillName = commander.skill.name;
     this.skillDesc = commander.skill.desc;
+    this.activeSkill = commander.activeSkill ?? null;
     this.position = { ...position };
 
     const utype = UNIT_TYPES[commander.unitType];

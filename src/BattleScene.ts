@@ -102,6 +102,7 @@ export class BattleScene extends Phaser.Scene {
   private logLines: string[] = [];
   private waitBtn!: Phaser.GameObjects.Container;
   private cancelBtn!: Phaser.GameObjects.Container;
+  private activeBtn!: Phaser.GameObjects.Container;
 
   // 攻擊預判 tooltip
   private tooltip: Phaser.GameObjects.Container | null = null;
@@ -424,6 +425,13 @@ export class BattleScene extends Phaser.Scene {
         this.deselect();
       });
       this.cancelBtn.setVisible(false);
+
+      // 主動特技按鈕（佔同位置，與 cancelBtn 互斥顯示）：unit_selected 時 cancel 顯示、
+      // action_choice 時若 unit 有 activeSkill 且尚有次數則顯示。紫色區別於既有 4 鈕。
+      this.activeBtn = this.makeSquareButton(p.x, p.y, BTN_SIZE, '特技', 0x9966cc, () => {
+        this.useActiveSkill();
+      });
+      this.activeBtn.setVisible(false);
     }
 
     {
@@ -1028,6 +1036,10 @@ export class BattleScene extends Phaser.Scene {
     } else {
       this.potionBtn.setVisible(false);
     }
+    // 主動特技按鈕：玩家武將、有 activeSkill、本場尚有次數
+    const hasActive =
+      unit.faction === 'player' && unit.activeSkill !== null && unit.activeUsesLeft > 0;
+    this.activeBtn.setVisible(hasActive);
     this.showUnitInfo(unit);
     if (targets.length > 0) {
       this.hintText.setText(`「${unit.name}」可攻擊\n滑入敵人看預判`);
@@ -1043,11 +1055,62 @@ export class BattleScene extends Phaser.Scene {
     this.waitBtn.setVisible(false);
     this.cancelBtn.setVisible(false);
     this.potionBtn.setVisible(false);
+    this.activeBtn.setVisible(false);
     if (this.gameState === 'player_turn') {
       this.hintText.setText('點我方單位（藍）行動，\n或按「結束回合」。');
     }
     this.infoText.setText('');
     this.infoText.setVisible(false); // 沒選單位 → 連 backdrop 也藏起來
+  }
+
+  /** 觸發當前選中單位的主動特技（按鈕呼叫） */
+  private useActiveSkill(): void {
+    if (this.selection.kind !== 'action_choice') return;
+    const u = this.selection.unit;
+    const skill = u.activeSkill;
+    if (!skill || u.activeUsesLeft <= 0) return;
+
+    if (skill.type === 'heal_self') {
+      const heal = Math.min(skill.heal?.amount ?? 0, u.maxHp - u.hp);
+      u.hp += heal;
+      u.applyDamage(0); // refresh HP bar
+      u.showFloatingText(`${skill.name} +${heal} HP`, '#90ff90', '14px');
+      audio.playLevelUp();
+      this.appendLog(`${u.name} 使用「${skill.name}」恢復 ${heal} HP`);
+      u.activeUsesLeft -= 1;
+      u.exhaust();
+      this.deselect();
+      this.checkPlayerTurnEnd();
+      return;
+    }
+
+    if (skill.type === 'defense_stance') {
+      u.stanceMods = {
+        incomingMul: skill.stance?.incomingMul ?? 1,
+        // +1 因為當下回合也算一個 turn；下一個 startPlayerTurn 會 -1
+        turnsLeft: (skill.stance?.durationTurns ?? 1) + 1,
+      };
+      u.showFloatingText(`${skill.name}！`, '#7ed1ff', '16px');
+      audio.playLevelUp();
+      this.appendLog(`${u.name} 進入「${skill.name}」姿態`);
+      u.activeUsesLeft -= 1;
+      u.exhaust();
+      this.deselect();
+      this.checkPlayerTurnEnd();
+      return;
+    }
+
+    if (skill.type === 'empower_attack') {
+      // 蓄力：保留在 action_choice 等玩家選攻擊目標
+      u.pendingEmpower = skill;
+      u.showFloatingText(`${skill.name}！`, '#ffd54a', '16px');
+      audio.playLevelUp();
+      this.appendLog(`${u.name} 蓄力「${skill.name}」— 下一擊強化`);
+      u.activeUsesLeft -= 1;
+      // 不 exhaust、不 deselect — 玩家還要選敵人
+      this.activeBtn.setVisible(false); // 蓄力中不再顯示按鈕（避免重複按）
+      this.hintText.setText(`「${u.name}」蓄力完成 — 點敵人發動「${skill.name}」`);
+    }
   }
 
   private usePotion(): void {
@@ -1118,10 +1181,17 @@ export class BattleScene extends Phaser.Scene {
       defenderHpRatio: defender.hp / defender.maxHp,
       attackerAdjacentAllies: this.countAdjacentAllies(attacker),
       defenderAdjacentAllies: this.countAdjacentAllies(defender),
+      attackerEmpower: attacker.pendingEmpower?.empower,
+      defenderStanceMul: defender.stanceMods?.incomingMul,
       enemyAttackMul: getEnemyAttackMul(),
       attackerWeaponHitBonus: attacker.weapon?.hitBonus,
       attackerWeaponCritBonus: attacker.weapon?.critBonus,
     });
+    // 消耗主動特技 empower（不論命中與否）
+    if (attacker.pendingEmpower) {
+      this.appendLog(`【${attacker.name}】發動 ${attacker.pendingEmpower.name}！`);
+      attacker.pendingEmpower = null;
+    }
     const rolled = rollAttack(result);
     this.playAttackSound(attacker.unitType);
     await attacker.showAttackAnimation(defender);
@@ -1191,6 +1261,8 @@ export class BattleScene extends Phaser.Scene {
       defenderHpRatio: attacker.hp / attacker.maxHp,
       attackerAdjacentAllies: this.countAdjacentAllies(defender),
       defenderAdjacentAllies: this.countAdjacentAllies(attacker),
+      // 反擊不消耗 empower（empower 只給原攻擊用）；但 attacker 的 stance 仍生效
+      defenderStanceMul: attacker.stanceMods?.incomingMul,
       enemyAttackMul: getEnemyAttackMul(),
       attackerWeaponHitBonus: defender.weapon?.hitBonus,
       attackerWeaponCritBonus: defender.weapon?.critBonus,
@@ -1465,6 +1537,8 @@ export class BattleScene extends Phaser.Scene {
       defenderHpRatio: defender.hp / defender.maxHp,
       attackerAdjacentAllies: this.countAdjacentAllies(attacker),
       defenderAdjacentAllies: this.countAdjacentAllies(defender),
+      attackerEmpower: attacker.pendingEmpower?.empower,
+      defenderStanceMul: defender.stanceMods?.incomingMul,
       enemyAttackMul: getEnemyAttackMul(),
       attackerWeaponHitBonus: attacker.weapon?.hitBonus,
       attackerWeaponCritBonus: attacker.weapon?.critBonus,
@@ -1488,6 +1562,7 @@ export class BattleScene extends Phaser.Scene {
           defenderHpRatio: attacker.hp / attacker.maxHp,
           attackerAdjacentAllies: this.countAdjacentAllies(defender),
           defenderAdjacentAllies: this.countAdjacentAllies(attacker),
+          defenderStanceMul: attacker.stanceMods?.incomingMul,
           attackerWeaponHitBonus: defender.weapon?.hitBonus,
           attackerWeaponCritBonus: defender.weapon?.critBonus,
         })
@@ -1578,6 +1653,11 @@ export class BattleScene extends Phaser.Scene {
     this.gameState = 'player_turn';
     for (const u of this.units) {
       if (u.faction === 'player') u.resetTurn();
+      // 主動特技 stance buff 倒數：到 0 則失效
+      if (u.stanceMods) {
+        u.stanceMods.turnsLeft -= 1;
+        if (u.stanceMods.turnsLeft <= 0) u.stanceMods = null;
+      }
     }
     // survive 條件 → 顯示「回合 X / N」並判定是否撐到通關
     if (this.scenario.victoryCondition === 'survive' && this.scenario.surviveTurns) {
@@ -1652,6 +1732,7 @@ export class BattleScene extends Phaser.Scene {
         defenderHpRatio: defender.hp / defender.maxHp,
         attackerAdjacentAllies: this.countAdjacentAllies(attacker),
         defenderAdjacentAllies: this.countAdjacentAllies(defender),
+        defenderStanceMul: defender.stanceMods?.incomingMul,
         enemyAttackMul: getEnemyAttackMul(),
         attackerWeaponHitBonus: attacker.weapon?.hitBonus,
         attackerWeaponCritBonus: attacker.weapon?.critBonus,
@@ -1686,6 +1767,7 @@ export class BattleScene extends Phaser.Scene {
         defenderHpRatio: attacker.hp / attacker.maxHp,
         attackerAdjacentAllies: this.countAdjacentAllies(defender),
         defenderAdjacentAllies: this.countAdjacentAllies(attacker),
+        defenderStanceMul: attacker.stanceMods?.incomingMul,
         attackerWeaponHitBonus: defender.weapon?.hitBonus,
         attackerWeaponCritBonus: defender.weapon?.critBonus,
       });

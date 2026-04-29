@@ -28,7 +28,14 @@ export const COMMANDERS: Record<string, CommanderDef> = {
   arthur: {
     id: 'arthur', name: '亞瑟', faction: 'player', unitType: 'sword',
     statBonus: { hp: 6, attack: 1, defense: 1 },
-    skill: { id: 'kings_will', name: '王者意志', desc: 'HP < 50% 時，受到傷害 ×0.7' },
+    skill: { id: 'kings_will', name: '王者意志', desc: 'HP > 80% 攻擊 ×1.15；HP < 50% 受傷 ×0.7' },
+    activeSkill: {
+      id: 'royal_flash',
+      name: '王者一閃',
+      desc: '下一擊：傷害 ×1.5、命中 +20%、爆擊 +50%',
+      type: 'empower_attack',
+      empower: { dmgMul: 1.5, hitBoost: 20, critBoost: 50 },
+    },
     startingLevel: 5, growthRates: { hp: 3, attack: 1, defense: 1 },
     startingEquipment: { weapon: 'iron_sword', armor: 'leather_armor' },
   },
@@ -42,7 +49,14 @@ export const COMMANDERS: Record<string, CommanderDef> = {
   gary: {
     id: 'gary', name: '蓋瑞', faction: 'player', unitType: 'lance',
     statBonus: { hp: 4, attack: 1, defense: 2 },
-    skill: { id: 'unmoving', name: '不動如山', desc: '受到傷害 ×0.9' },
+    skill: { id: 'unmoving', name: '不動如山', desc: '原地不動攻擊 ×1.5；移動後 ×0.85' },
+    activeSkill: {
+      id: 'last_stand_active',
+      name: '死守',
+      desc: '本回合 + 下回合受到傷害 ×0.5',
+      type: 'defense_stance',
+      stance: { incomingMul: 0.5, durationTurns: 1 },
+    },
     startingLevel: 5, growthRates: { hp: 4, attack: 1, defense: 2 },
     startingEquipment: { weapon: 'iron_lance', armor: 'chain_mail' },
   },
@@ -51,7 +65,14 @@ export const COMMANDERS: Record<string, CommanderDef> = {
   sharon: {
     id: 'sharon', name: '夏倫', faction: 'player', unitType: 'mage',
     statBonus: { hp: 0, attack: 3, defense: 0 },
-    skill: { id: 'fameel_arcana', name: '法米爾秘術', desc: '攻擊時傷害 ×1.3' },
+    skill: { id: 'fameel_arcana', name: '法米爾秘術', desc: '對 lance/sword ×1.4，對 archer/flier ×0.85' },
+    activeSkill: {
+      id: 'restoration',
+      name: '癒術',
+      desc: '立即恢復 25 HP',
+      type: 'heal_self',
+      heal: { amount: 25 },
+    },
     startingLevel: 7, growthRates: { hp: 2, attack: 2, defense: 1 },
     startingEquipment: { weapon: 'fire_tome', armor: 'robe' },
   },

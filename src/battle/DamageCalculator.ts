@@ -1,4 +1,4 @@
-import type { Faction, UnitTypeId } from '../types';
+import type { ActiveSkillDef, Faction, UnitTypeId } from '../types';
 import { getCounter } from './CounterSystem';
 import { SKILL_EFFECTS } from '../data/skillEffects';
 import { UNIT_TYPES } from '../data/unitTypes';
@@ -23,6 +23,10 @@ export interface DamageContext {
   attackerAdjacentAllies?: number;
   /** 防守方周圍 6 格內同陣營友軍數（不含自己）。盾牆型防禦技能用 */
   defenderAdjacentAllies?: number;
+  /** 攻擊方的「empower 主動特技」修正（觸發後下一次攻擊用）*/
+  attackerEmpower?: ActiveSkillDef['empower'];
+  /** 防守方的「stance 防禦姿態」減傷倍率（一場 1 用、持續 N 回合）*/
+  defenderStanceMul?: number;
   /** 難度倍率（敵方攻擊額外乘）：休閒 0.7、普通 1.0、困難 1.3 */
   enemyAttackMul?: number;
   /** 攻擊方武器的命中率加成（百分點，可省略）*/
@@ -81,8 +85,18 @@ export function computeDamage(ctx: DamageContext): DamageResult {
 
   // 防禦改為「乘法減傷」：每點 DEF 抵 5%，上限 70%
   // 重甲跟布甲差別變明顯、地形 DEF 加成也更有感
-  const defReduction = Math.min(DEF_REDUCTION_CAP, totalDef * DEF_REDUCTION_PER_POINT);
+  // empower.ignoreDef 跳過防禦階段（破甲攻擊）
+  const empower = ctx.attackerEmpower;
+  const defReduction = empower?.ignoreDef
+    ? 0
+    : Math.min(DEF_REDUCTION_CAP, totalDef * DEF_REDUCTION_PER_POINT);
   let dmg = raw * (1 - defReduction);
+
+  // 攻擊方 empower 倍率（如「王者一閃 ×1.5」）
+  if (empower?.dmgMul && empower.dmgMul !== 1.0) {
+    dmg *= empower.dmgMul;
+    appliedSkills.push(`蓄力 ×${empower.dmgMul.toFixed(2)}`);
+  }
 
   // 防守方承受特技（乘在減傷後）
   const dSkill = ctx.defenderSkillId ? SKILL_EFFECTS[ctx.defenderSkillId] : undefined;
@@ -94,17 +108,29 @@ export function computeDamage(ctx: DamageContext): DamageResult {
     }
   }
 
+  // 防守方 stance 防禦姿態（一場 1 次 buff，持續 N 個我方回合）
+  if (ctx.defenderStanceMul && ctx.defenderStanceMul !== 1.0) {
+    dmg *= ctx.defenderStanceMul;
+    appliedSkills.push(`守方姿態 ×${ctx.defenderStanceMul.toFixed(2)}`);
+  }
+
   dmg = Math.max(1, Math.floor(dmg));
 
-  // 命中／爆擊率：兵種基底 + 武器加成
+  // 命中／爆擊率：兵種基底 + 武器加成 + empower buff
   const aType = UNIT_TYPES[ctx.attackerType];
   const hitRate = Math.max(
     0,
-    Math.min(100, (aType.hitRate ?? 95) + (ctx.attackerWeaponHitBonus ?? 0))
+    Math.min(
+      100,
+      (aType.hitRate ?? 95) + (ctx.attackerWeaponHitBonus ?? 0) + (empower?.hitBoost ?? 0)
+    )
   );
   const critRate = Math.max(
     0,
-    Math.min(100, (aType.critRate ?? 5) + (ctx.attackerWeaponCritBonus ?? 0))
+    Math.min(
+      100,
+      (aType.critRate ?? 5) + (ctx.attackerWeaponCritBonus ?? 0) + (empower?.critBoost ?? 0)
+    )
   );
 
   return {
