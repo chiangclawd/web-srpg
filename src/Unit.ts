@@ -303,6 +303,26 @@ export class Unit {
     });
   }
 
+  /**
+   * 反悔：直接把單位送回到指定座標（用於「取消移動」按鈕）。
+   * 跟 moveTo 不同：lastMoveDistance 重置為 0，動畫較短，視覺上代表「沒移過」。
+   */
+  revertTo(coord: Coord): Promise<void> {
+    this.lastMoveDistance = 0;
+    this.position = { ...coord };
+    const center = hexCenterPx(coord);
+    return new Promise((resolve) => {
+      this.scene.tweens.add({
+        targets: this.container,
+        x: center.x,
+        y: center.y,
+        duration: 180,
+        ease: 'Sine.easeOut',
+        onComplete: () => resolve(),
+      });
+    });
+  }
+
   flashHit(): void {
     this.scene.tweens.add({
       targets: this.body,
