@@ -1848,6 +1848,20 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (enemy.isAlive() && target.isAlive() && inRangeFrom(enemy.position)) {
+      // 在攻擊前判斷是否觸發 BOSS 主動特技（empower 型）— 該場 1 次、即將打到目標
+      // 才用，避免浪費。簡化策略：有 active 且未消耗 → 直接觸發。
+      if (
+        enemy.activeSkill?.type === 'empower_attack' &&
+        enemy.activeUsesLeft > 0 &&
+        !enemy.pendingEmpower
+      ) {
+        enemy.pendingEmpower = enemy.activeSkill;
+        enemy.activeUsesLeft -= 1;
+        enemy.showFloatingText(`${enemy.activeSkill.name}！`, '#ff6688', '16px');
+        audio.playLevelUp();
+        this.appendLog(`【${enemy.name}】發動主動特技「${enemy.activeSkill.name}」`);
+        await this.delay(360);
+      }
       await this.delay(160);
       await this.executeAttack(enemy, target);
     }
