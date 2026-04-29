@@ -109,7 +109,8 @@ export const SPRITE_ASSETS: AssetEntry[] = [
 
   // === 玩家泛用兵種 sprite（王國雜兵：劍/槍/騎/弓/法）===
   { key: 'sprite_player_sword', url: 'assets/sprites/player_sword.png' },
-  { key: 'sprite_player_lance', url: 'assets/sprites/player_lance.png' },
+  // 注意：實際檔名 player_lancer.png（產圖時用了 lancer 拼法）— 對齊實檔名以免改檔
+  { key: 'sprite_player_lance', url: 'assets/sprites/player_lancer.png' },
   { key: 'sprite_player_cavalry', url: 'assets/sprites/player_cavalry.png' },
   { key: 'sprite_player_archer', url: 'assets/sprites/player_archer.png' },
   { key: 'sprite_player_mage', url: 'assets/sprites/player_mage.png' },
