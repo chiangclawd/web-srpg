@@ -105,6 +105,8 @@ export class BattleScene extends Phaser.Scene {
   /** 移動後反悔按鈕（與 cancelBtn 同 slot 互斥顯示）*/
   private cancelMoveBtn!: Phaser.GameObjects.Container;
   private activeBtn!: Phaser.GameObjects.Container;
+  /** 主動特技確認對話框（按 activeBtn 後彈出，可確認 / 取消）*/
+  private activeConfirmOverlay: Phaser.GameObjects.Container | null = null;
 
   // 攻擊預判 tooltip
   private tooltip: Phaser.GameObjects.Container | null = null;
@@ -461,7 +463,7 @@ export class BattleScene extends Phaser.Scene {
       const ax = btnGridX + (BTN_SIZE + BTN_GAP) / 2 + (BTN_SIZE + BTN_GAP) / 2; // 取 grid 中央 X
       const ay = btnGridY - BTN_SIZE - BTN_GAP;
       this.activeBtn = this.makeSquareButton(ax - BTN_SIZE / 2, ay, BTN_SIZE, '特技', 0x9966cc, () => {
-        this.useActiveSkill();
+        this.openActiveSkillConfirm();
       });
       this.activeBtn.setVisible(false);
     }
@@ -1075,9 +1077,17 @@ export class BattleScene extends Phaser.Scene {
       this.potionBtn.setVisible(false);
     }
     // 主動特技按鈕：玩家武將、有 activeSkill、本場尚有次數
-    const hasActive =
+    // empower 型技能（強化下一擊）需要場上有敵人在攻擊範圍內才顯示，否則無意義
+    let showActive =
       unit.faction === 'player' && unit.activeSkill !== null && unit.activeUsesLeft > 0;
-    this.activeBtn.setVisible(hasActive);
+    if (showActive && unit.activeSkill?.type === 'empower_attack' && targets.length === 0) {
+      showActive = false;
+    }
+    this.activeBtn.setVisible(showActive);
+    // 用技能名取代「特技」泛稱，讓玩家直接看到技能類型
+    if (showActive && unit.activeSkill) {
+      this.setActiveBtnLabel(unit.activeSkill.name);
+    }
     this.showUnitInfo(unit);
     if (targets.length > 0) {
       this.hintText.setText(`「${unit.name}」可攻擊\n滑入敵人看預判`);
@@ -1090,6 +1100,7 @@ export class BattleScene extends Phaser.Scene {
     this.selection = { kind: 'idle' };
     this.clearHighlights();
     this.hideTooltip();
+    this.closeActiveSkillConfirm();
     this.waitBtn.setVisible(false);
     this.cancelBtn.setVisible(false);
     this.cancelMoveBtn.setVisible(false);
@@ -1100,6 +1111,21 @@ export class BattleScene extends Phaser.Scene {
     }
     this.infoText.setText('');
     this.infoText.setVisible(false); // 沒選單位 → 連 backdrop 也藏起來
+  }
+
+  /** 把 activeBtn 的文字換成技能名（例：「王者一閃」改成兩行顯示）。 */
+  private setActiveBtnLabel(name: string): void {
+    const txt = this.activeBtn.list.find(
+      (c): c is Phaser.GameObjects.Text => c instanceof Phaser.GameObjects.Text
+    );
+    if (!txt) return;
+    // 4 字內單行；4+ 字拆兩行（中文不切詞，按字數平均拆）
+    if (name.length <= 4) {
+      txt.setText(name);
+    } else {
+      const mid = Math.ceil(name.length / 2);
+      txt.setText(`${name.slice(0, mid)}\n${name.slice(mid)}`);
+    }
   }
 
   /** 反悔：把當前 action_choice 的單位送回 preMovePos，回到 unit_selected */
@@ -1122,6 +1148,108 @@ export class BattleScene extends Phaser.Scene {
       }
       this.selectUnit(unit);
     });
+  }
+
+  /** 按下「特技」按鈕：彈出名稱 + 描述 + 確認/取消 對話框（不直接施放）*/
+  private openActiveSkillConfirm(): void {
+    if (this.selection.kind !== 'action_choice') return;
+    const u = this.selection.unit;
+    const skill = u.activeSkill;
+    if (!skill || u.activeUsesLeft <= 0) return;
+    if (this.activeConfirmOverlay) return; // 已開
+
+    const { width, height } = this.scale;
+    const items: Phaser.GameObjects.GameObject[] = [];
+
+    // 全螢幕半透明 backdrop（捕獲點擊不滲透）
+    const bg = this.add.rectangle(0, 0, width, height, 0x000000, 0.78).setOrigin(0);
+    bg.setScrollFactor(0);
+    bg.setInteractive(); // 吃掉 tap，避免穿透到下層 UI
+    items.push(bg);
+
+    // 中央 panel
+    const pw = 640;
+    const ph = 380;
+    const px = width / 2;
+    const py = height / 2;
+    const panel = this.add.rectangle(px, py, pw, ph, 0x1a1a30, 1);
+    panel.setStrokeStyle(3, 0x9966cc);
+    panel.setScrollFactor(0);
+    items.push(panel);
+
+    // 標題（技能名）
+    const title = this.add.text(px, py - 130, skill.name, {
+      fontSize: '40px',
+      color: '#ffd54a',
+      fontStyle: 'bold',
+    });
+    title.setOrigin(0.5).setScrollFactor(0);
+    items.push(title);
+
+    // 描述
+    const desc = this.add.text(px, py - 50, skill.desc, {
+      fontSize: '24px',
+      color: '#ffffff',
+      align: 'center',
+      wordWrap: { width: pw - 80 },
+      lineSpacing: 6,
+    });
+    desc.setOrigin(0.5).setScrollFactor(0);
+    items.push(desc);
+
+    // 「使用次數剩餘」標籤
+    const usesLeft = this.add.text(px, py + 30, `（剩餘 ${u.activeUsesLeft} 次）`, {
+      fontSize: '20px',
+      color: '#aaaaaa',
+    });
+    usesLeft.setOrigin(0.5).setScrollFactor(0);
+    items.push(usesLeft);
+
+    // 確認 / 取消 按鈕（直接做小型 overlay 鈕，不重用 makeSquareButton 避免 container 巢狀問題）
+    const btnW = 200;
+    const btnH = 70;
+    const btnY = py + 130;
+
+    const mkOverlayBtn = (
+      cx: number,
+      label: string,
+      color: number,
+      onClick: () => void
+    ): Phaser.GameObjects.GameObject[] => {
+      const cbg = this.add.rectangle(cx, btnY, btnW, btnH, color);
+      cbg.setStrokeStyle(2, 0x000000).setScrollFactor(0);
+      const ctxt = this.add.text(cx, btnY, label, {
+        fontSize: '28px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      });
+      ctxt.setOrigin(0.5).setScrollFactor(0);
+      const chit = this.add.rectangle(cx, btnY, btnW, btnH, 0x000000, 0);
+      chit.setInteractive({ useHandCursor: true }).setScrollFactor(0);
+      chit.on('pointerover', () => cbg.setFillStyle(this.tint(color, 1.2)));
+      chit.on('pointerout', () => cbg.setFillStyle(color));
+      chit.on('pointerup', onClick);
+      return [cbg, ctxt, chit];
+    };
+
+    items.push(
+      ...mkOverlayBtn(px - btnW / 2 - 30, '✓ 確認施放', 0x4ae26a, () => {
+        this.closeActiveSkillConfirm();
+        this.useActiveSkill();
+      })
+    );
+    items.push(
+      ...mkOverlayBtn(px + btnW / 2 + 30, '✕ 取消', 0x666666, () => {
+        this.closeActiveSkillConfirm();
+      })
+    );
+
+    this.activeConfirmOverlay = this.add.container(0, 0, items).setDepth(180);
+  }
+
+  private closeActiveSkillConfirm(): void {
+    this.activeConfirmOverlay?.destroy();
+    this.activeConfirmOverlay = null;
   }
 
   /** 觸發當前選中單位的主動特技（按鈕呼叫） */
