@@ -32,7 +32,7 @@ import { TERRAIN_TYPES, parseTerrain } from './data/terrainTypes';
 import { getTileTextureKey } from './data/assetManifest';
 import { computeDamage, rollAttack } from './battle/DamageCalculator';
 import { getCounter } from './battle/CounterSystem';
-import { EXP_PER_DAMAGE, EXP_PER_KILL } from './battle/Leveling';
+import { EXP_PER_DAMAGE, EXP_PER_KILL, scaleByLevelDiff } from './battle/Leveling';
 import { getCommanderProgress, saveProgress, getExcludedCommanders } from './data/save';
 import type { CommanderProgress } from './types';
 import { audio, type BgmMood } from './utils/audio';
@@ -300,6 +300,15 @@ export class BattleScene extends Phaser.Scene {
   private deployUnits(): void {
     const excluded = getExcludedCommanders();
     this.battleStats = {};
+    const chapterNumber = CHAPTERS[this.chapterId]?.number ?? 1;
+    // 王國雜兵 (player generic) 列表 — 入場時依章節 scale 起始等級，避免後期還停留 lv 3
+    const PLAYER_GENERICS = new Set([
+      'knight_recruit',
+      'spear_recruit',
+      'horse_scout',
+      'archer_recruit',
+      'apprentice_mage',
+    ]);
     for (const dep of this.scenario.deployments) {
       const cmd = COMMANDERS[dep.commanderId];
       if (!cmd) {
@@ -309,8 +318,17 @@ export class BattleScene extends Phaser.Scene {
       // 玩家陣營：排除被標為「候補」的武將
       if (cmd.faction === 'player' && excluded.has(cmd.id)) continue;
       // 玩家陣營從存檔載入進度（敵方總是用 starting）
-      const progress =
+      let progress =
         cmd.faction === 'player' ? getCommanderProgress(cmd.id) ?? undefined : undefined;
+      // 王國雜兵章節 scaling：lv = max(已存進度 / startingLevel, 2 + chapterNumber)
+      // 確保 ch4 雜兵起始 lv 6、ch7 lv 9、ch10 lv 12，跟敵兵差距不再越拉越大
+      if (cmd.faction === 'player' && PLAYER_GENERICS.has(cmd.id)) {
+        const baseLv = progress?.level ?? cmd.startingLevel;
+        const chapterFloor = 2 + chapterNumber;
+        if (chapterFloor > baseLv) {
+          progress = { ...(progress ?? { level: cmd.startingLevel, exp: 0 }), level: chapterFloor };
+        }
+      }
       const unit = new Unit(this, cmd, dep.position, progress);
       unit.on('pointerup', () => {
         if (this.didDrag) return;
@@ -1225,7 +1243,7 @@ export class BattleScene extends Phaser.Scene {
         this.battleStats[attacker.id].damageDealt += rolled.damage;
         if (!defender.isAlive()) this.battleStats[attacker.id].kills += 1;
       }
-      this.grantExp(attacker, rolled.damage, !defender.isAlive());
+      this.grantExp(attacker, rolled.damage, !defender.isAlive(), defender.level);
     } else {
       this.appendLog(`${attacker.name} → ${defender.name} MISS`);
     }
@@ -1304,7 +1322,7 @@ export class BattleScene extends Phaser.Scene {
         this.battleStats[defender.id].damageDealt += counterRolled.damage;
         if (!attacker.isAlive()) this.battleStats[defender.id].kills += 1;
       }
-      this.grantExp(defender, counterRolled.damage, !attacker.isAlive());
+      this.grantExp(defender, counterRolled.damage, !attacker.isAlive(), attacker.level);
     } else {
       this.appendLog(`${defender.name} 反擊 ${attacker.name} MISS`);
     }
@@ -1355,9 +1373,11 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  private grantExp(unit: Unit, damageDealt: number, killed: boolean): void {
-    const expGain = damageDealt * EXP_PER_DAMAGE + (killed ? EXP_PER_KILL : 0);
-    if (expGain <= 0) return;
+  private grantExp(unit: Unit, damageDealt: number, killed: boolean, opponentLevel: number): void {
+    const baseGain = damageDealt * EXP_PER_DAMAGE + (killed ? EXP_PER_KILL : 0);
+    if (baseGain <= 0) return;
+    // 等級差異 scaling — 過等練功者得分變少，反之追等者得分加成
+    const expGain = Math.max(1, Math.round(baseGain * scaleByLevelDiff(unit.level, opponentLevel)));
     const beforeLv = unit.level;
     const result = unit.gainExp(expGain);
     unit.showFloatingText(`+${expGain} EXP`, '#ffe066', '12px');
