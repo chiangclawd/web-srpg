@@ -77,11 +77,44 @@ export interface CommanderDef {
     defense: number;
   };
   skill: CommanderSkill;
+  /** 主動特技（每場戰鬥可用 1 次）— 配 BattleScene 「特技」按鈕觸發 */
+  activeSkill?: ActiveSkillDef;
   startingLevel: number;
   growthRates: GrowthRates;
   startingEquipment: {
     weapon?: string;
     armor?: string;
+  };
+}
+
+/**
+ * 主動特技 — 戰鬥中由「特技」按鈕觸發，每場 1 次。
+ *
+ * 三個 type 對應三種戰鬥行為：
+ *   - empower_attack：強化下一次普通攻擊（玩家照常選敵人；觸發後 attack 帶入修正）
+ *   - defense_stance：套用一段時間的減傷 buff，當下消耗行動
+ *   - heal_self：立即恢復 HP，當下消耗行動
+ */
+export interface ActiveSkillDef {
+  id: string;
+  name: string;
+  desc: string;
+  type: 'empower_attack' | 'defense_stance' | 'heal_self';
+  /** type='empower_attack' 用 */
+  empower?: {
+    dmgMul?: number;     // e.g. 1.5 → 攻擊乘 1.5
+    hitBoost?: number;   // 百分點，e.g. 20 → 命中 +20%（可超 100% capped 在 100）
+    critBoost?: number;  // 百分點，e.g. 50
+    ignoreDef?: boolean; // 視防禦為 0
+  };
+  /** type='defense_stance' 用 */
+  stance?: {
+    incomingMul: number; // e.g. 0.5 → 受傷減半
+    durationTurns: number; // 持續幾個玩家回合（含當下）
+  };
+  /** type='heal_self' 用 */
+  heal?: {
+    amount: number; // 固定恢復 HP（cap 在 maxHp - hp）
   };
 }
 
