@@ -18,6 +18,7 @@ import {
   manhattan,
   coordEq,
   coordKey,
+  hexNeighbors,
   bfsReachable,
   attackTargetTiles,
 } from './Grid';
@@ -280,6 +281,18 @@ export class BattleScene extends Phaser.Scene {
     const g = Math.min(255, Math.max(0, Math.floor(((color >> 8) & 0xff) * factor)));
     const b = Math.min(255, Math.max(0, Math.floor((color & 0xff) * factor)));
     return (r << 16) | (g << 8) | b;
+  }
+
+  /** 計算單位周圍 6 格內仍存活的同陣營友軍數（不含自己）。陣營型技能用 */
+  private countAdjacentAllies(unit: Unit): number {
+    let n = 0;
+    for (const nb of hexNeighbors(unit.position)) {
+      const ally = this.units.find(
+        (u) => u !== unit && u.isAlive() && u.faction === unit.faction && coordEq(u.position, nb)
+      );
+      if (ally) n += 1;
+    }
+    return n;
   }
 
   // ===== 部署 =====
@@ -1103,6 +1116,8 @@ export class BattleScene extends Phaser.Scene {
       attackerMovedDistance: attacker.lastMoveDistance,
       attackerHpRatio: attacker.hp / attacker.maxHp,
       defenderHpRatio: defender.hp / defender.maxHp,
+      attackerAdjacentAllies: this.countAdjacentAllies(attacker),
+      defenderAdjacentAllies: this.countAdjacentAllies(defender),
       enemyAttackMul: getEnemyAttackMul(),
       attackerWeaponHitBonus: attacker.weapon?.hitBonus,
       attackerWeaponCritBonus: attacker.weapon?.critBonus,
@@ -1174,6 +1189,8 @@ export class BattleScene extends Phaser.Scene {
       attackerMovedDistance: 0, // 反擊不算移動加成
       attackerHpRatio: defender.hp / defender.maxHp,
       defenderHpRatio: attacker.hp / attacker.maxHp,
+      attackerAdjacentAllies: this.countAdjacentAllies(defender),
+      defenderAdjacentAllies: this.countAdjacentAllies(attacker),
       enemyAttackMul: getEnemyAttackMul(),
       attackerWeaponHitBonus: defender.weapon?.hitBonus,
       attackerWeaponCritBonus: defender.weapon?.critBonus,
@@ -1446,6 +1463,8 @@ export class BattleScene extends Phaser.Scene {
       attackerMovedDistance: attacker.lastMoveDistance,
       attackerHpRatio: attacker.hp / attacker.maxHp,
       defenderHpRatio: defender.hp / defender.maxHp,
+      attackerAdjacentAllies: this.countAdjacentAllies(attacker),
+      defenderAdjacentAllies: this.countAdjacentAllies(defender),
       enemyAttackMul: getEnemyAttackMul(),
       attackerWeaponHitBonus: attacker.weapon?.hitBonus,
       attackerWeaponCritBonus: attacker.weapon?.critBonus,
@@ -1467,6 +1486,8 @@ export class BattleScene extends Phaser.Scene {
           attackerMovedDistance: 0,
           attackerHpRatio: defender.hp / defender.maxHp,
           defenderHpRatio: attacker.hp / attacker.maxHp,
+          attackerAdjacentAllies: this.countAdjacentAllies(defender),
+          defenderAdjacentAllies: this.countAdjacentAllies(attacker),
           attackerWeaponHitBonus: defender.weapon?.hitBonus,
           attackerWeaponCritBonus: defender.weapon?.critBonus,
         })
@@ -1629,6 +1650,8 @@ export class BattleScene extends Phaser.Scene {
         attackerMovedDistance: fromMovedDistance,
         attackerHpRatio: attacker.hp / attacker.maxHp,
         defenderHpRatio: defender.hp / defender.maxHp,
+        attackerAdjacentAllies: this.countAdjacentAllies(attacker),
+        defenderAdjacentAllies: this.countAdjacentAllies(defender),
         enemyAttackMul: getEnemyAttackMul(),
         attackerWeaponHitBonus: attacker.weapon?.hitBonus,
         attackerWeaponCritBonus: attacker.weapon?.critBonus,
@@ -1661,6 +1684,8 @@ export class BattleScene extends Phaser.Scene {
         attackerMovedDistance: 0,
         attackerHpRatio: defender.hp / defender.maxHp,
         defenderHpRatio: attacker.hp / attacker.maxHp,
+        attackerAdjacentAllies: this.countAdjacentAllies(defender),
+        defenderAdjacentAllies: this.countAdjacentAllies(attacker),
         attackerWeaponHitBonus: defender.weapon?.hitBonus,
         attackerWeaponCritBonus: defender.weapon?.critBonus,
       });

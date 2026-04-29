@@ -311,7 +311,7 @@ export const COMMANDERS: Record<string, CommanderDef> = {
   raider_horseman: {
     id: 'raider_horseman', name: '蠻族騎士', faction: 'enemy', unitType: 'cavalry',
     statBonus: { hp: 0, attack: 1, defense: 0 },
-    skill: { id: 'cavalry_charge', name: '突擊', desc: '移動 ≥ 3 格時 ×1.2' },
+    skill: { id: 'frenzied_raid', name: '狂血突擊', desc: 'HP > 70% 時攻擊 ×1.25' },
     startingLevel: 5, growthRates: { hp: 3, attack: 2, defense: 1 },
     startingEquipment: { weapon: 'cavalry_blade', armor: 'cavalry_leather' },
   },
@@ -332,7 +332,7 @@ export const COMMANDERS: Record<string, CommanderDef> = {
   spear_militia: {
     id: 'spear_militia', name: '蠻族長槍', faction: 'enemy', unitType: 'lance',
     statBonus: { hp: 1, attack: 0, defense: 1 },
-    skill: { id: 'spear_formation', name: '槍陣', desc: '對騎兵 ×1.3' },
+    skill: { id: 'phalanx_wall', name: '盾牆陣', desc: '相鄰友軍 ≥ 1 時受傷 ×0.8' },
     startingLevel: 5, growthRates: { hp: 4, attack: 1, defense: 2 },
     startingEquipment: { weapon: 'iron_lance', armor: 'chain_mail' },
   },
@@ -382,7 +382,7 @@ export const COMMANDERS: Record<string, CommanderDef> = {
   shard_wolf: {
     id: 'shard_wolf', name: '碎片狼獸', faction: 'enemy', unitType: 'cavalry',
     statBonus: { hp: 0, attack: 1, defense: 0 },
-    skill: { id: 'cavalry_charge', name: '突擊', desc: '移動 ≥ 3 格時 ×1.2' },
+    skill: { id: 'tainted_bite', name: '虛空毒爪', desc: '對 mage 目標 ×1.4（剋後排）' },
     startingLevel: 8, growthRates: { hp: 3, attack: 2, defense: 1 },
     startingEquipment: { weapon: 'cavalry_blade', armor: 'cavalry_leather' },
   },

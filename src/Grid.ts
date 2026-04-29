@@ -134,7 +134,7 @@ export function inBounds(coord: Coord): boolean {
 }
 
 /** 六角格鄰居（pointy-top, odd-r） — 6 個方向 */
-function hexNeighbors(coord: Coord): Coord[] {
+export function hexNeighbors(coord: Coord): Coord[] {
   const isOdd = (coord.y & 1) === 1;
   const dirs: ReadonlyArray<readonly [number, number]> = isOdd
     ? [
