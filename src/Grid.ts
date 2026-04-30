@@ -156,15 +156,23 @@ export function hexNeighbors(coord: Coord): Coord[] {
   return dirs.map(([dx, dy]) => ({ x: coord.x + dx, y: coord.y + dy }));
 }
 
-/** Dijkstra：在六角格上計算可達範圍（含地形成本） */
+/**
+ * Dijkstra：在六角格上計算可達範圍（含地形成本）。
+ *
+ * `zocBlock`：敵方單位「相鄰格」集合（Zone of Control）。一旦移動踏入 ZoC
+ * 格就必須停下，不能再從該格繼續往外擴張；起點 exempt（已經貼著敵人時仍可
+ * 離開）。可達範圍仍包含這些 ZoC 格本身（玩家可以選擇停在那裡攻擊）。
+ */
 export function bfsReachable(
   start: Coord,
   range: number,
   blocked: Set<string>,
-  costFn?: (terrainId: TerrainTypeId) => number
+  costFn?: (terrainId: TerrainTypeId) => number,
+  zocBlock?: Set<string>
 ): Coord[] {
   const dist = new Map<string, number>();
-  dist.set(coordKey(start), 0);
+  const startKey = coordKey(start);
+  dist.set(startKey, 0);
   const queue: { coord: Coord; cost: number }[] = [{ coord: start, cost: 0 }];
   // 預設：用 TerrainTypeDef.moveCost（blocked 地形視為極高 cost，自然被 range 過濾）
   const cost = costFn ?? ((tid: TerrainTypeId) => {
@@ -177,6 +185,8 @@ export function bfsReachable(
     const item = queue.shift()!;
     const curKey = coordKey(item.coord);
     if ((dist.get(curKey) ?? Infinity) < item.cost) continue;
+    // ZoC：踏入敵方相鄰格就停下（起點 exempt — 允許從敵人旁邊離開）
+    if (zocBlock && curKey !== startKey && zocBlock.has(curKey)) continue;
 
     for (const next of hexNeighbors(item.coord)) {
       const nKey = coordKey(next);
@@ -193,7 +203,7 @@ export function bfsReachable(
 
   const result: Coord[] = [];
   for (const [key] of dist) {
-    if (key === coordKey(start)) continue;
+    if (key === startKey) continue;
     const [xs, ys] = key.split(',');
     result.push({ x: Number(xs), y: Number(ys) });
   }
@@ -214,12 +224,14 @@ export function bfsPath(
   goal: Coord,
   blocked: Set<string>,
   costFn?: (terrainId: TerrainTypeId) => number,
-  range = Infinity
+  range = Infinity,
+  zocBlock?: Set<string>
 ): Coord[] {
   if (coordEq(start, goal)) return [];
   const dist = new Map<string, number>();
   const parent = new Map<string, Coord>();
-  dist.set(coordKey(start), 0);
+  const startKey = coordKey(start);
+  dist.set(startKey, 0);
   const queue: { coord: Coord; cost: number }[] = [{ coord: start, cost: 0 }];
   const cost =
     costFn ??
@@ -235,6 +247,8 @@ export function bfsPath(
     const curKey = coordKey(item.coord);
     if ((dist.get(curKey) ?? Infinity) < item.cost) continue;
     if (curKey === goalKey) break;
+    // ZoC：踏入敵方相鄰格就停下，跟 bfsReachable 同 semantics（起點 exempt）
+    if (zocBlock && curKey !== startKey && zocBlock.has(curKey)) continue;
 
     for (const next of hexNeighbors(item.coord)) {
       const nKey = coordKey(next);
