@@ -24,7 +24,7 @@ import {
 } from './Grid';
 import { tracePointyHexPath } from './utils/hexDrawing';
 import type { Coord, GameState, ScenarioDef } from './types';
-import { COMMANDERS } from './data/commanders';
+import { COMMANDERS, isPlayerGeneric } from './data/commanders';
 import { SCENARIOS, DEFAULT_SCENARIO_ID } from './data/scenarios';
 import { CHAPTERS } from './data/chapters';
 import { UNIT_TYPES } from './data/unitTypes';
@@ -305,14 +305,6 @@ export class BattleScene extends Phaser.Scene {
     const excluded = getExcludedCommanders();
     this.battleStats = {};
     const chapterNumber = CHAPTERS[this.chapterId]?.number ?? 1;
-    // 王國雜兵 (player generic) 列表 — 入場時依章節 scale 起始等級，避免後期還停留 lv 3
-    const PLAYER_GENERICS = new Set([
-      'knight_recruit',
-      'spear_recruit',
-      'horse_scout',
-      'archer_recruit',
-      'apprentice_mage',
-    ]);
     for (const dep of this.scenario.deployments) {
       const cmd = COMMANDERS[dep.commanderId];
       if (!cmd) {
@@ -326,7 +318,7 @@ export class BattleScene extends Phaser.Scene {
         cmd.faction === 'player' ? getCommanderProgress(cmd.id) ?? undefined : undefined;
       // 王國雜兵章節 scaling：lv = max(已存進度 / startingLevel, 2 + chapterNumber)
       // 確保 ch4 雜兵起始 lv 6、ch7 lv 9、ch10 lv 12，跟敵兵差距不再越拉越大
-      if (cmd.faction === 'player' && PLAYER_GENERICS.has(cmd.id)) {
+      if (cmd.faction === 'player' && isPlayerGeneric(cmd.id)) {
         const baseLv = progress?.level ?? cmd.startingLevel;
         const chapterFloor = 2 + chapterNumber;
         if (chapterFloor > baseLv) {

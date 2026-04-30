@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CHAPTERS } from '../data/chapters';
-import { COMMANDERS, RECRUIT_AT_CHAPTER } from '../data/commanders';
+import { COMMANDERS, RECRUIT_AT_CHAPTER, isPlayerGeneric } from '../data/commanders';
 import { UNIT_TYPES } from '../data/unitTypes';
 import { EQUIPMENT, getEquippableFor, unlockChapterFor } from '../data/equipment';
 import {
@@ -57,7 +57,9 @@ export class HubScene extends Phaser.Scene {
     const chapterNumber = ch?.number ?? 1;
     this.playerCommanders = Object.values(COMMANDERS)
       .filter((c) => c.faction === 'player')
-      .filter((c) => (RECRUIT_AT_CHAPTER[c.id] ?? 1) <= chapterNumber);
+      .filter((c) => (RECRUIT_AT_CHAPTER[c.id] ?? 1) <= chapterNumber)
+      // 王國雜兵不在 Hub 顯示（沒立繪、裝備固定、無可調整）— 仍依 scenario.deployments 自動出陣
+      .filter((c) => !isPlayerGeneric(c.id));
     this.selectedIdx = 0;
     this.cards = [];
     this.equipPicker = null;
