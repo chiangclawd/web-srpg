@@ -24,6 +24,36 @@ const BGM_FILES: Record<BgmMood, string> = {
 /** BGM 預設音量（HTMLAudio 0..1）*/
 const BGM_FILE_VOLUME = 0.45;
 
+/**
+ * SFX 名稱（用作檔名 key + 公開 API 不變）。
+ * UI click 因為太頻繁、合成版已經夠 pleasing，不開檔案層（省 9 個請求變 8 個 + 簡化）。
+ */
+export type SfxName =
+  | 'sword'
+  | 'lance'
+  | 'arrow'
+  | 'magic'
+  | 'hit'
+  | 'unit_down'
+  | 'level_up'
+  | 'victory'
+  | 'defeat';
+
+const SFX_FILES: Record<SfxName, string> = {
+  sword: 'assets/audio/sfx_sword.mp3',
+  lance: 'assets/audio/sfx_lance.mp3',
+  arrow: 'assets/audio/sfx_arrow.mp3',
+  magic: 'assets/audio/sfx_magic.mp3',
+  hit: 'assets/audio/sfx_hit.mp3',
+  unit_down: 'assets/audio/sfx_unit_down.mp3',
+  level_up: 'assets/audio/sfx_level_up.mp3',
+  victory: 'assets/audio/sfx_victory.mp3',
+  defeat: 'assets/audio/sfx_defeat.mp3',
+};
+
+/** SFX 預設音量（HTMLAudio 0..1）— 略高於 BGM，戰鬥動作要凸出但不爆音 */
+const SFX_FILE_VOLUME = 0.6;
+
 class AudioSynth {
   private ctx: AudioContext | null = null;
   // BGM 狀態（synth 版）
@@ -40,6 +70,11 @@ class AudioSynth {
   private bgmFileCache = new Map<BgmMood, HTMLAudioElement>();
   /** 載入失敗的 mood — 不再重試（用 synth fallback）*/
   private bgmFileMissing = new Set<BgmMood>();
+  // SFX 狀態（檔案版）
+  /** 已載入過、確認檔案存在的 sfx — 之後直接重用 element（currentTime=0 重播）*/
+  private sfxFileCache = new Map<SfxName, HTMLAudioElement>();
+  /** 載入失敗的 sfx — 不再重試（用 synth fallback）*/
+  private sfxFileMissing = new Set<SfxName>();
 
   constructor() {
     // 瀏覽器 autoplay 政策：HTMLAudio.play() 在第一次 user gesture 前會被擋下。
@@ -79,21 +114,25 @@ class AudioSynth {
 
   /** 劍揮 — 短促降頻 */
   playSwordSwing(): void {
+    if (this.tryPlaySfxFile('sword')) return;
     this.sweep({ from: 600, to: 200, type: 'sawtooth', duration: 0.12, volume: 0.06 });
   }
 
   /** 槍刺 / 騎兵衝撞 — 較沉的降頻 */
   playLanceThrust(): void {
+    if (this.tryPlaySfxFile('lance')) return;
     this.sweep({ from: 400, to: 120, type: 'sawtooth', duration: 0.15, volume: 0.07 });
   }
 
   /** 弓箭咻 — 高頻向下滑 */
   playArrowShot(): void {
+    if (this.tryPlaySfxFile('arrow')) return;
     this.sweep({ from: 1400, to: 700, type: 'triangle', duration: 0.18, volume: 0.05 });
   }
 
   /** 法術發射 — 雙振盪 */
   playMagicCast(): void {
+    if (this.tryPlaySfxFile('magic')) return;
     const ctx = this.getCtx();
     if (!ctx) return;
     const t = ctx.currentTime;
@@ -103,16 +142,19 @@ class AudioSynth {
 
   /** 命中 — 短促衝擊 */
   playHit(): void {
+    if (this.tryPlaySfxFile('hit')) return;
     this.beep({ freq: 180, type: 'square', duration: 0.06, volume: 0.06 });
   }
 
   /** 武將撤退 — 下降長音 */
   playUnitDown(): void {
+    if (this.tryPlaySfxFile('unit_down')) return;
     this.sweep({ from: 500, to: 100, type: 'sine', duration: 0.45, volume: 0.06 });
   }
 
   /** 升級 — 三音上升 */
   playLevelUp(): void {
+    if (this.tryPlaySfxFile('level_up')) return;
     const ctx = this.getCtx();
     if (!ctx) return;
     const t = ctx.currentTime;
@@ -123,6 +165,7 @@ class AudioSynth {
 
   /** 勝利 — 簡短和弦 */
   playVictory(): void {
+    if (this.tryPlaySfxFile('victory')) return;
     const ctx = this.getCtx();
     if (!ctx) return;
     const t = ctx.currentTime;
@@ -134,6 +177,7 @@ class AudioSynth {
 
   /** 戰敗 — 下降低音 */
   playDefeat(): void {
+    if (this.tryPlaySfxFile('defeat')) return;
     this.sweep({ from: 300, to: 80, type: 'sawtooth', duration: 0.6, volume: 0.07 });
   }
 
@@ -288,6 +332,42 @@ class AudioSynth {
   /** 淡出後停止 BGM */
   stopBgm(): void {
     this.stopBgmInternal(true);
+  }
+
+  /**
+   * 嘗試播放檔案版 SFX。檔案存在 → 從頭播（覆蓋上一輪殘響）回傳 true；
+   * 缺檔（之前 error 過）→ 回傳 false，呼叫端走 synth fallback。
+   *
+   * 第一次呼叫某個 sfx 時 element 還沒載入完，play() 可能 reject（autoplay
+   * 政策或 decode 中），此時為了不讓玩家「靜音一聲」我們仍然回傳 false 讓
+   * synth 同步發聲；等 element 真正載完 / failed 後就會走純檔案 / 純 synth。
+   *
+   * 註：若 user gesture 已發生 + 檔案已 decode，play() 會 sync 啟動，不會卡。
+   */
+  private tryPlaySfxFile(name: SfxName): boolean {
+    if (getSettings().muted) return true; // 靜音模式：跳過 synth fallback
+    if (this.sfxFileMissing.has(name)) return false;
+    let el = this.sfxFileCache.get(name);
+    let firstLoad = false;
+    if (!el) {
+      firstLoad = true;
+      el = new Audio(SFX_FILES[name]);
+      el.volume = SFX_FILE_VOLUME;
+      el.preload = 'auto';
+      el.addEventListener('error', () => {
+        this.sfxFileMissing.add(name);
+        this.sfxFileCache.delete(name);
+      });
+      this.sfxFileCache.set(name, el);
+    }
+    // 第一次呼叫：element 還沒 ready，讓 synth 同步補位（避免無聲）。下次起檔案版接手。
+    if (firstLoad || el.readyState < 2 /* HAVE_CURRENT_DATA */) {
+      el.play().catch(() => {});
+      return false;
+    }
+    el.currentTime = 0;
+    el.play().catch(() => {});
+    return true;
   }
 
   /**
