@@ -20,6 +20,7 @@ import {
   coordKey,
   hexNeighbors,
   bfsReachable,
+  bfsPath,
   attackTargetTiles,
 } from './Grid';
 import { tracePointyHexPath } from './utils/hexDrawing';
@@ -1010,10 +1011,18 @@ export class BattleScene extends Phaser.Scene {
     const unit = sel.unit;
     // 保存移動前位置給「取消移動」反悔機制使用（在 enterActionChoice 階段顯示按鈕）
     const preMovePos = { ...unit.position };
+    // 計算逐格路徑（含地形成本 + 避開其他單位）— 已知 tile 在 reachable 內
+    const path = bfsPath(
+      unit.position,
+      tile,
+      this.collectBlockedTiles(unit),
+      (tid) => getMoveCost(unit.unitType, tid),
+      unit.moveRange
+    );
     this.selection = { kind: 'busy' };
     this.clearHighlights();
     this.cancelBtn.setVisible(false);
-    void unit.moveTo(tile).then(() => {
+    void unit.moveTo(tile, path).then(() => {
       this.enterActionChoice(unit, preMovePos);
     });
   }
@@ -2037,7 +2046,14 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (bestTile && !coordEq(bestTile, enemy.position)) {
-      await enemy.moveTo(bestTile);
+      const aiPath = bfsPath(
+        enemy.position,
+        bestTile,
+        blocked,
+        (tid) => getMoveCost(enemy.unitType, tid),
+        enemy.moveRange
+      );
+      await enemy.moveTo(bestTile, aiPath);
     }
 
     if (enemy.isAlive() && target.isAlive() && inRangeFrom(enemy.position)) {
