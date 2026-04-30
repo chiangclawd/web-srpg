@@ -27,7 +27,7 @@ import type { Coord, GameState, ScenarioDef } from './types';
 import { COMMANDERS, isPlayerGeneric } from './data/commanders';
 import { SCENARIOS, DEFAULT_SCENARIO_ID } from './data/scenarios';
 import { CHAPTERS } from './data/chapters';
-import { UNIT_TYPES } from './data/unitTypes';
+import { UNIT_TYPES, getMoveCost } from './data/unitTypes';
 import { TERRAIN_TYPES, parseTerrain } from './data/terrainTypes';
 import { getTileTextureKey } from './data/assetManifest';
 import { computeDamage, rollAttack } from './battle/DamageCalculator';
@@ -1022,7 +1022,12 @@ export class BattleScene extends Phaser.Scene {
     // 大地圖：相機自動置中於選定單位（平滑）
     this.panCameraTo(unit);
     const blocked = this.collectBlockedTiles(unit);
-    const moveTiles = bfsReachable(unit.position, unit.moveRange, blocked).filter(
+    const moveTiles = bfsReachable(
+      unit.position,
+      unit.moveRange,
+      blocked,
+      (tid) => getMoveCost(unit.unitType, tid),
+    ).filter(
       (c) => !this.units.some((u) => u !== unit && u.isAlive() && coordEq(u.position, c))
     );
     // 把單位目前格子也算進可選範圍 → 點原格 = 原地不動，直接進攻擊選擇
@@ -1979,9 +1984,14 @@ export class BattleScene extends Phaser.Scene {
     const inRangeFrom = (from: Coord): boolean =>
       attackTargetTiles(from, enemy.attackRange).some((c) => coordEq(c, target.position));
 
-    // 第 2 步：選位置
+    // 第 2 步：選位置（用敵兵自己的 terrain cost — 飛兵敵人能飛過山地）
     const blocked = this.collectBlockedTiles(enemy);
-    const reachable = bfsReachable(enemy.position, enemy.moveRange, blocked);
+    const reachable = bfsReachable(
+      enemy.position,
+      enemy.moveRange,
+      blocked,
+      (tid) => getMoveCost(enemy.unitType, tid),
+    );
     const standable: Coord[] = [
       { ...enemy.position }, // 原地不動也是選項
       ...reachable.filter(

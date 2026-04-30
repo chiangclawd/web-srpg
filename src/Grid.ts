@@ -160,11 +160,17 @@ export function hexNeighbors(coord: Coord): Coord[] {
 export function bfsReachable(
   start: Coord,
   range: number,
-  blocked: Set<string>
+  blocked: Set<string>,
+  costFn?: (terrainId: TerrainTypeId) => number
 ): Coord[] {
   const dist = new Map<string, number>();
   dist.set(coordKey(start), 0);
   const queue: { coord: Coord; cost: number }[] = [{ coord: start, cost: 0 }];
+  // 預設：用 TerrainTypeDef.moveCost（blocked 地形視為極高 cost，自然被 range 過濾）
+  const cost = costFn ?? ((tid: TerrainTypeId) => {
+    const t = TERRAIN_TYPES[tid];
+    return t.blocked ? 99 : t.moveCost;
+  });
 
   while (queue.length > 0) {
     queue.sort((a, b) => a.cost - b.cost);
@@ -175,9 +181,8 @@ export function bfsReachable(
     for (const next of hexNeighbors(item.coord)) {
       const nKey = coordKey(next);
       if (!inBounds(next) || blocked.has(nKey)) continue;
-      const tDef = TERRAIN_TYPES[getTerrainAt(next)];
-      if (tDef.blocked) continue;
-      const newCost = item.cost + tDef.moveCost;
+      const tid = getTerrainAt(next);
+      const newCost = item.cost + cost(tid);
       if (newCost > range) continue;
       if (newCost < (dist.get(nKey) ?? Infinity)) {
         dist.set(nKey, newCost);
