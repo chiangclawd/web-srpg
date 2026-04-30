@@ -19,6 +19,20 @@ export interface UnitTypeDef {
     attack: number;
     defense: number;
   };
+  /**
+   * 地形移動成本（per-class，FE / Advance Wars 風格）。
+   * 缺省 → 沿用 TerrainTypeDef.moveCost。
+   *
+   * 設計原則：
+   *   - sword / lance：標準步兵成本（1/2/3）
+   *   - archer：森林專家（forest 1）
+   *   - mage：學院師承會「飛行步」（mountain 2 不再阻擋）
+   *   - cavalry：開闊地特化（forest 3 / mountain 4 — 馬不擅崎嶇）
+   *   - flier：完全無視地形（plain/forest/mountain/water 全 1）
+   *
+   * 數值 ≥ moveRange 等同無法到達；99 約等於不可進入。
+   */
+  terrainCosts?: Partial<Record<TerrainTypeId, number>>;
   /** 命中率 0-100，預設 95 */
   hitRate?: number;
   /** 爆擊率 0-100，預設 5；爆擊傷害 ×1.5 */
