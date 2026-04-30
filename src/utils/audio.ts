@@ -2,21 +2,44 @@
  * 程序化合成音效（無需資產檔案，直接用 Web Audio API）
  * 第一次播放會初始化 AudioContext。瀏覽器需要 user gesture 才允許播放——
  * 因為遊戲一定要先點按鈕才開始，所以實務上沒問題。
+ *
+ * BGM 升級：若 public/assets/audio/bgm_<mood>.mp3 存在，優先播放檔案版
+ * （HTMLAudioElement, loop=true）；缺檔時 fallback 到下方既有 synth 音層。
+ * 兩者切換無痛，使用者陸續上傳音樂檔即可逐 mood 升級。
  */
 
 import { getSettings } from './settings';
 
 export type BgmMood = 'peaceful' | 'tense' | 'dark' | 'epic' | 'finale';
 
+/** 各 mood 對應的音樂檔路徑（HTMLAudioElement loop 播放）*/
+const BGM_FILES: Record<BgmMood, string> = {
+  peaceful: 'assets/audio/bgm_peaceful.mp3',
+  tense: 'assets/audio/bgm_tense.mp3',
+  dark: 'assets/audio/bgm_dark.mp3',
+  epic: 'assets/audio/bgm_epic.mp3',
+  finale: 'assets/audio/bgm_finale.mp3',
+};
+
+/** BGM 預設音量（HTMLAudio 0..1）*/
+const BGM_FILE_VOLUME = 0.45;
+
 class AudioSynth {
   private ctx: AudioContext | null = null;
-  // BGM 狀態
+  // BGM 狀態（synth 版）
   private bgmOscs: OscillatorNode[] = [];
   private bgmLfos: OscillatorNode[] = [];
   private bgmGain: GainNode | null = null;
   private bgmActive: BgmMood | null = null;
   private bgmMelodyTimer: ReturnType<typeof setInterval> | null = null;
   private bgmPercussionTimer: ReturnType<typeof setInterval> | null = null;
+  // BGM 狀態（檔案版）
+  private bgmAudioEl: HTMLAudioElement | null = null;
+  private bgmAudioMood: BgmMood | null = null;
+  /** 已載入過、確認檔案存在的 mood — 之後直接重用 */
+  private bgmFileCache = new Map<BgmMood, HTMLAudioElement>();
+  /** 載入失敗的 mood — 不再重試（用 synth fallback）*/
+  private bgmFileMissing = new Set<BgmMood>();
 
   private getCtx(): AudioContext | null {
     if (getSettings().muted) return null;
@@ -96,14 +119,28 @@ class AudioSynth {
     this.sweep({ from: 300, to: 80, type: 'sawtooth', duration: 0.6, volume: 0.07 });
   }
 
-  // ===== BGM（程序化氛圍音層）=====
+  // ===== BGM =====
   /**
-   * 啟動 BGM ambient drone。
-   * 不同 mood 對應不同 chord 與細微差異。重複呼叫會替換目前音層。
+   * 啟動指定 mood 的 BGM。優先順序：
+   *   1. public/assets/audio/bgm_<mood>.mp3（HTMLAudioElement loop）— 若有檔
+   *   2. 程序化合成版（既有 synth 音層）— fallback
+   *
+   * 同 mood 重複呼叫不重啟；切換 mood 會把舊的（檔案 / synth）淡出。
    */
   startBgm(mood: BgmMood): void {
-    if (this.bgmActive === mood) return;
-    if (this.bgmActive) this.stopBgmInternal(false);
+    if (this.bgmAudioMood === mood || this.bgmActive === mood) return;
+    if (getSettings().muted) return;
+
+    // 切換 mood：先把舊的關掉
+    this.stopBgmInternal(false);
+
+    // 優先嘗試檔案版（如果之前沒被標 missing）
+    if (!this.bgmFileMissing.has(mood)) {
+      this.tryStartBgmFile(mood);
+      if (this.bgmAudioMood === mood) return; // 檔案版啟動成功
+    }
+
+    // 走 synth fallback
     const ctx = this.getCtx();
     if (!ctx) return;
 
@@ -227,7 +264,69 @@ class AudioSynth {
     this.stopBgmInternal(true);
   }
 
+  /**
+   * 嘗試播放檔案版 BGM。檔案不存在或 decode 失敗 → 標 missing 留給 synth 補位。
+   * Browser autoplay 限制：第一次玩家手勢前 audio 會 reject；fallback 到 synth
+   * 由它的 AudioContext 走過用戶手勢解鎖。
+   */
+  private tryStartBgmFile(mood: BgmMood): void {
+    let el = this.bgmFileCache.get(mood);
+    if (!el) {
+      el = new Audio(BGM_FILES[mood]);
+      el.loop = true;
+      el.volume = BGM_FILE_VOLUME;
+      el.preload = 'auto';
+      el.addEventListener('error', () => {
+        this.bgmFileMissing.add(mood);
+        this.bgmFileCache.delete(mood);
+        if (this.bgmAudioMood === mood) {
+          this.bgmAudioEl = null;
+          this.bgmAudioMood = null;
+        }
+      });
+      this.bgmFileCache.set(mood, el);
+    }
+    // 從頭播
+    el.currentTime = 0;
+    const playPromise = el.play();
+    // 確認 play() 成功才正式登記為當前 BGM；失敗（autoplay block 或 decode error）
+    // 等下一次 user gesture 觸發或被視為 missing。
+    if (playPromise && typeof playPromise.then === 'function') {
+      playPromise.catch(() => {
+        // 不標 missing — 多半是 autoplay policy；下次 startBgm 會重試。
+      });
+    }
+    this.bgmAudioEl = el;
+    this.bgmAudioMood = mood;
+  }
+
   private stopBgmInternal(fade: boolean): void {
+    // 1) 停檔案版
+    if (this.bgmAudioEl) {
+      const el = this.bgmAudioEl;
+      this.bgmAudioEl = null;
+      this.bgmAudioMood = null;
+      if (fade) {
+        // 200ms 線性 fade out
+        const startVol = el.volume;
+        const t0 = performance.now();
+        const tick = () => {
+          const dt = (performance.now() - t0) / 200;
+          if (dt >= 1) {
+            el.pause();
+            el.volume = startVol;
+            return;
+          }
+          el.volume = startVol * (1 - dt);
+          requestAnimationFrame(tick);
+        };
+        tick();
+      } else {
+        el.pause();
+      }
+    }
+
+    // 2) 停 synth 版
     if (this.bgmMelodyTimer) {
       clearInterval(this.bgmMelodyTimer);
       this.bgmMelodyTimer = null;
