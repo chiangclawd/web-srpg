@@ -1,6 +1,22 @@
 import type { CommanderDef } from '../types';
 
 /**
+ * 王國雜兵 commander id 集合 — 立繪只是色塊、裝備固定，沒有可調整事項。
+ * Hub 出陣畫面隱藏；BattleScene 自動依 scenario.deployments 部署 + 章節 scaling 等級。
+ */
+export const PLAYER_GENERIC_IDS = new Set<string>([
+  'knight_recruit',
+  'spear_recruit',
+  'horse_scout',
+  'archer_recruit',
+  'apprentice_mage',
+]);
+
+export function isPlayerGeneric(id: string): boolean {
+  return PLAYER_GENERIC_IDS.has(id);
+}
+
+/**
  * 玩家武將的「招募章節」— 從第 N 章開始可在 Hub 中見到並出陣。
  * 未列入此表者預設從第 1 章可用。
  */
