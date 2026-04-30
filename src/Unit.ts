@@ -287,19 +287,50 @@ export class Unit {
     this.updateHpBar();
   }
 
-  moveTo(coord: Coord): Promise<void> {
+  /**
+   * 移動到目標格。傳 `path` 時逐格 tween（棋盤移動感，每格 ~110ms 線性），
+   * 沒傳就退回單一直線 tween（給 revert / 兼容用途）。path 不含起點、
+   * 含目的地；長度 0 視同沒傳。
+   */
+  moveTo(coord: Coord, path?: Coord[]): Promise<void> {
     this.lastMoveDistance = hexDistance(this.position, coord);
     this.position = { ...coord };
-    const center = hexCenterPx(coord);
-    return new Promise((resolve) => {
-      this.scene.tweens.add({
-        targets: this.container,
-        x: center.x,
-        y: center.y,
-        duration: 250,
-        ease: 'Sine.easeInOut',
-        onComplete: () => resolve(),
+
+    if (!path || path.length === 0) {
+      const center = hexCenterPx(coord);
+      return new Promise((resolve) => {
+        this.scene.tweens.add({
+          targets: this.container,
+          x: center.x,
+          y: center.y,
+          duration: 250,
+          ease: 'Sine.easeInOut',
+          onComplete: () => resolve(),
+        });
       });
+    }
+
+    const STEP_MS = 110;
+    return new Promise((resolve) => {
+      let i = 0;
+      const stepNext = (): void => {
+        if (i >= path.length) {
+          resolve();
+          return;
+        }
+        const step = path[i];
+        const center = hexCenterPx(step);
+        i += 1;
+        this.scene.tweens.add({
+          targets: this.container,
+          x: center.x,
+          y: center.y,
+          duration: STEP_MS,
+          ease: 'Linear',
+          onComplete: stepNext,
+        });
+      };
+      stepNext();
     });
   }
 

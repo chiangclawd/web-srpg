@@ -200,6 +200,66 @@ export function bfsReachable(
   return result;
 }
 
+/**
+ * Dijkstra：在六角格上把 start → goal 的最短路徑還原成「逐格步序」。
+ * 回傳陣列不含 start、含 goal；目標不可達或 cost > range 時回傳空陣列。
+ *
+ * 用途：把 bfsReachable 選定的目的地翻譯成「沿著合法地形 + 避開 blocked
+ * 的中間 hexes」，餵給 Unit.moveTo() 做逐格動畫，比直線 tween 更接近棋盤
+ * 移動感。`range` 預設 Infinity；呼叫端通常已用 bfsReachable 確認可達，
+ * 這裡 cap 只是防呆。
+ */
+export function bfsPath(
+  start: Coord,
+  goal: Coord,
+  blocked: Set<string>,
+  costFn?: (terrainId: TerrainTypeId) => number,
+  range = Infinity
+): Coord[] {
+  if (coordEq(start, goal)) return [];
+  const dist = new Map<string, number>();
+  const parent = new Map<string, Coord>();
+  dist.set(coordKey(start), 0);
+  const queue: { coord: Coord; cost: number }[] = [{ coord: start, cost: 0 }];
+  const cost =
+    costFn ??
+    ((tid: TerrainTypeId) => {
+      const t = TERRAIN_TYPES[tid];
+      return t.blocked ? 99 : t.moveCost;
+    });
+  const goalKey = coordKey(goal);
+
+  while (queue.length > 0) {
+    queue.sort((a, b) => a.cost - b.cost);
+    const item = queue.shift()!;
+    const curKey = coordKey(item.coord);
+    if ((dist.get(curKey) ?? Infinity) < item.cost) continue;
+    if (curKey === goalKey) break;
+
+    for (const next of hexNeighbors(item.coord)) {
+      const nKey = coordKey(next);
+      if (!inBounds(next) || blocked.has(nKey)) continue;
+      const tid = getTerrainAt(next);
+      const newCost = item.cost + cost(tid);
+      if (newCost > range) continue;
+      if (newCost < (dist.get(nKey) ?? Infinity)) {
+        dist.set(nKey, newCost);
+        parent.set(nKey, item.coord);
+        queue.push({ coord: next, cost: newCost });
+      }
+    }
+  }
+
+  if (!dist.has(goalKey)) return [];
+  const path: Coord[] = [];
+  let cur: Coord | undefined = goal;
+  while (cur && !coordEq(cur, start)) {
+    path.unshift(cur);
+    cur = parent.get(coordKey(cur));
+  }
+  return path;
+}
+
 /** 攻擊範圍：所有 hex 距離 <= range 的格子（不含起點） */
 export function attackTargetTiles(from: Coord, range: number): Coord[] {
   const tiles: Coord[] = [];
