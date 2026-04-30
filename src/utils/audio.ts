@@ -40,15 +40,15 @@ export type SfxName =
   | 'defeat';
 
 const SFX_FILES: Record<SfxName, string> = {
-  sword: 'assets/audio/sfx_sword.mp3',
-  lance: 'assets/audio/sfx_lance.mp3',
-  arrow: 'assets/audio/sfx_arrow.mp3',
-  magic: 'assets/audio/sfx_magic.mp3',
-  hit: 'assets/audio/sfx_hit.mp3',
-  unit_down: 'assets/audio/sfx_unit_down.mp3',
-  level_up: 'assets/audio/sfx_level_up.mp3',
-  victory: 'assets/audio/sfx_victory.mp3',
-  defeat: 'assets/audio/sfx_defeat.mp3',
+  sword: 'assets/audio/sfx_sword.m4a',
+  lance: 'assets/audio/sfx_lance.m4a',
+  arrow: 'assets/audio/sfx_arrow.m4a',
+  magic: 'assets/audio/sfx_magic.m4a',
+  hit: 'assets/audio/sfx_hit.m4a',
+  unit_down: 'assets/audio/sfx_unit_down.m4a',
+  level_up: 'assets/audio/sfx_level_up.m4a',
+  victory: 'assets/audio/sfx_victory.m4a',
+  defeat: 'assets/audio/sfx_defeat.m4a',
 };
 
 /** SFX 預設音量（HTMLAudio 0..1）— 略高於 BGM，戰鬥動作要凸出但不爆音 */
