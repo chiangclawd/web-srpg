@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CUTSCENES } from '../data/cutscenes';
 import { COMMANDERS } from '../data/commanders';
 import { getPortraitKey } from '../data/assetManifest';
+import { audio } from '../utils/audio';
 import type { DialogueLine } from '../types';
 
 export interface CutsceneNext {
@@ -72,6 +73,9 @@ export class CutsceneScene extends Phaser.Scene {
 
   create(): void {
     const { width, height } = this.scale;
+
+    // 章節對話期間維持 peaceful BGM；切到戰鬥場景時 BattleScene 會接手換 mood
+    audio.startBgm('peaceful');
 
     // 純黑底（永遠先鋪一層，當 fallback / bg cross-fade 期間的襯底）
     this.add.rectangle(0, 0, width, height, 0x0a0a0a).setOrigin(0);

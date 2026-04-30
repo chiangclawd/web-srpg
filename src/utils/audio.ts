@@ -41,6 +41,24 @@ class AudioSynth {
   /** 載入失敗的 mood — 不再重試（用 synth fallback）*/
   private bgmFileMissing = new Set<BgmMood>();
 
+  constructor() {
+    // 瀏覽器 autoplay 政策：HTMLAudio.play() 在第一次 user gesture 前會被擋下。
+    // 註冊 window-level 監聽器，在第一次點擊 / 按鍵 / 觸控時嘗試 resume 已存在
+    // 但被暫停的 BGM。Title / Cutscene 在 user gesture 前 startBgm 會記下狀態，
+    // user 一互動就接得上音樂。
+    if (typeof window !== 'undefined') {
+      const unlock = (): void => {
+        if (getSettings().muted) return;
+        if (this.bgmAudioEl && this.bgmAudioEl.paused) {
+          this.bgmAudioEl.play().catch(() => {});
+        }
+      };
+      window.addEventListener('pointerdown', unlock);
+      window.addEventListener('keydown', unlock);
+      window.addEventListener('touchstart', unlock);
+    }
+  }
+
   private getCtx(): AudioContext | null {
     if (getSettings().muted) return null;
     if (!this.ctx) {
@@ -128,8 +146,16 @@ class AudioSynth {
    * 同 mood 重複呼叫不重啟；切換 mood 會把舊的（檔案 / synth）淡出。
    */
   startBgm(mood: BgmMood): void {
-    if (this.bgmAudioMood === mood || this.bgmActive === mood) return;
     if (getSettings().muted) return;
+    // 同 mood 已在播：若檔案版被 autoplay 擋下（el.paused），主動重試一次
+    // 避免第一次 startBgm 在 user gesture 前被擋之後就再也不重試。
+    if (this.bgmAudioMood === mood && this.bgmAudioEl) {
+      if (this.bgmAudioEl.paused) {
+        this.bgmAudioEl.play().catch(() => {});
+      }
+      return;
+    }
+    if (this.bgmActive === mood) return;
 
     // 切換 mood：先把舊的關掉
     this.stopBgmInternal(false);
