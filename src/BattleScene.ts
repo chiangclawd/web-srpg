@@ -264,8 +264,8 @@ export class BattleScene extends Phaser.Scene {
         tracePointyHexPath(gStroke, center.x, center.y, HEX_SIZE);
         gStroke.strokePath();
 
-        // 非平原 → 加小型地形標誌（hex 底部）
-        if (terrain.id !== 'plain') {
+        // 水域 → 標 川（強調阻擋）；林 / 山 立繪已能直接看出地形，省略標籤
+        if (terrain.id === 'water') {
           const tx = center.x + HEX_W / 2 - 14;
           const ty = center.y + HEX_H / 2 - 14;
           const t = this.add.text(tx, ty, terrain.shortName, {
@@ -1017,7 +1017,8 @@ export class BattleScene extends Phaser.Scene {
       tile,
       this.collectBlockedTiles(unit),
       (tid) => getMoveCost(unit.unitType, tid),
-      unit.moveRange
+      unit.moveRange,
+      this.collectZoCTiles(unit)
     );
     this.selection = { kind: 'busy' };
     this.clearHighlights();
@@ -1031,11 +1032,13 @@ export class BattleScene extends Phaser.Scene {
     // 大地圖：相機自動置中於選定單位（平滑）
     this.panCameraTo(unit);
     const blocked = this.collectBlockedTiles(unit);
+    const zoc = this.collectZoCTiles(unit);
     const moveTiles = bfsReachable(
       unit.position,
       unit.moveRange,
       blocked,
       (tid) => getMoveCost(unit.unitType, tid),
+      zoc,
     ).filter(
       (c) => !this.units.some((u) => u !== unit && u.isAlive() && coordEq(u.position, c))
     );
@@ -1345,6 +1348,19 @@ export class BattleScene extends Phaser.Scene {
     for (const u of this.units) {
       if (u === self || !u.isAlive()) continue;
       set.add(coordKey(u.position));
+    }
+    return set;
+  }
+
+  /**
+   * 蒐集敵方相鄰格集合（ZoC）— 任何踏入這些格子的移動都必須在那格停下，
+   * 不能繼續往前。包含 self 起點旁邊的敵人在內；起點本身在 bfs 內被 exempt。
+   */
+  private collectZoCTiles(self: Unit): Set<string> {
+    const set = new Set<string>();
+    for (const u of this.units) {
+      if (!u.isAlive() || u.faction === self.faction) continue;
+      for (const n of hexNeighbors(u.position)) set.add(coordKey(n));
     }
     return set;
   }
@@ -1995,11 +2011,13 @@ export class BattleScene extends Phaser.Scene {
 
     // 第 2 步：選位置（用敵兵自己的 terrain cost — 飛兵敵人能飛過山地）
     const blocked = this.collectBlockedTiles(enemy);
+    const zoc = this.collectZoCTiles(enemy);
     const reachable = bfsReachable(
       enemy.position,
       enemy.moveRange,
       blocked,
       (tid) => getMoveCost(enemy.unitType, tid),
+      zoc,
     );
     const standable: Coord[] = [
       { ...enemy.position }, // 原地不動也是選項
@@ -2051,7 +2069,8 @@ export class BattleScene extends Phaser.Scene {
         bestTile,
         blocked,
         (tid) => getMoveCost(enemy.unitType, tid),
-        enemy.moveRange
+        enemy.moveRange,
+        zoc
       );
       await enemy.moveTo(bestTile, aiPath);
     }
