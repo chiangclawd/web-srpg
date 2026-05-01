@@ -137,12 +137,13 @@
       }
 
       /* ===== 全局浮動靜音按鈕 =====
-         右上角小圖示，每個 scene 都看得到；click → 切 BGM / SFX 全靜音。
-         直屏 rotate-prompt 蓋住時也能按到（z-index 較高）。 */
+         左下角小圖示 — 戰鬥場景的 zoom +/⌂/− 在右上、結束回合在右中、
+         hint 在左上、Cutscene 對話框 x 從 40 起，所以左下角是各 scene 共同
+         安全區。z-index 高於 rotate-prompt 以外的一切。 */
       #mute-toggle {
         position: fixed;
-        top: 8px;
-        right: 8px;
+        left: 8px;
+        bottom: 8px;
         z-index: 10000;
         width: 38px;
         height: 38px;
