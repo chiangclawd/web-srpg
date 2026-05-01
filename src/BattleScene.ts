@@ -37,7 +37,7 @@ import { EXP_PER_DAMAGE, EXP_PER_KILL, scaleByLevelDiff } from './battle/Levelin
 import { getCommanderProgress, saveProgress, getExcludedCommanders } from './data/save';
 import type { CommanderProgress } from './types';
 import { audio, type BgmMood } from './utils/audio';
-import { getSettings, cycleAnimSpeed, toggleMute, cycleDifficulty, difficultyLabel, getEnemyAttackMul, cycleTheme, getThemeColors } from './utils/settings';
+import { getSettings, cycleAnimSpeed, cycleDifficulty, difficultyLabel, getEnemyAttackMul, cycleTheme, getThemeColors } from './utils/settings';
 import { tryUnlockAchievement } from './utils/achievementToast';
 import { CHAPTER_COMPLETE_ACHIEVEMENT } from './data/achievements';
 import { addHitRect } from './utils/uiHit';
@@ -836,7 +836,7 @@ export class BattleScene extends Phaser.Scene {
       `音效：${getSettings().muted ? '關' : '開'}`,
       '#ffffff',
       () => {
-        const m = toggleMute();
+        const m = audio.toggleMute();
         muteTxt.setText(`音效：${m ? '關' : '開'}`);
       }
     );
