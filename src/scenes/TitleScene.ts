@@ -1,6 +1,13 @@
 import Phaser from 'phaser';
 import { CHAPTERS, FIRST_CHAPTER_ID } from '../data/chapters';
 import { hasSave, loadSave, clearSave, getUnlockedAchievements } from '../data/save';
+import {
+  hasAnySave as hasAnyBattleSave,
+  getSlots as getBattleSlots,
+  clearSlot as clearBattleSlot,
+  formatSaveTime,
+  SAVE_SLOT_COUNT,
+} from '../data/battleSave';
 import { t, toggleLang } from '../utils/i18n';
 import { audio } from '../utils/audio';
 import { ACHIEVEMENTS } from '../data/achievements';
@@ -83,6 +90,18 @@ export class TitleScene extends Phaser.Scene {
           this.scene.restart();
         },
         '#aa6666'
+      );
+      y += 56;
+    }
+
+    // 戰局存檔（mid-battle save 三格欄位）— 任一格非空才顯示
+    if (hasAnyBattleSave()) {
+      this.makeMenuButton(
+        width / 2,
+        y,
+        '💾 載入戰局',
+        () => this.openBattleSaveLoadOverlay(),
+        '#ffd23a'
       );
       y += 56;
     }
@@ -215,6 +234,111 @@ export class TitleScene extends Phaser.Scene {
         data: { chapterId: ch.id },
       },
     });
+  }
+
+  /** 戰局存檔 — 三格欄位選擇器；點 slot 直接載入 BattleScene */
+  private openBattleSaveLoadOverlay(): void {
+    const { width, height } = this.scale;
+    const slots = getBattleSlots();
+    const items: Phaser.GameObjects.GameObject[] = [];
+    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.92);
+    bg.setInteractive();
+    items.push(bg);
+
+    const title = this.add
+      .text(width / 2, height / 2 - 200, '— 載入戰局 —', {
+        fontSize: '34px',
+        color: '#ffd23a',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+    items.push(title);
+
+    const overlay = this.add.container(0, 0, items);
+    overlay.setDepth(220);
+
+    const close = (): void => overlay.destroy();
+
+    for (let i = 0; i < SAVE_SLOT_COUNT; i += 1) {
+      const slot = slots[i];
+      const y = height / 2 - 80 + i * 80;
+      const label = slot
+        ? `${i + 1}　Ch${slot.chapterNumber} ${slot.chapterTitle}\n　　玩家回合 ${slot.playerTurnNumber} · ${formatSaveTime(slot.savedAt)}`
+        : `${i + 1}　— 空欄位 —`;
+      const color = slot ? '#7ed1ff' : '#666666';
+      const txt = this.add.text(width / 2 - 60, y, label, {
+        fontSize: '20px',
+        color,
+        fontStyle: slot ? 'bold' : 'normal',
+        align: 'left',
+        lineSpacing: 4,
+      });
+      txt.setOrigin(0.5);
+      overlay.add(txt);
+      if (slot) {
+        const slotIdx = i;
+        const hit = addHitRect(
+          this,
+          width / 2 - 60,
+          y,
+          Math.max(txt.width + 30, 480),
+          txt.height + 14,
+          () => {
+            audio.playClick();
+            overlay.destroy();
+            this.scene.start('BattleScene', { loadSlot: slotIdx });
+          },
+          () => txt.setColor('#ffffff'),
+          () => txt.setColor(color)
+        );
+        overlay.add(hit);
+
+        const del = this.add.text(width / 2 + 280, y, '🗑', {
+          fontSize: '24px',
+          color: '#cc6666',
+        });
+        del.setOrigin(0.5);
+        overlay.add(del);
+        const delHit = addHitRect(
+          this,
+          width / 2 + 280,
+          y,
+          50,
+          50,
+          () => {
+            clearBattleSlot(slotIdx);
+            audio.playClick();
+            overlay.destroy();
+            // 重開：若清完最後一格，hasAnyBattleSave 變 false → restart 主畫面收掉入口
+            if (!hasAnyBattleSave()) this.scene.restart();
+            else this.openBattleSaveLoadOverlay();
+          },
+          () => del.setColor('#ff8888'),
+          () => del.setColor('#cc6666')
+        );
+        overlay.add(delHit);
+      }
+    }
+
+    const cancel = this.add
+      .text(width / 2, height / 2 + 200, '取消', {
+        fontSize: '22px',
+        color: '#cc8888',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+    overlay.add(cancel);
+    const cancelHit = addHitRect(
+      this,
+      width / 2,
+      height / 2 + 200,
+      140,
+      40,
+      close,
+      () => cancel.setColor('#ffaaaa'),
+      () => cancel.setColor('#cc8888')
+    );
+    overlay.add(cancelHit);
   }
 
   private openAchievementsOverlay(): void {

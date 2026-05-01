@@ -35,6 +35,17 @@ import { computeDamage, rollAttack } from './battle/DamageCalculator';
 import { getCounter } from './battle/CounterSystem';
 import { EXP_PER_DAMAGE, EXP_PER_KILL, scaleByLevelDiff } from './battle/Leveling';
 import { getCommanderProgress, saveProgress, getExcludedCommanders } from './data/save';
+import {
+  type BattleSave,
+  type BattleSaveUnit,
+  loadSlot as loadBattleSlot,
+  saveToSlot as saveBattleSlot,
+  clearSlot as clearBattleSlot,
+  getSlots as getBattleSlots,
+  formatSaveTime,
+  SAVE_SLOT_COUNT,
+} from './data/battleSave';
+import { EQUIPMENT } from './data/equipment';
 import type { CommanderProgress } from './types';
 import { audio, type BgmMood } from './utils/audio';
 import { getSettings, cycleAnimSpeed, cycleDifficulty, difficultyLabel, getEnemyAttackMul, cycleTheme, getThemeColors } from './utils/settings';
@@ -64,6 +75,8 @@ type UISelection =
 export interface BattleSceneInitData {
   chapterId?: string;
   scenarioId?: string;
+  /** 從戰鬥存檔欄位載入（0..2）；提供時 chapterId / scenarioId 都從 save 讀出 */
+  loadSlot?: number;
 }
 
 export class BattleScene extends Phaser.Scene {
@@ -73,6 +86,8 @@ export class BattleScene extends Phaser.Scene {
   private scenario!: ScenarioDef;
   private chapterId: string = '';
   private scenarioIdOverride: string | null = null;
+  /** init 時若帶 loadSlot，這裡暫存 save；create() 跑完 deployUnits + startPlayerTurn 後 apply */
+  private pendingSave: BattleSave | null = null;
   /** 玩家回合計數（從 1 起算）；用於 survive 條件判定與 UI 顯示 */
   private playerTurnNumber = 1;
   /** UI 元素清單（縮放時用反比 scale + position 維持視覺大小、視覺位置不動） */
@@ -143,13 +158,28 @@ export class BattleScene extends Phaser.Scene {
   }
 
   init(data: BattleSceneInitData): void {
-    this.chapterId = data.chapterId ?? '';
-    this.scenarioIdOverride = data.scenarioId ?? null;
+    this.pendingSave = null;
+    if (typeof data.loadSlot === 'number') {
+      const save = loadBattleSlot(data.loadSlot);
+      if (save) {
+        this.chapterId = save.chapterId;
+        this.scenarioIdOverride = save.scenarioIdOverride;
+        this.pendingSave = save;
+      } else {
+        this.chapterId = data.chapterId ?? '';
+        this.scenarioIdOverride = data.scenarioId ?? null;
+      }
+    } else {
+      this.chapterId = data.chapterId ?? '';
+      this.scenarioIdOverride = data.scenarioId ?? null;
+    }
     // 重置場景狀態（Phaser 會 reuse 同一個 Scene 物件）
     this.units = [];
     this.gameState = 'player_turn';
     this.selection = { kind: 'idle' };
     this.logLines = [];
+    this.playerTurnNumber = 1;
+    this.potionCount = 3;
   }
 
   create(): void {
@@ -218,7 +248,17 @@ export class BattleScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => audio.stopBgm());
     this.events.once(Phaser.Scenes.Events.DESTROY, () => audio.stopBgm());
 
+    // 載入 save：先把場景 startPlayerTurn 跑起來建好 UI（會把所有單位 hasActed 重置成 false），
+    // 再把 save 蓋上去恢復 hp / position / hasActed / 技能狀態，最後對齊 turn UI。
+    if (this.pendingSave) {
+      this.playerTurnNumber = this.pendingSave.playerTurnNumber;
+      this.potionCount = this.pendingSave.potionCount;
+    }
     this.startPlayerTurn();
+    if (this.pendingSave) {
+      this.applyPendingSave(this.pendingSave);
+      this.pendingSave = null;
+    }
   }
 
   private resolveScenarioId(): string {
@@ -768,6 +808,206 @@ export class BattleScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-ESC', () => this.togglePause());
   }
 
+  // ===== 戰鬥中存檔 =====
+  /** 把當前戰局狀態 snapshot 成 BattleSave 結構 */
+  private serializeBattle(): BattleSave {
+    const ch = CHAPTERS[this.chapterId];
+    const units: BattleSaveUnit[] = this.units
+      .filter((u) => u.isAlive())
+      .map((u) => ({
+        commanderId: u.id,
+        position: { ...u.position },
+        hp: u.hp,
+        level: u.level,
+        exp: u.exp,
+        weaponId: u.weapon?.id ?? null,
+        armorId: u.armor?.id ?? null,
+        hasActed: u.hasActed,
+        activeUsesLeft: u.activeUsesLeft,
+        pendingEmpowerId: u.pendingEmpower?.id ?? null,
+        stanceMods: u.stanceMods ? { ...u.stanceMods } : null,
+      }));
+    return {
+      chapterId: this.chapterId,
+      scenarioIdOverride: this.scenarioIdOverride,
+      playerTurnNumber: this.playerTurnNumber,
+      potionCount: this.potionCount,
+      units,
+      savedAt: Date.now(),
+      chapterNumber: ch?.number ?? 0,
+      chapterTitle: ch?.title ?? this.scenario.name,
+    };
+  }
+
+  /**
+   * 把 save 套用到剛 deploy 完 + startPlayerTurn 完的場景上。
+   * - save 沒記載的單位 = 已陣亡 → 直接 destroy 移除
+   * - save 有記載的單位 → mutate hp / position / level / 裝備 / hasActed / 技能狀態
+   */
+  private applyPendingSave(save: BattleSave): void {
+    const byId = new Map<string, BattleSaveUnit>();
+    for (const su of save.units) byId.set(su.commanderId, su);
+
+    const survivors: Unit[] = [];
+    for (const u of this.units) {
+      const su = byId.get(u.id);
+      if (!su) {
+        // 不在 save 裡 → save 當下已陣亡
+        u.destroy();
+        continue;
+      }
+      // 位置：直接 setPosition（無動畫，瞬移）
+      u.position = { ...su.position };
+      const center = hexCenterPx(u.position);
+      u.setContainerPosition(center.x, center.y);
+      // 等級 / exp / 裝備
+      u.level = su.level;
+      u.exp = su.exp;
+      u.weapon = su.weaponId ? EQUIPMENT[su.weaponId] ?? null : null;
+      u.armor = su.armorId ? EQUIPMENT[su.armorId] ?? null : null;
+      u.refreshLevelDisplay();
+      // HP（用 setHp 確保 bar 同步）
+      u.setHp(su.hp);
+      // 行動狀態
+      u.hasActed = su.hasActed;
+      if (su.hasActed) u.exhaust(); else u.resetTurn();
+      // 主動特技狀態
+      u.activeUsesLeft = su.activeUsesLeft;
+      u.pendingEmpower = null; // 序列化時 empower 用 id 重建（簡化：載入後預設 null，下回合自然用）
+      u.stanceMods = su.stanceMods ? { ...su.stanceMods } : null;
+      survivors.push(u);
+    }
+    this.units = survivors;
+    this.appendLog(`▶ 已從存檔接續戰局（玩家回合 ${this.playerTurnNumber}）`);
+  }
+
+  /** 把當前戰局存到指定欄位 */
+  private saveBattleToSlot(slotIdx: number): void {
+    saveBattleSlot(slotIdx, this.serializeBattle());
+  }
+
+  /**
+   * 開存檔欄位選擇 overlay。三格垂直排列，點 slot = 蓋上去存；🗑 = 清除該格。
+   * 完成 / 取消後呼叫 onClose 讓上一層 UI（pause overlay）回來。
+   */
+  private openSaveSlotPicker(onClose: () => void): void {
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const slots = getBattleSlots();
+    const items: Phaser.GameObjects.GameObject[] = [];
+
+    const bg = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.86);
+    bg.setInteractive();
+    items.push(bg);
+
+    const title = this.add
+      .text(w / 2, h / 2 - 200, '— 儲存戰局 —', {
+        fontSize: '34px',
+        color: '#ffd23a',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+    items.push(title);
+
+    const sub = this.add
+      .text(w / 2, h / 2 - 160, '點選欄位即覆蓋寫入；🗑 清除舊存檔', {
+        fontSize: '14px',
+        color: '#888888',
+      })
+      .setOrigin(0.5);
+    items.push(sub);
+
+    const overlay = this.add.container(0, 0, items);
+    overlay.setDepth(220);
+
+    const close = (): void => {
+      overlay.destroy();
+      onClose();
+    };
+
+    for (let i = 0; i < SAVE_SLOT_COUNT; i += 1) {
+      const slot = slots[i];
+      const y = h / 2 - 80 + i * 80;
+      const label = slot
+        ? `${i + 1}　Ch${slot.chapterNumber} ${slot.chapterTitle}\n　　玩家回合 ${slot.playerTurnNumber} · ${formatSaveTime(slot.savedAt)}`
+        : `${i + 1}　— 空欄位 —`;
+      const color = slot ? '#7ed1ff' : '#888888';
+      const txt = this.add.text(w / 2 - 60, y, label, {
+        fontSize: '20px',
+        color,
+        fontStyle: slot ? 'bold' : 'normal',
+        align: 'left',
+        lineSpacing: 4,
+      });
+      txt.setOrigin(0.5);
+      overlay.add(txt);
+      const slotIdx = i;
+      const hit = addHitRect(
+        this,
+        w / 2 - 60,
+        y,
+        Math.max(txt.width + 30, 480),
+        txt.height + 14,
+        () => {
+          this.saveBattleToSlot(slotIdx);
+          this.appendLog(`✓ 已存到欄位 ${slotIdx + 1}`);
+          audio.playClick();
+          close();
+        },
+        () => txt.setColor('#ffffff'),
+        () => txt.setColor(color)
+      );
+      overlay.add(hit);
+
+      if (slot) {
+        const del = this.add.text(w / 2 + 280, y, '🗑', {
+          fontSize: '24px',
+          color: '#cc6666',
+        });
+        del.setOrigin(0.5);
+        overlay.add(del);
+        const delHit = addHitRect(
+          this,
+          w / 2 + 280,
+          y,
+          50,
+          50,
+          () => {
+            clearBattleSlot(slotIdx);
+            audio.playClick();
+            close();
+            // 重開 picker 顯示更新後狀態
+            this.openSaveSlotPicker(onClose);
+          },
+          () => del.setColor('#ff8888'),
+          () => del.setColor('#cc6666')
+        );
+        overlay.add(delHit);
+      }
+    }
+
+    // 取消
+    const cancel = this.add
+      .text(w / 2, h / 2 + 200, '取消', {
+        fontSize: '22px',
+        color: '#cc8888',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+    overlay.add(cancel);
+    const cancelHit = addHitRect(
+      this,
+      w / 2,
+      h / 2 + 200,
+      140,
+      40,
+      close,
+      () => cancel.setColor('#ffaaaa'),
+      () => cancel.setColor('#cc8888')
+    );
+    overlay.add(cancelHit);
+  }
+
   // ===== 暫停選單 =====
   private togglePause(): void {
     if (this.gameState === 'victory' || this.gameState === 'defeat') return;
@@ -813,7 +1053,17 @@ export class BattleScene extends Phaser.Scene {
     items.push(subtitle);
 
     items.push(
-      this.makeMenuLabel(w / 2, h / 2 - 50, '繼續遊戲', '#7ed1ff', () => this.unpause())
+      this.makeMenuLabel(w / 2, h / 2 - 90, '繼續遊戲', '#7ed1ff', () => this.unpause())
+    );
+
+    items.push(
+      this.makeMenuLabel(w / 2, h / 2 - 45, '💾 儲存戰局', '#ffd23a', () => {
+        // 開存檔欄位選擇 overlay；先把 pause overlay 暫時隱藏避免疊
+        if (this.pauseOverlay) this.pauseOverlay.setVisible(false);
+        this.openSaveSlotPicker(() => {
+          if (this.pauseOverlay) this.pauseOverlay.setVisible(true);
+        });
+      })
     );
 
     const speedTxt = this.makeMenuLabel(

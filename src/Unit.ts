@@ -287,6 +287,22 @@ export class Unit {
     this.updateHpBar();
   }
 
+  /** 直接寫死 HP 值（給戰鬥存檔載入用，跳過扣血邏輯）*/
+  setHp(hp: number): void {
+    this.hp = Math.max(0, Math.min(hp, this.maxHp));
+    this.updateHpBar();
+  }
+
+  /** 不走動畫直接搬到 (x, y) — 給戰鬥存檔載入用 */
+  setContainerPosition(x: number, y: number): void {
+    this.container.setPosition(x, y);
+  }
+
+  /** 強制刷新等級徽章（外部修改 level 時呼叫，例如戰鬥存檔載入）*/
+  refreshLevelDisplay(): void {
+    this.refreshLevelBadge();
+  }
+
   /**
    * 移動到目標格。傳 `path` 時逐格 tween（棋盤移動感，每格 ~110ms 線性），
    * 沒傳就退回單一直線 tween（給 revert / 兼容用途）。path 不含起點、
