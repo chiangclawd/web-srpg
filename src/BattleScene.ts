@@ -528,9 +528,12 @@ export class BattleScene extends Phaser.Scene {
       this.potionBtn.setVisible(false);
     }
 
-    // === 縮放按鈕（畫面右上角）===
+    // === 右上按鈕欄：⏸ / ＋ / ⌂ / －（從上到下）===
+    // ⏸ 必須有觸控入口 — 手機沒實體鍵盤不能按 ESC 開暫停 / 存檔。
     const zoomX = viewportW - 70;
     let zoomY = 40;
+    this.makeZoomButton(zoomX, zoomY, '⏸', () => this.togglePause());
+    zoomY += 64;
     this.makeZoomButton(zoomX, zoomY, '＋', () => this.zoomBy(1.25));
     zoomY += 64;
     this.makeZoomButton(zoomX, zoomY, '⌂', () => this.applyZoom(1.0, viewportW / 2, viewportH / 2));
@@ -1045,7 +1048,7 @@ export class BattleScene extends Phaser.Scene {
     items.push(title);
 
     const subtitle = this.add
-      .text(w / 2, h / 2 - 110, '按 ESC 繼續，或選擇下方項目', {
+      .text(w / 2, h / 2 - 110, '按 ⏸ 或 ESC 繼續，或選擇下方項目', {
         fontSize: '13px',
         color: '#888888',
       })
