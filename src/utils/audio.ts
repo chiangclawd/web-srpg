@@ -8,7 +8,7 @@
  * 兩者切換無痛，使用者陸續上傳音樂檔即可逐 mood 升級。
  */
 
-import { getSettings } from './settings';
+import { getSettings, toggleMute as toggleMutedSetting } from './settings';
 
 export type BgmMood = 'peaceful' | 'tense' | 'dark' | 'epic' | 'finale';
 
@@ -91,6 +91,63 @@ class AudioSynth {
       window.addEventListener('pointerdown', unlock);
       window.addEventListener('keydown', unlock);
       window.addEventListener('touchstart', unlock);
+    }
+    // tab 切走 / 鎖屏 / app 切到背景 → 暫停 BGM；回來再 resume（除非 user mute）
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          this.pauseBgmOnly();
+        } else if (!getSettings().muted) {
+          this.resumeBgmOnly();
+        }
+      });
+    }
+  }
+
+  /**
+   * 切換靜音 — 同步更新 storage + 立刻 pause / resume BGM。
+   * 戰鬥內 SFX 走 `getCtx()` 已經會自動因 muted 回 null 不發聲，BGM 必須手動。
+   */
+  toggleMute(): boolean {
+    const muted = toggleMutedSetting();
+    if (muted) this.pauseBgmOnly();
+    else this.resumeBgmOnly();
+    return muted;
+  }
+
+  /** 暫停（不釋放）BGM；保留 element / mood，可隨時 resume */
+  private pauseBgmOnly(): void {
+    if (this.bgmAudioEl && !this.bgmAudioEl.paused) {
+      this.bgmAudioEl.pause();
+    }
+    // synth：master gain → 0；melody/percussion timer 也清掉避免它們還在
+    // 製造新 oscillator 直接打到 destination
+    if (this.bgmGain && this.ctx) {
+      this.bgmGain.gain.cancelScheduledValues(this.ctx.currentTime);
+      this.bgmGain.gain.setValueAtTime(0, this.ctx.currentTime);
+    }
+    if (this.bgmMelodyTimer) {
+      clearInterval(this.bgmMelodyTimer);
+      this.bgmMelodyTimer = null;
+    }
+    if (this.bgmPercussionTimer) {
+      clearInterval(this.bgmPercussionTimer);
+      this.bgmPercussionTimer = null;
+    }
+  }
+
+  /** 從 pause 狀態恢復 BGM。檔案版直接 play()；synth 版若被打斷需重新 startBgm */
+  private resumeBgmOnly(): void {
+    if (getSettings().muted) return;
+    if (this.bgmAudioEl && this.bgmAudioEl.paused) {
+      this.bgmAudioEl.play().catch(() => {});
+      return;
+    }
+    // synth 版（melody/percussion timer 被清光）→ 重叫 startBgm 接回去
+    if (this.bgmActive) {
+      const mood = this.bgmActive;
+      this.bgmActive = null;
+      this.startBgm(mood);
     }
   }
 

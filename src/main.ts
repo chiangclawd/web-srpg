@@ -4,11 +4,22 @@ import { TitleScene } from './scenes/TitleScene';
 import { CutsceneScene } from './scenes/CutsceneScene';
 import { HubScene } from './scenes/HubScene';
 import { BattleScene } from './BattleScene';
-import { loadSettings } from './utils/settings';
+import { loadSettings, getSettings } from './utils/settings';
 import { loadLang } from './utils/i18n';
+import { audio } from './utils/audio';
 
 loadSettings();
 loadLang();
+
+// 暴露給 index.html 的浮動靜音按鈕（避免在 inline script 重新建一個 audio 實例）
+(window as unknown as {
+  __srpgToggleMute?: () => boolean;
+  __srpgIsMuted?: () => boolean;
+}).__srpgToggleMute = () => audio.toggleMute();
+(window as unknown as {
+  __srpgToggleMute?: () => boolean;
+  __srpgIsMuted?: () => boolean;
+}).__srpgIsMuted = () => getSettings().muted;
 
 /**
  * 主要 QA 平台是 iPhone X 之後的全螢幕機種（19.5:9 橫屏）→ canvas aspect
