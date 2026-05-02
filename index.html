@@ -177,7 +177,7 @@
     <div id="install-hint">
       <div class="row">
         <div class="ico" id="install-hint-icon">📲</div>
-        <div class="text" id="install-hint-text">把遊戲加到主畫面，下次直接點開、無瀏覽器邊框、體感更好。</div>
+        <div class="text" id="install-hint-text">加入主畫面後即無瀏覽器邊框（無上方網址列），整個螢幕都是遊戲。</div>
       </div>
       <div class="actions">
         <button id="install-hint-dismiss">知道了</button>
@@ -214,17 +214,17 @@
           actionBtn.style.display = '';
           icon.textContent = '⬇️';
           text.innerHTML =
-            '把遊戲<strong>加入主畫面</strong>後，下次直接點開、無瀏覽器邊框、體感更好。';
+            '<strong>加入主畫面</strong>後即無瀏覽器邊框（無上方網址列），整個螢幕都是遊戲。';
         });
 
         if (isIOS) {
           icon.textContent = '⎙';
           text.innerHTML =
-            '想加入主畫面？點下方 <strong>分享 ⎙</strong> → 「<strong>加入主畫面</strong>」，下次點桌面圖示直接開遊戲。';
+            '想去掉上方網址列、整個螢幕當遊戲？點下方 <strong>分享 ⎙</strong> → 「<strong>加入主畫面</strong>」，下次點桌面圖示開啟即無瀏覽器邊框。';
         } else {
           // Android 預設文案（beforeinstallprompt 沒觸發時的 fallback）
           text.innerHTML =
-            '想加入主畫面？點瀏覽器右上 <strong>⋮ 選單</strong> → 「<strong>加入主畫面</strong>」，下次點桌面圖示直接開遊戲。';
+            '想去掉上方網址列、整個螢幕當遊戲？點瀏覽器右上 <strong>⋮ 選單</strong> → 「<strong>加入主畫面</strong>」，下次點桌面圖示開啟即無瀏覽器邊框。';
         }
 
         actionBtn.addEventListener('click', function () {
@@ -248,6 +248,47 @@
         setTimeout(function () {
           if (!localStorage.getItem(DISMISS_KEY)) hint.style.display = 'block';
         }, 1500);
+      })();
+    </script>
+    <script>
+      // ===== Android Chrome 全螢幕 =====
+      // iOS Safari 完全不支援 Fullscreen API（rejects requestFullscreen on
+      // non-video elements），唯一全螢幕路徑是 Add to Home Screen → standalone。
+      // Android Chrome 有 Fullscreen API：第一次使用者觸控時呼叫 requestFullscreen
+      // → 自動隱藏網址列 + 系統列。已 standalone 模式跳過。
+      (function () {
+        if (window.matchMedia('(display-mode: standalone)').matches) return;
+        var ua = window.navigator.userAgent;
+        var isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+        if (isIOS) return;
+        var isAndroid = /Android/.test(ua);
+        if (!isAndroid) return;
+        var el = document.documentElement;
+        var req =
+          el.requestFullscreen ||
+          el.webkitRequestFullscreen ||
+          el.mozRequestFullScreen ||
+          el.msRequestFullscreen;
+        if (!req) return;
+        function tryFullscreen() {
+          // 已在 fullscreen 模式 → 不再嘗試
+          var alreadyFs =
+            document.fullscreenElement ||
+            document.webkitFullscreenElement ||
+            document.mozFullScreenElement ||
+            document.msFullscreenElement;
+          if (alreadyFs) return;
+          try {
+            var p = req.call(el);
+            if (p && typeof p.catch === 'function') p.catch(function () {});
+          } catch (e) {
+            // user gesture 不夠 / 瀏覽器拒絕：靜默失敗
+          }
+        }
+        // 第一次 pointerdown / touchstart 觸發 — Android Chrome 認為這是
+        // user gesture，requestFullscreen 不會被拒絕。
+        window.addEventListener('pointerdown', tryFullscreen, { once: true });
+        window.addEventListener('touchstart', tryFullscreen, { once: true, passive: true });
       })();
     </script>
     <script>
