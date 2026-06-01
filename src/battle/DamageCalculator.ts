@@ -2,6 +2,14 @@ import type { ActiveSkillDef, Faction, UnitTypeId } from '../types';
 import { getCounter } from './CounterSystem';
 import { SKILL_EFFECTS } from '../data/skillEffects';
 import { UNIT_TYPES } from '../data/unitTypes';
+import {
+  CRIT_MULTIPLIER,
+  DEF_REDUCTION_PER_POINT,
+  DEF_REDUCTION_CAP,
+} from '../data/balance';
+
+// 重新匯出以維持既有 public API（部分呼叫端 import 自此檔）。
+export { CRIT_MULTIPLIER } from '../data/balance';
 
 export interface DamageContext {
   attackerType: UnitTypeId;
@@ -55,14 +63,7 @@ export interface ResolvedAttack {
   crit: boolean;
 }
 
-// 爆擊傷害倍率。維持 2.0（沿用既有平衡基準，爆擊偏「驚喜爆發」而非小加成）。
-// 注意：DESIGN.md「高命中低變異」指的是命中率高（少 miss），爆擊率本身偏低（5–12%），
-// 故 2.0 倍的爆擊不會讓運氣主導戰局。調整此值＝改變戰鬥變異度，請同步更新註解。
-export const CRIT_MULTIPLIER = 2.0;
-
-/** 每點 DEF 抵 5% 傷害；上限 70%（避免 BOSS 完全無敵） */
-const DEF_REDUCTION_PER_POINT = 0.05;
-const DEF_REDUCTION_CAP = 0.7;
+// 傷害公式調參（CRIT_MULTIPLIER / DEF_REDUCTION_*）已移至 data/balance.ts，見上方 import。
 
 export function computeDamage(ctx: DamageContext): DamageResult {
   const counter = getCounter(ctx.attackerType, ctx.defenderType);
