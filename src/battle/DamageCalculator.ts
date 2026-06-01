@@ -2,6 +2,20 @@ import type { ActiveSkillDef, Faction, UnitTypeId } from '../types';
 import { getCounter } from './CounterSystem';
 import { SKILL_EFFECTS } from '../data/skillEffects';
 import { UNIT_TYPES } from '../data/unitTypes';
+import {
+  CRIT_MULTIPLIER,
+  DEF_REDUCTION_PER_POINT,
+  DEF_REDUCTION_CAP,
+  DOUBLE_ATTACK_THRESHOLD,
+} from '../data/balance';
+
+// 重新匯出以維持既有 public API（部分呼叫端 import 自此檔）。
+export { CRIT_MULTIPLIER } from '../data/balance';
+
+/** 攻方速度是否快到能對守方追擊（二次攻擊）。攻守各自獨立判定。 */
+export function doublesAttack(attackerSpeed: number, defenderSpeed: number): boolean {
+  return attackerSpeed - defenderSpeed >= DOUBLE_ATTACK_THRESHOLD;
+}
 
 export interface DamageContext {
   attackerType: UnitTypeId;
@@ -44,7 +58,7 @@ export interface DamageResult {
   appliedSkills: string[];
   /** 該攻擊的命中率 0-100 */
   hitRate: number;
-  /** 該攻擊的爆擊率 0-100（爆擊傷害 ×1.5）*/
+  /** 該攻擊的爆擊率 0-100（爆擊傷害 ×CRIT_MULTIPLIER，見下方常數）*/
   critRate: number;
 }
 
@@ -55,11 +69,7 @@ export interface ResolvedAttack {
   crit: boolean;
 }
 
-export const CRIT_MULTIPLIER = 2.0;
-
-/** 每點 DEF 抵 5% 傷害；上限 70%（避免 BOSS 完全無敵） */
-const DEF_REDUCTION_PER_POINT = 0.05;
-const DEF_REDUCTION_CAP = 0.7;
+// 傷害公式調參（CRIT_MULTIPLIER / DEF_REDUCTION_*）已移至 data/balance.ts，見上方 import。
 
 export function computeDamage(ctx: DamageContext): DamageResult {
   const counter = getCounter(ctx.attackerType, ctx.defenderType);

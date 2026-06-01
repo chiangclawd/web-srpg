@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
+    "balance": "tsx scripts/balance-sim.ts",
     "optimize-assets": "node scripts/optimize-assets.mjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
@@ -19,6 +20,7 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
     "sharp": "^0.34.5",
+    "tsx": "^4.19.2",
     "typescript": "^5.4.5",
     "vite": "^5.2.10"
   }

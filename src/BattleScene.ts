@@ -31,7 +31,7 @@ import { CHAPTERS } from './data/chapters';
 import { UNIT_TYPES, getMoveCost } from './data/unitTypes';
 import { TERRAIN_TYPES, parseTerrain } from './data/terrainTypes';
 import { getTileTextureKey } from './data/assetManifest';
-import { computeDamage, rollAttack } from './battle/DamageCalculator';
+import { computeDamage, rollAttack, doublesAttack } from './battle/DamageCalculator';
 import { getCounter } from './battle/CounterSystem';
 import { EXP_PER_DAMAGE, EXP_PER_KILL, scaleByLevelDiff } from './battle/Leveling';
 import { getCommanderProgress, saveProgress, getExcludedCommanders } from './data/save';
@@ -111,6 +111,10 @@ export class BattleScene extends Phaser.Scene {
   private static readonly ZOOM_MAX = 2.0;
 
   private highlightGfx!: Phaser.GameObjects.Graphics;
+  // 威脅範圍疊圖（Wave 1 / G1）：顯示敵方可移動+可攻擊的全部格子，紅色半透明。
+  // 獨立於 highlightGfx（後者隨選取狀態頻繁 clear），由玩家用右上「⚠」鈕切換。
+  private threatGfx!: Phaser.GameObjects.Graphics;
+  private threatActive = false;
   private turnText!: Phaser.GameObjects.Text;
   private hintText!: Phaser.GameObjects.Text;
   private infoText!: Phaser.GameObjects.Text;
@@ -212,6 +216,9 @@ export class BattleScene extends Phaser.Scene {
     this.time.timeScale = speed;
 
     this.drawBoard();
+    // 威脅疊圖在棋盤之上、選取高亮(5)與單位之下，避免蓋住可移動綠格與 sprite
+    this.threatGfx = this.add.graphics();
+    this.threatGfx.setDepth(4);
     this.highlightGfx = this.add.graphics();
     this.highlightGfx.setDepth(5);
 
@@ -528,17 +535,68 @@ export class BattleScene extends Phaser.Scene {
       this.potionBtn.setVisible(false);
     }
 
-    // === 右上按鈕欄：⏸ / ＋ / ⌂ / －（從上到下）===
+    // === 右上按鈕欄：⏸ / ⚠ / ＋ / ⌂ / －（從上到下）===
     // ⏸ 必須有觸控入口 — 手機沒實體鍵盤不能按 ESC 開暫停 / 存檔。
+    // ⚠ 切換「威脅範圍」疊圖（敵方可達+可攻擊格），戰術規劃用。
     const zoomX = viewportW - 70;
     let zoomY = 40;
     this.makeZoomButton(zoomX, zoomY, '⏸', () => this.togglePause());
+    zoomY += 64;
+    this.makeZoomButton(zoomX, zoomY, '⚠', () => this.toggleThreat());
     zoomY += 64;
     this.makeZoomButton(zoomX, zoomY, '＋', () => this.zoomBy(1.25));
     zoomY += 64;
     this.makeZoomButton(zoomX, zoomY, '⌂', () => this.applyZoom(1.0, viewportW / 2, viewportH / 2));
     zoomY += 64;
     this.makeZoomButton(zoomX, zoomY, '－', () => this.zoomBy(0.8));
+  }
+
+  /** 切換威脅範圍疊圖。視覺回饋＝紅格出現/消失 + hint 文字（按鈕本身有 hover handler，不另著色避免衝突）。 */
+  private toggleThreat(): void {
+    this.threatActive = !this.threatActive;
+    this.drawThreatOverlay();
+    this.flashHint(this.threatActive ? '威脅範圍：開（紅＝敵方可攻擊）' : '威脅範圍：關');
+  }
+
+  /**
+   * 重繪威脅疊圖：聯集所有存活敵方單位的「可移動格 + 從那些格可攻擊到的格」。
+   * threatActive=false 時只清空。於切換、玩家回合開始時呼叫（敵方位置在我方回合內不變）。
+   */
+  private drawThreatOverlay(): void {
+    this.threatGfx.clear();
+    if (!this.threatActive) return;
+    const danger = new Set<string>();
+    for (const enemy of this.units) {
+      if (!enemy.isAlive() || enemy.faction === 'player') continue;
+      const blocked = this.collectBlockedTiles(enemy);
+      const zoc = this.collectZoCTiles(enemy);
+      // 敵方能站的格（含原地）→ 從每格能攻擊到的格，全部算威脅
+      const stand = [
+        { ...enemy.position },
+        ...bfsReachable(
+          enemy.position,
+          enemy.moveRange,
+          blocked,
+          (tid) => getMoveCost(enemy.unitType, tid),
+          zoc
+        ),
+      ];
+      for (const s of stand) {
+        for (const t of attackTargetTiles(s, enemy.attackRange)) {
+          danger.add(coordKey(t));
+        }
+      }
+    }
+    this.threatGfx.fillStyle(0xff2a2a, 0.22);
+    this.threatGfx.lineStyle(1, 0xff5555, 0.35);
+    for (const key of danger) {
+      const [x, y] = key.split(',').map(Number);
+      const center = hexCenterPx({ x, y });
+      tracePointyHexPath(this.threatGfx, center.x, center.y, HEX_SIZE - 2);
+      this.threatGfx.fillPath();
+      tracePointyHexPath(this.threatGfx, center.x, center.y, HEX_SIZE - 2);
+      this.threatGfx.strokePath();
+    }
   }
 
 
@@ -1628,157 +1686,114 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ===== 戰鬥 =====
-  private async executeAttack(attacker: Unit, defender: Unit): Promise<void> {
-    const defenderTerrain = TERRAIN_TYPES[getTerrainAt(defender.position)];
+  /**
+   * 單次揮擊（atk 打 def）：算傷 → 擲骰 → 動畫 → 扣血 → 特效 → log → 經驗 → 陣亡移除。
+   * 攻方第一擊、守方反擊、雙方追擊都共用此函式，避免邏輯重複。
+   * @param isCounter 反擊 / 守方追擊用：不吃 empower、不算移動加成、log 用「反擊」語氣。
+   * @returns def 是否在此擊陣亡（呼叫端據此決定是否續打）。
+   */
+  private async performSwing(atk: Unit, def: Unit, isCounter: boolean): Promise<boolean> {
+    const defTerrain = TERRAIN_TYPES[getTerrainAt(def.position)];
     const result = computeDamage({
-      attackerType: attacker.unitType,
-      defenderType: defender.unitType,
-      attackerAttack: attacker.attack,
-      defenderDefense: defender.defense,
-      terrainDefBonus: defenderTerrain.defBonus,
-      attackerSkillId: attacker.skillId,
-      defenderSkillId: defender.skillId,
-      attackerFaction: attacker.faction,
-      defenderFaction: defender.faction,
-      attackerMovedDistance: attacker.lastMoveDistance,
-      attackerHpRatio: attacker.hp / attacker.maxHp,
-      defenderHpRatio: defender.hp / defender.maxHp,
-      attackerAdjacentAllies: this.countAdjacentAllies(attacker),
-      defenderAdjacentAllies: this.countAdjacentAllies(defender),
-      attackerEmpower: attacker.pendingEmpower?.empower,
-      defenderStanceMul: defender.stanceMods?.incomingMul,
+      attackerType: atk.unitType,
+      defenderType: def.unitType,
+      attackerAttack: atk.attack,
+      defenderDefense: def.defense,
+      terrainDefBonus: defTerrain.defBonus,
+      attackerSkillId: atk.skillId,
+      defenderSkillId: def.skillId,
+      attackerFaction: atk.faction,
+      defenderFaction: def.faction,
+      attackerMovedDistance: isCounter ? 0 : atk.lastMoveDistance,
+      attackerHpRatio: atk.hp / atk.maxHp,
+      defenderHpRatio: def.hp / def.maxHp,
+      attackerAdjacentAllies: this.countAdjacentAllies(atk),
+      defenderAdjacentAllies: this.countAdjacentAllies(def),
+      // empower 只在攻方第一擊（非反擊）生效；追擊時 pendingEmpower 已被清空
+      attackerEmpower: isCounter ? undefined : atk.pendingEmpower?.empower,
+      defenderStanceMul: def.stanceMods?.incomingMul,
       enemyAttackMul: getEnemyAttackMul(),
-      attackerWeaponHitBonus: attacker.weapon?.hitBonus,
-      attackerWeaponCritBonus: attacker.weapon?.critBonus,
+      attackerWeaponHitBonus: atk.weapon?.hitBonus,
+      attackerWeaponCritBonus: atk.weapon?.critBonus,
     });
-    // 消耗主動特技 empower（不論命中與否）
-    if (attacker.pendingEmpower) {
-      this.appendLog(`【${attacker.name}】發動 ${attacker.pendingEmpower.name}！`);
-      attacker.pendingEmpower = null;
+    // 消耗主動特技 empower（只攻方第一擊；不論命中與否）
+    if (!isCounter && atk.pendingEmpower) {
+      this.appendLog(`【${atk.name}】發動 ${atk.pendingEmpower.name}！`);
+      atk.pendingEmpower = null;
     }
     const rolled = rollAttack(result);
-    this.playAttackSound(attacker.unitType);
-    await attacker.showAttackAnimation(defender);
-    const tCenter = defender.getCenterPx();
+    this.playAttackSound(atk.unitType);
+    await atk.showAttackAnimation(def);
+    const center = def.getCenterPx();
     if (rolled.hit) {
       audio.playHit();
-      this.spawnHitParticles(
-        tCenter.x,
-        tCenter.y,
-        this.particleColorForType(attacker.unitType)
-      );
-      defender.applyDamage(rolled.damage);
-      defender.flashHit();
+      this.spawnHitParticles(center.x, center.y, this.particleColorForType(atk.unitType));
+      def.applyDamage(rolled.damage);
+      def.flashHit();
       const dmgColor = rolled.crit ? '#ffd54a' : '#ff8888';
-      const dmgSize = rolled.crit ? '20px' : '16px';
+      const dmgSize = rolled.crit ? '30px' : '22px';
       const dmgText = rolled.crit ? `-${rolled.damage} 爆！` : `-${rolled.damage}`;
-      defender.showFloatingText(dmgText, dmgColor, dmgSize);
+      def.showFloatingText(dmgText, dmgColor, dmgSize);
     } else {
-      defender.showFloatingText('MISS', '#dddddd', '16px');
+      def.showFloatingText('MISS', '#dddddd', '22px');
     }
     const tag =
-      result.counterLabel === '優勢'
-        ? '【剋】'
-        : result.counterLabel === '劣勢'
-        ? '【弱】'
-        : '';
+      result.counterLabel === '優勢' ? '【剋】' : result.counterLabel === '劣勢' ? '【弱】' : '';
+    const arrow = isCounter ? `反擊 ${def.name}` : `→ ${def.name}`;
     if (rolled.hit) {
       const critTag = rolled.crit ? '【爆】' : '';
-      this.appendLog(`${attacker.name} → ${defender.name} ${rolled.damage} 傷${tag}${critTag}`);
-      if (attacker.faction === 'player' && this.battleStats[attacker.id]) {
-        this.battleStats[attacker.id].damageDealt += rolled.damage;
-        if (!defender.isAlive()) this.battleStats[attacker.id].kills += 1;
+      this.appendLog(`${atk.name} ${arrow} ${rolled.damage} 傷${tag}${critTag}`);
+      if (atk.faction === 'player' && this.battleStats[atk.id]) {
+        this.battleStats[atk.id].damageDealt += rolled.damage;
+        if (!def.isAlive()) this.battleStats[atk.id].kills += 1;
       }
-      this.grantExp(attacker, rolled.damage, !defender.isAlive(), defender.level);
+      this.grantExp(atk, rolled.damage, !def.isAlive(), def.level);
     } else {
-      this.appendLog(`${attacker.name} → ${defender.name} MISS`);
+      this.appendLog(`${atk.name} ${arrow} MISS`);
     }
     await this.delay(220);
-
-    if (!defender.isAlive()) {
-      this.appendLog(`${defender.name} 撤退！`);
+    if (!def.isAlive()) {
+      this.appendLog(`${def.name} 撤退！`);
       audio.playUnitDown();
-      defender.destroy();
-      this.units = this.units.filter((u) => u !== defender);
-      return;
+      def.destroy();
+      this.units = this.units.filter((u) => u !== def);
+      if (this.threatActive) this.drawThreatOverlay(); // 場上少一單位 → 威脅可能變化
+      return true;
     }
+    return false;
+  }
 
-    const inCounterRange = attackTargetTiles(defender.position, defender.attackRange).some(
+  /**
+   * 一次完整交戰：攻方第一擊 → 守方反擊 → 攻方追擊 → 守方追擊。
+   * 追擊＝速度差達 DOUBLE_ATTACK_THRESHOLD；任一方陣亡即提前結束。
+   */
+  private async executeAttack(attacker: Unit, defender: Unit): Promise<void> {
+    // 1. 攻方第一擊
+    if (await this.performSwing(attacker, defender, false)) return;
+
+    // 守方是否在反擊射程內（反擊與守方追擊共用此判定）
+    const defenderCanReach = attackTargetTiles(defender.position, defender.attackRange).some(
       (c) => coordEq(c, attacker.position)
     );
-    if (!inCounterRange) return;
 
-    await this.delay(80);
-    const attackerTerrain = TERRAIN_TYPES[getTerrainAt(attacker.position)];
-    const counter = computeDamage({
-      attackerType: defender.unitType,
-      defenderType: attacker.unitType,
-      attackerAttack: defender.attack,
-      defenderDefense: attacker.defense,
-      terrainDefBonus: attackerTerrain.defBonus,
-      attackerSkillId: defender.skillId,
-      defenderSkillId: attacker.skillId,
-      attackerFaction: defender.faction,
-      defenderFaction: attacker.faction,
-      attackerMovedDistance: 0, // 反擊不算移動加成
-      attackerHpRatio: defender.hp / defender.maxHp,
-      defenderHpRatio: attacker.hp / attacker.maxHp,
-      attackerAdjacentAllies: this.countAdjacentAllies(defender),
-      defenderAdjacentAllies: this.countAdjacentAllies(attacker),
-      // 反擊不消耗 empower（empower 只給原攻擊用）；但 attacker 的 stance 仍生效
-      defenderStanceMul: attacker.stanceMods?.incomingMul,
-      enemyAttackMul: getEnemyAttackMul(),
-      attackerWeaponHitBonus: defender.weapon?.hitBonus,
-      attackerWeaponCritBonus: defender.weapon?.critBonus,
-    });
-    const counterRolled = rollAttack(counter);
-    this.playAttackSound(defender.unitType);
-    await defender.showAttackAnimation(attacker);
-    const aCenter = attacker.getCenterPx();
-    if (counterRolled.hit) {
-      audio.playHit();
-      this.spawnHitParticles(
-        aCenter.x,
-        aCenter.y,
-        this.particleColorForType(defender.unitType)
-      );
-      attacker.applyDamage(counterRolled.damage);
-      attacker.flashHit();
-      const dmgColor = counterRolled.crit ? '#ffd54a' : '#ff8888';
-      const dmgSize = counterRolled.crit ? '20px' : '16px';
-      const dmgText = counterRolled.crit
-        ? `-${counterRolled.damage} 爆！`
-        : `-${counterRolled.damage}`;
-      attacker.showFloatingText(dmgText, dmgColor, dmgSize);
-    } else {
-      attacker.showFloatingText('MISS', '#dddddd', '16px');
+    // 2. 守方反擊
+    if (defenderCanReach) {
+      await this.delay(80);
+      if (await this.performSwing(defender, attacker, true)) return;
     }
-    const ctag =
-      counter.counterLabel === '優勢'
-        ? '【剋】'
-        : counter.counterLabel === '劣勢'
-        ? '【弱】'
-        : '';
-    if (counterRolled.hit) {
-      const critTag = counterRolled.crit ? '【爆】' : '';
-      this.appendLog(
-        `${defender.name} 反擊 ${attacker.name} ${counterRolled.damage} 傷${ctag}${critTag}`
-      );
-      if (defender.faction === 'player' && this.battleStats[defender.id]) {
-        this.battleStats[defender.id].damageDealt += counterRolled.damage;
-        if (!attacker.isAlive()) this.battleStats[defender.id].kills += 1;
-      }
-      this.grantExp(defender, counterRolled.damage, !attacker.isAlive(), attacker.level);
-    } else {
-      this.appendLog(`${defender.name} 反擊 ${attacker.name} MISS`);
-    }
-    await this.delay(220);
 
-    if (!attacker.isAlive()) {
-      this.appendLog(`${attacker.name} 撤退！`);
-      audio.playUnitDown();
-      attacker.destroy();
-      this.units = this.units.filter((u) => u !== attacker);
+    // 3. 攻方追擊（速度快過守方達門檻；不需守方在射程內）
+    if (doublesAttack(attacker.speed, defender.speed)) {
+      await this.delay(80);
+      attacker.showFloatingText('追擊！', '#ffd54a', '22px');
+      if (await this.performSwing(attacker, defender, false)) return;
+    }
+
+    // 4. 守方追擊（需在反擊射程內且速度差達門檻）
+    if (defenderCanReach && doublesAttack(defender.speed, attacker.speed)) {
+      await this.delay(80);
+      defender.showFloatingText('追擊！', '#ffd54a', '22px');
+      await this.performSwing(defender, attacker, true);
     }
   }
 
@@ -2037,24 +2052,31 @@ export class BattleScene extends Phaser.Scene {
     const tag = (lbl: '優勢' | '劣勢' | '普通') =>
       lbl === '優勢' ? '【剋】' : lbl === '劣勢' ? '【弱】' : '';
 
-    // 計算戰後 HP 與致命結果
-    const defHpAfter = Math.max(0, defender.hp - ourHit.damage);
+    // 追擊（速度差達門檻）：攻方 / 守方可能各打兩下，預判須反映加倍傷害
+    const atkDoubles = doublesAttack(attacker.speed, defender.speed);
+    const defDoubles = !!counterHit && doublesAttack(defender.speed, attacker.speed);
+    const ourTotal = ourHit.damage * (atkDoubles ? 2 : 1);
+    const counterTotal = counterHit ? counterHit.damage * (defDoubles ? 2 : 1) : 0;
+
+    // 計算戰後 HP 與致命結果（含追擊）
+    const defHpAfter = Math.max(0, defender.hp - ourTotal);
     const willKill = defHpAfter === 0;
-    const atkHpAfter = counterHit ? Math.max(0, attacker.hp - counterHit.damage) : attacker.hp;
+    const atkHpAfter = counterHit ? Math.max(0, attacker.hp - counterTotal) : attacker.hp;
     const willDie = counterHit ? atkHpAfter === 0 : false;
 
     const killBadge = willKill ? '　★擊殺' : '';
     const deathBadge = willDie ? '　⚠致命！' : '';
+    const dbl = (on: boolean) => (on ? ' ×2追擊' : '');
 
     const fmtHitCrit = (r: { hitRate: number; critRate: number }) =>
       `命中 ${r.hitRate}% / 爆 ${r.critRate}%`;
 
     const lines = [
       `${attacker.name} → ${defender.name}`,
-      `傷害 ${ourHit.damage}${tag(ourHit.counterLabel)}　(剩 ${defHpAfter}/${defender.maxHp})${killBadge}`,
+      `傷害 ${ourHit.damage}${dbl(atkDoubles)}${tag(ourHit.counterLabel)}　(剩 ${defHpAfter}/${defender.maxHp})${killBadge}`,
       `　${fmtHitCrit(ourHit)}`,
       counterHit
-        ? `反擊 ${counterHit.damage}${tag(counterHit.counterLabel)}　(剩 ${atkHpAfter}/${attacker.maxHp})${deathBadge}`
+        ? `反擊 ${counterHit.damage}${dbl(defDoubles)}${tag(counterHit.counterLabel)}　(剩 ${atkHpAfter}/${attacker.maxHp})${deathBadge}`
         : `對方無法反擊`,
       counterHit ? `　${fmtHitCrit(counterHit)}` : '',
     ].filter((s) => s.length > 0);
@@ -2063,11 +2085,11 @@ export class BattleScene extends Phaser.Scene {
     const mainColor = willDie ? '#ff6666' : willKill ? '#ffd54a' : '#ffffff';
 
     const text = this.add.text(0, 0, lines.join('\n'), {
-      fontSize: '13px',
+      fontSize: '18px',
       color: mainColor,
-      lineSpacing: 4,
-      padding: { left: 8, right: 8, top: 6, bottom: 6 },
-      backgroundColor: '#000000c8',
+      lineSpacing: 5,
+      padding: { left: 10, right: 10, top: 8, bottom: 8 },
+      backgroundColor: '#000000d8',
       fontStyle: willDie || willKill ? 'bold' : 'normal',
     });
     const w = text.width;
@@ -2138,6 +2160,8 @@ export class BattleScene extends Phaser.Scene {
       this.turnText.setText('你的回合').setColor('#7ed1ff');
     }
     this.deselect();
+    // 敵方在上回合可能已移動 → 若威脅疊圖開著，依新位置重繪
+    if (this.threatActive) this.drawThreatOverlay();
   }
 
   private checkPlayerTurnEnd(): void {
@@ -2152,6 +2176,7 @@ export class BattleScene extends Phaser.Scene {
     this.playerTurnNumber += 1;
     this.turnText.setText('敵方回合').setColor('#ff8080');
     this.clearHighlights();
+    this.threatGfx.clear(); // 敵方移動中 → 暫清威脅疊圖，回合開始時依新位置重繪
     this.waitBtn.setVisible(false);
     this.cancelBtn.setVisible(false);
     this.hintText.setText('敵方行動中…');
