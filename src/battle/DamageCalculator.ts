@@ -49,6 +49,8 @@ export interface DamageContext {
   attackerWeaponCritBonus?: number;
   /** 側/背擊傷害倍率（Wave 4）：正面 1.0 / 側 1.1 / 背 1.25，由 BattleScene 依面向幾何算好傳入。 */
   flankMul?: number;
+  /** 羈絆傷害倍率（Wave 6）：相鄰羈絆夥伴時 >1，由 BattleScene 算好傳入。 */
+  bondMul?: number;
 }
 
 export interface DamageResult {
@@ -99,6 +101,12 @@ export function computeDamage(ctx: DamageContext): DamageResult {
   if (ctx.flankMul && ctx.flankMul !== 1.0) {
     raw *= ctx.flankMul;
     appliedSkills.push(`側背擊 ×${ctx.flankMul.toFixed(2)}`);
+  }
+
+  // 羈絆加成（Wave 6）：相鄰羈絆夥伴時的攻擊倍率
+  if (ctx.bondMul && ctx.bondMul !== 1.0) {
+    raw *= ctx.bondMul;
+    appliedSkills.push(`羈絆 ×${ctx.bondMul.toFixed(2)}`);
   }
 
   // 防禦改為「乘法減傷」：每點 DEF 抵 5%，上限 70%

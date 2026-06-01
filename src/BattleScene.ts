@@ -32,7 +32,8 @@ import { UNIT_TYPES, getMoveCost } from './data/unitTypes';
 import { TERRAIN_TYPES, parseTerrain } from './data/terrainTypes';
 import { getTileTextureKey } from './data/assetManifest';
 import { computeDamage, rollAttack, doublesAttack } from './battle/DamageCalculator';
-import { FLANK } from './data/balance';
+import { FLANK, BOND_ATK_MUL } from './data/balance';
+import { findBond } from './data/bonds';
 import { getCounter } from './battle/CounterSystem';
 import { EXP_PER_DAMAGE, EXP_PER_KILL, scaleByLevelDiff } from './battle/Leveling';
 import { getCommanderProgress, saveProgress, getExcludedCommanders } from './data/save';
@@ -1699,6 +1700,22 @@ export class BattleScene extends Phaser.Scene {
     return { mul: FLANK.SIDE_MUL, label: '側擊' }; // 側面
   }
 
+  /**
+   * 羈絆加成（Wave 6）：unit 的相鄰格若有「羈絆夥伴」（同陣營），攻擊獲得倍率。
+   * 回傳倍率與羈絆名（供預判 / log 顯示）。
+   */
+  private bondInfo(unit: Unit): { mul: number; name: string } {
+    for (const nb of hexNeighbors(unit.position)) {
+      const ally = this.units.find(
+        (u) => u.isAlive() && u.faction === unit.faction && coordEq(u.position, nb)
+      );
+      if (!ally) continue;
+      const bond = findBond(unit.id, ally.id);
+      if (bond) return { mul: BOND_ATK_MUL, name: bond.name };
+    }
+    return { mul: 1.0, name: '' };
+  }
+
   private findAttackTargets(unit: Unit): Coord[] {
     const tiles = attackTargetTiles(unit.position, unit.attackRange);
     return tiles.filter((t) =>
@@ -1718,6 +1735,7 @@ export class BattleScene extends Phaser.Scene {
   private async performSwing(atk: Unit, def: Unit, isCounter: boolean): Promise<boolean> {
     // 側/背擊：依守方「目前」面向判定（先判定再轉向攻擊，攻方轉向不影響守方面向）
     const flank = this.flankInfo(atk, def);
+    const bond = this.bondInfo(atk); // 相鄰羈絆夥伴加成
     atk.faceToward(def.position); // 攻方轉向目標（也讓對方反擊時為正面）
     const defTerrain = TERRAIN_TYPES[getTerrainAt(def.position)];
     const result = computeDamage({
@@ -1742,6 +1760,7 @@ export class BattleScene extends Phaser.Scene {
       attackerWeaponHitBonus: atk.weapon?.hitBonus,
       attackerWeaponCritBonus: atk.weapon?.critBonus,
       flankMul: flank.mul,
+      bondMul: bond.mul,
     });
     // 消耗主動特技 empower（只攻方第一擊；不論命中與否）
     if (!isCounter && atk.pendingEmpower) {
@@ -1782,10 +1801,11 @@ export class BattleScene extends Phaser.Scene {
     const tag =
       result.counterLabel === '優勢' ? '【剋】' : result.counterLabel === '劣勢' ? '【弱】' : '';
     const flankTag = flank.label ? `【${flank.label}】` : '';
+    const bondTag = bond.name ? `【${bond.name}】` : '';
     const arrow = isCounter ? `反擊 ${def.name}` : `→ ${def.name}`;
     if (rolled.hit) {
       const critTag = rolled.crit ? '【爆】' : '';
-      this.appendLog(`${atk.name} ${arrow} ${rolled.damage} 傷${tag}${critTag}${flankTag}`);
+      this.appendLog(`${atk.name} ${arrow} ${rolled.damage} 傷${tag}${critTag}${flankTag}${bondTag}`);
       if (atk.faction === 'player' && this.battleStats[atk.id]) {
         this.battleStats[atk.id].damageDealt += rolled.damage;
         if (!def.isAlive()) this.battleStats[atk.id].kills += 1;
@@ -2076,6 +2096,7 @@ export class BattleScene extends Phaser.Scene {
     const atkT = TERRAIN_TYPES[getTerrainAt(attacker.position)];
     // 側/背擊預判（攻方攻擊後會轉向守方，故守方反擊一律為正面，不給反擊加成）
     const flank = this.flankInfo(attacker, defender);
+    const bond = this.bondInfo(attacker); // 相鄰羈絆夥伴加成
     const ourHit = computeDamage({
       attackerType: attacker.unitType,
       defenderType: defender.unitType,
@@ -2097,6 +2118,7 @@ export class BattleScene extends Phaser.Scene {
       attackerWeaponHitBonus: attacker.weapon?.hitBonus,
       attackerWeaponCritBonus: attacker.weapon?.critBonus,
       flankMul: flank.mul,
+      bondMul: bond.mul,
     });
     const counterRange = attackTargetTiles(defender.position, defender.attackRange).some(
       (c) => coordEq(c, attacker.position)
@@ -2146,9 +2168,10 @@ export class BattleScene extends Phaser.Scene {
       `命中 ${r.hitRate}% / 爆 ${r.critRate}%`;
 
     const flankFc = flank.label ? ` ${flank.label}` : '';
+    const bondFc = bond.name ? ` 羈絆` : '';
     const lines = [
-      `${attacker.name} → ${defender.name}`,
-      `傷害 ${ourHit.damage}${dbl(atkDoubles)}${flankFc}${tag(ourHit.counterLabel)}　(剩 ${defHpAfter}/${defender.maxHp})${killBadge}`,
+      `${attacker.name} → ${defender.name}${bond.name ? `　【${bond.name}】` : ''}`,
+      `傷害 ${ourHit.damage}${dbl(atkDoubles)}${flankFc}${bondFc}${tag(ourHit.counterLabel)}　(剩 ${defHpAfter}/${defender.maxHp})${killBadge}`,
       `　${fmtHitCrit(ourHit)}`,
       counterHit
         ? `反擊 ${counterHit.damage}${dbl(defDoubles)}${tag(counterHit.counterLabel)}　(剩 ${atkHpAfter}/${attacker.maxHp})${deathBadge}`

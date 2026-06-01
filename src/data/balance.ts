@@ -64,6 +64,10 @@ export const FLANK = {
   REAR_MUL: 1.25, // 背擊
 } as const;
 
+// ===== 羈絆 / 支援（Wave 6 / G6）=====
+/** 相鄰羈絆夥伴時，攻擊傷害倍率（鼓勵讓有羈絆的武將並肩作戰）。 */
+export const BOND_ATK_MUL = 1.15;
+
 // ===== 經驗 / 等級 =====
 export const EXP_PER_LEVEL = 50;
 export const EXP_PER_DAMAGE = 1;
