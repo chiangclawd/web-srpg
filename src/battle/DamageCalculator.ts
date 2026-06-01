@@ -43,6 +43,8 @@ export interface DamageContext {
   defenderStanceMul?: number;
   /** 難度倍率（敵方攻擊額外乘）：休閒 0.7、普通 1.0、困難 1.3 */
   enemyAttackMul?: number;
+  /** 難度倍率（守方為玩家時受傷再乘）：休閒 1.2(=傷害×0.83)、普通 1.0、困難 0.85(=傷害×1.18) */
+  playerDefenseMul?: number;
   /** 攻擊方武器的命中率加成（百分點，可省略）*/
   attackerWeaponHitBonus?: number;
   /** 攻擊方武器的爆擊率加成（百分點，可省略）*/
@@ -138,6 +140,15 @@ export function computeDamage(ctx: DamageContext): DamageResult {
   if (ctx.defenderStanceMul && ctx.defenderStanceMul !== 1.0) {
     dmg *= ctx.defenderStanceMul;
     appliedSkills.push(`守方姿態 ×${ctx.defenderStanceMul.toFixed(2)}`);
+  }
+
+  // 難度倍率：守方為玩家時，依難度調整受傷（Wave 8）— easy 1/1.2≈0.83、hard 1/0.85≈1.18
+  if (
+    ctx.defenderFaction === 'player' &&
+    ctx.playerDefenseMul &&
+    ctx.playerDefenseMul !== 1.0
+  ) {
+    dmg /= ctx.playerDefenseMul;
   }
 
   dmg = Math.max(1, Math.floor(dmg));
