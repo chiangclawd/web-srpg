@@ -36,7 +36,11 @@ export const UNIT_TYPES: Record<UnitTypeId, UnitTypeDef> = {
     color: 0xd8a060,
     attackRange: 1,
     moveRange: 5,
-    baseStats: { hp: 26, attack: 9, defense: 3 },
+    // Wave A 平衡微調：模擬器顯示騎兵 1v1 平均勝率 73% 壓制全體，且 move 5 的結構性
+    // 機動優勢未計入模擬。攻擊 9→8、HP 26→25 把純數值面拉回目標區間；保留 move 5 維持
+    // 「機動」身分（其機動強度另由實戰體現，非模擬器可見）。mage/flier 不動：mage 實戰
+    // 脆且被貼身剋、flier 強度來自未模擬的機動，故不依抽象模擬器調整。
+    baseStats: { hp: 25, attack: 8, defense: 3 },
     hitRate: 90,
     critRate: 10, // 衝鋒爆發力強
     // 開闊地特化：森林 + 山地額外昂貴（馬不擅崎嶇）
