@@ -1689,15 +1689,20 @@ export class BattleScene extends Phaser.Scene {
    * 側 / 背擊判定（Wave 4）：依「攻擊者位於守方面向的哪個弧」回傳傷害倍率與標籤。
    * 用 pixel 空間角度，避開 odd-r 鄰格方位的奇偶列差異。
    */
-  private flankInfo(attacker: Unit, defender: Unit): { mul: number; label: string } {
+  /** 從某「位置」攻擊 defender 的側/背擊判定（AI 評估假設位置用）。 */
+  private flankClassify(attackerPos: Coord, defender: Unit): { mul: number; label: string } {
     const d = defender.getCenterPx();
-    const a = attacker.getCenterPx();
+    const a = hexCenterPx(attackerPos);
     const angToAtk = Math.atan2(a.y - d.y, a.x - d.x); // 守方 → 攻方 的方向
     let diff = Math.abs(angToAtk - defender.facing) % (2 * Math.PI);
     if (diff > Math.PI) diff = 2 * Math.PI - diff; // 正規化到 [0, π]
     if (diff <= FLANK.FRONT_ARC) return { mul: 1.0, label: '' }; // 正面
     if (diff >= FLANK.REAR_ARC) return { mul: FLANK.REAR_MUL, label: '背擊' }; // 背面
     return { mul: FLANK.SIDE_MUL, label: '側擊' }; // 側面
+  }
+
+  private flankInfo(attacker: Unit, defender: Unit): { mul: number; label: string } {
+    return this.flankClassify(attacker.position, defender);
   }
 
   /**
@@ -2412,6 +2417,47 @@ export class BattleScene extends Phaser.Scene {
       ),
     ];
 
+    // === Wave 7 AI 升級 ===
+    // 難度連動智商：easy 維持原本（較魯莽）；normal/hard 啟用殘血撤退 + 側背擊走位。
+    const smart = getSettings().difficulty !== 'easy';
+    const lowHp = enemy.hp / enemy.maxHp < 0.3;
+
+    // 殘血自保：若沒有「安全擊殺」機會（能殺且不會被反殺），改撤退到離玩家最遠的掩體格。
+    if (smart && lowHp) {
+      const hasSafeKill = standable.some((tile) => {
+        if (!inRangeFrom(tile)) return false;
+        const d = predictDamage(enemy, target, manhattan(tile, enemy.position));
+        const c = predictCounterIfWeAttack(enemy, target, tile);
+        return d.canKill && c < enemy.hp;
+      });
+      if (!hasSafeKill) {
+        let fleeTile: Coord = enemy.position;
+        let fleeScore = -Infinity;
+        for (const tile of standable) {
+          const nearest = Math.min(...players.map((p) => manhattan(tile, p.position)));
+          const t = TERRAIN_TYPES[getTerrainAt(tile)];
+          const sc = nearest * 6 + t.defBonus * 3; // 越遠越好 + 偏好掩體
+          if (sc > fleeScore) {
+            fleeScore = sc;
+            fleeTile = tile;
+          }
+        }
+        if (!coordEq(fleeTile, enemy.position)) {
+          const fleePath = bfsPath(
+            enemy.position,
+            fleeTile,
+            blocked,
+            (tid) => getMoveCost(enemy.unitType, tid),
+            enemy.moveRange,
+            zoc
+          );
+          await enemy.moveTo(fleeTile, fleePath);
+          this.appendLog(`${enemy.name} 殘血撤退`);
+        }
+        return; // 撤退後不攻擊
+      }
+    }
+
     let bestTile: Coord | null = null;
     let bestTileScore = -Infinity;
     for (const tile of standable) {
@@ -2432,6 +2478,8 @@ export class BattleScene extends Phaser.Scene {
         // 預期反擊每點 -2 分 → 遠程兵自然偏好「打到目標但不在反擊範圍內」的位置（kite）
         score -= counterDmg * 2;
         score += tileTerrain.defBonus * 4; // 偏好高 DEF 地形
+        // Wave 7：normal/hard 主動找側/背擊位（×1.25 背→+20、×1.1 側→+8）
+        if (smart) score += (this.flankClassify(tile, target).mul - 1) * 80;
         score += 100; // 能攻擊的位置壓倒性優於 approach 分支（避免「逼近但不攻擊」）
       } else {
         // 不能攻擊 → 越接近目標越好（負距離，越大越好）
