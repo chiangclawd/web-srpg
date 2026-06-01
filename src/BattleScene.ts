@@ -32,6 +32,7 @@ import { UNIT_TYPES, getMoveCost } from './data/unitTypes';
 import { TERRAIN_TYPES, parseTerrain } from './data/terrainTypes';
 import { getTileTextureKey } from './data/assetManifest';
 import { computeDamage, rollAttack, doublesAttack } from './battle/DamageCalculator';
+import { FLANK } from './data/balance';
 import { getCounter } from './battle/CounterSystem';
 import { EXP_PER_DAMAGE, EXP_PER_KILL, scaleByLevelDiff } from './battle/Leveling';
 import { getCommanderProgress, saveProgress, getExcludedCommanders } from './data/save';
@@ -1676,6 +1677,21 @@ export class BattleScene extends Phaser.Scene {
     return set;
   }
 
+  /**
+   * 側 / 背擊判定（Wave 4）：依「攻擊者位於守方面向的哪個弧」回傳傷害倍率與標籤。
+   * 用 pixel 空間角度，避開 odd-r 鄰格方位的奇偶列差異。
+   */
+  private flankInfo(attacker: Unit, defender: Unit): { mul: number; label: string } {
+    const d = defender.getCenterPx();
+    const a = attacker.getCenterPx();
+    const angToAtk = Math.atan2(a.y - d.y, a.x - d.x); // 守方 → 攻方 的方向
+    let diff = Math.abs(angToAtk - defender.facing) % (2 * Math.PI);
+    if (diff > Math.PI) diff = 2 * Math.PI - diff; // 正規化到 [0, π]
+    if (diff <= FLANK.FRONT_ARC) return { mul: 1.0, label: '' }; // 正面
+    if (diff >= FLANK.REAR_ARC) return { mul: FLANK.REAR_MUL, label: '背擊' }; // 背面
+    return { mul: FLANK.SIDE_MUL, label: '側擊' }; // 側面
+  }
+
   private findAttackTargets(unit: Unit): Coord[] {
     const tiles = attackTargetTiles(unit.position, unit.attackRange);
     return tiles.filter((t) =>
@@ -1693,6 +1709,9 @@ export class BattleScene extends Phaser.Scene {
    * @returns def 是否在此擊陣亡（呼叫端據此決定是否續打）。
    */
   private async performSwing(atk: Unit, def: Unit, isCounter: boolean): Promise<boolean> {
+    // 側/背擊：依守方「目前」面向判定（先判定再轉向攻擊，攻方轉向不影響守方面向）
+    const flank = this.flankInfo(atk, def);
+    atk.faceToward(def.position); // 攻方轉向目標（也讓對方反擊時為正面）
     const defTerrain = TERRAIN_TYPES[getTerrainAt(def.position)];
     const result = computeDamage({
       attackerType: atk.unitType,
@@ -1715,6 +1734,7 @@ export class BattleScene extends Phaser.Scene {
       enemyAttackMul: getEnemyAttackMul(),
       attackerWeaponHitBonus: atk.weapon?.hitBonus,
       attackerWeaponCritBonus: atk.weapon?.critBonus,
+      flankMul: flank.mul,
     });
     // 消耗主動特技 empower（只攻方第一擊；不論命中與否）
     if (!isCounter && atk.pendingEmpower) {
@@ -1730,19 +1750,23 @@ export class BattleScene extends Phaser.Scene {
       this.spawnHitParticles(center.x, center.y, this.particleColorForType(atk.unitType));
       def.applyDamage(rolled.damage);
       def.flashHit();
-      const dmgColor = rolled.crit ? '#ffd54a' : '#ff8888';
-      const dmgSize = rolled.crit ? '30px' : '22px';
-      const dmgText = rolled.crit ? `-${rolled.damage} 爆！` : `-${rolled.damage}`;
+      const dmgColor = flank.label ? '#ff7b3a' : rolled.crit ? '#ffd54a' : '#ff8888';
+      const dmgSize = rolled.crit || flank.label ? '30px' : '22px';
+      const flankSuffix = flank.label ? ` ${flank.label}` : '';
+      const dmgText = rolled.crit
+        ? `-${rolled.damage} 爆！${flankSuffix}`
+        : `-${rolled.damage}${flankSuffix}`;
       def.showFloatingText(dmgText, dmgColor, dmgSize);
     } else {
       def.showFloatingText('MISS', '#dddddd', '22px');
     }
     const tag =
       result.counterLabel === '優勢' ? '【剋】' : result.counterLabel === '劣勢' ? '【弱】' : '';
+    const flankTag = flank.label ? `【${flank.label}】` : '';
     const arrow = isCounter ? `反擊 ${def.name}` : `→ ${def.name}`;
     if (rolled.hit) {
       const critTag = rolled.crit ? '【爆】' : '';
-      this.appendLog(`${atk.name} ${arrow} ${rolled.damage} 傷${tag}${critTag}`);
+      this.appendLog(`${atk.name} ${arrow} ${rolled.damage} 傷${tag}${critTag}${flankTag}`);
       if (atk.faction === 'player' && this.battleStats[atk.id]) {
         this.battleStats[atk.id].damageDealt += rolled.damage;
         if (!def.isAlive()) this.battleStats[atk.id].kills += 1;
@@ -2003,6 +2027,8 @@ export class BattleScene extends Phaser.Scene {
     this.hideTooltip();
     const defT = TERRAIN_TYPES[getTerrainAt(defender.position)];
     const atkT = TERRAIN_TYPES[getTerrainAt(attacker.position)];
+    // 側/背擊預判（攻方攻擊後會轉向守方，故守方反擊一律為正面，不給反擊加成）
+    const flank = this.flankInfo(attacker, defender);
     const ourHit = computeDamage({
       attackerType: attacker.unitType,
       defenderType: defender.unitType,
@@ -2023,6 +2049,7 @@ export class BattleScene extends Phaser.Scene {
       enemyAttackMul: getEnemyAttackMul(),
       attackerWeaponHitBonus: attacker.weapon?.hitBonus,
       attackerWeaponCritBonus: attacker.weapon?.critBonus,
+      flankMul: flank.mul,
     });
     const counterRange = attackTargetTiles(defender.position, defender.attackRange).some(
       (c) => coordEq(c, attacker.position)
@@ -2071,9 +2098,10 @@ export class BattleScene extends Phaser.Scene {
     const fmtHitCrit = (r: { hitRate: number; critRate: number }) =>
       `命中 ${r.hitRate}% / 爆 ${r.critRate}%`;
 
+    const flankFc = flank.label ? ` ${flank.label}` : '';
     const lines = [
       `${attacker.name} → ${defender.name}`,
-      `傷害 ${ourHit.damage}${dbl(atkDoubles)}${tag(ourHit.counterLabel)}　(剩 ${defHpAfter}/${defender.maxHp})${killBadge}`,
+      `傷害 ${ourHit.damage}${dbl(atkDoubles)}${flankFc}${tag(ourHit.counterLabel)}　(剩 ${defHpAfter}/${defender.maxHp})${killBadge}`,
       `　${fmtHitCrit(ourHit)}`,
       counterHit
         ? `反擊 ${counterHit.damage}${dbl(defDoubles)}${tag(counterHit.counterLabel)}　(剩 ${atkHpAfter}/${attacker.maxHp})${deathBadge}`

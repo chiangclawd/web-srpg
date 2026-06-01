@@ -52,6 +52,18 @@ export const COUNTER_MATRIX: Record<UnitTypeId, CounterRow> = {
  */
 export const DOUBLE_ATTACK_THRESHOLD = 4;
 
+// ===== 方位 / 側背擊（Wave 4 / G4）=====
+// 依「攻擊者相對於守方面向的角度」給傷害加成：正面無加成、側面小加成、背面大加成。
+// 守方只在移動 / 攻擊時轉向（被打不轉），故包夾繞背能穩定吃到加成直到對方行動。
+export const FLANK = {
+  /** 正面弧（±此角度內視為正面，無加成）。單位：弧度。 */
+  FRONT_ARC: Math.PI / 3, // ±60°
+  /** 背面弧（與面向夾角 ≥ 此值視為背面）。單位：弧度。 */
+  REAR_ARC: (2 * Math.PI) / 3, // ≥120°
+  SIDE_MUL: 1.1, // 側擊
+  REAR_MUL: 1.25, // 背擊
+} as const;
+
 // ===== 經驗 / 等級 =====
 export const EXP_PER_LEVEL = 50;
 export const EXP_PER_DAMAGE = 1;

@@ -9,7 +9,7 @@ import type {
   EquipmentDef,
   GrowthRates,
 } from './types';
-import { HEX_W, HEX_H, hexCenterPx, hexDistance } from './Grid';
+import { HEX_W, HEX_H, hexCenterPx, hexDistance, coordEq } from './Grid';
 import { UNIT_TYPES } from './data/unitTypes';
 import { EQUIPMENT } from './data/equipment';
 import { getSpriteKeyCandidates } from './data/assetManifest';
@@ -72,6 +72,9 @@ export class Unit {
   private levelBadge: Phaser.GameObjects.Container;
   private typeBadge: Phaser.GameObjects.Container;
   private hpBarFill: Phaser.GameObjects.Rectangle;
+  /** 面向角度（弧度，pixel 空間）。只在移動 / 攻擊時改變；被打不會轉向。用於側/背擊判定。 */
+  facing = 0;
+  private facingPip!: Phaser.GameObjects.Arc;
 
   constructor(
     scene: Phaser.Scene,
@@ -201,6 +204,12 @@ export class Unit {
     this.hpBarFill = scene.add.rectangle(-barW / 2, barY, barW, 5, HP_BAR_GOOD);
     this.hpBarFill.setOrigin(0, 0.5);
 
+    // 面向指示「前點」：標出單位正面方向（從側/背攻擊有加成）。
+    // 玩家預設面右（+x，朝敵方），敵方面左（-x）。被打不轉向，只在移動/攻擊時更新。
+    this.facing = this.faction === 'player' ? 0 : Math.PI;
+    this.facingPip = scene.add.circle(0, 0, 5, 0xfff2a0);
+    this.facingPip.setStrokeStyle(2, 0x333300);
+
     this.container = scene.add.container(center.x, center.y, [
       this.hitArea,
       this.body,
@@ -209,8 +218,10 @@ export class Unit {
       this.typeBadge,
       hpBarBg,
       this.hpBarFill,
+      this.facingPip,
     ]);
     this.container.setDepth(10);
+    this.updateFacingPip();
 
     this.updateHpBar();
   }
@@ -313,6 +324,16 @@ export class Unit {
    */
   moveTo(coord: Coord, path?: Coord[]): Promise<void> {
     this.lastMoveDistance = hexDistance(this.position, coord);
+    // 面向移動方向：以「最後一步」的方向為準（倒數第二格 → 終點）；同格不動則保持原面向。
+    if (!coordEq(this.position, coord)) {
+      const from = path && path.length >= 2 ? path[path.length - 2] : this.position;
+      const fc = hexCenterPx(from);
+      const tc = hexCenterPx(coord);
+      if (fc.x !== tc.x || fc.y !== tc.y) {
+        this.facing = Math.atan2(tc.y - fc.y, tc.x - fc.x);
+        this.updateFacingPip();
+      }
+    }
     this.position = { ...coord };
 
     if (!path || path.length === 0) {
@@ -483,6 +504,24 @@ export class Unit {
 
   getCenterPx(): { x: number; y: number } {
     return hexCenterPx(this.position);
+  }
+
+  /** 重新定位「前點」到面向方向的格邊（container 子物件座標）。 */
+  private updateFacingPip(): void {
+    if (!this.facingPip) return;
+    const r = HEX_W * 0.34;
+    this.facingPip.setPosition(Math.cos(this.facing) * r, Math.sin(this.facing) * r);
+  }
+
+  /** 朝某格轉向：更新 facing 角度與前點。同格（dx=dy=0）則不變。 */
+  faceToward(target: Coord): void {
+    const c = this.getCenterPx();
+    const t = hexCenterPx(target);
+    const dx = t.x - c.x;
+    const dy = t.y - c.y;
+    if (dx === 0 && dy === 0) return;
+    this.facing = Math.atan2(dy, dx);
+    this.updateFacingPip();
   }
 
   showAttackAnimation(target: Unit): Promise<void> {
