@@ -44,7 +44,7 @@ export interface DamageResult {
   appliedSkills: string[];
   /** 該攻擊的命中率 0-100 */
   hitRate: number;
-  /** 該攻擊的爆擊率 0-100（爆擊傷害 ×1.5）*/
+  /** 該攻擊的爆擊率 0-100（爆擊傷害 ×CRIT_MULTIPLIER，見下方常數）*/
   critRate: number;
 }
 
@@ -55,6 +55,9 @@ export interface ResolvedAttack {
   crit: boolean;
 }
 
+// 爆擊傷害倍率。維持 2.0（沿用既有平衡基準，爆擊偏「驚喜爆發」而非小加成）。
+// 注意：DESIGN.md「高命中低變異」指的是命中率高（少 miss），爆擊率本身偏低（5–12%），
+// 故 2.0 倍的爆擊不會讓運氣主導戰局。調整此值＝改變戰鬥變異度，請同步更新註解。
 export const CRIT_MULTIPLIER = 2.0;
 
 /** 每點 DEF 抵 5% 傷害；上限 70%（避免 BOSS 完全無敵） */
