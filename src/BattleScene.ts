@@ -1400,7 +1400,10 @@ export class BattleScene extends Phaser.Scene {
     // 主動特技按鈕：玩家武將、有 activeSkill、本場尚有次數
     // empower 型技能（強化下一擊）需要場上有敵人在攻擊範圍內才顯示，否則無意義
     let showActive =
-      unit.faction === 'player' && unit.activeSkill !== null && unit.activeUsesLeft > 0;
+      unit.faction === 'player' &&
+      unit.activeSkill !== null &&
+      unit.activeUsesLeft > 0 &&
+      !unit.isSilenced();
     if (showActive && unit.activeSkill?.type === 'empower_attack' && targets.length === 0) {
       showActive = false;
     }
@@ -1477,6 +1480,10 @@ export class BattleScene extends Phaser.Scene {
     const u = this.selection.unit;
     const skill = u.activeSkill;
     if (!skill || u.activeUsesLeft <= 0) return;
+    if (u.isSilenced()) {
+      this.flashHint('被沉默，無法使用特技');
+      return;
+    }
     if (this.activeConfirmOverlay) return; // 已開
 
     const { width, height } = this.scale;
@@ -1757,6 +1764,18 @@ export class BattleScene extends Phaser.Scene {
         ? `-${rolled.damage} 爆！${flankSuffix}`
         : `-${rolled.damage}${flankSuffix}`;
       def.showFloatingText(dmgText, dmgColor, dmgSize);
+      // 武器命中附加狀態（Wave 5）：目標存活才掛
+      const onHit = atk.weapon?.onHitStatus;
+      if (onHit && def.isAlive() && (onHit.chance === undefined || Math.random() < onHit.chance)) {
+        def.addStatus({
+          type: onHit.type,
+          turnsLeft: onHit.turnsLeft,
+          magnitude: onHit.magnitude,
+          label: onHit.label,
+        });
+        def.showFloatingText(onHit.label, '#cc88ff', '20px');
+        this.appendLog(`${def.name} 受到 ${onHit.label}`);
+      }
     } else {
       def.showFloatingText('MISS', '#dddddd', '22px');
     }
@@ -1782,6 +1801,34 @@ export class BattleScene extends Phaser.Scene {
       def.destroy();
       this.units = this.units.filter((u) => u !== def);
       if (this.threatActive) this.drawThreatOverlay(); // 場上少一單位 → 威脅可能變化
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * 持有者回合開始時結算狀態效果（Wave 5）：套用毒傷（含浮字 / log / 陣亡移除），
+   * 回傳該單位是否因暈眩而跳過本回合行動。
+   */
+  private tickUnitStatuses(unit: Unit): boolean {
+    if (unit.statuses.length === 0) return false;
+    const { poison, stunned } = unit.tickStatuses();
+    if (poison > 0) {
+      unit.applyDamage(poison);
+      unit.showFloatingText(`-${poison} 毒`, '#88ff88', '22px');
+      this.appendLog(`${unit.name} 中毒 -${poison}`);
+      if (!unit.isAlive()) {
+        this.appendLog(`${unit.name} 撤退！`);
+        audio.playUnitDown();
+        unit.destroy();
+        this.units = this.units.filter((u) => u !== unit);
+        if (this.threatActive) this.drawThreatOverlay();
+        return false;
+      }
+    }
+    if (stunned) {
+      unit.showFloatingText('暈眩', '#ffcc44', '22px');
+      this.appendLog(`${unit.name} 暈眩，無法行動`);
       return true;
     }
     return false;
@@ -2175,6 +2222,12 @@ export class BattleScene extends Phaser.Scene {
         if (u.stanceMods.turnsLeft <= 0) u.stanceMods = null;
       }
     }
+    // 狀態效果（毒/暈/buff）於我方回合開始結算；暈眩者本回合無法行動
+    for (const u of [...this.units]) {
+      if (u.faction !== 'player' || !u.isAlive()) continue;
+      if (this.tickUnitStatuses(u)) u.exhaust();
+    }
+    if (this.checkBattleEnd()) return; // 毒傷可能造成我方全滅
     // survive 條件 → 顯示「回合 X / N」並判定是否撐到通關
     if (this.scenario.victoryCondition === 'survive' && this.scenario.surviveTurns) {
       this.turnText
@@ -2216,6 +2269,10 @@ export class BattleScene extends Phaser.Scene {
     for (const enemy of enemies) {
       if (!enemy.isAlive()) continue;
       await this.delay(360);
+      // 敵方狀態於其行動前結算：毒傷可能致死、暈眩則跳過行動
+      const stunned = this.tickUnitStatuses(enemy);
+      if (this.checkBattleEnd()) return;
+      if (stunned || !enemy.isAlive()) continue;
       await this.runEnemyAction(enemy);
       if (this.checkBattleEnd()) return;
     }

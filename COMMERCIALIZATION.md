@@ -76,10 +76,16 @@
 - 玩家與 AI 攻擊共用 `executeAttack`/`performSwing`，加成雙向生效。
 - 註：面向未進戰中存檔（讀檔回預設面向，影響微小）；AI 尚未主動找背擊（屬 Wave 7 AI）。
 
-### 🟡 G5. 深度機制 #3 — 狀態效果框架（中高風險）
+### ✅ G5. 深度機制 #3 — 狀態效果框架（Wave 5 已完成）
 
-把現有的 `stance`（防禦姿態）泛化成 **StatusEffect 系統**：中毒(DoT)、暈眩(跳過行動)、攻/防 up/down、沉默(不能放技)，帶持續回合 + 圖示。
-讓技能 / 裝備能掛載豐富效果，是後續所有「花式技能」的地基。
+通用 **StatusEffect 系統**（`types.ts` StatusEffectType / StatusEffect）：
+
+- **效果類型**：poison（每回合損血 DoT）、stun（該回合跳過行動）、atk_up/atk_down、def_up/def_down、silence（不能用主動特技），皆帶 `turnsLeft` + `magnitude` + 圖示 label。
+- **Unit 整合**：`statuses[]` + `addStatus`/`tickStatuses`/`hasStatus`/`isStunned`/`isSilenced`；攻/防增減**直接折進 `attack`/`defense` getter**（computeDamage 自動吃到，零改動）；單位上方顯示狀態圖示列。
+- **生命週期**：持有者回合開始結算——毒傷（含浮字/log/陣亡 + `checkBattleEnd`）、暈眩者 `exhaust` 跳過；玩家於 `startPlayerTurn`、敵方於 `runEnemyTurn` 各自結算。
+- **沉默**：封鎖主動特技按鈕與施放。
+- **掛載來源**：`EquipmentDef.onHitStatus`（命中附加，可設 chance），於 `performSwing` 命中時套用。示範：**惡龍弓→毒（2 回合×3）**、**冰霜之書→攻↓（2 回合 -3）**。stun/silence 框架已就緒，留給未來技能/BOSS 來源（掛在武器上每擊觸發會過強）。
+- 註：狀態未進戰中存檔（讀檔清空）；`stanceMods`（減傷倍率）暫保留獨立，未併入此框架。
 
 ### 🟡 G6. 深度機制 #4 — 羈絆 / 支援系統（中風險，DESIGN.md 既定 TODO）
 

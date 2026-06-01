@@ -46,6 +46,33 @@ export interface UnitTypeDef {
 
 export type EquipmentKind = 'weapon' | 'armor';
 
+/**
+ * 狀態效果（Wave 5 / G5）。由武器 onHitStatus、技能、未來 BOSS 能力掛載。
+ *   poison  每回合開始損 magnitude HP
+ *   stun    該回合無法行動（跳過）
+ *   atk_up / atk_down  攻擊 ± magnitude
+ *   def_up / def_down  防禦 ± magnitude
+ *   silence 不能使用主動特技
+ */
+export type StatusEffectType =
+  | 'poison'
+  | 'stun'
+  | 'atk_up'
+  | 'atk_down'
+  | 'def_up'
+  | 'def_down'
+  | 'silence';
+
+export interface StatusEffect {
+  type: StatusEffectType;
+  /** 剩餘回合（於持有者回合開始遞減，歸 0 移除）。 */
+  turnsLeft: number;
+  /** poison：每回合傷害；atk/def：增減量；stun/silence：0。 */
+  magnitude: number;
+  /** 圖示 / log 顯示用，如「毒」「暈」「攻↓」。 */
+  label: string;
+}
+
 export interface EquipmentDef {
   id: string;
   name: string;
@@ -70,6 +97,14 @@ export interface EquipmentDef {
   hitBonus?: number;
   /** 爆擊率加成（百分點）*/
   critBonus?: number;
+  /** 命中時附加狀態（Wave 5）。chance 省略 = 必定觸發。 */
+  onHitStatus?: {
+    type: StatusEffectType;
+    turnsLeft: number;
+    magnitude: number;
+    label: string;
+    chance?: number;
+  };
 }
 
 export interface CommanderSkill {
