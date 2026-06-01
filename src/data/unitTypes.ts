@@ -10,7 +10,7 @@ export const UNIT_TYPES: Record<UnitTypeId, UnitTypeDef> = {
     color: 0xc8c8c8,
     attackRange: 1,
     moveRange: 3,
-    baseStats: { hp: 28, attack: 8, defense: 4 },
+    baseStats: { hp: 28, attack: 8, defense: 4, speed: 9 }, // speed 9：俐落劍士，可追擊慢速兵
     hitRate: 95,
     critRate: 8, // 揮劍俐落，爆擊偏高
     // 標準步兵成本（沿用 terrain default）
@@ -23,7 +23,7 @@ export const UNIT_TYPES: Record<UnitTypeId, UnitTypeDef> = {
     color: 0xa0d0a0,
     attackRange: 1,
     moveRange: 3,
-    baseStats: { hp: 30, attack: 7, defense: 5 },
+    baseStats: { hp: 30, attack: 7, defense: 5, speed: 6 }, // speed 6：重裝槍兵偏慢，但僅被最快的飛兵追擊
     hitRate: 95,
     critRate: 5, // 穩重但仍會偶有刺破甲
     // 標準步兵成本
@@ -40,7 +40,7 @@ export const UNIT_TYPES: Record<UnitTypeId, UnitTypeDef> = {
     // 機動優勢未計入模擬。攻擊 9→8、HP 26→25 把純數值面拉回目標區間；保留 move 5 維持
     // 「機動」身分（其機動強度另由實戰體現，非模擬器可見）。mage/flier 不動：mage 實戰
     // 脆且被貼身剋、flier 強度來自未模擬的機動，故不依抽象模擬器調整。
-    baseStats: { hp: 25, attack: 8, defense: 3 },
+    baseStats: { hp: 25, attack: 8, defense: 3, speed: 7 }, // speed 7：機動但非纖細，難被追擊也不太追人
     hitRate: 90,
     critRate: 10, // 衝鋒爆發力強
     // 開闊地特化：森林 + 山地額外昂貴（馬不擅崎嶇）
@@ -53,7 +53,7 @@ export const UNIT_TYPES: Record<UnitTypeId, UnitTypeDef> = {
     color: 0x90b0e0,
     attackRange: 2,
     moveRange: 3,
-    baseStats: { hp: 22, attack: 8, defense: 2 },
+    baseStats: { hp: 22, attack: 8, defense: 2, speed: 8 }, // speed 8：身手敏捷，能追擊法師
     hitRate: 88, // 遠程：略低於近戰，但 88 才不會 miss 太頻繁
     critRate: 12, // 但會瞄準弱點
     // 森林專家（獵人出身）：forest 1 不減速；mountain 仍正常
@@ -66,7 +66,7 @@ export const UNIT_TYPES: Record<UnitTypeId, UnitTypeDef> = {
     color: 0xc090d8,
     attackRange: 2,
     moveRange: 2,
-    baseStats: { hp: 20, attack: 11, defense: 2 },
+    baseStats: { hp: 20, attack: 11, defense: 2, speed: 4 }, // speed 4：高火力但遲緩，常被快速兵追擊
     hitRate: 90,
     critRate: 5,
     // 學院師承「飛行步」：山地不再完全擋路（cost 2 = 全動作預算進去 1 格）
@@ -79,7 +79,7 @@ export const UNIT_TYPES: Record<UnitTypeId, UnitTypeDef> = {
     color: 0xeeeeff,
     attackRange: 1,
     moveRange: 6,
-    baseStats: { hp: 22, attack: 8, defense: 2 },
+    baseStats: { hp: 22, attack: 8, defense: 2, speed: 10 }, // speed 10：最快，俯衝追擊慢速兵
     hitRate: 85,
     critRate: 8,
     // 飛兵無視地形：所有地形（含水）都是 cost 1

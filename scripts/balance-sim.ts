@@ -14,7 +14,7 @@
  *     「數值 + 相剋矩陣」本身的平衡，定位/移動屬另一層（Wave 3/4）。
  *   - 因此這是「相剋矩陣 + 基礎數值」的體檢，不是完整戰場勝率。
  */
-import { computeDamage, rollAttack } from '../src/battle/DamageCalculator';
+import { computeDamage, rollAttack, doublesAttack } from '../src/battle/DamageCalculator';
 import { UNIT_TYPES } from '../src/data/unitTypes';
 import { BALANCE_TARGETS } from '../src/data/balance';
 import type { UnitTypeId } from '../src/types';
@@ -29,11 +29,12 @@ interface SimUnit {
   maxHp: number;
   attack: number;
   defense: number;
+  speed: number;
 }
 
 function mk(type: UnitTypeId): SimUnit {
   const b = UNIT_TYPES[type].baseStats;
-  return { type, hp: b.hp, maxHp: b.hp, attack: b.attack, defense: b.defense };
+  return { type, hp: b.hp, maxHp: b.hp, attack: b.attack, defense: b.defense, speed: b.speed };
 }
 
 /** 一次揮擊：用當前 HP 比例算預判再擲骰，命中則扣血。 */
@@ -50,15 +51,21 @@ function swing(atk: SimUnit, def: SimUnit): void {
   if (r.hit) def.hp -= r.damage;
 }
 
-/** 一場對決：輪流先手，先手揮擊後對方若存活則反擊。回傳 'A' | 'B' | 'draw'。 */
+/** 攻方一次行動：揮擊 + 速度達門檻時追擊一次。 */
+function act(atk: SimUnit, def: SimUnit): void {
+  swing(atk, def);
+  if (def.hp > 0 && doublesAttack(atk.speed, def.speed)) swing(atk, def);
+}
+
+/** 一場對決：輪流先手，先手行動後對方若存活則反擊（含各自追擊）。回傳 'A' | 'B' | 'draw'。 */
 function duel(aType: UnitTypeId, bType: UnitTypeId): 'A' | 'B' | 'draw' {
   const A = mk(aType);
   const B = mk(bType);
   let aFirst = true;
   for (let round = 0; round < MAX_ROUNDS && A.hp > 0 && B.hp > 0; round++) {
     const [first, second] = aFirst ? [A, B] : [B, A];
-    swing(first, second);
-    if (second.hp > 0) swing(second, first);
+    act(first, second);
+    if (second.hp > 0) act(second, first);
     aFirst = !aFirst;
   }
   if (A.hp <= 0 && B.hp <= 0) return 'draw';

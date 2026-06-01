@@ -45,6 +45,13 @@ export const COUNTER_MATRIX: Record<UnitTypeId, CounterRow> = {
   flier: { sword: E, archer: W },
 };
 
+// ===== 速度 / 追擊（Wave 3 / G3）=====
+/**
+ * 追擊門檻：攻方速度 − 守方速度 ≥ 此值 → 該次攻擊後追加一次「二次攻擊」。
+ * 攻守雙方各自獨立判定（火紋風）。速度是「每兵種固定」屬性（見 unitTypes baseStats.speed）。
+ */
+export const DOUBLE_ATTACK_THRESHOLD = 4;
+
 // ===== 經驗 / 等級 =====
 export const EXP_PER_LEVEL = 50;
 export const EXP_PER_DAMAGE = 1;

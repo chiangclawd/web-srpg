@@ -6,10 +6,16 @@ import {
   CRIT_MULTIPLIER,
   DEF_REDUCTION_PER_POINT,
   DEF_REDUCTION_CAP,
+  DOUBLE_ATTACK_THRESHOLD,
 } from '../data/balance';
 
 // 重新匯出以維持既有 public API（部分呼叫端 import 自此檔）。
 export { CRIT_MULTIPLIER } from '../data/balance';
+
+/** 攻方速度是否快到能對守方追擊（二次攻擊）。攻守各自獨立判定。 */
+export function doublesAttack(attackerSpeed: number, defenderSpeed: number): boolean {
+  return attackerSpeed - defenderSpeed >= DOUBLE_ATTACK_THRESHOLD;
+}
 
 export interface DamageContext {
   attackerType: UnitTypeId;

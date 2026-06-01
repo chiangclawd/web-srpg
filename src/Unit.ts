@@ -36,6 +36,8 @@ export class Unit {
   readonly skillDesc: string;
   readonly moveRange: number;
   readonly attackRange: number;
+  /** 速度（Wave 3）：固定取自兵種 baseStats.speed，用於追擊判定。 */
+  readonly speed: number;
 
   position: Coord;
   hp: number;
@@ -91,6 +93,7 @@ export class Unit {
     const utype = UNIT_TYPES[commander.unitType];
     this.moveRange = utype.moveRange;
     this.attackRange = utype.attackRange;
+    this.speed = utype.baseStats.speed;
     this.growthRates = commander.growthRates;
 
     this.level = progressOverride?.level ?? commander.startingLevel;

@@ -55,11 +55,15 @@
 - ⚠ **flier 31% / archer 偏低**：模擬器**刻意不模擬風箏/移動**，飛兵的本體是 move 6 + 無視地形，弓兵是 range 2 拉開距離——故 1v1 數字偏低多屬「設計使然」，非真正過弱。
 - 👉 後續開「平衡微調波」時，先壓 cavalry 基礎數值（attack 9→8 或 move 5→4），重跑 `npm run balance` 對照即可。
 
-### 🟡 G3. 深度機制 #1 — 速度 / 追擊（中高風險，深度槓桿最大）
+### ✅ G3. 深度機制 #1 — 速度 / 追擊（Wave 3 已完成）
 
-新增 `SPD` 速度屬性：攻方 SPD ≥ 守方 SPD + 門檻 → **二次攻擊（double）**。
-火紋招牌機制，讓「重攻單發」與「輕攻連擊」分流，戰術質感大增。
-影響：baseStats、Leveling、（可選）裝備重量、forecast 顯示「×2」。
+新增 `speed` 速度屬性（每兵種固定）：攻方 speed − 守方 speed ≥ `DOUBLE_ATTACK_THRESHOLD`(4) → **追擊（二次攻擊）**。攻守各自獨立判定（火紋風）。
+
+- **速度配置**：flier 10 / sword 9 / archer 8 / cavalry 7 / lance 6 / mage 4。
+- **戰鬥流程重構**：`executeAttack` 抽出 `performSwing` 共用函式，交戰＝攻方第一擊 → 守方反擊 → 攻方追擊 → 守方追擊；empower 只吃第一擊。
+- **forecast 顯示「×2追擊」**：預判面板反映加倍傷害與致命判定。
+- **模擬器同步**：`balance-sim.ts` 加入 speed/doubling，驗收後 lance 5→6 避免被全體追擊壓垮。
+- **結果**：快速兵（劍/弓/飛）懲罰遲緩法師、lance 變耐打中速坦、cavalry 爆發但無追擊、flier 快速騷擾——對位質感大增。殘留 cavalry 62%（角色使然）、mage 35%（脆皮 + 模擬器未計 range 2 風箏）屬可接受。
 
 ### 🟡 G4. 深度機制 #2 — 方位 / 背擊（中高風險）
 

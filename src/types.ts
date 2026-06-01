@@ -18,6 +18,11 @@ export interface UnitTypeDef {
     hp: number;
     attack: number;
     defense: number;
+    /**
+     * 速度（Wave 3 / G3）。攻方速度 − 守方速度 ≥ DOUBLE_ATTACK_THRESHOLD 時追擊（二次攻擊）。
+     * 每兵種固定、不隨等級成長（純兵種身分屬性）。
+     */
+    speed: number;
   };
   /**
    * 地形移動成本（per-class，FE / Advance Wars 風格）。
