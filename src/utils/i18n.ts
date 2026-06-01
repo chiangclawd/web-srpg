@@ -8,7 +8,7 @@ export type Lang = 'zh' | 'en';
 const STRINGS: Record<Lang, Record<string, string>> = {
   zh: {
     // 標題
-    'title.subtitle': '個人開發中 · Phase 2 完整流程 Demo',
+    'title.subtitle': '西方奇幻戰術 RPG',
     'title.newGame': '▶ 新遊戲',
     'title.continue': '⏵ 繼續（第 {n} 章 {title}）',
     'title.continueShort': '⏵ 繼續遊戲',
@@ -47,7 +47,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
   },
   en: {
     // Title
-    'title.subtitle': 'Indie SRPG · Phase 2 Demo',
+    'title.subtitle': 'A Western Fantasy Tactical RPG',
     'title.newGame': '▶ New Game',
     'title.continue': '⏵ Continue (Ch {n}: {title})',
     'title.continueShort': '⏵ Continue',
