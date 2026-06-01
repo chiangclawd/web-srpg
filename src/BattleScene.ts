@@ -32,6 +32,8 @@ import { UNIT_TYPES, getMoveCost } from './data/unitTypes';
 import { TERRAIN_TYPES, parseTerrain } from './data/terrainTypes';
 import { getTileTextureKey } from './data/assetManifest';
 import { computeDamage, rollAttack, doublesAttack } from './battle/DamageCalculator';
+import { FLANK, BOND_ATK_MUL } from './data/balance';
+import { findBond } from './data/bonds';
 import { getCounter } from './battle/CounterSystem';
 import { EXP_PER_DAMAGE, EXP_PER_KILL, scaleByLevelDiff } from './battle/Leveling';
 import { getCommanderProgress, saveProgress, getExcludedCommanders } from './data/save';
@@ -1399,7 +1401,10 @@ export class BattleScene extends Phaser.Scene {
     // 主動特技按鈕：玩家武將、有 activeSkill、本場尚有次數
     // empower 型技能（強化下一擊）需要場上有敵人在攻擊範圍內才顯示，否則無意義
     let showActive =
-      unit.faction === 'player' && unit.activeSkill !== null && unit.activeUsesLeft > 0;
+      unit.faction === 'player' &&
+      unit.activeSkill !== null &&
+      unit.activeUsesLeft > 0 &&
+      !unit.isSilenced();
     if (showActive && unit.activeSkill?.type === 'empower_attack' && targets.length === 0) {
       showActive = false;
     }
@@ -1476,6 +1481,10 @@ export class BattleScene extends Phaser.Scene {
     const u = this.selection.unit;
     const skill = u.activeSkill;
     if (!skill || u.activeUsesLeft <= 0) return;
+    if (u.isSilenced()) {
+      this.flashHint('被沉默，無法使用特技');
+      return;
+    }
     if (this.activeConfirmOverlay) return; // 已開
 
     const { width, height } = this.scale;
@@ -1676,6 +1685,42 @@ export class BattleScene extends Phaser.Scene {
     return set;
   }
 
+  /**
+   * 側 / 背擊判定（Wave 4）：依「攻擊者位於守方面向的哪個弧」回傳傷害倍率與標籤。
+   * 用 pixel 空間角度，避開 odd-r 鄰格方位的奇偶列差異。
+   */
+  /** 從某「位置」攻擊 defender 的側/背擊判定（AI 評估假設位置用）。 */
+  private flankClassify(attackerPos: Coord, defender: Unit): { mul: number; label: string } {
+    const d = defender.getCenterPx();
+    const a = hexCenterPx(attackerPos);
+    const angToAtk = Math.atan2(a.y - d.y, a.x - d.x); // 守方 → 攻方 的方向
+    let diff = Math.abs(angToAtk - defender.facing) % (2 * Math.PI);
+    if (diff > Math.PI) diff = 2 * Math.PI - diff; // 正規化到 [0, π]
+    if (diff <= FLANK.FRONT_ARC) return { mul: 1.0, label: '' }; // 正面
+    if (diff >= FLANK.REAR_ARC) return { mul: FLANK.REAR_MUL, label: '背擊' }; // 背面
+    return { mul: FLANK.SIDE_MUL, label: '側擊' }; // 側面
+  }
+
+  private flankInfo(attacker: Unit, defender: Unit): { mul: number; label: string } {
+    return this.flankClassify(attacker.position, defender);
+  }
+
+  /**
+   * 羈絆加成（Wave 6）：unit 的相鄰格若有「羈絆夥伴」（同陣營），攻擊獲得倍率。
+   * 回傳倍率與羈絆名（供預判 / log 顯示）。
+   */
+  private bondInfo(unit: Unit): { mul: number; name: string } {
+    for (const nb of hexNeighbors(unit.position)) {
+      const ally = this.units.find(
+        (u) => u.isAlive() && u.faction === unit.faction && coordEq(u.position, nb)
+      );
+      if (!ally) continue;
+      const bond = findBond(unit.id, ally.id);
+      if (bond) return { mul: BOND_ATK_MUL, name: bond.name };
+    }
+    return { mul: 1.0, name: '' };
+  }
+
   private findAttackTargets(unit: Unit): Coord[] {
     const tiles = attackTargetTiles(unit.position, unit.attackRange);
     return tiles.filter((t) =>
@@ -1693,6 +1738,10 @@ export class BattleScene extends Phaser.Scene {
    * @returns def 是否在此擊陣亡（呼叫端據此決定是否續打）。
    */
   private async performSwing(atk: Unit, def: Unit, isCounter: boolean): Promise<boolean> {
+    // 側/背擊：依守方「目前」面向判定（先判定再轉向攻擊，攻方轉向不影響守方面向）
+    const flank = this.flankInfo(atk, def);
+    const bond = this.bondInfo(atk); // 相鄰羈絆夥伴加成
+    atk.faceToward(def.position); // 攻方轉向目標（也讓對方反擊時為正面）
     const defTerrain = TERRAIN_TYPES[getTerrainAt(def.position)];
     const result = computeDamage({
       attackerType: atk.unitType,
@@ -1715,6 +1764,8 @@ export class BattleScene extends Phaser.Scene {
       enemyAttackMul: getEnemyAttackMul(),
       attackerWeaponHitBonus: atk.weapon?.hitBonus,
       attackerWeaponCritBonus: atk.weapon?.critBonus,
+      flankMul: flank.mul,
+      bondMul: bond.mul,
     });
     // 消耗主動特技 empower（只攻方第一擊；不論命中與否）
     if (!isCounter && atk.pendingEmpower) {
@@ -1730,19 +1781,36 @@ export class BattleScene extends Phaser.Scene {
       this.spawnHitParticles(center.x, center.y, this.particleColorForType(atk.unitType));
       def.applyDamage(rolled.damage);
       def.flashHit();
-      const dmgColor = rolled.crit ? '#ffd54a' : '#ff8888';
-      const dmgSize = rolled.crit ? '30px' : '22px';
-      const dmgText = rolled.crit ? `-${rolled.damage} 爆！` : `-${rolled.damage}`;
+      const dmgColor = flank.label ? '#ff7b3a' : rolled.crit ? '#ffd54a' : '#ff8888';
+      const dmgSize = rolled.crit || flank.label ? '30px' : '22px';
+      const flankSuffix = flank.label ? ` ${flank.label}` : '';
+      const dmgText = rolled.crit
+        ? `-${rolled.damage} 爆！${flankSuffix}`
+        : `-${rolled.damage}${flankSuffix}`;
       def.showFloatingText(dmgText, dmgColor, dmgSize);
+      // 武器命中附加狀態（Wave 5）：目標存活才掛
+      const onHit = atk.weapon?.onHitStatus;
+      if (onHit && def.isAlive() && (onHit.chance === undefined || Math.random() < onHit.chance)) {
+        def.addStatus({
+          type: onHit.type,
+          turnsLeft: onHit.turnsLeft,
+          magnitude: onHit.magnitude,
+          label: onHit.label,
+        });
+        def.showFloatingText(onHit.label, '#cc88ff', '20px');
+        this.appendLog(`${def.name} 受到 ${onHit.label}`);
+      }
     } else {
       def.showFloatingText('MISS', '#dddddd', '22px');
     }
     const tag =
       result.counterLabel === '優勢' ? '【剋】' : result.counterLabel === '劣勢' ? '【弱】' : '';
+    const flankTag = flank.label ? `【${flank.label}】` : '';
+    const bondTag = bond.name ? `【${bond.name}】` : '';
     const arrow = isCounter ? `反擊 ${def.name}` : `→ ${def.name}`;
     if (rolled.hit) {
       const critTag = rolled.crit ? '【爆】' : '';
-      this.appendLog(`${atk.name} ${arrow} ${rolled.damage} 傷${tag}${critTag}`);
+      this.appendLog(`${atk.name} ${arrow} ${rolled.damage} 傷${tag}${critTag}${flankTag}${bondTag}`);
       if (atk.faction === 'player' && this.battleStats[atk.id]) {
         this.battleStats[atk.id].damageDealt += rolled.damage;
         if (!def.isAlive()) this.battleStats[atk.id].kills += 1;
@@ -1758,6 +1826,34 @@ export class BattleScene extends Phaser.Scene {
       def.destroy();
       this.units = this.units.filter((u) => u !== def);
       if (this.threatActive) this.drawThreatOverlay(); // 場上少一單位 → 威脅可能變化
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * 持有者回合開始時結算狀態效果（Wave 5）：套用毒傷（含浮字 / log / 陣亡移除），
+   * 回傳該單位是否因暈眩而跳過本回合行動。
+   */
+  private tickUnitStatuses(unit: Unit): boolean {
+    if (unit.statuses.length === 0) return false;
+    const { poison, stunned } = unit.tickStatuses();
+    if (poison > 0) {
+      unit.applyDamage(poison);
+      unit.showFloatingText(`-${poison} 毒`, '#88ff88', '22px');
+      this.appendLog(`${unit.name} 中毒 -${poison}`);
+      if (!unit.isAlive()) {
+        this.appendLog(`${unit.name} 撤退！`);
+        audio.playUnitDown();
+        unit.destroy();
+        this.units = this.units.filter((u) => u !== unit);
+        if (this.threatActive) this.drawThreatOverlay();
+        return false;
+      }
+    }
+    if (stunned) {
+      unit.showFloatingText('暈眩', '#ffcc44', '22px');
+      this.appendLog(`${unit.name} 暈眩，無法行動`);
       return true;
     }
     return false;
@@ -2003,6 +2099,9 @@ export class BattleScene extends Phaser.Scene {
     this.hideTooltip();
     const defT = TERRAIN_TYPES[getTerrainAt(defender.position)];
     const atkT = TERRAIN_TYPES[getTerrainAt(attacker.position)];
+    // 側/背擊預判（攻方攻擊後會轉向守方，故守方反擊一律為正面，不給反擊加成）
+    const flank = this.flankInfo(attacker, defender);
+    const bond = this.bondInfo(attacker); // 相鄰羈絆夥伴加成
     const ourHit = computeDamage({
       attackerType: attacker.unitType,
       defenderType: defender.unitType,
@@ -2023,6 +2122,8 @@ export class BattleScene extends Phaser.Scene {
       enemyAttackMul: getEnemyAttackMul(),
       attackerWeaponHitBonus: attacker.weapon?.hitBonus,
       attackerWeaponCritBonus: attacker.weapon?.critBonus,
+      flankMul: flank.mul,
+      bondMul: bond.mul,
     });
     const counterRange = attackTargetTiles(defender.position, defender.attackRange).some(
       (c) => coordEq(c, attacker.position)
@@ -2071,9 +2172,11 @@ export class BattleScene extends Phaser.Scene {
     const fmtHitCrit = (r: { hitRate: number; critRate: number }) =>
       `命中 ${r.hitRate}% / 爆 ${r.critRate}%`;
 
+    const flankFc = flank.label ? ` ${flank.label}` : '';
+    const bondFc = bond.name ? ` 羈絆` : '';
     const lines = [
-      `${attacker.name} → ${defender.name}`,
-      `傷害 ${ourHit.damage}${dbl(atkDoubles)}${tag(ourHit.counterLabel)}　(剩 ${defHpAfter}/${defender.maxHp})${killBadge}`,
+      `${attacker.name} → ${defender.name}${bond.name ? `　【${bond.name}】` : ''}`,
+      `傷害 ${ourHit.damage}${dbl(atkDoubles)}${flankFc}${bondFc}${tag(ourHit.counterLabel)}　(剩 ${defHpAfter}/${defender.maxHp})${killBadge}`,
       `　${fmtHitCrit(ourHit)}`,
       counterHit
         ? `反擊 ${counterHit.damage}${dbl(defDoubles)}${tag(counterHit.counterLabel)}　(剩 ${atkHpAfter}/${attacker.maxHp})${deathBadge}`
@@ -2147,6 +2250,12 @@ export class BattleScene extends Phaser.Scene {
         if (u.stanceMods.turnsLeft <= 0) u.stanceMods = null;
       }
     }
+    // 狀態效果（毒/暈/buff）於我方回合開始結算；暈眩者本回合無法行動
+    for (const u of [...this.units]) {
+      if (u.faction !== 'player' || !u.isAlive()) continue;
+      if (this.tickUnitStatuses(u)) u.exhaust();
+    }
+    if (this.checkBattleEnd()) return; // 毒傷可能造成我方全滅
     // survive 條件 → 顯示「回合 X / N」並判定是否撐到通關
     if (this.scenario.victoryCondition === 'survive' && this.scenario.surviveTurns) {
       this.turnText
@@ -2188,6 +2297,10 @@ export class BattleScene extends Phaser.Scene {
     for (const enemy of enemies) {
       if (!enemy.isAlive()) continue;
       await this.delay(360);
+      // 敵方狀態於其行動前結算：毒傷可能致死、暈眩則跳過行動
+      const stunned = this.tickUnitStatuses(enemy);
+      if (this.checkBattleEnd()) return;
+      if (stunned || !enemy.isAlive()) continue;
       await this.runEnemyAction(enemy);
       if (this.checkBattleEnd()) return;
     }
@@ -2304,6 +2417,47 @@ export class BattleScene extends Phaser.Scene {
       ),
     ];
 
+    // === Wave 7 AI 升級 ===
+    // 難度連動智商：easy 維持原本（較魯莽）；normal/hard 啟用殘血撤退 + 側背擊走位。
+    const smart = getSettings().difficulty !== 'easy';
+    const lowHp = enemy.hp / enemy.maxHp < 0.3;
+
+    // 殘血自保：若沒有「安全擊殺」機會（能殺且不會被反殺），改撤退到離玩家最遠的掩體格。
+    if (smart && lowHp) {
+      const hasSafeKill = standable.some((tile) => {
+        if (!inRangeFrom(tile)) return false;
+        const d = predictDamage(enemy, target, manhattan(tile, enemy.position));
+        const c = predictCounterIfWeAttack(enemy, target, tile);
+        return d.canKill && c < enemy.hp;
+      });
+      if (!hasSafeKill) {
+        let fleeTile: Coord = enemy.position;
+        let fleeScore = -Infinity;
+        for (const tile of standable) {
+          const nearest = Math.min(...players.map((p) => manhattan(tile, p.position)));
+          const t = TERRAIN_TYPES[getTerrainAt(tile)];
+          const sc = nearest * 6 + t.defBonus * 3; // 越遠越好 + 偏好掩體
+          if (sc > fleeScore) {
+            fleeScore = sc;
+            fleeTile = tile;
+          }
+        }
+        if (!coordEq(fleeTile, enemy.position)) {
+          const fleePath = bfsPath(
+            enemy.position,
+            fleeTile,
+            blocked,
+            (tid) => getMoveCost(enemy.unitType, tid),
+            enemy.moveRange,
+            zoc
+          );
+          await enemy.moveTo(fleeTile, fleePath);
+          this.appendLog(`${enemy.name} 殘血撤退`);
+        }
+        return; // 撤退後不攻擊
+      }
+    }
+
     let bestTile: Coord | null = null;
     let bestTileScore = -Infinity;
     for (const tile of standable) {
@@ -2324,6 +2478,8 @@ export class BattleScene extends Phaser.Scene {
         // 預期反擊每點 -2 分 → 遠程兵自然偏好「打到目標但不在反擊範圍內」的位置（kite）
         score -= counterDmg * 2;
         score += tileTerrain.defBonus * 4; // 偏好高 DEF 地形
+        // Wave 7：normal/hard 主動找側/背擊位（×1.25 背→+20、×1.1 側→+8）
+        if (smart) score += (this.flankClassify(tile, target).mul - 1) * 80;
         score += 100; // 能攻擊的位置壓倒性優於 approach 分支（避免「逼近但不攻擊」）
       } else {
         // 不能攻擊 → 越接近目標越好（負距離，越大越好）

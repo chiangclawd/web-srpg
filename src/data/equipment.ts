@@ -140,6 +140,8 @@ export const EQUIPMENT: Record<string, EquipmentDef> = {
     id: 'dragon_bow', name: '惡龍弓', kind: 'weapon',
     atk: 7, def: 0, hpBonus: 0,
     unitTypes: ['archer'], requiredLevel: 14, hitBonus: 8, critBonus: 15,
+    // 命中淬毒（Wave 5 狀態框架示範）：2 回合，每回合 3 點
+    onHitStatus: { type: 'poison', turnsLeft: 2, magnitude: 3, label: '毒' },
   },
 
   cloth: {
@@ -175,6 +177,8 @@ export const EQUIPMENT: Record<string, EquipmentDef> = {
     id: 'ice_tome', name: '冰霜之書', kind: 'weapon',
     atk: 4, def: 0, hpBonus: 0,
     unitTypes: ['mage'], requiredLevel: 10, hitBonus: 5,
+    // 寒氣侵體（Wave 5 狀態框架示範）：2 回合攻擊 -3
+    onHitStatus: { type: 'atk_down', turnsLeft: 2, magnitude: 3, label: '攻↓' },
   },
   arcane_tome: {
     id: 'arcane_tome', name: '秘奧之書', kind: 'weapon',

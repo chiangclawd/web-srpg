@@ -8,8 +8,10 @@ import type {
   Faction,
   EquipmentDef,
   GrowthRates,
+  StatusEffect,
+  StatusEffectType,
 } from './types';
-import { HEX_W, HEX_H, hexCenterPx, hexDistance } from './Grid';
+import { HEX_W, HEX_H, hexCenterPx, hexDistance, coordEq } from './Grid';
 import { UNIT_TYPES } from './data/unitTypes';
 import { EQUIPMENT } from './data/equipment';
 import { getSpriteKeyCandidates } from './data/assetManifest';
@@ -72,6 +74,12 @@ export class Unit {
   private levelBadge: Phaser.GameObjects.Container;
   private typeBadge: Phaser.GameObjects.Container;
   private hpBarFill: Phaser.GameObjects.Rectangle;
+  /** 面向角度（弧度，pixel 空間）。只在移動 / 攻擊時改變；被打不會轉向。用於側/背擊判定。 */
+  facing = 0;
+  private facingPip!: Phaser.GameObjects.Arc;
+  /** 狀態效果列表（Wave 5）：毒/暈/攻防增減/沉默。 */
+  statuses: StatusEffect[] = [];
+  private statusText!: Phaser.GameObjects.Text;
 
   constructor(
     scene: Phaser.Scene,
@@ -201,6 +209,23 @@ export class Unit {
     this.hpBarFill = scene.add.rectangle(-barW / 2, barY, barW, 5, HP_BAR_GOOD);
     this.hpBarFill.setOrigin(0, 0.5);
 
+    // 面向指示「前點」：標出單位正面方向（從側/背攻擊有加成）。
+    // 玩家預設面右（+x，朝敵方），敵方面左（-x）。被打不轉向，只在移動/攻擊時更新。
+    this.facing = this.faction === 'player' ? 0 : Math.PI;
+    this.facingPip = scene.add.circle(0, 0, 5, 0xfff2a0);
+    this.facingPip.setStrokeStyle(2, 0x333300);
+
+    // 狀態圖示列（Wave 5）：浮在單位上方，addStatus/tick 時更新文字
+    this.statusText = scene.add
+      .text(0, -HEX_H / 2 - 6, '', {
+        fontSize: '15px',
+        color: '#ffe066',
+        fontStyle: 'bold',
+        backgroundColor: '#000000aa',
+        padding: { left: 3, right: 3, top: 1, bottom: 1 },
+      })
+      .setOrigin(0.5, 1);
+
     this.container = scene.add.container(center.x, center.y, [
       this.hitArea,
       this.body,
@@ -209,8 +234,11 @@ export class Unit {
       this.typeBadge,
       hpBarBg,
       this.hpBarFill,
+      this.facingPip,
+      this.statusText,
     ]);
     this.container.setDepth(10);
+    this.updateFacingPip();
 
     this.updateHpBar();
   }
@@ -221,11 +249,63 @@ export class Unit {
   }
 
   get attack(): number {
-    return this._baseAttack + (this.weapon?.atk ?? 0);
+    return Math.max(1, this._baseAttack + (this.weapon?.atk ?? 0) + this.statusStatMod('atk'));
   }
 
   get defense(): number {
-    return this._baseDefense + (this.armor?.def ?? 0);
+    return Math.max(0, this._baseDefense + (this.armor?.def ?? 0) + this.statusStatMod('def'));
+  }
+
+  // === 狀態效果（Wave 5）===
+  /** 加總攻 / 防的狀態增減（atk_up - atk_down / def_up - def_down）。 */
+  private statusStatMod(stat: 'atk' | 'def'): number {
+    let m = 0;
+    for (const s of this.statuses) {
+      if (s.type === `${stat}_up`) m += s.magnitude;
+      else if (s.type === `${stat}_down`) m -= s.magnitude;
+    }
+    return m;
+  }
+
+  hasStatus(type: StatusEffectType): boolean {
+    return this.statuses.some((s) => s.type === type);
+  }
+  isStunned(): boolean {
+    return this.hasStatus('stun');
+  }
+  isSilenced(): boolean {
+    return this.hasStatus('silence');
+  }
+
+  /** 加入狀態：同型已存在則取較長持續 + 較大強度（不疊加層數，避免無限堆疊）。 */
+  addStatus(effect: StatusEffect): void {
+    const existing = this.statuses.find((s) => s.type === effect.type);
+    if (existing) {
+      existing.turnsLeft = Math.max(existing.turnsLeft, effect.turnsLeft);
+      existing.magnitude = Math.max(existing.magnitude, effect.magnitude);
+    } else {
+      this.statuses.push({ ...effect });
+    }
+    this.updateStatusIcons();
+  }
+
+  /**
+   * 持有者回合開始時呼叫：回傳本回合應受的毒傷與是否被暈眩，並遞減所有狀態（歸 0 移除）。
+   * 毒傷與暈眩以「遞減前」的狀態判定（故 1 回合的暈本回合生效、之後消失）。
+   */
+  tickStatuses(): { poison: number; stunned: boolean } {
+    let poison = 0;
+    for (const s of this.statuses) if (s.type === 'poison') poison += s.magnitude;
+    const stunned = this.isStunned();
+    for (const s of this.statuses) s.turnsLeft -= 1;
+    this.statuses = this.statuses.filter((s) => s.turnsLeft > 0);
+    this.updateStatusIcons();
+    return { poison, stunned };
+  }
+
+  private updateStatusIcons(): void {
+    if (!this.statusText) return;
+    this.statusText.setText(this.statuses.map((s) => s.label).join(' '));
   }
 
   // === 等級系統 ===
@@ -313,6 +393,16 @@ export class Unit {
    */
   moveTo(coord: Coord, path?: Coord[]): Promise<void> {
     this.lastMoveDistance = hexDistance(this.position, coord);
+    // 面向移動方向：以「最後一步」的方向為準（倒數第二格 → 終點）；同格不動則保持原面向。
+    if (!coordEq(this.position, coord)) {
+      const from = path && path.length >= 2 ? path[path.length - 2] : this.position;
+      const fc = hexCenterPx(from);
+      const tc = hexCenterPx(coord);
+      if (fc.x !== tc.x || fc.y !== tc.y) {
+        this.facing = Math.atan2(tc.y - fc.y, tc.x - fc.x);
+        this.updateFacingPip();
+      }
+    }
     this.position = { ...coord };
 
     if (!path || path.length === 0) {
@@ -483,6 +573,24 @@ export class Unit {
 
   getCenterPx(): { x: number; y: number } {
     return hexCenterPx(this.position);
+  }
+
+  /** 重新定位「前點」到面向方向的格邊（container 子物件座標）。 */
+  private updateFacingPip(): void {
+    if (!this.facingPip) return;
+    const r = HEX_W * 0.34;
+    this.facingPip.setPosition(Math.cos(this.facing) * r, Math.sin(this.facing) * r);
+  }
+
+  /** 朝某格轉向：更新 facing 角度與前點。同格（dx=dy=0）則不變。 */
+  faceToward(target: Coord): void {
+    const c = this.getCenterPx();
+    const t = hexCenterPx(target);
+    const dx = t.x - c.x;
+    const dy = t.y - c.y;
+    if (dx === 0 && dy === 0) return;
+    this.facing = Math.atan2(dy, dx);
+    this.updateFacingPip();
   }
 
   showAttackAnimation(target: Unit): Promise<void> {
