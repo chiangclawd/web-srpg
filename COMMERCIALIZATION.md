@@ -121,10 +121,13 @@
 
 ## Part B — 內容完整度（Demo → 完整商品）
 
-1. 通關後移除所有「Demo / 第一階段」字樣（`i18n.ts`、`cutscenes.ts` 結尾）。
-2. 補完剩餘章節 CG（Ch4/5/7/9/11）與 5 位次要 BOSS 專屬 sprite（ROADMAP A1/A2，prompt 模板已備）。
-3. **全英化**（ROADMAP B2）：`cutscenes.ts` 對話翻譯 + `t_en()`，免費上架要面向全球玩家，英文是最大觸及面。
-4. 確認 11+ 章流程順暢、結局收束完整、難度曲線合理（用 G2 模擬器輔助）。
+1. ✅ **移除「Demo / 第一階段」字樣**：title.subtitle 兩語都改成正式描述；ch10 結尾「感謝遊玩 第一階段 Demo」改成「感謝遊玩 · 西方戰術 SRPG」。
+2. ⬜ 補完剩餘章節 CG（Ch4/5/7/9/11）與 5 位次要 BOSS 專屬 sprite（ROADMAP A1/A2，prompt 模板已備）—— **美術工作，需要你用 Nano Banana 產圖**。
+3. 🟡 **全英化機制就緒、內容首章已翻譯**：
+   - `DialogueLine` 加上 `speaker_en?` / `text_en?` 欄位；`CutsceneScene` 於 `lang=en` 時優先用 *_en，缺漏 fallback 到 zh
+   - 已翻譯 **ch1_prologue（15 行）作為示範**——切換到 English 進序章可看到完整英文流程
+   - **剩餘 ~459 行待翻譯**（45 個 script 中的 44 個）。可分章節分波翻譯（每章 ~10-30 行），或請你直接寫
+4. ⬜ 確認 11+ 章流程順暢、結局收束完整、難度曲線合理（用 G2 模擬器輔助）—— 需實機通關。
 
 ---
 
