@@ -2,6 +2,8 @@
 
 > 個人開發的瀏覽器戰術角色扮演遊戲，靈感取自《天使帝國》、《火焰之紋章》、《三國志》系列。
 
+**▶ 線上試玩**：<https://chiangclawd.github.io/web-srpg/> ・ **授權**：[MIT](./LICENSE) ・ **技術**：TypeScript + Phaser 3 + Vite（可選 Tauri 2 桌面殼）
+
 ## 📍 專案狀態
 
 🟢 **10 章節完整故事 — 主線 8 章 + 番外 TRUE END 2 章**
@@ -195,3 +197,9 @@ src-tauri/                  # Tauri 2 桌面包設定
 ## 🎯 一句話描述
 
 > 武將養成型戰術 SRPG，兵種相剋為戰術骨幹，故事章節推進的西方奇幻長篇。
+
+## 📄 授權 License
+
+**程式碼**以 [MIT License](./LICENSE) 釋出 — 歡迎自由使用、修改與散布，惟須保留版權與授權聲明。
+
+> ⚠️ 美術立繪 / CG、BGM、SFX 等資產可能採用各自來源的授權條款，**不必然涵蓋於本 MIT 授權內**；重用前請依各資產來源確認其授權範圍（細節見 `COMMERCIALIZATION.md` 風險清單）。
