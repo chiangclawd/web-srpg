@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 12,
+    date: '2026-10-16',
+    title: { zh: '14 張戰場全部手繪', en: 'All 14 battlefields hand-painted' },
+    items: [
+      { zh: '每一關的戰場背景都重繪成手繪風格：草原、森林、雪原、楓林、荒地與沙漠，道路與建造點位置完全不變', en: 'Every battlefield is repainted: meadows, forests, snowfields, autumn woods, wastelands and deserts. Roads and build spots stay exactly where they were' },
+      { zh: '背景圖在進入關卡時才下載（每關約 200 KB）', en: 'Each battlefield downloads when you enter the level (about 200 KB each)' },
+    ],
+  },
+  {
     id: 11,
     date: '2026-10-16',
     title: { zh: '手繪世界地圖', en: 'Hand-painted world map' },

@@ -1,0 +1,11 @@
+Image 1 is the layout of one battlefield in my 2D top-down fantasy tower-defense game, drawn in a flat placeholder style. Image 2 shows the game's TARGET art style: polished hand-painted cartoon fantasy art with clean dark-brown outlines, soft cel shading, rich painted textures and warm lighting.
+
+Repaint image 1 as a beautiful, polished, hand-painted tower-defense battlefield background in the style of image 2, seen from above with a slight tilt, like a premium mobile tower-defense game. The setting is {THEME}.
+
+STRICT layout rules (the game draws enemies and build spots on top of this image, so positions must match image 1 exactly):
+- Every road must keep EXACTLY the same shape, width and position as in image 1, including forks, bridges and where roads leave the edges of the image. Paint it with ruts, small pebbles and soft edges, but do not move, widen, narrow or straighten it.
+- Keep every open area open exactly where image 1 has open ground (that is where towers will be built). Do not add trees, rocks, buildings or water in those open areas.
+- Keep the trees, rocks, water, rivers, bridges, houses, castles, camps, ruins and altars at the same places as in image 1, repainted as rich illustrated assets.
+- Fill the whole image edge to edge. Same framing as image 1.
+
+Do NOT draw any towers, build spots, soldiers, monsters, people, flags, arrows, markers, text, frame or UI. No watermark.
