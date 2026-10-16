@@ -802,7 +802,7 @@ export const LEVELS: LevelDef[] = [
     startGold: 1050,
     lives: 20,
     heroStart: { x: 680, y: 470 },
-    mapPos: { x: 0.72, y: 0.84 },
+    mapPos: { x: 0.72, y: 0.79 },
     intro: ['sub_priest'],
     decor: [
       { kind: 'altar', x: 700, y: 360 },

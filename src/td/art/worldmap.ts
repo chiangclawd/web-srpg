@@ -7,7 +7,15 @@ import { drawAltar, drawCactus, drawCastle, drawDeadTree, drawDuneRipples, drawH
  * 世界地圖：羊皮紙風格大陸。南方草原（王國）→ 中部森林 → 北方雪原 → 東方楓林 → 東北蠻族要塞。
  * 座標同關卡 1280×720（mapPos 比例 × 尺寸）。
  */
-export function paintWorldMap(w: number, h: number, offX: number, s: number, nodes: (Vec & { theme: string; bonus?: boolean })[]): HTMLCanvasElement {
+export function paintWorldMap(
+  w: number,
+  h: number,
+  offX: number,
+  s: number,
+  nodes: (Vec & { theme: string; bonus?: boolean })[],
+  /** base：只畫地形（不含路線、羅盤、暗角），給 AI 重繪當構圖參考 */
+  opts: { base?: boolean } = {},
+): HTMLCanvasElement {
   // 外傳關卡不在主線路線上
   const main = nodes.filter((n) => !n.bonus);
   const [cv, ctx] = mkCanvas(w * s, h * s);
@@ -181,6 +189,7 @@ export function paintWorldMap(w: number, h: number, offX: number, s: number, nod
   ctx.lineWidth = 4;
   ctx.strokeStyle = '#5a4a2a';
   ctx.stroke();
+  if (opts.base) return cv;
   // 路線虛線
   const road = catmullRom(main, 20);
   ctx.setLineDash([8, 9]);
@@ -217,6 +226,13 @@ export function paintWorldMap(w: number, h: number, offX: number, s: number, nod
   void shade;
   void ellipse;
   return cv;
+}
+
+/** 地圖路線（主線與外傳），手繪地圖時由 MapScene 用向量線畫在圖上 */
+export function mapRoads(nodes: (Vec & { bonus?: boolean })[]): { main: Vec[]; side: Vec[] } {
+  const main = nodes.filter((n) => !n.bonus);
+  const side = nodes.filter((n) => n.bonus);
+  return { main: main.length >= 2 ? catmullRom(main, 20) : [], side: side.length >= 2 ? catmullRom(side, 20) : [] };
 }
 
 function compass(ctx: Ctx, x: number, y: number): void {
