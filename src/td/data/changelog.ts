@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 10,
+    date: '2026-10-16',
+    title: { zh: '砲管換新', en: 'New cannon barrels' },
+    items: [
+      { zh: '四種砲塔的臼砲（木砲、鐵砲、青銅砲、巨砲貝莎）換成手繪造型', en: 'All four mortars (wood, iron, bronze and Big Bertha) are hand-painted to match the towers' },
+      { zh: '修正砲口方向：現在會朝向正在攻擊的敵人', en: 'Fixed barrel direction: mortars now lean toward the enemy they are shelling' },
+    ],
+  },
+  {
     id: 9,
     date: '2026-10-16',
     title: { zh: '全新標題畫面', en: 'New title screen' },
