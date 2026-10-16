@@ -46,6 +46,7 @@ export class BootScene extends Phaser.Scene {
     for (const s of SPRITES) this.load.image(`raw_${s}`, `assets/sprites/${s}.png`);
     for (const m of PAINTED_MONSTERS) this.load.image(`rawmon_${m}`, `assets/sprites/mon/${m}.webp`);
     for (const k of Object.keys(PAINTED_TOWER_ART)) this.load.image(`rawtw_${k}`, `assets/sprites/tw/${k}.webp`);
+    this.load.image('keyart', 'assets/keyart.webp');
     for (const h of Object.values(HEROES)) this.load.image(`rawpt_${h.id}`, `assets/portraits/${h.id}.png`);
     for (const id of STORY_PORTRAITS) this.load.image(`rawpt_${id}`, `assets/portraits/${id}.png`);
   }
