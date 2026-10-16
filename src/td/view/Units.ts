@@ -242,6 +242,7 @@ export class TowerView {
   private barrel: Phaser.GameObjects.Image | null = null;
   private glow: Phaser.GameObjects.Image | null = null;
   private art = '';
+  private barrelK = 1 / TEX;
   private lastShot = -10;
   private shooterIdx = 0;
   private buildBar: Phaser.GameObjects.Rectangle[] = [];
@@ -271,20 +272,21 @@ export class TowerView {
     const t = this.tower;
     if (tu) {
       for (let i = 0; i < tu.n; i++) {
-        const ox = tu.n > 1 ? (i === 0 ? -12 : 12) : 0;
+        const ox = (tu.n > 1 ? (i === 0 ? -12 : 12) : 0) + (info.unitX ?? 0);
         const u = this.scene.add.image(t.x + ox, t.y - info.topY + 4, tu.tex).setOrigin(0.5, 1);
         const sc = tu.h / u.frame.height;
-        u.setScale(sc).setDepth(t.y + 0.5);
+        u.setScale(sc).setDepth(info.behind ? t.y - 0.05 : t.y + 0.5);
         if (tu.tint) u.setTint(tu.tint);
         this.units.push(u);
         this.unitScale.push(sc);
       }
     }
+    this.barrelK = (info.barrelScale ?? 1) / TEX;
     if (info.barrel) {
       this.barrel = this.scene.add
         .image(t.x, t.y - (info.barrelY ?? 30), info.barrel)
         .setOrigin(BARREL_ORIGIN.x, BARREL_ORIGIN.y)
-        .setScale(1 / TEX)
+        .setScale(this.barrelK)
         .setDepth(t.y + 0.5);
     }
     if (art === 'tw_art_tesla' || art.startsWith('tw_mage')) {
@@ -339,7 +341,7 @@ export class TowerView {
       this.barrel.setFlipX(face < 0);
       this.barrel.setRotation(face < 0 ? ang * 0.6 : ang * 0.6);
       const rk = since < 0.25 ? Math.sin((since / 0.25) * Math.PI) : 0;
-      this.barrel.setScale((1 / TEX) * (1 + rk * 0.12), (1 / TEX) * (1 - rk * 0.18));
+      this.barrel.setScale(this.barrelK * (1 + rk * 0.12), this.barrelK * (1 - rk * 0.18));
       this.barrel.setAlpha(building ? 0 : 1);
     }
     if (this.glow) {

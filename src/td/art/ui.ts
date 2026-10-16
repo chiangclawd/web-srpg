@@ -882,10 +882,36 @@ export function towerBadge(tower: HTMLCanvasElement, s: number, inner = '#3a5a2a
   ctx.save();
   circle(ctx, W / 2, W / 2, W / 2 - 11);
   ctx.clip();
-  const tw = tower.width / s;
-  const th = tower.height / s;
-  const k = 0.5;
-  ctx.drawImage(tower, W / 2 - (tw * k) / 2, W / 2 - th * k * 0.58, tw * k, th * k);
+  // 依實際不透明範圍縮放：手繪塔高矮差很多，太高的塔只露上半部（下緣被圓框裁掉）
+  const b = alphaBBox(tower);
+  const bw = b.w / s;
+  const bh = Math.min(b.h / s, bw * 1.15);
+  const k = Math.min(50 / bh, 54 / bw, 0.62);
+  const top = W / 2 - (bh * k) / 2 + 2;
+  ctx.drawImage(tower, b.x, b.y, b.w, b.h, W / 2 - (bw * k) / 2, top, bw * k, (b.h / s) * k);
   ctx.restore();
   return cv;
+}
+
+/** 畫布中 alpha 明顯的範圍（像素座標） */
+function alphaBBox(cv: HTMLCanvasElement): { x: number; y: number; w: number; h: number } {
+  const ctx = cv.getContext('2d');
+  if (!ctx) return { x: 0, y: 0, w: cv.width, h: cv.height };
+  const d = ctx.getImageData(0, 0, cv.width, cv.height).data;
+  let x0 = cv.width;
+  let y0 = cv.height;
+  let x1 = -1;
+  let y1 = -1;
+  for (let y = 0; y < cv.height; y++) {
+    for (let x = 0; x < cv.width; x++) {
+      if (d[(y * cv.width + x) * 4 + 3] > 40) {
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+  }
+  if (x1 < 0) return { x: 0, y: 0, w: cv.width, h: cv.height };
+  return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
 }

@@ -47,7 +47,7 @@ MODE=daily DAILY_KEY=2026-10-20 npm run td:optimize   # 檢查某天的每日挑
 npx tsx scripts/td-level-tool.ts suggest l3 11   # 自動建議建造點
 ```
 
-## 🎨 美術流程（AI 手繪魔物）
+## 🎨 美術流程（AI 手繪魔物與防禦塔）
 
 魔物 sprite（`public/assets/sprites/mon/*.webp`）由 Gemini 圖片模型生成，以既有的 chibi 敵人 sprite 當風格參考：
 
@@ -61,6 +61,18 @@ python3 scripts/art/key.py raw/troll.png keyed/troll.png 256   # 去背（取邊
 
 - 模型：`gemini-2.5-flash-image`（約 US$0.04／張）；提示詞在 `scripts/art/prompts/`，背景用洋紅色，紫／紅色角色改用綠色
 - 首批 10 張（8 種魔物＋變羊＋石像）約 US$0.39
+
+防禦塔（`public/assets/sprites/tw/*.webp`，20 種）是「一個家族一張圖」：把同類塔的 5 張程序繪圖拼成參考圖，請模型照順序一次重畫 5 座，風格與大小比例才會一致，再切開對齊：
+
+```bash
+GEMINI_ASPECT=16:9 NODE_USE_ENV_PROXY=1 node scripts/art/gemini-image.mjs raw/archer.png scripts/art/prompts/fam_archer.txt ref/archer_sheet.png
+python3 scripts/art/slice_towers.py raw/archer.png orig_frames/ out/ tw_archer_1 tw_archer_2 tw_archer_3 tw_archer_ranger tw_archer_marksman
+# 去背、去掉左上角浮水印、在最寬的空白處切成 5 座、同家族同一縮放、底部對齊地面線，輸出 264×320 WebP 並印出錨點
+```
+
+- 錨點（弓箭手／法師站的高度、砲管位置、縮放）寫在 `src/td/art/towers.ts` 的 `PAINTED_TOWER_ART`，只有圖檔成功載入才套用；城垛型的塔把單位畫在塔身後面
+- 模擬的射擊點（`World.muzzle`）沒改，平衡不變；畫面上投射物從塔頂出發、飛行中漸漸回到模擬軌跡
+- 4 張家族圖加試作約 US$0.51
 
 ## 🧱 架構
 

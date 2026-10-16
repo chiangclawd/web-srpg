@@ -1,0 +1,17 @@
+Image 1 is a row of 5 defense towers from my 2D fantasy tower-defense game, drawn in a flat placeholder style (ignore the grey fill inside them). Images 2-3 show the TARGET art style: polished hand-painted chibi fantasy game art with clean dark-brown outlines, soft cel shading, rich painted textures and warm lighting.
+
+Paint a NEW, polished version of the same 5 towers as one game sprite sheet:
+- Exactly 5 separate towers in ONE horizontal row, in the same order and at the same positions as image 1, evenly spaced with clear empty gaps between them, all standing on the same ground line, all at the same scale as in image 1 (left ones are smaller/lower levels, so keep their relative sizes).
+- Each tower stands on its own small round dirt base.
+- Slightly top-down front view, like image 1.
+- Keep each tower recognizably the same building type and keep its main features, but render it as a rich, detailed painted asset: carved stone blocks, wood grain, metal trims and rivets, banners with painted folds, small moss and weathering, highlights from the upper-left.
+- The top of every archer tower must be an EMPTY, flat, open platform (no roof, no spire) where two archers will stand.
+- Do NOT draw any people, soldiers, archers, mages, creatures or cannon barrels.
+- Background: perfectly flat solid magenta (#FF00FF) everywhere around the towers. No shadows on the background, no text, no labels, no frame.
+
+The 5 towers, left to right:
+1. Level 1 Archer Post: a simple wooden lookout platform on wooden stilts with cross braces and one small blue flag.
+2. Level 2 Archer Tower: a wooden platform on a short stone base, two small blue flags.
+3. Level 3 Archer Fort: a stone tower with blue banners with arrow emblems and a crenellated open top.
+4. Ranger Hideout: a tower built from a huge hollow tree trunk with a leafy green canopy around the open top and a green banner.
+5. Marksman Spire: a tall stone sniper tower with a red banner with a star, golden trims, crenellated open top.

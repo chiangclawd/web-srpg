@@ -20,7 +20,7 @@ const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models
   headers: { 'content-type': 'application/json' },
   body: JSON.stringify({
     contents: [{ role: 'user', parts }],
-    generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: '1:1' } },
+    generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: process.env.GEMINI_ASPECT ?? '1:1' } },
   }),
 });
 const body = await res.json();

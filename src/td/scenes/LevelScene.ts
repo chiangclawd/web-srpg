@@ -16,6 +16,7 @@ import { GEMS_PER_ACHIEVEMENT, ITEMS, KEG, gemReward, type ItemId } from '../dat
 import { RANGE_Y, inEllipse } from '../sim/math';
 import { paintLevel, paintBuildSpot } from '../art/terrain';
 import { THEMES } from '../art/scenery';
+import { visualMuzzleH } from '../art/towers';
 import { DEPTH, Fx, camShake } from '../view/Fx';
 import { TowerView, UnitView } from '../view/Units';
 import { RadialMenu, type RadialOption } from '../view/RadialMenu';
@@ -1097,16 +1098,20 @@ export class LevelScene extends Phaser.Scene {
           else if (tp === 'bomb') {
             sfx.play('cannon', 0.7);
             const m = this.world.muzzle(ev.t);
-            this.fx.smokePuff(m.x, m.y - 6, 3);
+            this.fx.smokePuff(m.x, m.y - 6 - this.muzzleLift(ev.t), 3);
           } else if (tp === 'tesla') sfx.play('zap', 0.8);
           break;
         }
         case 'lightning':
-          this.fx.lightning(ev.pts);
+          if (ev.t) {
+            const pts = ev.pts.slice();
+            pts[0] = { x: pts[0].x, y: pts[0].y - this.muzzleLift(ev.t) };
+            this.fx.lightning(pts);
+          } else this.fx.lightning(ev.pts);
           break;
         case 'beam':
           if (ev.kind === 'disintegrate') {
-            this.fx.beam(ev.x1, ev.y1, ev.x2, ev.y2, 0xb050ff, 0xffe0ff);
+            this.fx.beam(ev.x1, ev.y1 - (ev.t ? this.muzzleLift(ev.t) : 0), ev.x2, ev.y2, 0xb050ff, 0xffe0ff);
             sfx.play('zap');
           } else if (ev.kind === 'charge') {
             this.fx.beam(ev.x1, ev.y1, ev.x2, ev.y2, 0xffd27a, 0xffffff);
@@ -1290,13 +1295,24 @@ export class LevelScene extends Phaser.Scene {
 
   private spawnProj(p: Projectile): void {
     const key = PROJ_TEX[p.kind] ?? 'pj_arrow';
-    const img = (this.projPool.pop() ?? this.add.image(0, 0, key)).setTexture(key).setPosition(p.x, p.y);
+    const img = (this.projPool.pop() ?? this.add.image(0, 0, key)).setTexture(key).setPosition(p.x, p.y - this.projLift(p));
     img.setDepth(DEPTH.proj).setScale(1 / TEX).setAlpha(1).setVisible(true).setRotation(0).setBlendMode('NORMAL');
     if (p.kind === 'bolt' || p.kind === 'heroBolt' || p.kind === 'enemyBolt' || p.kind === 'iceShard') img.setBlendMode('ADD');
     if (p.kind === 'meteor') img.setScale(1.3 / TEX);
     if (p.kind === 'bomblet') img.setScale(0.7 / TEX);
     if (p.kind === 'heroBolt' && this.world.hero?.hero?.def.id === 'lila') img.setTexture('pj_ice');
     this.projViews.set(p.id, img);
+  }
+
+  /** 手繪塔比模擬的射擊點高：差距（畫面像素） */
+  private muzzleLift(t: Tower): number {
+    return Math.max(0, visualMuzzleH(t.def.art) - (t.y - this.world.muzzle(t).y));
+  }
+
+  /** 塔射出的投射物從塔頂出發、飛行中逐漸回到模擬軌跡（命中點不變） */
+  private projLift(p: Projectile): number {
+    if (!(p.owner instanceof Tower) || p.dur <= 0) return 0;
+    return this.muzzleLift(p.owner) * Math.max(0, 1 - p.t / p.dur);
   }
 
   private releaseProj(img: Phaser.GameObjects.Image): void {
@@ -1408,7 +1424,7 @@ export class LevelScene extends Phaser.Scene {
     for (const p of w.projectiles) {
       const img = this.projViews.get(p.id);
       if (!img) continue;
-      img.setPosition(p.x, p.y);
+      img.setPosition(p.x, p.y - this.projLift(p));
       if (p.kind === 'bomb' || p.kind === 'bomblet' || p.kind === 'axe') img.rotation += 0.2;
       else if (p.kind === 'meteor') {
         img.setRotation(0);

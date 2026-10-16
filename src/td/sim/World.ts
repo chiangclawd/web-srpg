@@ -46,8 +46,8 @@ export type SimEvent =
   | { type: 'projHit'; p: Projectile; hit: boolean }
   | { type: 'explosion'; x: number; y: number; r: number; kind: 'bomb' | 'bomblet' | 'meteor' | 'missile' | 'nova' | 'holy' | 'shock' }
   | { type: 'towerShoot'; t: Tower; tx: number; ty: number }
-  | { type: 'lightning'; pts: Vec[] }
-  | { type: 'beam'; x1: number; y1: number; x2: number; y2: number; kind: 'disintegrate' | 'ice' | 'charge' }
+  | { type: 'lightning'; pts: Vec[]; t?: Tower }
+  | { type: 'beam'; x1: number; y1: number; x2: number; y2: number; kind: 'disintegrate' | 'ice' | 'charge'; t?: Tower }
   | { type: 'melee'; x: number; y: number; heavy: boolean }
   | { type: 'soldierSpawn'; s: Soldier }
   | { type: 'soldierDie'; s: Soldier }
@@ -1660,7 +1660,7 @@ export class World {
           }
           cur = next;
         }
-        this.emit({ type: 'lightning', pts });
+        this.emit({ type: 'lightning', pts, t });
         const oc = t.skills.overcharge ?? 0;
         if (oc > 0) {
           for (const e of this.enemies) {
@@ -1733,7 +1733,7 @@ export class World {
             const e = list.reduce((a, b) => (b.maxHp > a.maxHp ? b : a));
             if (e.maxHp >= 100) {
               t.skillCd.disintegrate = 24 - 4 * lv;
-              this.emit({ type: 'beam', x1: m.x, y1: m.y, x2: e.x, y2: e.y - e.def.height * 0.5, kind: 'disintegrate' });
+              this.emit({ type: 'beam', x1: m.x, y1: m.y, x2: e.x, y2: e.y - e.def.height * 0.5, kind: 'disintegrate', t });
               this.damageEnemy(e, 999999, 'true', 'tower');
             }
           }
