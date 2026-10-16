@@ -50,6 +50,7 @@ export class LevelUIScene extends Phaser.Scene {
   private bossFill: Phaser.GameObjects.Rectangle | null = null;
   private bossId = -1;
   private itemBar!: Phaser.GameObjects.Container;
+  private ult: { btn: IconButton; cd: Phaser.GameObjects.Graphics; txt: Phaser.GameObjects.Text } | null = null;
   private itemSlots: Partial<Record<ItemId, { btn: IconButton; count: Phaser.GameObjects.Text; dot: Phaser.GameObjects.Arc }>> = {};
 
   constructor() {
@@ -105,7 +106,18 @@ export class LevelUIScene extends Phaser.Scene {
       this.heroLv = addText(this, 78, -78, '1', { size: 14, display: true }).setOrigin(0.5);
       this.bottomLeft.add([this.heroBtn, this.heroShade, this.heroDead, hpBg, this.heroHp, xpBg, this.heroXp, lvBadge, this.heroLv]);
     }
-    const sx = hero ? 128 : 46;
+    // 英雄絕招：緊鄰英雄頭像
+    this.ult = null;
+    if (hero?.hero) {
+      const ux = 128;
+      const btn = new IconButton(this, ux, -40, 62, hero.hero.def.ult.icon, () => this.lvl.enterHeroUlt(), 'ui_badge_gold');
+      const cd = this.add.graphics();
+      cd.setPosition(ux, -40);
+      const txt = addText(this, ux, -40, '', { size: 18, display: true }).setOrigin(0.5);
+      this.bottomLeft.add([btn, cd, txt]);
+      this.ult = { btn, cd, txt };
+    }
+    const sx = hero ? 200 : 46;
     (['meteor', 'reinforce'] as const).forEach((k, i) => {
       const btn = new IconButton(this, sx + i * 72, -40, 62, k === 'meteor' ? 'ic_meteor' : 'ic_reinforce', () => this.lvl.enterSpell(k), 'ui_badge');
       const cd = this.add.graphics();
@@ -209,6 +221,24 @@ export class LevelUIScene extends Phaser.Scene {
     };
     drawCd('meteor', w.meteorCd, w.meteorCdMax);
     drawCd('reinforce', w.reinfCd, w.reinfCdMax);
+    if (this.ult) {
+      const u = this.ult;
+      u.cd.clear();
+      u.btn.badge.setTint(this.lvl.mode === 'ult' ? 0xffffff : 0xe8e0d0);
+      if (w.heroUltCd > 0) {
+        u.cd.fillStyle(0x000000, 0.55);
+        u.cd.slice(0, 0, 26, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (w.heroUltCd / w.heroUltCdMax), false);
+        u.cd.fillPath();
+        u.txt.setText(String(Math.ceil(w.heroUltCd)));
+        u.btn.icon.setAlpha(0.6);
+        u.btn.setScale(1);
+      } else {
+        u.txt.setText('');
+        u.btn.icon.setAlpha(1);
+        // 冷卻好了：輕微脈動提醒
+        u.btn.setScale(this.lvl.mode === 'ult' ? 1.08 : 1 + Math.abs(Math.sin(this.time.now / 300)) * 0.06);
+      }
+    }
     // 首領血條
     const boss = w.enemies.find((e) => e.def.boss && e.alive);
     if (boss) {
@@ -286,6 +316,24 @@ export class LevelUIScene extends Phaser.Scene {
       sl.btn.icon.setAlpha(n > 0 ? 1 : 0.4);
       sl.dot.setFillStyle(n > 0 ? 0x2a1608 : 0x5a1a10);
     }
+  }
+
+  /** 絕招施放：英雄立繪從左側滑入＋絕招名稱 */
+  ultPop(): void {
+    const h = this.lvl.world.hero?.hero;
+    if (!h) return;
+    const c = this.add.container(0, VIEW_H * 0.36).setDepth(64);
+    if (this.textures.exists(`pt_${h.def.id}`)) {
+      const p = this.add.image(0, 120, `pt_${h.def.id}`).setOrigin(0, 1);
+      p.setScale(260 / p.frame.height);
+      c.add(p);
+    }
+    const name = addText(this, 190, 40, L(h.def.ult.name), { size: 36, display: true, color: '#ffe066', strokeW: 7 }).setOrigin(0, 0.5);
+    c.add(name);
+    c.x = -260;
+    c.setAlpha(0);
+    this.tweens.add({ targets: c, x: 10, alpha: 1, duration: 260, ease: 'Cubic.easeOut' });
+    this.tweens.add({ targets: c, x: -40, alpha: 0, delay: 1000, duration: 350, onComplete: () => c.destroy() });
   }
 
   /** 使用道具時在畫面中央彈出圖示與效果文字 */

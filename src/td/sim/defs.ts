@@ -125,6 +125,14 @@ export interface HeroSkillDef {
   cd: number;
 }
 
+/** 英雄絕招：玩家手動點地面施放，冷卻較長 */
+export interface HeroUltDef {
+  name: L10n;
+  desc: L10n;
+  icon: string;
+  cd: number;
+}
+
 export interface HeroDef {
   id: string;
   name: L10n;
@@ -146,6 +154,7 @@ export interface HeroDef {
   /** 飛行英雄：不會被擋、不擋人，但能飛越地形 */
   flying?: boolean;
   skills: HeroSkillDef[];
+  ult: HeroUltDef;
   /** 解鎖條件：通過哪一關（undefined = 一開始就有） */
   unlockAfter?: string;
 }

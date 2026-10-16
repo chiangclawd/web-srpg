@@ -702,6 +702,36 @@ function sackIcon(c: Ctx, w: number): void {
   c.fillText('$', m, m + 7);
 }
 
+function snowflakeIcon(c: Ctx, w: number): void {
+  const m = w / 2;
+  c.lineCap = 'round';
+  for (const [lw, col] of [
+    [7, OUTLINE],
+    [3.5, '#bff0ff'],
+  ] as const) {
+    c.lineWidth = lw;
+    c.strokeStyle = col;
+    for (let i = 0; i < 6; i++) {
+      const a = (i * Math.PI) / 3;
+      const ex = m + Math.cos(a) * 20;
+      const ey = m + Math.sin(a) * 20;
+      c.beginPath();
+      c.moveTo(m, m);
+      c.lineTo(ex, ey);
+      // 枝杈
+      const bx = m + Math.cos(a) * 12;
+      const by = m + Math.sin(a) * 12;
+      c.moveTo(bx, by);
+      c.lineTo(bx + Math.cos(a + 0.8) * 7, by + Math.sin(a + 0.8) * 7);
+      c.moveTo(bx, by);
+      c.lineTo(bx + Math.cos(a - 0.8) * 7, by + Math.sin(a - 0.8) * 7);
+      c.stroke();
+    }
+  }
+  circle(c, m, m, 4);
+  fillStroke(c, '#ffffff', 2);
+}
+
 const ICONS: Record<string, Fn> = {
   ic_gem: gemIcon,
   it_keg: kegIcon,
@@ -760,7 +790,22 @@ const ICONS: Record<string, Fn> = {
   sk_frostnova: spiralIcon,
   sk_icelance: beamIcon,
   sk_blizzard: spiralIcon,
+  sk_charge: fastIcon,
+  sk_trample: rockIcon,
+  sk_lance: beamIcon,
+  sk_dive: rocketIcon,
+  sk_gale: spiralIcon,
+  sk_storm: boltIcon,
+  // 英雄絕招
+  ult_arthur: crownIcon,
+  ult_elena: fanIcon,
+  ult_lila: snowflakeIcon,
+  ult_rain: fastIcon,
+  ult_aria: boltIcon,
 };
+
+/** 所有已註冊的圖示 key（測試用） */
+export const ICON_KEYS = Object.keys(ICONS);
 
 const UI: Record<string, { w: number; h: number; paint: Fn }> = {
   ui_panel: { w: 120, h: 120, paint: woodPanel },
@@ -776,6 +821,7 @@ const UI: Record<string, { w: number; h: number; paint: Fn }> = {
   ui_badge_green: { w: 76, h: 76, paint: badge('#e0b050', '#2a6a2a') },
   ui_badge_red: { w: 76, h: 76, paint: badge('#e0b050', '#7a2a1a') },
   ui_badge_grey: { w: 76, h: 76, paint: badge('#8a8278', '#3a3632') },
+  ui_badge_gold: { w: 76, h: 76, paint: badge('#fff0a0', '#8a5a10') },
   ui_pill: { w: 64, h: 26, paint: pill },
 };
 

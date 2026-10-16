@@ -130,6 +130,7 @@ const STR = {
   endlessOver: { zh: '防線終於失守', en: 'The line has fallen' },
   waveReached: { zh: '撐到第 {0} 波', en: 'Reached wave {0}' },
   newRecord: { zh: '新紀錄！', en: 'New record!' },
+  ultimate: { zh: '絕招', en: 'Ultimate' },
   shop: { zh: '商店', en: 'Shop' },
   gems: { zh: '寶石', en: 'Gems' },
   owned: { zh: '持有 {0}', en: 'Owned {0}' },

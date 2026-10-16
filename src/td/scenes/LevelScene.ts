@@ -27,7 +27,7 @@ import type { LevelUIScene, InfoData } from './LevelUIScene';
 const STEP = 1 / 60;
 const BG_SCALE = RS >= 2 ? 1.5 : 1;
 
-type Mode = 'idle' | 'hero' | 'meteor' | 'reinforce' | 'rally' | 'keg';
+type Mode = 'idle' | 'hero' | 'meteor' | 'reinforce' | 'rally' | 'keg' | 'ult';
 
 export class LevelScene extends Phaser.Scene {
   world!: World;
@@ -156,6 +156,7 @@ export class LevelScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-ESC', () => this.cancelAll());
     this.input.keyboard?.on('keydown-ONE', () => this.ui?.spellButton('meteor'));
     this.input.keyboard?.on('keydown-TWO', () => this.ui?.spellButton('reinforce'));
+    this.input.keyboard?.on('keydown-Q', () => this.enterHeroUlt());
 
     this.scale.on('resize', this.onResize, this);
     const onHide = () => {
@@ -243,7 +244,7 @@ export class LevelScene extends Phaser.Scene {
 
   private onSpotTap(i: number): void {
     if (this.world.result) return;
-    if (this.mode === 'meteor' || this.mode === 'reinforce' || this.mode === 'keg') {
+    if (this.mode === 'meteor' || this.mode === 'reinforce' || this.mode === 'keg' || this.mode === 'ult') {
       const s = this.world.spots[i];
       this.onGroundTap(s.x, s.y);
       return;
@@ -286,6 +287,10 @@ export class LevelScene extends Phaser.Scene {
       }
       case 'keg':
         if (this.consumeItem('keg', x, y)) this.setMode('idle');
+        return;
+      case 'ult':
+        if (w.castHeroUlt(x, y)) this.setMode('idle');
+        else sfx.play('error');
         return;
       case 'rally': {
         const t = this.menuTarget?.tower;
@@ -346,6 +351,8 @@ export class LevelScene extends Phaser.Scene {
       this.ui.toast(T('reinforceDesc'));
     } else if (m === 'keg') {
       this.ui.toast(L(ITEMS.keg.desc));
+    } else if (m === 'ult' && this.world.hero?.hero) {
+      this.ui.toast(L(this.world.hero.hero.def.ult.desc));
     } else if (m === 'rally') {
       const t = this.menuTarget?.tower;
       if (t) this.drawRange(t.x, t.y, t.def.range, 0x6aa0ff);
@@ -378,6 +385,16 @@ export class LevelScene extends Phaser.Scene {
     }
     this.closeMenu();
     this.setMode(this.mode === kind ? 'idle' : kind);
+  }
+
+  /** 英雄絕招按鈕：冷卻好了就進入選位模式 */
+  enterHeroUlt(): void {
+    if (!this.world.canHeroUlt()) {
+      sfx.play('error');
+      return;
+    }
+    this.closeMenu();
+    this.setMode(this.mode === 'ult' ? 'idle' : 'ult');
   }
 
   /** 道具列按鈕：需要目標的進入選位模式，其餘立即使用 */
@@ -990,6 +1007,9 @@ export class LevelScene extends Phaser.Scene {
         case 'item':
           this.itemFx(ev.id, ev.x, ev.y);
           break;
+        case 'heroUlt':
+          this.heroUltFx(ev.hero, ev.x, ev.y, ev.r);
+          break;
         case 'summon':
           this.fx.smokePuff(ev.x, ev.y - 10, 10);
           sfx.play('boss', 0.5);
@@ -1004,7 +1024,7 @@ export class LevelScene extends Phaser.Scene {
           const hit = this.add.rectangle(ev.t.x, ev.t.y - 30, 76, 84, 0xffffff, 0.001).setInteractive({ useHandCursor: true }).setDepth(ev.t.y);
           hit.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, e2: Phaser.Types.Input.EventData) => {
             e2?.stopPropagation?.();
-            if (this.mode === 'meteor' || this.mode === 'reinforce' || this.mode === 'hero' || this.mode === 'keg') {
+            if (this.mode === 'meteor' || this.mode === 'reinforce' || this.mode === 'hero' || this.mode === 'keg' || this.mode === 'ult') {
               this.onGroundTap(ev.t.x, ev.t.y + 10);
               return;
             }
@@ -1325,6 +1345,35 @@ export class LevelScene extends Phaser.Scene {
     if (this.mode0 === 'endless') this.ui.showEndlessResult(reached, sv.endless[this.level.id] ?? reached, newRecord);
     else this.ui.showResult(victory, stars, newStars);
     fresh.forEach((id, i) => this.time.delayedCall(1800 + i * 2200, () => this.ui.achievementToast(id)));
+  }
+
+  private heroUltFx(hero: string, x: number, y: number, r: number): void {
+    const COLORS: Record<string, number> = { arthur: 0xffe08a, elena: 0x9aff7a, lila: 0x9ae4ff, rain: 0xff9a5a, aria: 0xc8b0ff };
+    const col = COLORS[hero] ?? 0xffffff;
+    this.fx.ring(x, y, r, col, 500);
+    this.fx.ring(x, y, r * 0.6, col, 380);
+    switch (hero) {
+      case 'arthur':
+        sfx.play('horn', 0.6);
+        this.fx.smokePuff(x, y, 12);
+        break;
+      case 'elena':
+        sfx.play('whoosh');
+        break;
+      case 'lila':
+        sfx.play('freeze');
+        this.cameras.main.flash(250, 150, 210, 255);
+        break;
+      case 'rain':
+        sfx.play('lance');
+        camShake(this, 220, 0.005);
+        break;
+      case 'aria':
+        sfx.play('zap');
+        this.cameras.main.flash(200, 220, 200, 255);
+        break;
+    }
+    this.ui.ultPop();
   }
 
   private itemFx(id: ItemId, x: number, y: number): void {

@@ -28,6 +28,7 @@ export const HEROES: Record<string, HeroDef> = {
     cd: 1,
     speed: 72,
     regen: 8,
+    ult: { name: { zh: '王國聖騎', en: 'Royal Guard' }, desc: { zh: '在道路上召喚兩名聖騎士助陣 18 秒。', en: 'Summons two holy knights on the road for 18 seconds.' }, icon: 'ult_arthur', cd: 55 },
     skills: [
       {
         id: 'bash',
@@ -70,6 +71,7 @@ export const HEROES: Record<string, HeroDef> = {
     speed: 82,
     regen: 6,
     ranged: { range: 175, kind: 'arrow', dmgKind: 'physical' },
+    ult: { name: { zh: '萬箭齊發', en: 'Arrow Storm' }, desc: { zh: '對目標區域降下密集箭雨。', en: 'Rains a dense volley of arrows on the target area.' }, icon: 'ult_elena', cd: 45 },
     skills: [
       {
         id: 'multishot',
@@ -113,6 +115,7 @@ export const HEROES: Record<string, HeroDef> = {
     regen: 6,
     ranged: { range: 160, kind: 'magic', dmgKind: 'magic' },
     unlockAfter: 'l3',
+    ult: { name: { zh: '絕對零度', en: 'Absolute Zero' }, desc: { zh: '冰封範圍內的敵人並造成魔法傷害。', en: 'Freezes enemies in an area and deals magic damage.' }, icon: 'ult_lila', cd: 50 },
     skills: [
       {
         id: 'frostnova',
@@ -155,6 +158,7 @@ export const HEROES: Record<string, HeroDef> = {
     speed: 115,
     regen: 8,
     unlockAfter: 'l5',
+    ult: { name: { zh: '鐵騎突擊', en: 'Cavalry Sweep' }, desc: { zh: '騎兵隊橫掃目標區域，造成傷害並暈眩。', en: 'A cavalry squad sweeps the area, damaging and stunning.' }, icon: 'ult_rain', cd: 45 },
     skills: [
       {
         id: 'charge',
@@ -199,6 +203,7 @@ export const HEROES: Record<string, HeroDef> = {
     ranged: { range: 170, kind: 'arrow', dmgKind: 'physical' },
     flying: true,
     unlockAfter: 'l8',
+    ult: { name: { zh: '雷霆審判', en: 'Thunder Judgment' }, desc: { zh: '召喚雷擊轟擊目標區域的敵人。', en: 'Calls lightning down on enemies in the target area.' }, icon: 'ult_aria', cd: 45 },
     skills: [
       {
         id: 'dive',

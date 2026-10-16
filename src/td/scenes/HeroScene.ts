@@ -100,9 +100,9 @@ export class HeroScene extends Phaser.Scene {
     add(this.add.rectangle(tx + 2, 360, 456 * k, 10, 0xffd84a).setOrigin(0, 0.5));
     add(addText(this, tx + 466, 360, lv >= HERO_MAX_LEVEL ? 'MAX' : `${Math.round(xp)} / ${nxt}`, { size: 13, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
     // 技能
-    add(addText(this, tx, 386, T('skills'), { size: 20, display: true, color: '#7a4a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }));
+    add(addText(this, tx, 380, T('skills'), { size: 20, display: true, color: '#7a4a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }));
     h.skills.forEach((sk, i) => {
-      const sy = 438 + i * 58;
+      const sy = 436 + i * 46;
       const ok = lv >= sk.unlockLevel;
       const ib = add(this.add.image(tx + 24, sy, 'ui_badge_blue').setDisplaySize(48, 48));
       const ic = add(this.add.image(tx + 24, sy, `sk_${sk.id}`).setDisplaySize(30, 30));
@@ -113,6 +113,15 @@ export class HeroScene extends Phaser.Scene {
       add(addText(this, tx + 58, sy - 12, `${L(sk.name)}  (LV${sk.unlockLevel})`, { size: 17, display: true, color: ok ? '#4a2a10' : '#8a7a6a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
       add(addText(this, tx + 58, sy + 12, L(sk.desc), { size: 14, color: ok ? '#3a2412' : '#8a7a6a', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0, 0.5));
     });
+    // 絕招（手動施放）
+    {
+      const sy = 436 + h.skills.length * 46;
+      add(this.add.image(tx + 24, sy, 'ui_badge_gold').setDisplaySize(48, 48));
+      add(this.add.image(tx + 24, sy, h.ult.icon).setDisplaySize(30, 30));
+      add(addText(this, tx + 58, sy - 12, `${L(h.ult.name)}  (${T('ultimate')})`, { size: 17, display: true, color: '#8a4a00', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
+      const wrap = px + 330 - 90 - (tx + 58) - 12;
+      add(addText(this, tx + 58, sy + 4, L(h.ult.desc), { size: 13, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap }).setOrigin(0, 0));
+    }
     if (unlocked) {
       const selected = sv.selectedHero === h.id;
       add(

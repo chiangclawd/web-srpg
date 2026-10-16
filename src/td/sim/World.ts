@@ -61,6 +61,7 @@ export type SimEvent =
   | { type: 'skillBuy'; t: Tower; skill: string }
   | { type: 'spell'; kind: 'meteor' | 'reinforce'; x: number; y: number }
   | { type: 'item'; id: ItemId; x: number; y: number }
+  | { type: 'heroUlt'; hero: string; x: number; y: number; r: number }
   | { type: 'zone'; z: Zone }
   | { type: 'lifeLost'; amount: number; x: number; y: number }
   | { type: 'victory' }
@@ -118,6 +119,9 @@ export class World {
   readonly meteorCdMax: number;
   reinfCd = 0;
   readonly reinfCdMax: number;
+  /** 英雄絕招冷卻（沒有英雄時為 0） */
+  heroUltCd = 0;
+  heroUltCdMax = 0;
 
   result: 'victory' | 'defeat' | null = null;
   stats = { kills: 0, leaks: 0, goldEarned: 0, towersBuilt: 0, meteorKills: 0, earlyCalls: 0, sheep: 0, bossesKilled: [] as string[] };
@@ -370,6 +374,8 @@ export class World {
     }
     s.hero = { def, level: lv, xp, startXp: xp, skillCd: {}, moveTo: null, respawnAt: 0 };
     for (const sk of def.skills) s.hero.skillCd[sk.id] = 2;
+    this.heroUltCdMax = def.ult.cd;
+    this.heroUltCd = def.ult.cd * 0.4;
     this.hero = s;
     this.soldiers.push(s);
     this.emit({ type: 'soldierSpawn', s });
@@ -461,6 +467,85 @@ export class World {
         break;
     }
     this.emit({ type: 'item', id, x, y });
+    return true;
+  }
+
+  canHeroUlt(): boolean {
+    return !!this.hero?.hero && this.heroUltCd <= 0 && !this.result;
+  }
+
+  /** 英雄絕招：在 (x, y) 施放，效果隨英雄等級成長；英雄陣亡時也能用 */
+  castHeroUlt(x: number, y: number): boolean {
+    const hr = this.hero?.hero;
+    if (!hr || !this.canHeroUlt()) return false;
+    const lv = hr.level;
+    const near = (r: number, ground = false) => this.enemies.filter((e) => e.alive && (!ground || !e.flying) && inEllipse(x, y, e.x, e.y, r));
+    let r = 100;
+    switch (hr.def.id) {
+      case 'arthur': {
+        // 兩名聖騎士守住道路
+        for (let i = 0; i < 2; i++) {
+          const o = FORMATION[i];
+          const s = new Soldier('militia', 'sp_player_sword', 46, x + o.x, y + o.y, 220 + 30 * lv, 0.5, [10 + 2 * lv, 16 + 3 * lv], 1, 8);
+          s.expireAt = this.time + 18;
+          s.engageR = 90;
+          this.soldiers.push(s);
+          this.emit({ type: 'soldierSpawn', s });
+        }
+        r = 50;
+        break;
+      }
+      case 'elena': {
+        r = 90;
+        for (let i = 0; i < 26; i++) {
+          const tx = x + this.rng.range(-r, r) * 0.9;
+          const ty = y + this.rng.range(-r, r) * 0.6;
+          const p = new Projectile('heroArrow', tx - 40, ty - 440, tx, ty, 0.35 + i * 0.06, 0, null, 20 + 5 * lv, 'physical', 'hero', this.hero);
+          p.splash = 26;
+          p.hitsAir = true;
+          this.addProjectile(p);
+        }
+        break;
+      }
+      case 'lila': {
+        r = 105;
+        for (const e of near(r)) {
+          this.damageEnemy(e, 50 + 12 * lv, 'magic', 'hero');
+          if (!e.alive) continue;
+          const dur = e.def.boss ? 0.9 : 3;
+          e.stunUntil = Math.max(e.stunUntil, this.time + dur);
+          e.frozenUntil = Math.max(e.frozenUntil, this.time + dur);
+        }
+        this.emit({ type: 'explosion', x, y, r, kind: 'nova' });
+        break;
+      }
+      case 'rain': {
+        r = 100;
+        for (const e of near(r, true)) {
+          this.damageEnemy(e, 90 + 18 * lv, 'physical', 'hero');
+          if (e.alive) this.applyStun(e, 1.5);
+        }
+        this.emit({ type: 'beam', x1: x - r, y1: y - 10, x2: x + r, y2: y - 10, kind: 'charge' });
+        this.emit({ type: 'explosion', x, y, r, kind: 'bomblet' });
+        break;
+      }
+      case 'aria': {
+        r = 110;
+        const list = near(r);
+        for (let k = 0; k < 8 && list.length; k++) {
+          const e = list[k % list.length];
+          if (!e.alive) continue;
+          this.damageEnemy(e, 55 + 12 * lv, 'magic', 'hero');
+          if (e.alive) this.applyStun(e, 0.5);
+          this.emit({ type: 'lightning', pts: [{ x: e.x + this.rng.range(-20, 20), y: e.y - 300 }, { x: e.x, y: e.y - e.def.height * 0.5 }] });
+        }
+        break;
+      }
+      default:
+        return false;
+    }
+    this.heroUltCd = this.heroUltCdMax;
+    this.emit({ type: 'heroUlt', hero: hr.def.id, x, y, r });
     return true;
   }
 
@@ -586,6 +671,7 @@ export class World {
     this.time += dt;
     if (this.meteorCd > 0) this.meteorCd = Math.max(0, this.meteorCd - dt);
     if (this.reinfCd > 0) this.reinfCd = Math.max(0, this.reinfCd - dt);
+    if (this.heroUltCd > 0) this.heroUltCd = Math.max(0, this.heroUltCd - dt);
     this.updateWaves();
     for (const e of this.enemies) this.updateEnemy(e, dt);
     for (const t of this.towers) this.updateTower(t, dt);
