@@ -118,7 +118,37 @@ export function textStyle(o: TextOpts = {}): Phaser.Types.GameObjects.Text.TextS
 }
 
 export function addText(scene: Phaser.Scene, x: number, y: number, s: string, o: TextOpts = {}): Phaser.GameObjects.Text {
-  return scene.add.text(x, y, s, textStyle(o));
+  const t = scene.add.text(x, y, s, textStyle(o));
+  if (o.wrap && CJK.test(s)) kinsoku(t, s, o.wrap, o.size ?? 20);
+  return t;
+}
+
+const CJK = /[\u3000-\u9fff\uff00-\uffef]/;
+/** 不能出現在行首的標點（中文排版的避頭點） */
+const NO_LINE_START = '。，、．！？：；」』）】》〉〕…～,.!?:;)';
+
+/**
+ * 中文自動換行時，句號、逗號等標點不該落到行首：把上一行最後一個字一起帶下來。
+ * 處理完改用手動換行，換行寬度放寬一個字，避免之後被重新折行。
+ */
+function kinsoku(t: Phaser.GameObjects.Text, s: string, wrap: number, size: number): void {
+  let changed = false;
+  const out: string[] = [];
+  for (const para of s.split('\n')) {
+    const lines = t.getWrappedText(para);
+    for (let i = 1; i < lines.length; i++) {
+      let guard = 0;
+      while (lines[i] && NO_LINE_START.includes(lines[i][0]) && lines[i - 1].length > 2 && guard++ < 3) {
+        lines[i] = lines[i - 1].slice(-1) + lines[i];
+        lines[i - 1] = lines[i - 1].slice(0, -1);
+        changed = true;
+      }
+    }
+    out.push(...(lines.length ? lines : ['']));
+  }
+  if (!changed) return;
+  t.setWordWrapWidth(wrap + size, true);
+  t.setText(out.join('\n'));
 }
 
 /** 程序繪圖紋理的解析度倍率（畫在 2 倍大小，顯示時縮 0.5） */

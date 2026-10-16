@@ -60,6 +60,8 @@ export const ITEMS: Record<ItemId, ItemDef> = {
 export function gemReward(mode: LevelMode, victory: boolean, stars: number, firstClear: boolean, wave: number): number {
   if (mode === 'endless') return Math.floor(wave / 2);
   if (!victory) return 0;
+  // 每日挑戰：當天第一次過關給較多寶石
+  if (mode === 'daily') return firstClear ? 15 + stars * 3 : 0;
   if (mode === 'campaign') return 4 + stars * 3 + (firstClear ? 10 : 0);
   return firstClear ? 30 : 8;
 }

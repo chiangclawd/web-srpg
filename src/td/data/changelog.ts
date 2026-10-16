@@ -11,6 +11,16 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 3,
+    date: '2026-10-16',
+    title: { zh: '每日挑戰與分享成績', en: 'Daily Challenge & sharing' },
+    items: [
+      { zh: '地圖右上新增每日挑戰：每天換一關＋兩個修正，所有人同一題（通過該關即可挑戰）', en: 'New Daily Challenge (top right of the map): one level and two modifiers per day, the same for everyone (clear that level to take it on)' },
+      { zh: '每天第一次通過可得寶石，連續挑戰還有新成就', en: 'Gems for your first clear each day, plus new achievements' },
+      { zh: '結算畫面可一鍵分享成績給朋友', en: 'Share your result with friends from the results screen' },
+    ],
+  },
+  {
     id: 2,
     date: '2026-10-16',
     title: { zh: '修正 iPhone 閃退', en: 'iPhone crash fix' },

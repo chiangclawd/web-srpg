@@ -58,6 +58,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'minimalist', name: { zh: '以少勝多', en: 'Minimalist' }, desc: { zh: '第 3 關以後只用 6 座以內的塔通關', en: 'Win level 3 or later with 6 towers or fewer' }, icon: 'ic_check' },
   { id: 'endless_15', name: { zh: '堅守不退', en: 'Holdout' }, desc: { zh: '無盡模式撐到第 15 波', en: 'Reach wave 15 in Endless mode' }, icon: 'ic_skull' },
   { id: 'endless_30', name: { zh: '無盡守望', en: 'Eternal Watch' }, desc: { zh: '無盡模式撐到第 30 波', en: 'Reach wave 30 in Endless mode' }, icon: 'ic_crown' },
+  { id: 'daily_first', name: { zh: '每日一戰', en: 'Daily Duty' }, desc: { zh: '完成一次每日挑戰', en: 'Complete a daily challenge' }, icon: 'ic_star' },
+  { id: 'daily_7', name: { zh: '風雨無阻', en: 'Come Rain or Shine' }, desc: { zh: '累計完成 7 天每日挑戰', en: 'Complete 7 daily challenges' }, icon: 'ic_crown' },
   { id: 'hero_max', name: { zh: '傳奇之路', en: 'Legendary' }, desc: { zh: '任一英雄達到 10 級', en: 'Raise any hero to level 10' }, icon: 'ic_crown' },
 ];
 
@@ -104,6 +106,8 @@ export function evaluateAchievements(o: LevelOutcome, sv: SaveData): string[] {
   if (o.sheep >= 5) unlock('shepherd');
   if (o.heroLevel >= 10) unlock('hero_max');
   if (o.mode === 'endless' && o.wave >= 15) unlock('endless_15');
+  if (o.mode === 'daily' && o.victory) unlock('daily_first');
+  if (Object.values(sv.daily ?? {}).filter((n) => n > 0).length >= 7) unlock('daily_7');
   if (o.mode === 'endless' && o.wave >= 30) unlock('endless_30');
   sv.achievements = [...got];
   return fresh;

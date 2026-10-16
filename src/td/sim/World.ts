@@ -161,7 +161,8 @@ export class World {
 
   private costMul(type: TowerType): number {
     const m = this.mods;
-    return type === 'archer' ? m.archerCost : type === 'barracks' ? m.barracksCost : type === 'mage' ? m.mageCost : m.artCost;
+    const base = type === 'archer' ? m.archerCost : type === 'barracks' ? m.barracksCost : type === 'mage' ? m.mageCost : m.artCost;
+    return base * (this.level.rules?.towerCostMul ?? 1);
   }
 
   buildCost(type: TowerType): number {
@@ -674,7 +675,10 @@ export class World {
     const def = ENEMIES[id];
     const path = this.paths[pathIndex];
     const ln = lane ?? this.rng.range(-1, 1) * (def.flying ? 22 : 13);
-    const e = new Enemy(def, path, pathIndex, ln, (def.boss ? DIFF_BOSS_HP[this.difficulty] : DIFF_HP[this.difficulty]) * hpMul, this.time);
+    const r = this.level.rules;
+    const e = new Enemy(def, path, pathIndex, ln, (def.boss ? DIFF_BOSS_HP[this.difficulty] : DIFF_HP[this.difficulty]) * hpMul * (r?.enemyHpMul ?? 1), this.time);
+    if (r?.enemySpeedMul) e.speed *= r.enemySpeedMul;
+    if (r?.enemyArmorAdd) e.armor = Math.min(0.9, e.armor + r.enemyArmorAdd);
     e.d = d;
     e.waveMul = hpMul;
     path.posAt(e.d, e.lane, e);
@@ -959,7 +963,7 @@ export class World {
     e.alive = false;
     e.hp = 0;
     this.releaseEngagers(e);
-    const g = e.def.gold;
+    const g = Math.round(e.def.gold * (this.level.rules?.bountyMul ?? 1));
     this.gold += g;
     this.stats.goldEarned += g;
     this.stats.kills++;

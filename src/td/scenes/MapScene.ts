@@ -5,6 +5,7 @@ import { UPGRADE_COLUMNS } from '../data/upgrades';
 import { HEROES } from '../data/heroes';
 import { paintWorldMap } from '../art/worldmap';
 import { showTipBubble } from '../ui/tip';
+import { DAILY_MODS, dailyBaseLevel, dailyKey, dailySpec } from '../data/daily';
 import { Button, IconButton, panel } from '../ui/widgets';
 import { L, T, getLang } from '../i18n';
 import { save, persist, totalStars } from '../save';
@@ -160,10 +161,79 @@ export class MapScene extends Phaser.Scene {
     const enc = new Button(this, right - 150, VIEW_H - 42, 140, 56, T('encyclopedia'), () => this.leave('Encyclopedia'), { color: 'wood', icon: 'ic_book', iconSize: 34, text: { size: 20 } });
     const ach = new Button(this, right - 630, VIEW_H - 42, 140, 56, T('achievements'), () => this.leave('Achievements'), { color: 'wood', icon: 'ic_crown', iconSize: 34, text: { size: 20 } });
     const shop = new Button(this, right - 790, VIEW_H - 42, 140, 56, T('shop'), () => this.leave('Shop'), { color: 'red', icon: 'ic_gem', iconSize: 32, text: { size: 20 } });
+    // 每日挑戰（通關第 3 關後開放）
+    const dailyOpen = (save().stars.l3 ?? 0) > 0;
+    const dly = new Button(this, right - 104, 34, 180, 48, T('daily'), () => {
+      if (!dailyOpen) {
+        sfx.play('error');
+        this.toastMsg(T('dailyLocked'));
+        return;
+      }
+      this.showDaily();
+    }, { color: dailyOpen ? 'gold' : 'grey', icon: 'ic_star', iconSize: 28, text: { size: 18 }, sound: dailyOpen });
+    if (!dailyOpen) dly.add(this.add.image(72, -14, 'ic_lock').setDisplaySize(20, 20));
+    else if (!save().daily[dailyKey()] && (save().stars[dailySpec(dailyKey()).levelId] ?? 0) > 0) {
+      // 今天的挑戰打得了、還沒過：小紅點提醒
+      const dot = this.add.circle(right - 22, 16, 9, 0xc0392b).setStrokeStyle(2, 0xffffff);
+      this.tweens.add({ targets: dot, scale: 1.25, duration: 500, yoyo: true, repeat: -1 });
+      this.hud.push(dot);
+    }
+    this.hud.push(dly);
     this.hud.push(back, up, hb, enc, ach, shop);
     for (const o of [back, up, hb, enc, sp, si, st]) (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(500);
     this.hud.forEach((o) => (o as unknown as Phaser.GameObjects.Components.Depth).setDepth?.(500));
     void up;
+  }
+
+  /** 每日挑戰面板：今天的關卡、兩個修正、今日最佳 */
+  private showDaily(): void {
+    this.infoPanel?.destroy();
+    const key = dailyKey();
+    const spec = dailySpec(key);
+    const lv = dailyBaseLevel(key);
+    const idx = LEVELS.indexOf(lv);
+    const sv = save();
+    const w = viewW(this);
+    const left = -(w - PLAY_W) / 2;
+    const pw = 460;
+    const ph = 470;
+    const c = this.add.container(left + w / 2, 335).setDepth(650);
+    c.add(panel(this, 0, 0, pw, ph));
+    c.add(addText(this, 0, -ph / 2 + 36, T('dailyTitle', key), { size: 26, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0.5));
+    c.add(addText(this, 0, -ph / 2 + 70, T('dailyHint'), { size: 14, color: '#5a3a1a', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: pw - 60, align: 'center' }).setOrigin(0.5, 0));
+    c.add(addText(this, 0, -ph / 2 + 130, `${idx + 1}. ${L(lv.name)}`, { size: 24, display: true, color: '#7a4a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0.5));
+    let y = -ph / 2 + 176;
+    for (const id of spec.mods) {
+      const m = DAILY_MODS[id];
+      const col = m.good ? '#2a6a1a' : '#9a2a1a';
+      c.add(this.add.image(-pw / 2 + 46, y + 10, m.good ? 'ui_badge_green' : 'ui_badge_red').setDisplaySize(40, 40));
+      c.add(this.add.image(-pw / 2 + 46, y + 10, m.good ? 'ic_coin' : 'ic_skull').setDisplaySize(24, 24));
+      c.add(addText(this, -pw / 2 + 76, y, L(m.name), { size: 18, display: true, color: col, stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
+      const desc = id === 'limited' ? T('dailyLimited', spec.towers.map((t) => L(TOWERS[t].name)).join('、')) : L(m.desc);
+      c.add(addText(this, -pw / 2 + 76, y + 22, desc, { size: 14, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0, 0.5));
+      y += 58;
+    }
+    const best = sv.daily[key] ?? 0;
+    c.add(addText(this, -60, ph / 2 - 120, T('todayBest'), { size: 18, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(1, 0.5));
+    for (let k = 0; k < 3; k++) c.add(this.add.image(-30 + k * 36, ph / 2 - 120, k < best ? 'ic_star' : 'ic_star_empty').setDisplaySize(32, 32));
+    // 要先通過當天這一關（戰役進度不夠時提示要打哪一關）
+    const cleared = (sv.stars[lv.id] ?? 0) > 0;
+    const go = new Button(this, 0, ph / 2 - 50, 220, 60, T('battle'), () => {
+      sfx.play('horn', 0.7);
+      this.cameras.main.fadeOut(300, 0, 0, 0);
+      this.time.delayedCall(310, () => this.scene.start('Level', { levelId: lv.id, difficulty: 'normal', mode: 'daily' }));
+    }, { color: 'green', icon: 'ic_reinforce', iconSize: 34, text: { size: 26 }, disabled: !cleared });
+    c.add(go);
+    if (!cleared) {
+      c.add(addText(this, 0, ph / 2 - 92, T('dailyNeedLevel', `${idx + 1}. ${L(lv.name)}`), { size: 15, color: '#9a2a1a', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0.5));
+    }
+    c.add(new IconButton(this, pw / 2 - 18, -ph / 2 + 18, 40, 'ic_close', () => {
+      this.infoPanel?.destroy();
+      this.infoPanel = null;
+    }));
+    c.setScale(0.85).setAlpha(0);
+    this.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 220, ease: 'Back.easeOut' });
+    this.infoPanel = c;
   }
 
   /** 地圖首次提示：有星星可用 → 指向升級；寶石夠買道具 → 指向商店 */
@@ -216,7 +286,7 @@ export class MapScene extends Phaser.Scene {
     // 模式分頁：戰役 / 英雄挑戰 / 鋼鐵挑戰（通關戰役後解鎖，各給 1 星）
     const beaten = (sv.stars[lv.id] ?? 0) > 0;
     const ch = sv.challenges[lv.id] ?? {};
-    const modes: LevelMode[] = ['campaign', 'heroic', 'iron', 'endless'];
+    const modes = ['campaign', 'heroic', 'iron', 'endless'] as const;
     const TAB_COLOR = { campaign: 'gold', heroic: 'red', iron: 'blue', endless: 'green' } as const;
     modes.forEach((m, k) => {
       const locked = m !== 'campaign' && !beaten;

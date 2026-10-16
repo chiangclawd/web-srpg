@@ -10,6 +10,8 @@ import type { EnemyDef } from '../sim/defs';
 import { IconButton, Button, panel, dimmer } from '../ui/widgets';
 import { playDialog } from '../ui/dialog';
 import { showTipBubble } from '../ui/tip';
+import { shareResult } from '../ui/share';
+import { DAILY_MODS, dailySpec } from '../data/daily';
 import { L, T } from '../i18n';
 import { save, persist } from '../save';
 import { sfx } from '../audio';
@@ -604,7 +606,8 @@ export class LevelUIScene extends Phaser.Scene {
     const c = this.add.container(w / 2, VIEW_H / 2).setDepth(100);
     c.add(dimmer(this, w * 2, VIEW_H * 2, 0.6).setPosition(-w, -VIEW_H));
     c.add(panel(this, 0, 20, 500, 380));
-    const challenge = this.lvl.mode0 !== 'campaign';
+    const challenge = this.lvl.mode0 === 'heroic' || this.lvl.mode0 === 'iron';
+    const daily = this.lvl.mode0 === 'daily';
     const title = addText(this, 0, -150, victory ? (challenge ? T('challengeDone') : T('victory')) : T('defeat'), {
       size: 54,
       display: true,
@@ -665,13 +668,18 @@ export class LevelUIScene extends Phaser.Scene {
       this.gemLine(c, 84);
       const idx = LEVELS.findIndex((l) => l.id === this.lvl.level.id);
       const next = LEVELS[idx + 1];
-      c.add(new Button(this, -150, 140, 140, 52, T('retry'), () => this.lvl.restart(), { color: 'gold' }));
-      c.add(new Button(this, 0, 140, 140, 52, T('toMap'), () => this.lvl.exitToMap(), { color: 'blue' }));
-      // 主線最終關 → 尾聲；外傳關卡之間 → 下一關；最後一關 → 回地圖
-      const finale = !this.lvl.level.bonus && (!next || next.bonus);
-      if (finale) c.add(new Button(this, 150, 140, 140, 52, T('epilogue'), () => this.lvl.exitToEnding(), { color: 'green' }));
-      else if (next) c.add(new Button(this, 150, 140, 140, 52, T('next'), () => this.lvl.exitToMap(next.id), { color: 'green' }));
-      else c.add(new Button(this, 150, 140, 140, 52, 'OK', () => this.lvl.exitToMap(), { color: 'green' }));
+      // 每日挑戰只有再試／回地圖；主線最終關 → 尾聲；外傳關卡之間 → 下一關；最後一關 → 回地圖
+      if (daily) {
+        c.add(new Button(this, -100, 140, 170, 52, T('retry'), () => this.lvl.restart(), { color: 'gold' }));
+        c.add(new Button(this, 100, 140, 170, 52, T('toMap'), () => this.lvl.exitToMap(), { color: 'blue' }));
+      } else {
+        c.add(new Button(this, -150, 140, 140, 52, T('retry'), () => this.lvl.restart(), { color: 'gold' }));
+        c.add(new Button(this, 0, 140, 140, 52, T('toMap'), () => this.lvl.exitToMap(), { color: 'blue' }));
+        const finale = !this.lvl.level.bonus && (!next || next.bonus);
+        if (finale) c.add(new Button(this, 150, 140, 140, 52, T('epilogue'), () => this.lvl.exitToEnding(), { color: 'green' }));
+        else if (next) c.add(new Button(this, 150, 140, 140, 52, T('next'), () => this.lvl.exitToMap(next.id), { color: 'green' }));
+        else c.add(new Button(this, 150, 140, 140, 52, 'OK', () => this.lvl.exitToMap(), { color: 'green' }));
+      }
     } else {
       const tip = addText(this, 0, -30, TIPS[Math.floor(Math.random() * TIPS.length)][save().settings.lang], {
         size: 18,
@@ -687,9 +695,35 @@ export class LevelUIScene extends Phaser.Scene {
       c.add(new Button(this, -100, 120, 170, 56, T('retry'), () => this.lvl.restart(), { color: 'green' }));
       c.add(new Button(this, 100, 120, 170, 56, T('toMap'), () => this.lvl.exitToMap(), { color: 'blue' }));
     }
+    if (victory) this.addShare(c, this.shareText(stars));
     this.modal = c;
     c.setScale(0.6).setAlpha(0);
     this.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 350, ease: 'Back.easeOut' });
+  }
+
+  /** 結算面板右上角的分享鈕 */
+  private addShare(c: Phaser.GameObjects.Container, text: string): void {
+    const b = new IconButton(this, 218, -150, 58, 'ic_share', () => shareResult(text, () => this.toast(T('shareCopied'))), 'ui_badge_blue');
+    c.add(b);
+  }
+
+  private shareText(stars: number, wave = 0): string {
+    const lv = this.lvl.level;
+    const idx = LEVELS.findIndex((l) => l.id === lv.id);
+    const starStr = '★'.repeat(stars) + '☆'.repeat(Math.max(0, 3 - stars));
+    switch (this.lvl.mode0) {
+      case 'endless':
+        return T('shareEndless', L(lv.name), wave);
+      case 'heroic':
+      case 'iron':
+        return T('shareChallenge', L(lv.name), T(this.lvl.mode0));
+      case 'daily': {
+        const spec = dailySpec(this.lvl.dailyKey);
+        return T('shareDaily', this.lvl.dailyKey, starStr, spec.mods.map((m) => L(DAILY_MODS[m].name)).join('・'));
+      }
+      default:
+        return T('shareCampaign', idx + 1, L(lv.name), starStr);
+    }
   }
 
   /** 無盡模式結算：到達波數＋最佳紀錄 */
@@ -726,6 +760,7 @@ export class LevelUIScene extends Phaser.Scene {
       }).setOrigin(0.5),
     );
     this.gemLine(c, 86);
+    this.addShare(c, this.shareText(0, reached));
     c.add(new Button(this, -100, 140, 170, 56, T('retry'), () => this.lvl.restart(), { color: 'green' }));
     c.add(new Button(this, 100, 140, 170, 56, T('toMap'), () => this.lvl.exitToMap(), { color: 'blue' }));
     this.modal = c;
