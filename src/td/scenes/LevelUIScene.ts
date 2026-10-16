@@ -2,11 +2,12 @@ import Phaser from 'phaser';
 import { VIEW_H, addText, setupCamera, viewW } from '../config';
 import { ENEMIES } from '../data/enemies';
 import { ACHIEVEMENTS } from '../data/achievements';
-import { SPEAKERS, type StoryLine } from '../data/story';
+import type { StoryLine } from '../data/story';
 import { LEVELS } from '../data/levels';
 import { HERO_XP_TABLE, HERO_MAX_LEVEL } from '../data/heroes';
 import type { EnemyDef } from '../sim/defs';
 import { IconButton, Button, panel, dimmer } from '../ui/widgets';
+import { playDialog } from '../ui/dialog';
 import { L, T } from '../i18n';
 import { save, persist } from '../save';
 import { sfx } from '../audio';
@@ -399,76 +400,11 @@ export class LevelUIScene extends Phaser.Scene {
   showStory(lines: StoryLine[], done: () => void): void {
     this.lvl.togglePause(true);
     this.closeModal();
-    const w = viewW(this);
-    const c = this.add.container(0, 0).setDepth(110);
-    const dim = dimmer(this, w, VIEW_H, 0.5);
-    c.add(dim);
-    const box = this.add.container(w / 2, VIEW_H - 92);
-    box.add(panel(this, 0, 0, Math.min(w - 80, 1100), 140, 'ui_dark', 22));
-    const bw = Math.min(w - 80, 1100);
-    const name = addText(this, -bw / 2 + 30, -50, '', { size: 24, display: true, color: '#ffd36b' });
-    const text = addText(this, -bw / 2 + 30, -14, '', { size: 21, color: '#f4e8cc', wrap: bw - 60, lineSpacing: 6 });
-    const hint = addText(this, bw / 2 - 24, 52, '▼', { size: 18, color: '#ffd36b' }).setOrigin(1, 1);
-    this.tweens.add({ targets: hint, y: 46, duration: 500, yoyo: true, repeat: -1 });
-    box.add([name, text, hint]);
-    let portrait: Phaser.GameObjects.Image | null = null;
-    c.add(box);
-    const skip = new Button(this, w - 90, 40, 140, 44, `${T('skip')} ▶▶`, () => finish(), { color: 'grey', text: { size: 16 } });
-    c.add(skip);
-    this.modal = c;
-    let idx = -1;
-    let typing: Phaser.Time.TimerEvent | null = null;
-    let full = '';
-    const finish = () => {
-      typing?.remove();
-      c.destroy();
+    this.modal = playDialog(this, lines, () => {
       this.modal = null;
       this.lvl.togglePause(false);
       done();
-    };
-    const next = () => {
-      if (typing && text.text.length < full.length) {
-        typing.remove();
-        typing = null;
-        text.setText(full);
-        return;
-      }
-      idx++;
-      if (idx >= lines.length) {
-        finish();
-        return;
-      }
-      const ln = lines[idx];
-      const sp = SPEAKERS[ln.who];
-      const enemy = !!sp?.enemy;
-      name.setText(L(sp?.name ?? { zh: ln.who, en: ln.who }));
-      name.setColor(enemy ? '#ff8a6a' : '#ffd36b');
-      full = L(ln.text);
-      text.setText('');
-      // 立繪：我方在左、敵方在右
-      portrait?.destroy();
-      if (this.textures.exists(`pt_${ln.who}`)) {
-        const px = enemy ? w - 210 : 210;
-        portrait = this.add.image(px + (enemy ? 60 : -60), VIEW_H - 150, `pt_${ln.who}`).setOrigin(0.5, 1);
-        portrait.setScale(Math.min(400 / portrait.frame.height, 380 / portrait.frame.width));
-        if (enemy) portrait.setFlipX(true);
-        portrait.setAlpha(0);
-        c.addAt(portrait, 1);
-        this.tweens.add({ targets: portrait, x: px, alpha: 1, duration: 260, ease: 'Cubic.easeOut' });
-      }
-      let n = 0;
-      typing = this.time.addEvent({
-        delay: 28,
-        repeat: full.length - 1,
-        callback: () => {
-          n++;
-          text.setText(full.slice(0, n));
-          if (n % 3 === 0) sfx.play('click', 0.15);
-        },
-      });
-    };
-    dim.on('pointerdown', () => next());
-    next();
+    });
   }
 
   private closeModal(): void {
@@ -582,7 +518,7 @@ export class LevelUIScene extends Phaser.Scene {
       c.add(new Button(this, -150, 140, 140, 52, T('retry'), () => this.lvl.restart(), { color: 'gold' }));
       c.add(new Button(this, 0, 140, 140, 52, T('toMap'), () => this.lvl.exitToMap(), { color: 'blue' }));
       if (next) c.add(new Button(this, 150, 140, 140, 52, T('next'), () => this.lvl.exitToMap(next.id), { color: 'green' }));
-      else c.add(new Button(this, 150, 140, 140, 52, 'OK', () => this.lvl.exitToMap(), { color: 'green' }));
+      else c.add(new Button(this, 150, 140, 140, 52, T('epilogue'), () => this.lvl.exitToEnding(), { color: 'green' }));
     } else {
       const tip = addText(this, 0, -30, TIPS[Math.floor(Math.random() * TIPS.length)][save().settings.lang], {
         size: 18,

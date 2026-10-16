@@ -10,7 +10,7 @@ import { sfx } from '../audio';
 import { Path } from '../sim/Path';
 
 /** 標題畫面背景用的裝飾地圖 */
-const MENU_LEVEL: LevelDef = {
+export const MENU_LEVEL: LevelDef = {
   id: 'menu',
   index: -1,
   name: { zh: '', en: '' },
@@ -107,8 +107,12 @@ export class MenuScene extends Phaser.Scene {
     this.tweens.add({ targets: title, y: 126, duration: 2200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     const start = new Button(this, cx, 300, 280, 74, T('start'), () => this.go(), { color: 'green', text: { size: 34 } }).setDepth(2000);
     this.tweens.add({ targets: start, scale: 1.04, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    const set = new Button(this, cx - 82, 386, 150, 52, T('settings'), () => this.settings(), { color: 'wood' }).setDepth(2000);
-    const srpg = new Button(this, cx + 82, 386, 150, 52, T('srpg'), () => (window.location.href = './'), { color: 'blue', text: { size: 18 } }).setDepth(2000);
+    const set = new Button(this, cx - 164, 386, 150, 52, T('settings'), () => this.settings(), { color: 'wood' }).setDepth(2000);
+    const cred = new Button(this, cx, 386, 150, 52, T('credits'), () => {
+      this.cameras.main.fadeOut(300, 0, 0, 0);
+      this.time.delayedCall(310, () => this.scene.start('Ending', { epilogue: false, back: 'Menu' }));
+    }, { color: 'wood' }).setDepth(2000);
+    const srpg = new Button(this, cx + 164, 386, 150, 52, T('srpg'), () => (window.location.href = './'), { color: 'blue', text: { size: 18 } }).setDepth(2000);
     const lang = new Button(this, cx + w / 2 - 70, 40, 100, 44, getLang() === 'zh' ? 'EN' : '中文', () => {
       setLang(getLang() === 'zh' ? 'en' : 'zh');
       save().settings.lang = getLang();
@@ -116,7 +120,7 @@ export class MenuScene extends Phaser.Scene {
       this.build();
     }, { color: 'grey' }).setDepth(2000);
     const ver = addText(this, cx + w / 2 - 12, VIEW_H - 10, `v${__APP_VERSION__} · ${__GIT_SHA__}`, { size: 13, color: '#e8d8b8', strokeW: 3 }).setOrigin(1, 1).setDepth(2000);
-    this.ui.push(title, sub, start, set, srpg, lang, ver);
+    this.ui.push(title, sub, start, set, cred, srpg, lang, ver);
   }
 
   private go(): void {

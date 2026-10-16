@@ -76,3 +76,15 @@ export const STORY: Record<string, StoryLine[]> = {
     { who: 'arthur', text: { zh: '這是最後一戰。為了王國，為了所有人，守住終焉之門！', en: 'This is the last battle. For the kingdom and for everyone, hold the Gate of the End!' } },
   ],
 };
+
+/** 通關最終關後的尾聲 */
+export const EPILOGUE: StoryLine[] = [
+  { who: 'cult_leader', text: { zh: '不可能……深淵之門，竟然被凡人封上了……', en: 'Impossible... the Abyss Gate, sealed by mere mortals...' } },
+  { who: 'arthur', text: { zh: '門已經關上了。黑暗教派的陰謀，到此為止。', en: 'The gate is shut. The cult’s scheme ends here.' } },
+  { who: 'elena', text: { zh: '北方的蠻族也撤回山裡了。這一次，是真正的和平。', en: 'The northern clans have gone back to the hills. This time the peace is real.' } },
+  { who: 'lila', text: { zh: '王都的法師們正在淨化荒原，花草很快就會長回來的。', en: 'The royal mages are cleansing the wastes. The flowers will grow back soon.' } },
+  { who: 'rain', text: { zh: '卡爾將軍最後說了聲「謝謝」。也許，他一直在等人阻止他。', en: 'General Carl said “thank you” at the end. Maybe he was waiting for someone to stop him.' } },
+  { who: 'aria', text: { zh: '我飛遍了整個王國，每個村莊都在慶祝！', en: 'I flew over the whole kingdom. Every village is celebrating!' } },
+  { who: 'gary', text: { zh: '村民說要在村口立一座紀念碑，就立在我們蓋第一座箭塔的地方！', en: 'The villagers want a monument at the gate, right where we built our first archer tower!' } },
+  { who: 'arthur', text: { zh: '那就回家吧。為了守護這片土地的每一個人，乾杯！', en: 'Then let us go home. To everyone who held this land together. Cheers!' } },
+];

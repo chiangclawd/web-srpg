@@ -1266,6 +1266,15 @@ export class LevelScene extends Phaser.Scene {
     });
   }
 
+  /** 最終關通關 → 尾聲與製作群 */
+  exitToEnding(): void {
+    this.cameras.main.fadeOut(400, 0, 0, 0);
+    this.time.delayedCall(420, () => {
+      this.scene.stop('LevelUI');
+      this.scene.start('Ending', { epilogue: true, back: 'Map' });
+    });
+  }
+
   heroView(): UnitView | undefined {
     return this.world.hero ? this.soldierViews.get(this.world.hero.id) : undefined;
   }
