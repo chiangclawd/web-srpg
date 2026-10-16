@@ -39,6 +39,8 @@ export class RadialMenu extends Phaser.GameObjects.Container {
     y: number,
     options: RadialOption[],
     radius = 64,
+    /** 手機上整個選單放大（按鈕接近手指大小） */
+    private zoom = 1,
   ) {
     super(scene, x, y);
     this.setDepth(DEPTH.menu);
@@ -52,9 +54,9 @@ export class RadialMenu extends Phaser.GameObjects.Container {
     this.add(ring);
     for (const o of options) this.addOption(o, radius);
     scene.add.existing(this);
-    this.setScale(0.3);
+    this.setScale(0.3 * zoom);
     this.setAlpha(0);
-    scene.tweens.add({ targets: this, scale: 1, alpha: 1, duration: 200, ease: 'Back.easeOut' });
+    scene.tweens.add({ targets: this, scale: zoom, alpha: 1, duration: 200, ease: 'Back.easeOut' });
   }
 
   private addOption(o: RadialOption, radius: number): void {
@@ -144,6 +146,6 @@ export class RadialMenu extends Phaser.GameObjects.Container {
   close(): void {
     if (this.closing) return;
     this.closing = true;
-    this.scene.tweens.add({ targets: this, scale: 0.4, alpha: 0, duration: 140, onComplete: () => this.destroy() });
+    this.scene.tweens.add({ targets: this, scale: 0.4 * this.zoom, alpha: 0, duration: 140, onComplete: () => this.destroy() });
   }
 }

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { VIEW_H, addText, fitText, setupCamera, viewW } from '../config';
+import { VIEW_H, addText, fitText, setupCamera, viewW, uiZoom } from '../config';
 import { HEROES, HERO_ORDER, HERO_XP_TABLE, HERO_MAX_LEVEL, heroLevelForXp } from '../data/heroes';
 import { LEVELS } from '../data/levels';
 import { heroStats } from '../sim/World';
@@ -137,7 +137,8 @@ export class HeroScene extends Phaser.Scene {
       const lvName = LEVELS.find((l) => l.id === h.unlockAfter);
       add(addText(this, px + Math.min(w - 220, 1000) / 2 - 110, 140, T('unlockAfter', L(lvName?.name)), { size: 16, display: true, color: '#c0392b', stroke: '#f4e2b8', strokeW: 2, shadow: false, wrap: 200, align: 'center' }).setOrigin(0.5));
     }
-    add(new IconButton(this, 44, 40, 60, 'ic_close', () => this.back()));
+    // 手機上關閉鈕放大（以左上角為錨點）
+    add(new IconButton(this, 12 + 30 * uiZoom(), 10 + 30 * uiZoom(), 60, 'ic_close', () => this.back()).setBaseScale(uiZoom()));
   }
 
   private back(): void {

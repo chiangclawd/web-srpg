@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 5,
+    date: '2026-10-16',
+    title: { zh: '手機按鈕更好按', en: 'Bigger buttons on phones' },
+    items: [
+      { zh: '手機上英雄、法術、絕招、道具、暫停／加速、建塔選單、呼叫波次與地圖按鈕整體放大', en: 'On phones, hero, spell, ultimate, item, pause/speed, build menu, wave call and map buttons are all larger' },
+      { zh: '微調第 5、9、10、14 關各一個建造點，避免被放大的按鈕蓋住', en: 'Nudged one build spot each in levels 5, 9, 10 and 14 so the bigger buttons do not cover them' },
+    ],
+  },
+  {
     id: 4,
     date: '2026-10-16',
     title: { zh: '手機文字更清楚', en: 'Readable text on phones' },

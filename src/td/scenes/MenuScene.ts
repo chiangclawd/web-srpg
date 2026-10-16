@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PLAY_W, PLAY_X0, TEX, VIEW_H, WORLD_W, addText, bgScale, setupCamera, viewW, type Quality } from '../config';
+import { PLAY_W, PLAY_X0, TEX, VIEW_H, WORLD_W, addText, bgScale, setupCamera, uiZoom, viewW, type Quality } from '../config';
 import { paintLevel } from '../art/terrain';
 import type { LevelDef } from '../sim/defs';
 import { TW_BASE, TW_H } from '../art/towers';
@@ -120,23 +120,27 @@ export class MenuScene extends Phaser.Scene {
     title.setFill(grd);
     const sub = addText(this, cx, 196, getLang() === 'zh' ? 'KINGDOM BASTION' : '王國防線', { size: 26, display: true, color: '#f4e2b8', strokeW: 6 }).setOrigin(0.5).setDepth(2000);
     this.tweens.add({ targets: title, y: 126, duration: 2200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    const start = new Button(this, cx, 300, 280, 74, T('start'), () => this.go(), { color: 'green', text: { size: 34 } }).setDepth(2000);
+    // 主按鈕一組，手機上整組放大
+    const z = uiZoom();
+    const btns = this.add.container(cx, 300).setScale(z).setDepth(2000);
+    const start = new Button(this, 0, 0, 280, 74, T('start'), () => this.go(), { color: 'green', text: { size: 34 } });
     this.tweens.add({ targets: start, scale: 1.04, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    const set = new Button(this, cx - 164, 386, 150, 52, T('settings'), () => this.settings(), { color: 'wood' }).setDepth(2000);
-    const cred = new Button(this, cx, 386, 150, 52, T('credits'), () => {
+    const set = new Button(this, -164, 86, 150, 52, T('settings'), () => this.settings(), { color: 'wood' });
+    const cred = new Button(this, 0, 86, 150, 52, T('credits'), () => {
       this.cameras.main.fadeOut(300, 0, 0, 0);
       this.time.delayedCall(310, () => this.scene.start('Ending', { epilogue: false, back: 'Menu' }));
-    }, { color: 'wood' }).setDepth(2000);
-    const srpg = new Button(this, cx + 164, 386, 150, 52, T('srpg'), () => (window.location.href = './'), { color: 'blue', text: { size: 18 } }).setDepth(2000);
-    const lang = new Button(this, cx + w / 2 - 70, 40, 100, 44, getLang() === 'zh' ? 'EN' : '中文', () => {
+    }, { color: 'wood' });
+    const srpg = new Button(this, 164, 86, 150, 52, T('srpg'), () => (window.location.href = './'), { color: 'blue', text: { size: 18 } });
+    btns.add([start, set, cred, srpg]);
+    const lang = new Button(this, cx + w / 2 - 14 - 50 * z, 12 + 22 * z, 100, 44, getLang() === 'zh' ? 'EN' : '中文', () => {
       setLang(getLang() === 'zh' ? 'en' : 'zh');
       save().settings.lang = getLang();
       persist();
       this.build();
-    }, { color: 'grey' }).setDepth(2000);
+    }, { color: 'grey' }).setBaseScale(z).setDepth(2000);
     const ver = addText(this, cx + w / 2 - 12, VIEW_H - 10, `v${__APP_VERSION__} · ${__GIT_SHA__}`, { size: 13, color: '#e8d8b8', strokeW: 3 }).setOrigin(1, 1).setDepth(2000);
-    const news = new Button(this, cx - w / 2 + 84, 40, 140, 44, T('news'), () => this.showNews(), { color: 'grey', text: { size: 16 } }).setDepth(2000);
-    this.ui.push(title, sub, start, set, cred, srpg, lang, ver, news);
+    const news = new Button(this, cx - w / 2 + 14 + 70 * z, 12 + 22 * z, 140, 44, T('news'), () => this.showNews(), { color: 'grey', text: { size: 16 } }).setBaseScale(z).setDepth(2000);
+    this.ui.push(title, sub, btns, lang, ver, news);
   }
 
   /** 更新內容：有新的條目時開場自動跳出一次 */

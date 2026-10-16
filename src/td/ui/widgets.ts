@@ -25,6 +25,8 @@ export class Button extends Phaser.GameObjects.Container {
   readonly hit: Phaser.GameObjects.Rectangle;
   private icon?: Phaser.GameObjects.Image;
   private enabled = true;
+  /** 按下動畫以這個倍率為基準（手機上整顆放大時用） */
+  private baseScale = 1;
 
   constructor(scene: Phaser.Scene, x: number, y: number, w: number, h: number, text: string, onClick: () => void, o: ButtonOpts = {}) {
     super(scene, x, y);
@@ -54,16 +56,16 @@ export class Button extends Phaser.GameObjects.Container {
         return;
       }
       pressed = true;
-      this.setScale(0.94);
+      this.setScale(this.baseScale * 0.94);
     });
     this.hit.on('pointerout', () => {
       pressed = false;
-      this.setScale(1);
+      this.setScale(this.baseScale);
     });
     this.hit.on('pointerup', () => {
       if (!pressed) return;
       pressed = false;
-      this.setScale(1);
+      this.setScale(this.baseScale);
       if (o.sound !== false) sfx.play('click');
       onClick();
     });
@@ -85,6 +87,11 @@ export class Button extends Phaser.GameObjects.Container {
     return this;
   }
 
+  setBaseScale(s: number): this {
+    this.baseScale = s;
+    return this.setScale(s);
+  }
+
   private labelRoom = 0;
 
   /** 字太長（手機放大字體、英文版）就縮小到塞得進按鈕 */
@@ -101,6 +108,7 @@ export class IconButton extends Phaser.GameObjects.Container {
   readonly hit: Phaser.GameObjects.Arc;
   private enabled = true;
   private size: number;
+  private baseScale = 1;
 
   constructor(scene: Phaser.Scene, x: number, y: number, size: number, icon: string, onClick: () => void, badge = 'ui_badge', iconScale = 0.62) {
     super(scene, x, y);
@@ -115,16 +123,16 @@ export class IconButton extends Phaser.GameObjects.Container {
     this.hit.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
       ev?.stopPropagation?.();
       pressed = true;
-      this.setScale(0.9);
+      this.setScale(this.baseScale * 0.9);
     });
     this.hit.on('pointerout', () => {
       pressed = false;
-      this.setScale(1);
+      this.setScale(this.baseScale);
     });
     this.hit.on('pointerup', () => {
       if (!pressed) return;
       pressed = false;
-      this.setScale(1);
+      this.setScale(this.baseScale);
       if (!this.enabled) {
         sfx.play('error', 0.6);
         return;
@@ -133,6 +141,12 @@ export class IconButton extends Phaser.GameObjects.Container {
       onClick();
     });
     scene.add.existing(this);
+  }
+
+  /** 手機上整顆放大：按下動畫以此為基準 */
+  setBaseScale(s: number): this {
+    this.baseScale = s;
+    return this.setScale(s);
   }
 
   setIcon(icon: string): this {

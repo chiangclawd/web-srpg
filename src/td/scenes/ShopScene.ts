@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { VIEW_H, addText, setupCamera, viewW } from '../config';
+import { VIEW_H, addText, setupCamera, viewW, uiZoom } from '../config';
 import { ITEMS, ITEM_ORDER, type ItemId } from '../data/items';
 import { Button, IconButton, panel } from '../ui/widgets';
 import { L, T } from '../i18n';
@@ -65,7 +65,8 @@ export class ShopScene extends Phaser.Scene {
       const btn = add(new Button(this, x, y + 138, Math.min(170, cw - 50), 54, String(it.price), () => this.buy(id), { color: 'green', icon: 'ic_gem', iconSize: 30, text: { size: 24 } }));
       this.buyBtns[id] = btn;
     });
-    add(new IconButton(this, 44, 44, 60, 'ic_close', () => this.back()));
+    // 手機上關閉鈕放大（以左上角為錨點）
+    add(new IconButton(this, 12 + 30 * uiZoom(), 10 + 30 * uiZoom(), 60, 'ic_close', () => this.back()).setBaseScale(uiZoom()));
     this.refresh();
   }
 
