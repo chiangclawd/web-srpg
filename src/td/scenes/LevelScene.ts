@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PLAY_W, PLAY_X0, TEX, VIEW_H, WORLD_W, bgScale, freeCanvasTexture, setupCamera, viewW } from '../config';
+import { PLAY_W, PLAY_X0, TEX, VIEW_H, WORLD_W, bgScale, freeCanvasTexture, setupCamera, uiZoom, viewW } from '../config';
 import { getLevel } from '../data/levels';
 import { HEROES } from '../data/heroes';
 import { TOWERS, TOWER_ORDER } from '../data/towers';
@@ -516,7 +516,7 @@ export class LevelScene extends Phaser.Scene {
         },
       };
     });
-    this.menu = new RadialMenu(this, s.x, s.y - 20, opts);
+    this.menu = this.radial(s.x, s.y - 20, opts, 64);
     this.menuTarget = { spot };
     if (this.level.tutorial && this.world.towers.length === 0) this.ui.toast(T('tutConfirm'));
   }
@@ -649,7 +649,7 @@ export class LevelScene extends Phaser.Scene {
         },
       });
     }
-    this.menu = new RadialMenu(this, t.x, t.y - 40, opts, 66);
+    this.menu = this.radial(t.x, t.y - 40, opts, 66);
     this.menuTarget = { tower: t };
   }
 
@@ -694,9 +694,10 @@ export class LevelScene extends Phaser.Scene {
   private createWaveButtons(): void {
     this.level.paths.forEach((_, i) => {
       const btn = new IconButton(this, 0, 0, 52, 'ic_skull', () => this.onSkullTap(), 'ui_badge_red', 0.7);
+      btn.setBaseScale(uiZoom());
       btn.setDepth(DEPTH.menu - 10);
       btn.hit.on('pointerdown', (p: Phaser.Input.Pointer) => (this.lastTapTouch = p.wasTouch));
-      const ring = this.add.graphics().setDepth(DEPTH.menu - 11);
+      const ring = this.add.graphics().setDepth(DEPTH.menu - 11).setScale(uiZoom());
       btn.setVisible(false);
       this.waveBtns.push({ path: i, btn, ring });
       btn.hit.on('pointerover', () => this.ui?.showWavePreview(this.world.nextWaveEnemies()));
@@ -723,7 +724,18 @@ export class LevelScene extends Phaser.Scene {
 
   /** 右下角道具列（HUD）遮住的區域：波次按鈕與出口標記要避開 */
   private underItemBar(x: number, y: number, right: number): boolean {
-    return x > right - 250 && y > VIEW_H - 90;
+    const z = uiZoom();
+    return x > right - 250 * z && y > VIEW_H - 90 * z;
+  }
+
+  /** 環狀選單：手機上放大，並夾在畫面內（靠邊的建造點選單不會被切掉） */
+  private radial(x: number, y: number, opts: RadialOption[], radius: number): RadialMenu {
+    const z = uiZoom();
+    const v = this.viewRect();
+    const ex = (radius + 40) * z;
+    const cx = Phaser.Math.Clamp(x, v.left + ex, Math.max(v.left + ex, v.right - ex));
+    const cy = Phaser.Math.Clamp(y, v.top + (radius + 34) * z, Math.max(v.top + (radius + 34) * z, v.bottom - (radius + 48) * z));
+    return new RadialMenu(this, cx, cy, opts, radius, z);
   }
 
   private positionExitMarks(): void {
@@ -760,7 +772,7 @@ export class LevelScene extends Phaser.Scene {
       target = { x: best.x, y: best.y - 34 };
     } else if (w.towers.length > 0 && w.waveIndex < 0 && !this.menu) {
       const b = this.waveBtns.find((x) => x.btn.visible);
-      if (b) target = { x: b.btn.x, y: b.btn.y - 40 };
+      if (b) target = { x: b.btn.x, y: b.btn.y - 40 * uiZoom() };
     }
     if (!target) {
       a.setVisible(false);
@@ -776,12 +788,13 @@ export class LevelScene extends Phaser.Scene {
 
   private positionWaveButtons(): void {
     const v = this.viewRect();
+    const z = uiZoom();
     for (const wb of this.waveBtns) {
       const p = this.world.paths[wb.path];
       let pos = p.posAt(0);
       for (let d = 0; d < p.length; d += 8) {
         const q = p.posAt(d);
-        if (q.x > v.left + 40 && q.x < v.right - 40 && q.y > 70 && q.y < VIEW_H - 40 && !this.underItemBar(q.x, q.y, v.right)) {
+        if (q.x > v.left + 40 * z && q.x < v.right - 40 * z && q.y > 70 * z && q.y < VIEW_H - 40 * z && !this.underItemBar(q.x, q.y, v.right)) {
           pos = q;
           break;
         }

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { VIEW_H, addText, setupCamera, viewW } from '../config';
+import { VIEW_H, addText, setupCamera, viewW, uiZoom } from '../config';
 import { UPGRADE_COLUMNS } from '../data/upgrades';
 import { Button, IconButton, panel } from '../ui/widgets';
 import { L, T } from '../i18n';
@@ -104,7 +104,8 @@ export class UpgradeScene extends Phaser.Scene {
         add(this.add.image(w / 2 + 230, infoY, 'ic_lock').setDisplaySize(36, 36));
       }
     }
-    add(new IconButton(this, 44, VIEW_H - 44, 64, 'ic_close', () => this.back()));
+    // 手機上關閉鈕放大（以左下角為錨點）
+    add(new IconButton(this, 12 + 32 * uiZoom(), VIEW_H - 12 - 32 * uiZoom(), 64, 'ic_close', () => this.back()).setBaseScale(uiZoom()));
     add(
       new Button(this, w - 100, VIEW_H - 44, 140, 50, T('reset'), () => {
         sv.upgrades = {};

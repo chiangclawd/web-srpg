@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { VIEW_H, addText, setupCamera, viewW } from '../config';
+import { VIEW_H, addText, setupCamera, viewW, uiZoom } from '../config';
 import { ENEMIES } from '../data/enemies';
 import { TOWERS, TOWER_ORDER } from '../data/towers';
 import { Button, IconButton, panel } from '../ui/widgets';
@@ -119,7 +119,8 @@ export class EncyclopediaScene extends Phaser.Scene {
         }
       }
     }
-    add(new IconButton(this, 44, VIEW_H - 44, 64, 'ic_close', () => this.back()));
+    // 手機上關閉鈕放大（以左下角為錨點）
+    add(new IconButton(this, 12 + 32 * uiZoom(), VIEW_H - 12 - 32 * uiZoom(), 64, 'ic_close', () => this.back()).setBaseScale(uiZoom()));
   }
 
   private towerDetail(add: <T extends Phaser.GameObjects.GameObject>(o: T) => T, x: number, w: number, type: TowerType, def: TowerLevelDef): void {

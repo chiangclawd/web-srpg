@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { VIEW_H, addText, fitText, setupCamera, viewW } from '../config';
+import { VIEW_H, addText, fitText, setupCamera, viewW, uiZoom } from '../config';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { IconButton, panel } from '../ui/widgets';
 import { L, T } from '../i18n';
@@ -81,7 +81,8 @@ export class AchievementScene extends Phaser.Scene {
       title.setPosition(tx, top);
       desc.setPosition(tx, top + title.displayHeight);
     });
-    add(new IconButton(this, 44, 40, 60, 'ic_close', () => this.back()));
+    // 手機上關閉鈕放大（以左上角為錨點）
+    add(new IconButton(this, 12 + 30 * uiZoom(), 10 + 30 * uiZoom(), 60, 'ic_close', () => this.back()).setBaseScale(uiZoom()));
   }
 
   private back(): void {

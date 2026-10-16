@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PLAY_W, PLAY_X0, VIEW_H, WORLD_W, bgScale, addText, fitText, setupCamera, viewW } from '../config';
+import { PLAY_W, PLAY_X0, VIEW_H, WORLD_W, bgScale, addText, fitText, setupCamera, uiZoom, viewW } from '../config';
 import { LEVELS } from '../data/levels';
 import { UPGRADE_COLUMNS } from '../data/upgrades';
 import { HEROES } from '../data/heroes';
@@ -80,7 +80,8 @@ export class MapScene extends Phaser.Scene {
         const st = this.add.image((k - 1) * 18, 42, k < stars ? 'ic_star' : 'ic_star_empty').setDisplaySize(20, 20);
         c.add(st);
       }
-      const hit = this.add.circle(0, 0, 34, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
+      // 手機上點擊範圍放大（旗子本身不變）
+      const hit = this.add.circle(0, 0, 34 * uiZoom(), 0xffffff, 0.001).setInteractive({ useHandCursor: true });
       hit.on('pointerdown', () => {
         sfx.play('click');
         this.showLevel(i);
@@ -135,35 +136,41 @@ export class MapScene extends Phaser.Scene {
     const left = -(w - PLAY_W) / 2;
     this.cameras.main.setScroll(left, 0);
     const right = left + w;
+    // 四個角各一組，以角落為錨點；手機上整組放大（按鈕接近手指大小）
+    const z = uiZoom();
+    const topLeft = this.add.container(left, 0).setScale(z);
+    const topRight = this.add.container(right, 0).setScale(z);
+    const bottomRight = this.add.container(right, VIEW_H).setScale(z);
+    this.hud.push(topLeft, topRight, bottomRight);
     // 總星數
-    const sp = panel(this, left + 100, 34, 170, 46, 'ui_dark', 18);
-    const si = this.add.image(left + 40, 34, 'ic_star').setDisplaySize(32, 32);
+    const sp = panel(this, 100, 34, 170, 46, 'ui_dark', 18);
+    const si = this.add.image(40, 34, 'ic_star').setDisplaySize(32, 32);
     const total = LEVELS.length * 5;
-    const st = addText(this, left + 62, 34, `${totalStars()} / ${total}`, { size: 22, display: true, color: '#ffe066' }).setOrigin(0, 0.5);
-    this.hud.push(sp, si, st);
+    const st = addText(this, 62, 34, `${totalStars()} / ${total}`, { size: 22, display: true, color: '#ffe066' }).setOrigin(0, 0.5);
     // 寶石
-    const gp = panel(this, left + 280, 34, 150, 46, 'ui_dark', 18);
-    const gi = this.add.image(left + 226, 34, 'ic_gem').setDisplaySize(30, 30);
-    const gt = addText(this, left + 248, 34, String(save().gems ?? 0), { size: 22, display: true, color: '#e0c0ff' }).setOrigin(0, 0.5);
-    this.hud.push(gp, gi, gt);
-    // 底部按鈕
-    const back = new IconButton(this, left + 44, VIEW_H - 44, 64, 'ic_close', () => this.leave('Menu'));
+    const gp = panel(this, 280, 34, 150, 46, 'ui_dark', 18);
+    const gi = this.add.image(226, 34, 'ic_gem').setDisplaySize(30, 30);
+    const gt = addText(this, 248, 34, String(save().gems ?? 0), { size: 22, display: true, color: '#e0c0ff' }).setOrigin(0, 0.5);
+    topLeft.add([sp, si, st, gp, gi, gt]);
+    // 底部按鈕（座標相對右下角）
+    const back = new IconButton(this, left + 12 + 32 * z, VIEW_H - 12 - 32 * z, 64, 'ic_close', () => this.leave('Menu')).setBaseScale(z);
     const avail = starsAvailable();
-    const up = new Button(this, right - 470, VIEW_H - 42, 140, 56, T('upgrades'), () => this.leave('Upgrade'), { color: 'gold', icon: 'ic_hammer', iconSize: 34, text: { size: 20 } });
-    if (avail > 0) {
-      const badge = this.add.circle(right - 410, VIEW_H - 68, 14, 0xc0392b).setStrokeStyle(2, 0xffffff);
-      const bt = addText(this, right - 410, VIEW_H - 68, String(avail), { size: 14, display: true }).setOrigin(0.5);
-      this.tweens.add({ targets: [badge, bt], scale: 1.2, duration: 500, yoyo: true, repeat: -1 });
-      this.hud.push(badge, bt);
-    }
+    const up = new Button(this, -470, -42, 140, 56, T('upgrades'), () => this.leave('Upgrade'), { color: 'gold', icon: 'ic_hammer', iconSize: 34, text: { size: 20 } });
     const hero = HEROES[save().selectedHero] ?? HEROES.arthur;
-    const hb = new Button(this, right - 310, VIEW_H - 42, 140, 56, T('heroes'), () => this.leave('Hero'), { color: 'blue', icon: `ptc_${hero.id}`, iconSize: 38, text: { size: 20 } });
-    const enc = new Button(this, right - 150, VIEW_H - 42, 140, 56, T('encyclopedia'), () => this.leave('Encyclopedia'), { color: 'wood', icon: 'ic_book', iconSize: 34, text: { size: 20 } });
-    const ach = new Button(this, right - 630, VIEW_H - 42, 140, 56, T('achievements'), () => this.leave('Achievements'), { color: 'wood', icon: 'ic_crown', iconSize: 34, text: { size: 20 } });
-    const shop = new Button(this, right - 790, VIEW_H - 42, 140, 56, T('shop'), () => this.leave('Shop'), { color: 'red', icon: 'ic_gem', iconSize: 32, text: { size: 20 } });
+    const hb = new Button(this, -310, -42, 140, 56, T('heroes'), () => this.leave('Hero'), { color: 'blue', icon: `ptc_${hero.id}`, iconSize: 38, text: { size: 20 } });
+    const enc = new Button(this, -150, -42, 140, 56, T('encyclopedia'), () => this.leave('Encyclopedia'), { color: 'wood', icon: 'ic_book', iconSize: 34, text: { size: 20 } });
+    const ach = new Button(this, -630, -42, 140, 56, T('achievements'), () => this.leave('Achievements'), { color: 'wood', icon: 'ic_crown', iconSize: 34, text: { size: 20 } });
+    const shop = new Button(this, -790, -42, 140, 56, T('shop'), () => this.leave('Shop'), { color: 'red', icon: 'ic_gem', iconSize: 32, text: { size: 20 } });
+    bottomRight.add([up, hb, enc, ach, shop]);
+    if (avail > 0) {
+      const badge = this.add.circle(-410, -68, 14, 0xc0392b).setStrokeStyle(2, 0xffffff);
+      const bt = addText(this, -410, -68, String(avail), { size: 14, display: true }).setOrigin(0.5);
+      this.tweens.add({ targets: [badge, bt], scale: 1.2, duration: 500, yoyo: true, repeat: -1 });
+      bottomRight.add([badge, bt]);
+    }
     // 每日挑戰（通關第 3 關後開放）
     const dailyOpen = (save().stars.l3 ?? 0) > 0;
-    const dly = new Button(this, right - 104, 34, 180, 48, T('daily'), () => {
+    const dly = new Button(this, -104, 34, 180, 48, T('daily'), () => {
       if (!dailyOpen) {
         sfx.play('error');
         this.toastMsg(T('dailyLocked'));
@@ -171,18 +178,16 @@ export class MapScene extends Phaser.Scene {
       }
       this.showDaily();
     }, { color: dailyOpen ? 'gold' : 'grey', icon: 'ic_star', iconSize: 28, text: { size: 18 }, sound: dailyOpen });
+    topRight.add(dly);
     if (!dailyOpen) dly.add(this.add.image(72, -14, 'ic_lock').setDisplaySize(20, 20));
     else if (!save().daily[dailyKey()] && (save().stars[dailySpec(dailyKey()).levelId] ?? 0) > 0) {
       // 今天的挑戰打得了、還沒過：小紅點提醒
-      const dot = this.add.circle(right - 22, 16, 9, 0xc0392b).setStrokeStyle(2, 0xffffff);
+      const dot = this.add.circle(-22, 16, 9, 0xc0392b).setStrokeStyle(2, 0xffffff);
       this.tweens.add({ targets: dot, scale: 1.25, duration: 500, yoyo: true, repeat: -1 });
-      this.hud.push(dot);
+      topRight.add(dot);
     }
-    this.hud.push(dly);
-    this.hud.push(back, up, hb, enc, ach, shop);
-    for (const o of [back, up, hb, enc, sp, si, st]) (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(500);
+    this.hud.push(back);
     this.hud.forEach((o) => (o as unknown as Phaser.GameObjects.Components.Depth).setDepth?.(500));
-    void up;
   }
 
   /** 每日挑戰面板：今天的關卡、兩個修正、今日最佳 */
@@ -249,13 +254,14 @@ export class MapScene extends Phaser.Scene {
     this.time.delayedCall(900, () => {
       if (!this.sys.isActive()) return;
       const w = viewW(this);
-      // 底部按鈕位置（與 buildHud 一致；螢幕座標）
-      const x = tip === 'upgrades' ? w - 470 : w - 790;
+      // 底部按鈕位置（與 buildHud 一致；螢幕座標，手機上整組放大）
+      const z = uiZoom();
+      const x = w - (tip === 'upgrades' ? 470 : 790) * z;
       sv.tipsSeen.push(tip);
       persist();
       this.infoPanel?.destroy();
       this.infoPanel = null;
-      showTipBubble(this, x, VIEW_H - 42, T(tip === 'upgrades' ? 'tipUpgrades' : 'tipShop'), () => {}, 2000);
+      showTipBubble(this, x, VIEW_H - 42 * z, T(tip === 'upgrades' ? 'tipUpgrades' : 'tipShop'), () => {}, 2000);
     });
   }
 

@@ -9,12 +9,17 @@ import { inEllipse } from '../src/td/sim/math';
 
 const W = 1280;
 const H = 720;
+// HUD 範圍：以 16:9 手機（邏輯寬 1280、HUD 壓在玩法區上、放大 1.35 倍）為最壞情況
+const HUD_Z = 1.35;
 const HUD_ZONES = [
-  { x0: 0, y0: 0, x1: 340, y1: 86 },
-  { x0: 1110, y0: 0, x1: 1280, y1: 86 },
-  { x0: 0, y0: 610, x1: 330, y1: 720 },
+  // 左上：生命 / 金幣 / 波次
+  { x0: 0, y0: 0, x1: 12 + 336 * HUD_Z, y1: 10 + 50 * HUD_Z },
+  // 右上：暫停 / 速度
+  { x0: W - 8 - 120 * HUD_Z, y0: 0, x1: W, y1: 8 + 66 * HUD_Z },
+  // 左下：英雄 + 法術
+  { x0: 0, y0: H - 14 - 92 * HUD_Z, x1: 8 + 303 * HUD_Z, y1: H },
   // 右下道具列
-  { x0: 1048, y0: 652, x1: 1280, y1: 720 },
+  { x0: W - 8 - 223 * HUD_Z, y0: H - 8 - 57 * HUD_Z, x1: W, y1: H },
 ];
 const MIN_PATH_DIST = 58;
 const MIN_SPACING = 92;
@@ -50,7 +55,7 @@ function check(): number {
           if (Math.hypot(s.x - d.x, (s.y - d.y) * 1.3) < 80) issues.push(`overlaps ${d.kind}`);
         }
       }
-      if (inHud(s.x, s.y, 30)) issues.push('under HUD');
+      if (inHud(s.x, s.y, 10)) issues.push('under HUD');
       lv.spots.forEach((o, j) => {
         if (j > i && Math.hypot(o.x - s.x, o.y - s.y) < MIN_SPACING) issues.push(`overlaps spot ${j}`);
       });

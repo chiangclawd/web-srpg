@@ -34,6 +34,10 @@ export class LevelUIScene extends Phaser.Scene {
   private waveTxt!: Phaser.GameObjects.Text;
   private statsPanel!: Phaser.GameObjects.Container;
   private pauseBtn!: IconButton;
+  /** 右上角：暫停 / 速度（手機上整組放大） */
+  private topRight!: Phaser.GameObjects.Container;
+  /** HUD 放大倍率（手機上讓按鈕接近手指大小；桌機為 1） */
+  private hudZoom = 1;
   private speedBtn!: IconButton;
   private speedTxt!: Phaser.GameObjects.Text;
   private heroBtn: IconButton | null = null;
@@ -74,6 +78,7 @@ export class LevelUIScene extends Phaser.Scene {
 
   create(): void {
     setupCamera(this);
+    this.hudZoom = uiZoom();
     // 左上：生命 / 金幣 / 波次
     this.statsPanel = this.add.container(12, 10);
     const bg = panel(this, 0, 0, 336, 50, 'ui_dark', 20).setOrigin(0);
@@ -85,13 +90,15 @@ export class LevelUIScene extends Phaser.Scene {
     this.waveTxt = addText(this, 252, 25, '0/0', { size: 20, display: true }).setOrigin(0, 0.5);
     this.statsPanel.add([bg, heart, this.livesTxt, coin, this.goldTxt, skull, this.waveTxt]);
 
-    // 右上：暫停 / 速度
-    this.pauseBtn = new IconButton(this, 0, 0, 52, 'ic_pause', () => this.lvl.togglePause(), 'ui_badge');
-    this.speedBtn = new IconButton(this, 0, 0, 52, 'ic_fast', () => {
+    // 右上：暫停 / 速度（以右上角為錨點）
+    this.topRight = this.add.container(0, 0);
+    this.pauseBtn = new IconButton(this, -30, 28, 52, 'ic_pause', () => this.lvl.togglePause(), 'ui_badge');
+    this.speedBtn = new IconButton(this, -90, 28, 52, 'ic_fast', () => {
       this.lvl.toggleSpeed();
       this.refreshSpeed();
     }, 'ui_badge');
-    this.speedTxt = addText(this, 0, 0, '', { size: 14, display: true, color: '#ffe066' }).setOrigin(0.5);
+    this.speedTxt = addText(this, -90, 58, '', { size: 14, display: true, color: '#ffe066' }).setOrigin(0.5);
+    this.topRight.add([this.pauseBtn, this.speedBtn, this.speedTxt]);
 
     // 左下：英雄 + 法術
     this.bottomLeft = this.add.container(0, 0);
@@ -159,11 +166,12 @@ export class LevelUIScene extends Phaser.Scene {
 
   private layout(): void {
     const w = viewW(this);
-    this.pauseBtn.setPosition(w - 38, 36);
-    this.speedBtn.setPosition(w - 98, 36);
-    this.speedTxt.setPosition(w - 98, 66);
-    this.bottomLeft.setPosition(8, VIEW_H - 14);
-    this.itemBar.setPosition(w - 8, VIEW_H - 8);
+    // 四個角的 HUD 各自以角落為錨點縮放：手機上按鈕放大，不會跑出畫面
+    const z = this.hudZoom;
+    this.statsPanel.setPosition(12, 10).setScale(z);
+    this.topRight.setPosition(w - 8, 8).setScale(z);
+    this.bottomLeft.setPosition(8, VIEW_H - 14).setScale(z);
+    this.itemBar.setPosition(w - 8, VIEW_H - 8).setScale(z);
     if (this.modal) this.modal.setPosition(w / 2, VIEW_H / 2);
   }
 
@@ -316,16 +324,16 @@ export class LevelUIScene extends Phaser.Scene {
     let y = 0;
     if (id === 'ult') {
       if (!this.ult) return false;
-      x = bl.x + this.ult.btn.x;
-      y = bl.y + this.ult.btn.y;
+      x = bl.x + this.ult.btn.x * bl.scaleX;
+      y = bl.y + this.ult.btn.y * bl.scaleY;
     } else if (id === 'spells') {
       const m = this.spellBtns.meteor.btn;
       const r = this.spellBtns.reinforce.btn;
-      x = bl.x + (m.x + r.x) / 2;
-      y = bl.y + m.y;
+      x = bl.x + ((m.x + r.x) / 2) * bl.scaleX;
+      y = bl.y + m.y * bl.scaleY;
     } else {
-      x = this.itemBar.x - 114;
-      y = this.itemBar.y - 32;
+      x = this.itemBar.x - 114 * this.itemBar.scaleX;
+      y = this.itemBar.y - 32 * this.itemBar.scaleY;
     }
     const sv = save();
     if (!sv.tipsSeen.includes(id)) sv.tipsSeen.push(id);
