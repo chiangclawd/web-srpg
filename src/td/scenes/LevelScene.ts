@@ -169,6 +169,7 @@ export class LevelScene extends Phaser.Scene {
 
     // 環境粒子
     this.makeAmbient();
+    this.makeLife();
 
     // 全域點擊
     this.setupGestures();
@@ -340,6 +341,144 @@ export class LevelScene extends Phaser.Scene {
   viewRect(): Phaser.Geom.Rectangle {
     const w = viewW(this);
     return new Phaser.Geom.Rectangle(-(w - PLAY_W) / 2, 0, w, VIEW_H);
+  }
+
+  /** 讓手繪戰場動起來：營火、祭壇、水面閃光，以及各主題的小生物（純裝飾，量少，手機也輕） */
+  private makeLife(): void {
+    const twinkle = (zone: { getRandomPoint: (p: Phaser.Types.Math.Vector2Like) => Phaser.Types.Math.Vector2Like }, every: number) =>
+      this.add
+        .particles(0, 0, 'fx_star', {
+          emitZone: { type: 'random', source: zone },
+          lifespan: 800,
+          scale: { start: 0.22, end: 0 },
+          alpha: { start: 0.9, end: 0 },
+          tint: 0xf4fbff,
+          blendMode: 'ADD',
+          frequency: every,
+        })
+        .setDepth(DEPTH.decal + 5);
+    for (const d of this.level.decor ?? []) {
+      if (d.kind === 'camp') {
+        // 營火位置與程序背景的畫法相同（手繪圖照著它畫）
+        const fx = d.x + 2;
+        const fy = d.y + 26;
+        const glow = this.add.image(fx, fy - 4, 'fx_soft').setTint(0xffa040).setBlendMode('ADD').setAlpha(0.5).setScale(0.9).setDepth(DEPTH.decal + 5);
+        this.tweens.add({ targets: glow, alpha: 0.28, scale: 0.75, duration: 160, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        this.add
+          .particles(fx, fy - 8, 'fx_smoke', {
+            lifespan: 2800,
+            speedY: { min: -26, max: -14 },
+            speedX: { min: -4, max: 10 },
+            scale: { start: 0.16, end: 0.55 },
+            alpha: { start: 0.32, end: 0 },
+            tint: 0x8a8070,
+            frequency: 420,
+          })
+          .setDepth(DEPTH.float - 20);
+        this.add
+          .particles(fx, fy - 6, 'fx_spark', {
+            lifespan: 900,
+            speedY: { min: -55, max: -25 },
+            speedX: { min: -14, max: 14 },
+            scale: { start: 0.22, end: 0 },
+            tint: 0xffb040,
+            blendMode: 'ADD',
+            frequency: 320,
+          })
+          .setDepth(DEPTH.float - 21);
+      } else if (d.kind === 'altar') {
+        const glow = this.add.image(d.x, d.y - 18, 'fx_soft').setTint(0xb060ff).setBlendMode('ADD').setAlpha(0.35).setScale(1.3).setDepth(DEPTH.decal + 5);
+        this.tweens.add({ targets: glow, alpha: 0.6, scale: 1.6, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        this.add
+          .particles(d.x, d.y - 14, 'fx_soft', {
+            x: { min: -22, max: 22 },
+            lifespan: 2200,
+            speedY: { min: -34, max: -16 },
+            scale: { start: 0.14, end: 0 },
+            alpha: { start: 0.8, end: 0 },
+            tint: 0xc080ff,
+            blendMode: 'ADD',
+            frequency: 260,
+          })
+          .setDepth(DEPTH.float - 21);
+      } else if (d.kind === 'lake') {
+        const { x, y, rx, ry } = d;
+        twinkle(
+          {
+            getRandomPoint: (p) => {
+              const a = Math.random() * Math.PI * 2;
+              const r = Math.sqrt(Math.random()) * 0.8;
+              p.x = x + Math.cos(a) * rx * r;
+              p.y = y + Math.sin(a) * ry * r;
+              return p;
+            },
+          },
+          Math.max(260, 60000 / (rx * ry) ** 0.9),
+        );
+      } else if (d.kind === 'river') {
+        const pts = d.points;
+        twinkle(
+          {
+            getRandomPoint: (p) => {
+              const i = Math.floor(Math.random() * (pts.length - 1));
+              const k = Math.random();
+              p.x = pts[i].x + (pts[i + 1].x - pts[i].x) * k + (Math.random() - 0.5) * d.width * 0.6;
+              p.y = pts[i].y + (pts[i + 1].y - pts[i].y) * k;
+              return p;
+            },
+          },
+          240,
+        );
+      }
+    }
+    const theme = this.level.theme;
+    if (theme === 'grass' || theme === 'forest') {
+      // 蝴蝶：在場上隨意飛（拍翅＝左右縮放）
+      const tints = [0xffe070, 0xff9ad0, 0x9ad0ff, 0xffffff, 0xffb060];
+      for (let i = 0; i < 5; i++) {
+        const b = this.add.image(Phaser.Math.Between(80, PLAY_W - 80), Phaser.Math.Between(80, 640), 'fx_butterfly').setTint(tints[i]).setDepth(DEPTH.float - 30);
+        const k = (0.75 + Math.random() * 0.3) / TEX;
+        b.setScale(k);
+        this.tweens.add({ targets: b, scaleX: k * 0.25, duration: 110 + i * 9, yoyo: true, repeat: -1 });
+        const fly = () => {
+          const tx = Phaser.Math.Clamp(b.x + Phaser.Math.Between(-260, 260), 40, PLAY_W - 40);
+          const ty = Phaser.Math.Clamp(b.y + Phaser.Math.Between(-160, 160), 60, 680);
+          b.setFlipX(tx < b.x);
+          this.tweens.add({ targets: b, x: tx, y: ty, duration: Math.hypot(tx - b.x, ty - b.y) * 40 + 600, ease: 'Sine.easeInOut', onComplete: fly });
+        };
+        fly();
+      }
+    } else if (theme === 'waste') {
+      this.add
+        .particles(0, 0, 'fx_soft', {
+          x: { min: 0, max: PLAY_W },
+          y: { min: 60, max: 720 },
+          lifespan: 4200,
+          speedY: { min: -22, max: -8 },
+          speedX: { min: -6, max: 6 },
+          scale: { start: 0.12, end: 0 },
+          alpha: { start: 0.7, end: 0 },
+          tint: 0xb070ff,
+          blendMode: 'ADD',
+          frequency: 240,
+        })
+        .setDepth(DEPTH.float - 25);
+    } else if (theme === 'desert') {
+      // 一陣陣風沙由左吹到右
+      this.add
+        .particles(0, 0, 'fx_soft', {
+          x: { min: -PLAY_X0 - 60, max: -PLAY_X0 },
+          y: { min: 30, max: 700 },
+          lifespan: 13000,
+          speedX: { min: 90, max: 150 },
+          speedY: { min: -6, max: 6 },
+          scale: { min: 0.9, max: 2 },
+          alpha: { start: 0.2, end: 0 },
+          tint: 0xf0d8a0,
+          frequency: 380,
+        })
+        .setDepth(DEPTH.float - 25);
+    }
   }
 
   private makeAmbient(): void {
