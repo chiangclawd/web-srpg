@@ -14,6 +14,9 @@ export interface SaveData {
   seenEnemies: string[];
   /** 已播放過解鎖動畫的關卡 */
   unlockedSeen: string[];
+  /** 挑戰模式完成紀錄（各 1 星） */
+  challenges: Record<string, { heroic?: boolean; iron?: boolean }>;
+  achievements: string[];
   settings: {
     music: number;
     sfx: number;
@@ -21,7 +24,7 @@ export interface SaveData {
     difficulty: Difficulty;
     speed: number;
   };
-  stats: { kills: number; plays: number; victories: number };
+  stats: { kills: number; plays: number; victories: number; towers: number };
 }
 
 function defaults(): SaveData {
@@ -34,8 +37,10 @@ function defaults(): SaveData {
     selectedHero: 'arthur',
     seenEnemies: [],
     unlockedSeen: ['l1'],
+    challenges: {},
+    achievements: [],
     settings: { music: 0.6, sfx: 0.8, lang: nav.startsWith('zh') ? 'zh' : 'en', difficulty: 'normal', speed: 1 },
-    stats: { kills: 0, plays: 0, victories: 0 },
+    stats: { kills: 0, plays: 0, victories: 0, towers: 0 },
   };
 }
 
@@ -74,8 +79,12 @@ export function persist(): void {
   }
 }
 
+/** 戰役星數 + 挑戰星數（英雄 / 鋼鐵各 1 星） */
 export function totalStars(): number {
-  return Object.values(data.stars).reduce((a, b) => a + b, 0);
+  const campaign = Object.values(data.stars).reduce((a, b) => a + b, 0);
+  let ch = 0;
+  for (const c of Object.values(data.challenges ?? {})) ch += (c.heroic ? 1 : 0) + (c.iron ? 1 : 0);
+  return campaign + ch;
 }
 
 export function spentStars(costs: (col: string, n: number) => number): number {

@@ -114,6 +114,14 @@ const STR = {
   heroLevelUp: { zh: '英雄升級！', en: 'Hero level up!' },
   credits: { zh: '製作', en: 'Credits' },
   allClear: { zh: '恭喜通關全部戰役！', en: 'Campaign complete!' },
+  noSpells: { zh: '鋼鐵挑戰中無法使用法術', en: 'Spells are disabled in Iron challenges' },
+  heroicRules: { zh: '僅有\u00a03\u00a0條命・6\u00a0波高密度精英敵軍・起始金幣較多', en: '3 lives · 6 dense elite waves · extra starting gold' },
+  ironRules: { zh: '僅有\u00a03\u00a0條命・一波連續總攻・只能用：{0}・禁用法術', en: '3 lives · one relentless assault · towers: {0} · no spells' },
+  challengeDone: { zh: '挑戰完成！', en: 'Challenge complete!' },
+  unlockChallenge: { zh: '通關戰役後解鎖挑戰', en: 'Beat the campaign level to unlock' },
+  achievements: { zh: '成就', en: 'Achievements' },
+  achUnlocked: { zh: '解鎖成就', en: 'Achievement unlocked' },
+  bossHp: { zh: '首領', en: 'Boss' },
 } satisfies Record<string, L10n>;
 
 export type StrKey = keyof typeof STR;

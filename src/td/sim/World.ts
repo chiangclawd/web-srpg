@@ -117,7 +117,7 @@ export class World {
   readonly reinfCdMax: number;
 
   result: 'victory' | 'defeat' | null = null;
-  stats = { kills: 0, leaks: 0, goldEarned: 0, towersBuilt: 0, meteorKills: 0 };
+  stats = { kills: 0, leaks: 0, goldEarned: 0, towersBuilt: 0, meteorKills: 0, earlyCalls: 0, sheep: 0, bossesKilled: [] as string[] };
 
   constructor(opts: WorldOptions) {
     this.level = opts.level;
@@ -484,6 +484,7 @@ export class World {
     if (this.waveState === 'gap') {
       const remain = Math.max(0, this.nextWaveAt - this.time);
       bonus = Math.round(remain * 1.4);
+      if (remain > 2) this.stats.earlyCalls++;
       if (bonus > 0) {
         this.gold += bonus;
         this.stats.goldEarned += bonus;
@@ -797,6 +798,7 @@ export class World {
     this.gold += g;
     this.stats.goldEarned += g;
     this.stats.kills++;
+    if (e.def.boss) this.stats.bossesKilled.push(e.def.id);
     if (src === 'hero') this.gainHeroXp(g * 1.2);
     else this.gainHeroXp(g * 0.25);
     this.emit({ type: 'enemyDie', e });
@@ -1567,6 +1569,7 @@ export class World {
               t.skillCd.polymorph = 20 - 3 * lv;
               this.releaseEngagers(e);
               e.sheep = true;
+              this.stats.sheep++;
               e.maxHp = 30;
               e.hp = Math.min(e.hp, 30);
               e.armor = 0;

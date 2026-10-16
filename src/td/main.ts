@@ -10,6 +10,7 @@ import { LevelUIScene } from './scenes/LevelUIScene';
 import { UpgradeScene } from './scenes/UpgradeScene';
 import { HeroScene } from './scenes/HeroScene';
 import { EncyclopediaScene } from './scenes/EncyclopediaScene';
+import { AchievementScene } from './scenes/AchievementScene';
 
 loadSave();
 
@@ -19,7 +20,7 @@ const game = new Phaser.Game({
   width: computeViewW() * RS,
   height: VIEW_H * RS,
   backgroundColor: '#120d08',
-  scene: [BootScene, MenuScene, MapScene, LevelScene, LevelUIScene, UpgradeScene, HeroScene, EncyclopediaScene],
+  scene: [BootScene, MenuScene, MapScene, LevelScene, LevelUIScene, UpgradeScene, HeroScene, EncyclopediaScene, AchievementScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

@@ -7,7 +7,9 @@ import { ENEMIES } from '../data/enemies';
 import { computeMods } from '../data/upgrades';
 import { World, type Difficulty, type SimEvent } from '../sim/World';
 import { Enemy, Soldier, Tower, type Projectile } from '../sim/entities';
-import type { LevelDef, TowerLevelDef, TowerType } from '../sim/defs';
+import type { LevelDef, LevelMode, TowerLevelDef, TowerType } from '../sim/defs';
+import { challengeLevel } from '../data/challenges';
+import { evaluateAchievements } from '../data/achievements';
 import { RANGE_Y, inEllipse } from '../sim/math';
 import { paintLevel, paintBuildSpot } from '../art/terrain';
 import { THEMES } from '../art/scenery';
@@ -31,6 +33,9 @@ export class LevelScene extends Phaser.Scene {
   fx!: Fx;
   ui!: LevelUIScene;
   difficulty: Difficulty = 'normal';
+  /** 關卡模式（戰役 / 英雄挑戰 / 鋼鐵挑戰） */
+  mode0: LevelMode = 'campaign';
+  baseLevel!: LevelDef;
   paused = false;
   speed = 1;
   mode: Mode = 'idle';
@@ -62,8 +67,10 @@ export class LevelScene extends Phaser.Scene {
     super('Level');
   }
 
-  init(data: { levelId: string; difficulty?: Difficulty }): void {
-    this.level = getLevel(data.levelId)!;
+  init(data: { levelId: string; difficulty?: Difficulty; mode?: LevelMode }): void {
+    this.mode0 = data.mode ?? 'campaign';
+    this.baseLevel = getLevel(data.levelId)!;
+    this.level = challengeLevel(this.baseLevel, this.mode0);
     this.difficulty = data.difficulty ?? save().settings.difficulty;
     this.paused = false;
     this.speed = save().settings.speed ?? 1;
@@ -341,6 +348,11 @@ export class LevelScene extends Phaser.Scene {
 
   enterSpell(kind: 'meteor' | 'reinforce'): void {
     const w = this.world;
+    if (!w.spellsEnabled) {
+      sfx.play('error');
+      this.ui.toast(T('noSpells'));
+      return;
+    }
     const ready = kind === 'meteor' ? w.meteorCd <= 0 : w.reinfCd <= 0;
     if (!ready) {
       sfx.play('error');
@@ -393,11 +405,13 @@ export class LevelScene extends Phaser.Scene {
     const opts: RadialOption[] = TOWER_ORDER.map((type, i) => {
       const cost = this.world.buildCost(type);
       const def = TOWERS[type].levels[0];
+      const allowed = this.world.canBuildType(type);
       return {
         id: type,
-        icon: `icb_${type}`,
-        price: cost,
-        enabled: this.world.gold >= cost,
+        icon: allowed ? `icb_${type}` : 'ic_lock',
+        badge: allowed ? undefined : 'ui_badge_grey',
+        price: allowed ? cost : null,
+        enabled: allowed && this.world.gold >= cost,
         angle: angles[i],
         onPreview: () => {
           this.drawRange(s.x, s.y, this.effRange(type, def), 0xffffff);
@@ -1186,22 +1200,52 @@ export class LevelScene extends Phaser.Scene {
     }
     let newStars = 0;
     if (victory) {
-      const prev = sv.stars[this.level.id] ?? 0;
-      if (stars > prev) {
-        newStars = stars - prev;
-        sv.stars[this.level.id] = stars;
+      if (this.mode0 === 'campaign') {
+        const prev = sv.stars[this.level.id] ?? 0;
+        if (stars > prev) {
+          newStars = stars - prev;
+          sv.stars[this.level.id] = stars;
+        }
+      } else {
+        const c = (sv.challenges[this.level.id] ??= {});
+        if (!c[this.mode0]) {
+          c[this.mode0] = true;
+          newStars = 1;
+        }
       }
       sv.stats.victories++;
     }
     sv.stats.kills += w.stats.kills;
+    sv.stats.towers = (sv.stats.towers ?? 0) + w.stats.towersBuilt;
+    const fresh = evaluateAchievements(
+      {
+        levelId: this.level.id,
+        mode: this.mode0,
+        difficulty: this.difficulty,
+        victory,
+        stars,
+        lives: w.lives,
+        maxLives: w.maxLives,
+        towersAtEnd: w.towers.length,
+        maxTowerLevel: Math.max(0, ...w.towers.map((t) => t.level)),
+        skillMaxed: w.towers.some((t) => (t.def.skills ?? []).some((k) => (t.skills[k.id] ?? 0) >= k.costs.length)),
+        earlyCalls: w.stats.earlyCalls,
+        meteorKills: w.stats.meteorKills,
+        sheep: w.stats.sheep,
+        heroLevel: hero?.level ?? 0,
+        bossesKilled: w.stats.bossesKilled,
+      },
+      sv,
+    );
     persist();
     sfx.play(victory ? 'victory' : 'defeat');
     this.ui.showResult(victory, stars, newStars);
+    fresh.forEach((id, i) => this.time.delayedCall(1800 + i * 2200, () => this.ui.achievementToast(id)));
   }
 
   restart(): void {
     this.cameras.main.fadeOut(250, 0, 0, 0);
-    this.time.delayedCall(260, () => this.scene.restart({ levelId: this.level.id, difficulty: this.difficulty }));
+    this.time.delayedCall(260, () => this.scene.restart({ levelId: this.level.id, difficulty: this.difficulty, mode: this.mode0 }));
   }
 
   exitToMap(nextLevel?: string): void {

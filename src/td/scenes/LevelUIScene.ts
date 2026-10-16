@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { VIEW_H, addText, setupCamera, viewW } from '../config';
 import { ENEMIES } from '../data/enemies';
+import { ACHIEVEMENTS } from '../data/achievements';
 import { LEVELS } from '../data/levels';
 import { HERO_XP_TABLE, HERO_MAX_LEVEL } from '../data/heroes';
 import type { EnemyDef } from '../sim/defs';
@@ -17,6 +18,7 @@ export interface InfoData {
   stats: [string, string][];
   cost?: number;
   icon?: string;
+  icons?: { tex: string; count: number; tint?: number; boss?: boolean }[];
 }
 
 export class LevelUIScene extends Phaser.Scene {
@@ -41,6 +43,9 @@ export class LevelUIScene extends Phaser.Scene {
   private modal: Phaser.GameObjects.Container | null = null;
   private lastGold = -1;
   private lastLives = -1;
+  private bossBar: Phaser.GameObjects.Container | null = null;
+  private bossFill: Phaser.GameObjects.Rectangle | null = null;
+  private bossId = -1;
 
   constructor() {
     super('LevelUI');
@@ -53,6 +58,9 @@ export class LevelUIScene extends Phaser.Scene {
     this.modal = null;
     this.lastGold = -1;
     this.lastLives = -1;
+    this.bossBar = null;
+    this.bossFill = null;
+    this.bossId = -1;
   }
 
   create(): void {
@@ -100,6 +108,10 @@ export class LevelUIScene extends Phaser.Scene {
       const txt = addText(this, sx + i * 72, -40, '', { size: 18, display: true }).setOrigin(0.5);
       this.bottomLeft.add([btn, cd, txt]);
       this.spellBtns[k] = { btn, cd, txt };
+      if (!this.lvl.world.spellsEnabled) {
+        btn.setEnabled(false);
+        this.bottomLeft.add(this.add.image(sx + i * 72 + 18, -22, 'ic_lock').setDisplaySize(24, 24));
+      }
     });
 
     this.layout();
@@ -174,6 +186,52 @@ export class LevelUIScene extends Phaser.Scene {
     };
     drawCd('meteor', w.meteorCd, w.meteorCdMax);
     drawCd('reinforce', w.reinfCd, w.reinfCdMax);
+    // 首領血條
+    const boss = w.enemies.find((e) => e.def.boss && e.alive);
+    if (boss) {
+      if (!this.bossBar || this.bossId !== boss.id) this.makeBossBar(boss.id, L(boss.def.name), boss.def.sprite);
+      if (this.bossFill) this.bossFill.width = 356 * Phaser.Math.Clamp(boss.hp / boss.maxHp, 0, 1);
+    } else if (this.bossBar) {
+      const b = this.bossBar;
+      this.bossBar = null;
+      this.bossFill = null;
+      this.bossId = -1;
+      this.tweens.add({ targets: b, alpha: 0, y: b.y - 20, duration: 300, onComplete: () => b.destroy() });
+    }
+  }
+
+  private makeBossBar(id: number, name: string, sprite: string): void {
+    this.bossBar?.destroy();
+    const w = viewW(this);
+    const c = this.add.container(w / 2, 34).setDepth(40);
+    c.add(panel(this, 0, 0, 420, 50, 'ui_dark', 18));
+    const face = this.add.image(-188, 18, sprite).setOrigin(0.5, 1);
+    face.setScale(Math.min(46 / face.frame.height, 46 / face.frame.width));
+    c.add(face);
+    c.add(addText(this, -160, -12, name, { size: 15, display: true, color: '#ffb08a' }).setOrigin(0, 0.5));
+    c.add(this.add.rectangle(-160, 10, 360, 12, 0x1a0a04).setOrigin(0, 0.5).setStrokeStyle(2, 0x000000));
+    this.bossFill = this.add.rectangle(-158, 10, 356, 8, 0xd8402a).setOrigin(0, 0.5);
+    c.add(this.bossFill);
+    this.bossBar = c;
+    this.bossId = id;
+    c.setAlpha(0).setY(10);
+    this.tweens.add({ targets: c, alpha: 1, y: 34, duration: 300, ease: 'Back.easeOut' });
+  }
+
+  /** 成就解鎖提示 */
+  achievementToast(id: string): void {
+    const a = ACHIEVEMENTS.find((x) => x.id === id);
+    if (!a) return;
+    const w = viewW(this);
+    const c = this.add.container(w / 2, -60).setDepth(200);
+    c.add(panel(this, 0, 0, 380, 70, 'ui_dark', 20));
+    c.add(this.add.image(-150, 0, 'ui_badge_green').setDisplaySize(54, 54));
+    c.add(this.add.image(-150, 0, a.icon).setDisplaySize(32, 32));
+    c.add(addText(this, -114, -14, T('achUnlocked'), { size: 13, color: '#9aff7a', strokeW: 2 }).setOrigin(0, 0.5));
+    c.add(addText(this, -114, 10, L(a.name), { size: 20, display: true, color: '#ffe8a8' }).setOrigin(0, 0.5));
+    sfx.play('star');
+    this.tweens.add({ targets: c, y: 120, duration: 420, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: c, y: -60, alpha: 0, delay: 2600, duration: 380, ease: 'Quad.easeIn', onComplete: () => c.destroy() });
   }
 
   spellButton(k: 'meteor' | 'reinforce'): void {
@@ -198,33 +256,46 @@ export class LevelUIScene extends Phaser.Scene {
   showInfo(d: InfoData): void {
     this.hideInfo();
     const w = viewW(this);
-    const bw = 360;
-    const lines = d.stats.length;
-    const descH = d.desc ? 20 * Math.ceil(d.desc.length / 26) : 0;
-    const bh = 54 + descH + Math.ceil(lines / 2) * 24;
-    const c = this.add.container(w / 2, VIEW_H - bh / 2 - 10);
-    c.add(panel(this, 0, 0, bw, bh, 'ui_dark', 18));
-    const title = addText(this, -bw / 2 + 16, -bh / 2 + 10, d.title, { size: 20, display: true, color: '#ffe8a8' });
-    c.add(title);
+    const bw = 380;
+    const c = this.add.container(w / 2, 0);
+    const parts: Phaser.GameObjects.GameObject[] = [];
+    const left = -bw / 2 + 16;
+    let y = 10;
+    parts.push(addText(this, left, y, d.title, { size: 20, display: true, color: '#ffe8a8' }));
     if (d.cost !== undefined) {
-      const ci = this.add.image(bw / 2 - 66, -bh / 2 + 22, 'ic_coin').setDisplaySize(24, 24);
-      const ct = addText(this, bw / 2 - 52, -bh / 2 + 22, String(d.cost), { size: 18, display: true, color: this.lvl.world.gold >= d.cost ? '#ffe066' : '#ff7a6a' }).setOrigin(0, 0.5);
-      c.add([ci, ct]);
+      parts.push(this.add.image(bw / 2 - 66, y + 12, 'ic_coin').setDisplaySize(24, 24));
+      parts.push(addText(this, bw / 2 - 52, y + 12, String(d.cost), { size: 18, display: true, color: this.lvl.world.gold >= d.cost ? '#ffe066' : '#ff7a6a' }).setOrigin(0, 0.5));
     }
-    let y = -bh / 2 + 38;
+    y += 30;
+    if (d.icons?.length) {
+      // 敵人頭像列（下一波預告）
+      const n = d.icons.length;
+      const step = Math.min(70, (bw - 32) / n);
+      d.icons.forEach((ic, i) => {
+        const x = left + 22 + i * step;
+        const img = this.add.image(x, y + 46, ic.tex).setOrigin(0.5, 1);
+        img.setScale(Math.min(44 / img.frame.height, 50 / img.frame.width));
+        if (ic.tint) img.setTint(ic.tint);
+        parts.push(img);
+        parts.push(addText(this, x + 14, y + 40, `×${ic.count}`, { size: 15, display: true, color: ic.boss ? '#ff7a5a' : '#fff6dc' }).setOrigin(0, 0.5));
+      });
+      y += 54;
+    }
     if (d.desc) {
-      const ds = addText(this, -bw / 2 + 16, y, d.desc, { size: 14, color: '#e8dcc0', wrap: bw - 32, strokeW: 2 });
-      c.add(ds);
-      y += ds.height + 4;
+      const ds = addText(this, left, y, d.desc, { size: 14, color: '#e8dcc0', wrap: bw - 32, strokeW: 2 });
+      parts.push(ds);
+      y += ds.height + 6;
     }
     d.stats.forEach(([k, v], i) => {
       const col = i % 2;
       const row = Math.floor(i / 2);
-      const tx = -bw / 2 + 16 + col * (bw / 2 - 8);
-      const ty = y + row * 22;
-      const s = addText(this, tx, ty, k ? `${k}: ${v}` : v, { size: 14, color: k ? '#fff6dc' : '#9ad8ff', strokeW: 2 });
-      c.add(s);
+      parts.push(addText(this, left + col * (bw / 2 - 8), y + row * 22, k ? `${k}: ${v}` : v, { size: 14, color: k ? '#fff6dc' : '#9ad8ff', strokeW: 2 }));
     });
+    y += Math.ceil(d.stats.length / 2) * 22 + 8;
+    const bh = Math.max(56, y);
+    c.add(panel(this, 0, bh / 2, bw, bh, 'ui_dark', 18));
+    c.add(parts);
+    c.setY(VIEW_H - bh - 10);
     c.setDepth(50);
     c.setAlpha(0);
     this.tweens.add({ targets: c, alpha: 1, duration: 120 });
@@ -245,8 +316,9 @@ export class LevelUIScene extends Phaser.Scene {
 
   showWavePreview(list: { enemy: string; count: number }[]): void {
     if (!list.length) return;
-    const desc = list.map((x) => `${L(ENEMIES[x.enemy].name)} ×${x.count}`).join('、');
-    this.showInfo({ title: `${T('wave')} ${this.lvl.world.waveIndex + 2} ${T('incoming')}`, desc: `${desc}\n${T('callWave')}`, stats: [] });
+    const icons = list.map((x) => ({ tex: ENEMIES[x.enemy].sprite, count: x.count, tint: ENEMIES[x.enemy].tint, boss: !!ENEMIES[x.enemy].boss }));
+    const names = list.map((x) => L(ENEMIES[x.enemy].name)).join('、');
+    this.showInfo({ title: `${T('wave')} ${this.lvl.world.waveIndex + 2} ${T('incoming')}`, desc: `${names}\n${T('callWave')}`, stats: [], icons });
   }
 
   hideInfo(): void {
@@ -371,14 +443,25 @@ export class LevelUIScene extends Phaser.Scene {
     const c = this.add.container(w / 2, VIEW_H / 2).setDepth(100);
     c.add(dimmer(this, w * 2, VIEW_H * 2, 0.6).setPosition(-w, -VIEW_H));
     c.add(panel(this, 0, 20, 500, 380));
-    const title = addText(this, 0, -150, victory ? T('victory') : T('defeat'), {
+    const challenge = this.lvl.mode0 !== 'campaign';
+    const title = addText(this, 0, -150, victory ? (challenge ? T('challengeDone') : T('victory')) : T('defeat'), {
       size: 54,
       display: true,
       color: victory ? '#ffe066' : '#ff6a5a',
       strokeW: 8,
     }).setOrigin(0.5);
     c.add(title);
-    if (victory) {
+    if (victory && challenge) {
+      const st = this.add.image(0, -50, 'ic_star').setDisplaySize(96, 96).setScale(0);
+      c.add(this.add.image(0, -50, 'ic_star_empty').setDisplaySize(96, 96));
+      c.add(st);
+      this.tweens.add({ targets: st, scale: 96 / 56 / 2, duration: 420, delay: 500, ease: 'Back.easeOut', onStart: () => sfx.play('star') });
+      c.add(
+        addText(this, 0, 30, this.lvl.mode0 === 'heroic' ? T('heroic') : T('iron'), { size: 22, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0.5),
+      );
+      c.add(new Button(this, -100, 140, 170, 52, T('retry'), () => this.lvl.restart(), { color: 'gold' }));
+      c.add(new Button(this, 100, 140, 170, 52, T('toMap'), () => this.lvl.exitToMap(), { color: 'blue' }));
+    } else if (victory) {
       for (let i = 0; i < 3; i++) {
         const sx = (i - 1) * 96;
         const sy = i === 1 ? -62 : -46;
