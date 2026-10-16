@@ -73,6 +73,7 @@ python3 scripts/art/slice_towers.py raw/archer.png orig_frames/ out/ tw_archer_1
 - 錨點（弓箭手／法師站的高度、砲管位置、縮放）寫在 `src/td/art/towers.ts` 的 `PAINTED_TOWER_ART`，只有圖檔成功載入才套用；城垛型的塔把單位畫在塔身後面
 - 模擬的射擊點（`World.muzzle`）沒改，平衡不變；畫面上投射物從塔頂出發、飛行中漸漸回到模擬軌跡
 - 4 張家族圖加試作約 US$0.51
+- 砲管（`barrel_*.webp`，160×160、旋轉軸 (80,100)）一樣一張圖畫 4 個：`scripts/art/slice_barrels.py` 去背切開，砲座底部對齊原本位置、砲座中心對準旋轉軸；砲口朝右上（瞄準左邊時 flipX）
 
 標題主視覺（`public/assets/keyart.webp`，21:9）以塔、魔物和英雄 sprite 當風格參考生成，再用兩次「只改局部」的編輯把左邊守軍裡誤畫的哥布林換成士兵（提示詞：`scripts/art/prompts/keyart*.txt`，共 4 張約 US$0.16）。MenuScene 有這張圖就用它（緩慢呼吸縮放＋落葉），沒有就退回程序繪製的地圖；分享預覽圖 `public/td-og.jpg` 是同一畫面只留標題、1200×630 截圖。
 

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { TEX, VIEW_H, addText, setupCamera, viewW } from '../config';
-import { BARREL_ORIGIN, TOWER_ART, TW_BASE, TW_W, paintTowers, PAINTED_TOWER_ART, usePaintedTower } from '../art/towers';
+import { BARREL_ORIGIN, TOWER_ART, TW_BASE, TW_W, paintTowers, PAINTED_BARRELS, PAINTED_TOWER_ART, usePaintedBarrel, usePaintedTower } from '../art/towers';
 import { paintMonsters } from '../art/units';
 import { paintFx } from '../art/fx';
 import { paintUi, towerBadge } from '../art/ui';
@@ -45,7 +45,7 @@ export class BootScene extends Phaser.Scene {
     });
     for (const s of SPRITES) this.load.image(`raw_${s}`, `assets/sprites/${s}.png`);
     for (const m of PAINTED_MONSTERS) this.load.image(`rawmon_${m}`, `assets/sprites/mon/${m}.webp`);
-    for (const k of Object.keys(PAINTED_TOWER_ART)) this.load.image(`rawtw_${k}`, `assets/sprites/tw/${k}.webp`);
+    for (const k of [...Object.keys(PAINTED_TOWER_ART), ...Object.keys(PAINTED_BARRELS)]) this.load.image(`rawtw_${k}`, `assets/sprites/tw/${k}.webp`);
     this.load.image('keyart', 'assets/keyart.webp');
     for (const h of Object.values(HEROES)) this.load.image(`rawpt_${h.id}`, `assets/portraits/${h.id}.png`);
     for (const id of STORY_PORTRAITS) this.load.image(`rawpt_${id}`, `assets/portraits/${id}.png`);
@@ -76,8 +76,8 @@ export class BootScene extends Phaser.Scene {
 
   private generate(): void {
     const towers = paintTowers(TEX);
-    // 手繪塔：圖檔已是 TW_W×TW_H×TEX，直接畫進畫布取代程式畫的塔（徽章也會跟著換）
-    for (const k of Object.keys(PAINTED_TOWER_ART)) {
+    // 手繪塔與砲管：圖檔尺寸與程式畫的畫布相同，直接畫進去取代（徽章也會跟著換）
+    for (const k of [...Object.keys(PAINTED_TOWER_ART), ...Object.keys(PAINTED_BARRELS)]) {
       const key = `rawtw_${k}`;
       if (!this.textures.exists(key) || !towers[k]) continue;
       const src = this.textures.get(key).getSourceImage() as HTMLImageElement;
@@ -87,6 +87,7 @@ export class BootScene extends Phaser.Scene {
       ctx.clearRect(0, 0, cv.width, cv.height);
       ctx.drawImage(src, 0, 0, cv.width, cv.height);
       usePaintedTower(k);
+      usePaintedBarrel(k);
       this.textures.remove(key);
     }
     this.addCanvases(towers);

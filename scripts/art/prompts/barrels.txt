@@ -1,0 +1,11 @@
+Image 1 shows 4 placeholder mortar cannons from my 2D fantasy tower-defense game (flat placeholder style), left to right from smallest to biggest. Image 2 shows the TARGET art style: the game's hand-painted artillery towers, polished chibi fantasy game art with clean dark-brown outlines, soft cel shading, rich painted textures and warm lighting.
+
+Paint a NEW, polished version of the same 4 mortar cannons as one game sprite sheet:
+- Exactly 4 separate mortars in ONE horizontal row, in the same order and at the same positions and relative sizes as image 1, with clear empty gaps between them, all standing on the same ground line.
+- Each is a short, fat siege mortar barrel on a small round swivel mount, seen from a slightly top-down front view. Every barrel is tilted the SAME way as in image 1: the muzzle points UP and to the RIGHT (about 20 degrees right of vertical), and the dark open muzzle hole is visible at the top.
+- 1: small mortar of dark oak wood with two iron hoops, on a plain wooden mount.
+- 2: iron mortar, dark steel grey with two brass bands, on an iron mount.
+- 3: polished bronze mortar with brass bands and rivets, on an iron mount.
+- 4: "Big Bertha", a huge heavy dark-steel siege mortar with thick golden bands, a reinforced lip, rivets and a heavy stone-and-iron mount.
+- Do NOT draw any towers, walls, people, cannonballs, smoke or fire.
+- Background: perfectly flat solid magenta (#FF00FF) everywhere. No shadows on the background, no text, no labels, no frame.

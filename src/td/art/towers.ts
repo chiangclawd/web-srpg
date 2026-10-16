@@ -90,9 +90,19 @@ export const PAINTED_TOWER_ART: Record<string, TowerArtInfo> = {
 export function visualMuzzleH(art: string): number {
   const info = TOWER_ART[art];
   if (!info) return 0;
-  if (info.barrel) return (info.barrelY ?? 30) + 22 * (info.barrelScale ?? 1);
+  if (info.barrel) return (info.barrelY ?? 30) + (BARREL_MUZZLE[info.barrel] ?? 22) * (info.barrelScale ?? 1);
   if (art === 'tw_art_tesla') return info.topY + 2;
   return info.topY + 10;
+}
+
+/** 砲口中心在旋轉軸上方幾像素（邏輯）；手繪砲管比較長 */
+const BARREL_MUZZLE: Record<string, number> = {};
+
+/** AI 手繪砲管（public/assets/sprites/tw/barrel_*.webp，160×160，旋轉軸在 (80,100)） */
+export const PAINTED_BARRELS: Record<string, number> = { barrel_1: 24, barrel_2: 32, barrel_3: 39, barrel_bertha: 42 };
+
+export function usePaintedBarrel(key: string): void {
+  if (PAINTED_BARRELS[key]) BARREL_MUZZLE[key] = PAINTED_BARRELS[key];
 }
 
 export function usePaintedTower(key: string): void {
@@ -616,7 +626,7 @@ function barrel(ctx: Ctx, cx: number, cy: number, kind: 1 | 2 | 3 | 4): void {
   // 砲身（朝上斜的臼砲）
   ctx.save();
   ctx.translate(cx, cy);
-  ctx.rotate(-0.35);
+  ctx.rotate(0.35); // 砲口朝右上：未翻轉時對準右邊的目標（TowerView 朝左時 flipX）
   roundRect(ctx, -13 * sz, -30 * sz, 26 * sz, 40 * sz, 8 * sz);
   fillStroke(ctx, cylGrad(ctx, -13 * sz, 13 * sz, col), 3);
   // 箍
