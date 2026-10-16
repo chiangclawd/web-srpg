@@ -12,9 +12,12 @@
     "optimize-assets": "node scripts/optimize-assets.mjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "td:sim": "tsx scripts/td-sim.ts",
+    "td:levels": "tsx scripts/td-level-tool.ts"
   },
   "dependencies": {
+    "@fontsource/luckiest-guy": "^5.3.0",
     "phaser": "^3.80.1"
   },
   "devDependencies": {

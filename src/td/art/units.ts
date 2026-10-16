@@ -1,0 +1,266 @@
+import { OUTLINE, circle, ellipse, fillStroke, mkCanvas, poly, rgrad, roundRect, shade, vgrad, type Ctx } from './paint';
+
+/**
+ * 程序繪製的魔物（chibi 風格，粗描邊，面向右）。
+ * 每張紋理：寬 W、高 H，腳底在底部中央（origin 0.5, 1）。
+ */
+
+function goblin(ctx: Ctx, w: number, h: number): void {
+  const cx = w / 2;
+  const by = h - 3;
+  const skin = '#7cbf45';
+  // 腳
+  for (const ox of [-7, 6]) {
+    roundRect(ctx, cx + ox - 4, by - 14, 8, 14, 3);
+    fillStroke(ctx, shade(skin, -0.2), 2.5);
+  }
+  // 身體（皮衣）
+  ellipse(ctx, cx, by - 22, 14, 13);
+  fillStroke(ctx, vgrad(ctx, by - 35, by - 10, '#9a6a3c', '#6a4422'), 3);
+  ctx.strokeStyle = '#3a2412';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx - 12, by - 26);
+  ctx.lineTo(cx + 12, by - 18);
+  ctx.stroke();
+  // 匕首（右手）
+  ctx.save();
+  ctx.translate(cx + 14, by - 24);
+  ctx.rotate(-0.5);
+  poly(ctx, [0, 0, 4, -16, 8, 0]);
+  fillStroke(ctx, vgrad(ctx, -16, 0, '#ffffff', '#9aa6b0'), 2);
+  roundRect(ctx, 0, 0, 8, 6, 2);
+  fillStroke(ctx, '#5a3a1e', 2);
+  ctx.restore();
+  // 手
+  circle(ctx, cx + 14, by - 22, 4.5);
+  fillStroke(ctx, skin, 2.5);
+  circle(ctx, cx - 13, by - 22, 4.5);
+  fillStroke(ctx, skin, 2.5);
+  // 耳朵
+  for (const sx of [-1, 1]) {
+    poly(ctx, [cx + sx * 10, by - 50, cx + sx * 28, by - 58, cx + sx * 12, by - 42]);
+    fillStroke(ctx, skin, 2.5);
+    poly(ctx, [cx + sx * 12, by - 49, cx + sx * 23, by - 55, cx + sx * 13, by - 45]);
+    ctx.fillStyle = '#e88aa0';
+    ctx.fill();
+  }
+  // 頭
+  ellipse(ctx, cx + 1, by - 46, 15, 14);
+  fillStroke(ctx, rgrad(ctx, cx - 4, by - 52, 2, 18, shade(skin, 0.25), shade(skin, -0.15)), 3);
+  // 眼睛
+  for (const ox of [-5, 7]) {
+    ellipse(ctx, cx + ox, by - 48, 4.2, 4.8);
+    fillStroke(ctx, '#fff27a', 1.8);
+    circle(ctx, cx + ox + 1.2, by - 47.5, 1.8);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fill();
+  }
+  // 嘴與牙
+  ctx.strokeStyle = OUTLINE;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx - 4, by - 39);
+  ctx.quadraticCurveTo(cx + 2, by - 36, cx + 8, by - 39);
+  ctx.stroke();
+  ctx.fillStyle = '#fff';
+  poly(ctx, [cx - 1, by - 38.5, cx + 1, by - 35, cx + 3, by - 38]);
+  ctx.fill();
+  // 鼻
+  ellipse(ctx, cx + 3, by - 43, 3.5, 2.4);
+  fillStroke(ctx, shade(skin, -0.1), 1.6);
+}
+
+function wolf(ctx: Ctx, w: number, h: number): void {
+  const cx = w / 2;
+  const by = h - 3;
+  const fur = '#d9e2ea';
+  const dark = '#8494a4';
+  // 尾巴
+  ctx.beginPath();
+  ctx.moveTo(cx - 20, by - 26);
+  ctx.quadraticCurveTo(cx - 40, by - 30, cx - 42, by - 44);
+  ctx.quadraticCurveTo(cx - 30, by - 34, cx - 18, by - 32);
+  ctx.closePath();
+  fillStroke(ctx, vgrad(ctx, by - 44, by - 26, fur, dark), 2.5);
+  // 後腳
+  for (const ox of [-16, -6]) {
+    roundRect(ctx, cx + ox - 4, by - 18, 8, 18, 3);
+    fillStroke(ctx, shade(dark, ox === -6 ? 0 : -0.15), 2.5);
+  }
+  // 身體
+  ellipse(ctx, cx - 2, by - 25, 24, 12);
+  fillStroke(ctx, vgrad(ctx, by - 37, by - 13, fur, dark), 3);
+  // 前腳
+  for (const ox of [12, 20]) {
+    roundRect(ctx, cx + ox - 4, by - 18, 8, 18, 3);
+    fillStroke(ctx, shade(dark, ox === 20 ? 0.1 : -0.1), 2.5);
+  }
+  // 頭
+  ellipse(ctx, cx + 22, by - 34, 12, 10);
+  fillStroke(ctx, vgrad(ctx, by - 44, by - 24, '#f2f6fa', dark), 3);
+  // 嘴
+  poly(ctx, [cx + 28, by - 36, cx + 44, by - 31, cx + 42, by - 26, cx + 27, by - 27]);
+  fillStroke(ctx, vgrad(ctx, by - 36, by - 26, '#eef2f6', '#a8b4c0'), 2.5);
+  circle(ctx, cx + 43, by - 32, 2.4);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fill();
+  // 耳
+  for (const ox of [16, 24]) {
+    poly(ctx, [cx + ox - 4, by - 41, cx + ox, by - 54, cx + ox + 5, by - 41]);
+    fillStroke(ctx, dark, 2.2);
+  }
+  // 眼
+  ellipse(ctx, cx + 27, by - 37, 2.6, 2.2);
+  ctx.fillStyle = '#ffcf3a';
+  ctx.fill();
+  ctx.fillStyle = '#1a1a1a';
+  circle(ctx, cx + 27.6, by - 37, 1.1);
+  ctx.fill();
+}
+
+function troll(ctx: Ctx, w: number, h: number): void {
+  const cx = w / 2;
+  const by = h - 3;
+  const skin = '#8aa39a';
+  // 腿
+  for (const ox of [-12, 12]) {
+    roundRect(ctx, cx + ox - 9, by - 26, 18, 26, 6);
+    fillStroke(ctx, shade(skin, -0.2), 3);
+  }
+  // 身體
+  ellipse(ctx, cx, by - 50, 30, 30);
+  fillStroke(ctx, rgrad(ctx, cx - 10, by - 62, 4, 38, shade(skin, 0.2), shade(skin, -0.25)), 3.5);
+  // 肚子
+  ellipse(ctx, cx + 2, by - 42, 18, 16);
+  ctx.fillStyle = shade(skin, 0.25, 0.7);
+  ctx.fill();
+  // 腰布
+  poly(ctx, [cx - 26, by - 30, cx + 26, by - 30, cx + 18, by - 16, cx - 4, by - 20, cx - 20, by - 14]);
+  fillStroke(ctx, vgrad(ctx, by - 30, by - 14, '#8a5a32', '#5a3a1e'), 3);
+  // 棍棒
+  ctx.save();
+  ctx.translate(cx + 30, by - 46);
+  ctx.rotate(-0.6);
+  roundRect(ctx, -6, -40, 14, 50, 7);
+  fillStroke(ctx, vgrad(ctx, -40, 10, '#8a6038', '#5a3a1e'), 3);
+  for (const [sx, sy] of [
+    [-2, -32],
+    [6, -22],
+    [-3, -14],
+  ]) {
+    poly(ctx, [sx - 4, sy, sx, sy - 6, sx + 4, sy]);
+    fillStroke(ctx, '#d0d0c8', 1.6);
+  }
+  ctx.restore();
+  // 手臂
+  ellipse(ctx, cx + 28, by - 46, 9, 12);
+  fillStroke(ctx, skin, 3);
+  ellipse(ctx, cx - 28, by - 44, 9, 13);
+  fillStroke(ctx, shade(skin, -0.1), 3);
+  // 頭
+  ellipse(ctx, cx + 6, by - 82, 14, 12);
+  fillStroke(ctx, rgrad(ctx, cx + 2, by - 86, 2, 16, shade(skin, 0.25), shade(skin, -0.15)), 3);
+  // 獠牙
+  for (const ox of [2, 12]) {
+    poly(ctx, [cx + ox - 2, by - 76, cx + ox, by - 84, cx + ox + 2, by - 76]);
+    fillStroke(ctx, '#fff8e0', 1.6);
+  }
+  // 眼
+  for (const ox of [2, 11]) {
+    circle(ctx, cx + ox, by - 86, 2.5);
+    ctx.fillStyle = '#ffde3a';
+    ctx.fill();
+  }
+  // 眉
+  ctx.strokeStyle = OUTLINE;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(cx - 2, by - 91);
+  ctx.lineTo(cx + 15, by - 89);
+  ctx.stroke();
+}
+
+function golem(ctx: Ctx, w: number, h: number): void {
+  const cx = w / 2;
+  const by = h - 3;
+  const rock = '#9a8466';
+  const lava = '#ff8a2a';
+  const block = (x: number, y: number, rw: number, rh: number, k = 0) => {
+    poly(ctx, [x - rw, y + rh * 0.6, x - rw * 0.8, y - rh, x + rw * 0.6, y - rh * 0.9, x + rw, y + rh * 0.3, x + rw * 0.4, y + rh]);
+    fillStroke(ctx, vgrad(ctx, y - rh, y + rh, shade(rock, 0.25 + k), shade(rock, -0.25 + k)), 3);
+  };
+  block(cx - 12, by - 10, 9, 10);
+  block(cx + 12, by - 10, 9, 10, -0.05);
+  block(cx, by - 38, 24, 20);
+  block(cx - 28, by - 40, 9, 14, -0.1);
+  block(cx + 28, by - 42, 10, 15, 0.05);
+  block(cx + 2, by - 66, 12, 10, 0.1);
+  ctx.strokeStyle = lava;
+  ctx.shadowColor = '#ff5a00';
+  ctx.shadowBlur = 6;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(cx - 10, by - 48);
+  ctx.lineTo(cx - 2, by - 38);
+  ctx.lineTo(cx - 8, by - 28);
+  ctx.moveTo(cx + 8, by - 44);
+  ctx.lineTo(cx + 14, by - 34);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  for (const ox of [-2, 6]) {
+    circle(ctx, cx + ox, by - 67, 2.4);
+    ctx.fillStyle = '#ffe07a';
+    ctx.fill();
+  }
+}
+
+function sheep(ctx: Ctx, w: number, h: number): void {
+  const cx = w / 2;
+  const by = h - 3;
+  for (const ox of [-10, -3, 6, 12]) {
+    roundRect(ctx, cx + ox - 2.5, by - 12, 5, 12, 2);
+    fillStroke(ctx, '#2a2a2a', 1.5);
+  }
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = OUTLINE;
+  const puffs: [number, number, number][] = [
+    [cx - 10, by - 20, 9],
+    [cx + 2, by - 24, 10],
+    [cx + 12, by - 19, 8],
+    [cx - 2, by - 15, 9],
+  ];
+  for (const [x, y, r] of puffs) {
+    circle(ctx, x, y, r);
+    ctx.stroke();
+  }
+  for (const [x, y, r] of puffs) {
+    circle(ctx, x, y, r);
+    ctx.fillStyle = rgrad(ctx, x - 3, y - 3, 1, r, '#ffffff', '#dcdcdc');
+    ctx.fill();
+  }
+  ellipse(ctx, cx + 20, by - 24, 6, 7);
+  fillStroke(ctx, '#3a3a3a', 2.5);
+  circle(ctx, cx + 22, by - 26, 1.4);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+}
+
+export const MONSTERS: Record<string, { w: number; h: number; paint: (ctx: Ctx, w: number, h: number) => void }> = {
+  mon_goblin: { w: 64, h: 66, paint: goblin },
+  mon_wolf: { w: 92, h: 60, paint: wolf },
+  mon_troll: { w: 110, h: 104, paint: troll },
+  mon_golem: { w: 86, h: 84, paint: golem },
+  mon_sheep: { w: 56, h: 40, paint: sheep },
+};
+
+export function paintMonsters(s: number): Record<string, HTMLCanvasElement> {
+  const out: Record<string, HTMLCanvasElement> = {};
+  for (const [k, m] of Object.entries(MONSTERS)) {
+    const [cv, ctx] = mkCanvas(m.w * s, m.h * s);
+    ctx.scale(s, s);
+    m.paint(ctx, m.w, m.h);
+    out[k] = cv;
+  }
+  return out;
+}

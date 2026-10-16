@@ -1,0 +1,1157 @@
+import Phaser from 'phaser';
+import { PLAY_W, PLAY_X0, RS, TEX, VIEW_H, WORLD_W, setupCamera, viewW } from '../config';
+import { getLevel } from '../data/levels';
+import { HEROES } from '../data/heroes';
+import { TOWERS, TOWER_ORDER } from '../data/towers';
+import { ENEMIES } from '../data/enemies';
+import { computeMods } from '../data/upgrades';
+import { World, type Difficulty, type SimEvent } from '../sim/World';
+import { Enemy, Soldier, Tower, type Projectile } from '../sim/entities';
+import type { LevelDef, TowerLevelDef, TowerType } from '../sim/defs';
+import { RANGE_Y, inEllipse } from '../sim/math';
+import { paintLevel, paintBuildSpot } from '../art/terrain';
+import { THEMES } from '../art/scenery';
+import { DEPTH, Fx } from '../view/Fx';
+import { TowerView, UnitView } from '../view/Units';
+import { RadialMenu, type RadialOption } from '../view/RadialMenu';
+import { IconButton } from '../ui/widgets';
+import { sfx } from '../audio';
+import { save, persist } from '../save';
+import { L, T } from '../i18n';
+import type { LevelUIScene, InfoData } from './LevelUIScene';
+
+const STEP = 1 / 60;
+const BG_SCALE = RS >= 2 ? 1.5 : 1;
+
+type Mode = 'idle' | 'hero' | 'meteor' | 'reinforce' | 'rally';
+
+export class LevelScene extends Phaser.Scene {
+  world!: World;
+  level!: LevelDef;
+  fx!: Fx;
+  ui!: LevelUIScene;
+  difficulty: Difficulty = 'normal';
+  paused = false;
+  speed = 1;
+  mode: Mode = 'idle';
+
+  private acc = 0;
+  private enemyViews = new Map<number, UnitView>();
+  private soldierViews = new Map<number, UnitView>();
+  private towerViews = new Map<number, TowerView>();
+  private projViews = new Map<number, Phaser.GameObjects.Image>();
+  private zoneViews = new Map<number, Phaser.GameObjects.GameObject[]>();
+  private spotImgs: Phaser.GameObjects.Image[] = [];
+  private spotHits: Phaser.GameObjects.Ellipse[] = [];
+  private towerHits = new Map<number, Phaser.GameObjects.Rectangle>();
+  private menu: RadialMenu | null = null;
+  private menuTarget: { spot?: number; tower?: Tower } | null = null;
+  private rangeG!: Phaser.GameObjects.Graphics;
+  private rallyFlags = new Map<number, Phaser.GameObjects.Image>();
+  private waveBtns: { path: number; btn: IconButton; ring: Phaser.GameObjects.Graphics }[] = [];
+  private seenIntro = new Set<string>();
+  private resultShown = false;
+  private ambient: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+
+  constructor() {
+    super('Level');
+  }
+
+  init(data: { levelId: string; difficulty?: Difficulty }): void {
+    this.level = getLevel(data.levelId)!;
+    this.difficulty = data.difficulty ?? save().settings.difficulty;
+    this.paused = false;
+    this.speed = save().settings.speed ?? 1;
+    this.mode = 'idle';
+    this.acc = 0;
+    this.enemyViews = new Map();
+    this.soldierViews = new Map();
+    this.towerViews = new Map();
+    this.projViews = new Map();
+    this.zoneViews = new Map();
+    this.spotImgs = [];
+    this.spotHits = [];
+    this.towerHits = new Map();
+    this.rallyFlags = new Map();
+    this.waveBtns = [];
+    this.menu = null;
+    this.menuTarget = null;
+    this.resultShown = false;
+    this.seenIntro = new Set(save().seenEnemies);
+  }
+
+  create(): void {
+    const sv = save();
+    const heroId = sv.selectedHero;
+    const heroDef = HEROES[heroId] ?? HEROES.arthur;
+    this.world = new World({
+      level: this.level,
+      mods: computeMods(sv.upgrades),
+      hero: { def: heroDef, xp: sv.heroes[heroDef.id]?.xp ?? 0 },
+      difficulty: this.difficulty,
+      seed: (Date.now() & 0xffff) + 1,
+    });
+    sv.stats.plays++;
+    persist();
+
+    const cam = setupCamera(this);
+    this.layoutCamera();
+    cam.setBackgroundColor(THEMES[this.level.theme].groundDark);
+
+    // 背景
+    if (this.textures.exists('bg_level')) this.textures.remove('bg_level');
+    const bg = paintLevel(this.level, WORLD_W, PLAY_X0, BG_SCALE);
+    this.textures.addCanvas('bg_level', bg);
+    this.add.image(-PLAY_X0, 0, 'bg_level').setOrigin(0).setScale(1 / BG_SCALE).setDepth(DEPTH.bg);
+    if (this.textures.exists('spot_tex')) this.textures.remove('spot_tex');
+    this.textures.addCanvas('spot_tex', paintBuildSpot(TEX, THEMES[this.level.theme].snowy));
+
+    this.fx = new Fx(this);
+    this.rangeG = this.add.graphics().setDepth(DEPTH.rangeRing);
+
+    // 建造點
+    this.world.spots.forEach((s, i) => {
+      const img = this.add.image(s.x, s.y, 'spot_tex').setScale(1 / TEX).setDepth(DEPTH.decal + 10);
+      this.spotImgs.push(img);
+      const hit = this.add.ellipse(s.x, s.y - 4, 84, 56, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
+      hit.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
+        ev?.stopPropagation?.();
+        this.onSpotTap(i);
+      });
+      hit.on('pointerover', () => img.setTint(0xfff0c0));
+      hit.on('pointerout', () => img.clearTint());
+      this.spotHits.push(hit);
+    });
+
+    // 環境粒子
+    this.makeAmbient();
+
+    // 全域點擊
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
+      if (over.length) return;
+      this.onGroundTap(p.worldX, p.worldY);
+    });
+    this.input.keyboard?.on('keydown-SPACE', () => this.togglePause());
+    this.input.keyboard?.on('keydown-ESC', () => this.cancelAll());
+    this.input.keyboard?.on('keydown-ONE', () => this.ui?.spellButton('meteor'));
+    this.input.keyboard?.on('keydown-TWO', () => this.ui?.spellButton('reinforce'));
+
+    this.scale.on('resize', this.onResize, this);
+    this.events.once('shutdown', () => {
+      this.scale.off('resize', this.onResize, this);
+      this.scene.stop('LevelUI');
+    });
+
+    this.createWaveButtons();
+
+    // HUD
+    this.scene.launch('LevelUI', { level: this });
+    this.ui = this.scene.get('LevelUI') as LevelUIScene;
+
+    sfx.playBgm(this.level.bgm ?? 'tense');
+    this.cameras.main.fadeIn(400, 0, 0, 0);
+
+    // 開場：介紹新敵人
+    this.time.delayedCall(500, () => this.introNewEnemies(this.level.intro ?? []));
+  }
+
+  private onResize(): void {
+    this.layoutCamera();
+    this.positionWaveButtons();
+  }
+
+  private layoutCamera(): void {
+    const w = viewW(this);
+    this.cameras.main.setScroll(-(w - PLAY_W) / 2, 0);
+  }
+
+  /** 世界座標可見範圍 */
+  viewRect(): Phaser.Geom.Rectangle {
+    const w = viewW(this);
+    return new Phaser.Geom.Rectangle(-(w - PLAY_W) / 2, 0, w, VIEW_H);
+  }
+
+  private makeAmbient(): void {
+    const theme = this.level.theme;
+    if (theme === 'snow') {
+      this.ambient = this.add.particles(0, 0, 'fx_snow', {
+        x: { min: -PLAY_X0, max: PLAY_W + PLAY_X0 },
+        y: -10,
+        lifespan: 9000,
+        speedY: { min: 25, max: 55 },
+        speedX: { min: -20, max: 10 },
+        scale: { min: 0.3, max: 0.7 },
+        alpha: { start: 0.9, end: 0.4 },
+        frequency: 70,
+      });
+    } else if (theme === 'autumn' || theme === 'forest') {
+      this.ambient = this.add.particles(0, 0, 'fx_leaf', {
+        x: { min: -PLAY_X0, max: PLAY_W + PLAY_X0 },
+        y: -10,
+        lifespan: 10000,
+        speedY: { min: 20, max: 40 },
+        speedX: { min: -30, max: 20 },
+        rotate: { start: 0, end: 360 },
+        scale: { min: 0.35, max: 0.6 },
+        tint: theme === 'autumn' ? [0xd9822b, 0xc4512a, 0xe3a93a] : [0x7ac24a, 0x5aa03a],
+        frequency: 500,
+      });
+    }
+    this.ambient?.setDepth(DEPTH.float - 10);
+  }
+
+  // ═════════════════════════ 輸入 ═════════════════════════
+
+  private onSpotTap(i: number): void {
+    if (this.world.result) return;
+    if (this.mode === 'meteor' || this.mode === 'reinforce') {
+      const s = this.world.spots[i];
+      this.onGroundTap(s.x, s.y);
+      return;
+    }
+    const spot = this.world.spots[i];
+    if (spot.tower) {
+      this.openTowerMenu(spot.tower);
+      return;
+    }
+    if (this.menuTarget?.spot === i) {
+      this.closeMenu();
+      return;
+    }
+    this.openBuildMenu(i);
+  }
+
+  private onGroundTap(x: number, y: number): void {
+    if (this.world.result) return;
+    const w = this.world;
+    switch (this.mode) {
+      case 'meteor':
+        if (w.castMeteor(x, y)) {
+          sfx.play('whoosh');
+          this.setMode('idle');
+        }
+        return;
+      case 'reinforce': {
+        const onPath = w.paths.some((p) => p.nearest({ x, y }).dist < 42);
+        if (!onPath) {
+          sfx.play('error');
+          this.fx.floatText(x, y - 10, '✖', '#ff6a5a', 22);
+          return;
+        }
+        if (w.castReinforce(x, y)) {
+          sfx.play('horn', 0.4);
+          this.fx.smokePuff(x, y, 8);
+          this.setMode('idle');
+        }
+        return;
+      }
+      case 'rally': {
+        const t = this.menuTarget?.tower;
+        if (t && w.setRally(t, x, y)) {
+          sfx.play('click');
+          this.showRallyFlag(t, true);
+          this.fx.ring(x, y, 30, 0x6aa0ff, 300);
+        } else {
+          sfx.play('error');
+        }
+        this.setMode('idle');
+        this.closeMenu();
+        return;
+      }
+      case 'hero':
+        if (w.moveHero(x, y)) {
+          sfx.play('click');
+          this.fx.ring(x, y, 22, 0xffd84a, 300);
+          this.setMode('idle');
+        }
+        return;
+      default:
+        break;
+    }
+    // 點英雄？
+    const h = w.hero;
+    if (h && h.alive && Math.hypot(h.x - x, h.y - 24 - y) < 34) {
+      this.closeMenu();
+      this.setMode('hero');
+      return;
+    }
+    // 點敵人 → 顯示資訊
+    let best: Enemy | null = null;
+    let bd = 30;
+    for (const e of w.enemies) {
+      const d = Math.hypot(e.x - x, e.y - e.def.height * 0.5 + (e.flying ? -30 : 0) - y);
+      if (d < bd) {
+        bd = d;
+        best = e;
+      }
+    }
+    this.closeMenu();
+    if (best) this.ui.showEnemyInfo(best.def);
+    else this.ui.hideInfo();
+  }
+
+  setMode(m: Mode): void {
+    this.mode = m;
+    const hv = this.world.hero ? this.soldierViews.get(this.world.hero.id) : undefined;
+    hv?.showRing(m === 'hero');
+    this.ui?.onModeChange(m);
+    this.drawRange(null);
+    if (m === 'hero' && this.world.hero) {
+      this.ui.toast(T('heroMove'));
+    } else if (m === 'meteor') {
+      this.ui.toast(T('meteorDesc'));
+    } else if (m === 'reinforce') {
+      this.ui.toast(T('reinforceDesc'));
+    } else if (m === 'rally') {
+      const t = this.menuTarget?.tower;
+      if (t) this.drawRange(t.x, t.y, t.def.range, 0x6aa0ff);
+    }
+  }
+
+  cancelAll(): void {
+    this.closeMenu();
+    this.setMode('idle');
+    this.ui?.hideInfo();
+  }
+
+  selectHero(): void {
+    if (!this.world.hero?.alive) return;
+    this.closeMenu();
+    this.setMode(this.mode === 'hero' ? 'idle' : 'hero');
+  }
+
+  enterSpell(kind: 'meteor' | 'reinforce'): void {
+    const w = this.world;
+    const ready = kind === 'meteor' ? w.meteorCd <= 0 : w.reinfCd <= 0;
+    if (!ready) {
+      sfx.play('error');
+      return;
+    }
+    this.closeMenu();
+    this.setMode(this.mode === kind ? 'idle' : kind);
+  }
+
+  togglePause(force?: boolean): void {
+    this.paused = force ?? !this.paused;
+    this.ui?.showPause(this.paused);
+  }
+
+  toggleSpeed(): number {
+    this.speed = this.speed === 1 ? 2 : 1;
+    save().settings.speed = this.speed;
+    persist();
+    return this.speed;
+  }
+
+  // ═════════════════════════ 選單 ═════════════════════════
+
+  private closeMenu(): void {
+    if (this.menu) {
+      this.menu.close();
+      this.menu = null;
+    }
+    if (this.menuTarget?.tower) this.showRallyFlag(this.menuTarget.tower, false);
+    this.menuTarget = null;
+    this.drawRange(null);
+    this.ui?.hideInfo();
+  }
+
+  private drawRange(x: number | null, y = 0, r = 0, color = 0xffffff): void {
+    const g = this.rangeG;
+    g.clear();
+    if (x === null) return;
+    g.fillStyle(color, 0.12);
+    g.fillEllipse(x, y, r * 2, r * 2 * RANGE_Y);
+    g.lineStyle(2.5, color, 0.7);
+    g.strokeEllipse(x, y, r * 2, r * 2 * RANGE_Y);
+  }
+
+  private openBuildMenu(spot: number): void {
+    this.closeMenu();
+    this.setMode('idle');
+    const s = this.world.spots[spot];
+    const angles = [-135, -45, 135, 45];
+    const opts: RadialOption[] = TOWER_ORDER.map((type, i) => {
+      const cost = this.world.buildCost(type);
+      const def = TOWERS[type].levels[0];
+      return {
+        id: type,
+        icon: `icb_${type}`,
+        price: cost,
+        enabled: this.world.gold >= cost,
+        angle: angles[i],
+        onPreview: () => {
+          this.drawRange(s.x, s.y, this.effRange(type, def), 0xffffff);
+          this.ui.showInfo(this.towerInfo(type, def, cost));
+        },
+        onConfirm: () => {
+          const t = this.world.build(spot, type);
+          if (t) {
+            sfx.play('build');
+            this.closeMenu();
+          }
+        },
+      };
+    });
+    this.menu = new RadialMenu(this, s.x, s.y - 20, opts);
+    this.menuTarget = { spot };
+    if (this.level.tutorial && this.world.towers.length === 0) this.ui.toast(T('tutConfirm'));
+  }
+
+  private effRange(type: TowerType, def: TowerLevelDef): number {
+    const m = this.world.mods;
+    const mul = type === 'archer' ? m.archerRange : type === 'mage' ? m.mageRange : type === 'artillery' ? m.artRange : 1;
+    return def.range * mul;
+  }
+
+  private openTowerMenu(t: Tower): void {
+    this.closeMenu();
+    this.setMode('idle');
+    const w = this.world;
+    const opts: RadialOption[] = [];
+    const range = w.towerRange(t);
+    this.drawRange(t.x, t.y, range, t.type === 'barracks' ? 0x6aa0ff : 0xffffff);
+    this.ui.showInfo(this.towerInfo(t.type, t.def, null, t));
+    if (t.type === 'barracks') this.showRallyFlag(t, true);
+
+    if (t.level < 3) {
+      const cost = w.upgradeCost(t)!;
+      const next = TOWERS[t.type].levels[t.level];
+      opts.push({
+        id: 'up',
+        icon: 'ic_upgrade',
+        price: cost,
+        enabled: w.gold >= cost,
+        angle: -90,
+        onPreview: () => {
+          this.drawRange(t.x, t.y, this.effRange(t.type, next), 0x9aff7a);
+          this.ui.showInfo(this.towerInfo(t.type, next, cost, undefined, t.def));
+        },
+        onConfirm: () => {
+          if (w.upgrade(t)) {
+            sfx.play('upgrade');
+            this.closeMenu();
+          }
+        },
+      });
+    } else if (t.level === 3) {
+      TOWERS[t.type].branches.forEach((b, i) => {
+        const cost = w.branchCost(t, i)!;
+        opts.push({
+          id: 'br' + i,
+          icon: `icb_${b.branchId}`,
+          price: cost,
+          enabled: w.gold >= cost,
+          angle: i === 0 ? -130 : -50,
+          dist: 70,
+          size: 58,
+          onPreview: () => {
+            this.drawRange(t.x, t.y, this.effRange(t.type, b), 0x9aff7a);
+            this.ui.showInfo(this.towerInfo(t.type, b, cost, undefined, t.def));
+          },
+          onConfirm: () => {
+            if (w.chooseBranch(t, i)) {
+              sfx.play('upgrade');
+              this.closeMenu();
+            }
+          },
+        });
+      });
+    } else {
+      const skills = t.def.skills ?? [];
+      const angs = skills.length === 2 ? [-130, -50] : [-150, -90, -30];
+      skills.forEach((sk, i) => {
+        const lv = t.skills[sk.id] ?? 0;
+        const cost = w.skillCost(t, sk.id);
+        opts.push({
+          id: 'sk_' + sk.id,
+          icon: `sk_${sk.id}`,
+          badge: 'ui_badge_blue',
+          price: cost,
+          tag: cost === null ? 'MAX' : undefined,
+          enabled: cost !== null && w.gold >= cost,
+          pips: [lv, sk.costs.length],
+          angle: angs[i],
+          dist: 70,
+          onPreview: () => {
+            this.ui.showInfo({
+              title: L(sk.name),
+              desc: L(sk.desc),
+              stats: [[T('level'), `${lv} / ${sk.costs.length}`]],
+              cost: cost ?? undefined,
+            });
+          },
+          onConfirm: () => {
+            if (w.buySkill(t, sk.id)) {
+              sfx.play('sparkle');
+              this.closeMenu();
+              this.openTowerMenu(t);
+            }
+          },
+        });
+      });
+    }
+    const refund = w.sellValue(t);
+    opts.push({
+      id: 'sell',
+      icon: 'ic_sell',
+      badge: 'ui_badge_red',
+      price: refund,
+      enabled: true,
+      angle: 90,
+      size: 46,
+      onPreview: () => this.ui.showInfo({ title: T('sell'), desc: `+${refund}`, stats: [] }),
+      onConfirm: () => {
+        w.sell(t);
+        sfx.play('sell');
+        this.closeMenu();
+      },
+    });
+    if (t.type === 'barracks') {
+      opts.push({
+        id: 'rally',
+        icon: 'ic_rally',
+        badge: 'ui_badge_blue',
+        price: null,
+        enabled: true,
+        angle: 30,
+        dist: 72,
+        size: 46,
+        confirm: false,
+        onConfirm: () => {
+          this.menu?.close();
+          this.menu = null;
+          this.setMode('rally');
+          this.ui.toast(T('rally'));
+        },
+      });
+    }
+    this.menu = new RadialMenu(this, t.x, t.y - 40, opts, 66);
+    this.menuTarget = { tower: t };
+  }
+
+  private showRallyFlag(t: Tower, on: boolean): void {
+    let f = this.rallyFlags.get(t.id);
+    if (!on) {
+      f?.setVisible(false);
+      return;
+    }
+    if (!f) {
+      f = this.add.image(0, 0, 'fx_rally').setOrigin(0.3, 0.95).setScale(1 / TEX).setDepth(DEPTH.float - 1);
+      this.rallyFlags.set(t.id, f);
+    }
+    f.setPosition(t.rallyX, t.rallyY).setVisible(true);
+    f.setScale(0);
+    this.tweens.add({ targets: f, scale: 1 / TEX, duration: 250, ease: 'Back.easeOut' });
+  }
+
+  towerInfo(type: TowerType, def: TowerLevelDef, cost: number | null, tower?: Tower, prev?: TowerLevelDef): InfoData {
+    const stats: [string, string][] = [];
+    const m = this.world.mods;
+    if (type === 'barracks' && def.soldier) {
+      const st = def.soldier;
+      stats.push([T('soldiers'), String(st.count)]);
+      stats.push([T('hp'), String(Math.round(st.hp * m.barracksHp))]);
+      stats.push([T('damage'), `${Math.round(st.dmg[0] * m.barracksDmg)}-${Math.round(st.dmg[1] * m.barracksDmg)}`]);
+      stats.push([T('armor'), armorWord(st.armor + m.barracksArmor)]);
+    } else {
+      const dm = type === 'archer' ? m.archerDmg : type === 'mage' ? m.mageDmg : m.artDmg;
+      stats.push([T('damage'), `${Math.round(def.damage[0] * dm)}-${Math.round(def.damage[1] * dm)}`]);
+      stats.push([T('rate'), rateWord(def.cooldown)]);
+      stats.push([T('range'), String(Math.round(this.effRange(type, def)))]);
+      stats.push(['', def.hitsAir ? T('hitsAir') : T('groundOnly')]);
+    }
+    void prev;
+    void tower;
+    return { title: L(def.name), desc: L(def.desc), stats, cost: cost ?? undefined };
+  }
+
+  // ═════════════════════════ 波次按鈕 ═════════════════════════
+
+  private createWaveButtons(): void {
+    this.level.paths.forEach((_, i) => {
+      const btn = new IconButton(this, 0, 0, 52, 'ic_skull', () => this.callWave(), 'ui_badge_red', 0.7);
+      btn.setDepth(DEPTH.menu - 10);
+      const ring = this.add.graphics().setDepth(DEPTH.menu - 11);
+      btn.setVisible(false);
+      this.waveBtns.push({ path: i, btn, ring });
+      btn.hit.on('pointerover', () => this.ui?.showWavePreview(this.world.nextWaveEnemies()));
+      btn.hit.on('pointerout', () => this.ui?.hideInfo());
+    });
+    this.positionWaveButtons();
+  }
+
+  private positionWaveButtons(): void {
+    const v = this.viewRect();
+    for (const wb of this.waveBtns) {
+      const p = this.world.paths[wb.path];
+      let pos = p.posAt(0);
+      for (let d = 0; d < p.length; d += 8) {
+        const q = p.posAt(d);
+        if (q.x > v.left + 40 && q.x < v.right - 40 && q.y > 70 && q.y < VIEW_H - 40) {
+          pos = q;
+          break;
+        }
+      }
+      wb.btn.setPosition(pos.x, pos.y - 6);
+      wb.ring.setPosition(pos.x, pos.y - 6);
+    }
+  }
+
+  callWave(): void {
+    const w = this.world;
+    if (!w.canCallWave()) return;
+    const bonus = w.callNextWave();
+    sfx.play('horn');
+    if (bonus > 0) sfx.play('coin');
+    this.ui.hideInfo();
+  }
+
+  private updateWaveButtons(time: number): void {
+    const w = this.world;
+    const can = w.canCallWave();
+    const paths = can ? new Set(w.nextWavePaths()) : new Set<number>();
+    for (const wb of this.waveBtns) {
+      const vis = paths.has(wb.path);
+      wb.btn.setVisible(vis);
+      wb.ring.clear();
+      if (!vis) continue;
+      const pulse = 1 + Math.sin(time / 180) * 0.06;
+      wb.btn.setScale(pulse);
+      if (w.waveState === 'gap') {
+        const k = Phaser.Math.Clamp((w.nextWaveAt - w.time) / w.gapTotal, 0, 1);
+        wb.ring.lineStyle(5, 0x1a0a04, 0.8);
+        wb.ring.beginPath();
+        wb.ring.arc(0, 0, 30, 0, Math.PI * 2);
+        wb.ring.strokePath();
+        wb.ring.lineStyle(3.5, 0xffd84a, 1);
+        wb.ring.beginPath();
+        wb.ring.arc(0, 0, 30, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * k);
+        wb.ring.strokePath();
+      } else {
+        wb.ring.lineStyle(3, 0xffd84a, 0.4 + Math.sin(time / 150) * 0.3);
+        wb.ring.strokeCircle(0, 0, 31);
+      }
+    }
+  }
+
+  // ═════════════════════════ 主迴圈 ═════════════════════════
+
+  override update(time: number, deltaMs: number): void {
+    const w = this.world;
+    if (!this.paused && !w.result) {
+      this.acc += Math.min(deltaMs, 100) / 1000 * this.speed;
+      let n = 0;
+      while (this.acc >= STEP && n < 16) {
+        w.step(STEP);
+        this.acc -= STEP;
+        n++;
+      }
+    }
+    this.handleEvents(w.drainEvents());
+    this.sync(time);
+    this.updateWaveButtons(time);
+    this.ui?.refresh();
+    // 選單打開時更新可負擔狀態（金幣變動）
+  }
+
+  private handleEvents(evs: SimEvent[]): void {
+    for (const ev of evs) {
+      switch (ev.type) {
+        case 'enemySpawn': {
+          const e = ev.e;
+          const v = new UnitView(this, e.def.sprite, e.def.height, e.def.facesRight, !!e.def.flying, Math.max(20, e.def.radius * 2), true, 0x5ad04a);
+          if (e.def.boss) v.body.setScale(v.body.scale);
+          this.enemyViews.set(e.id, v);
+          if (!this.seenIntro.has(e.def.id)) {
+            this.seenIntro.add(e.def.id);
+            const sv = save();
+            if (!sv.seenEnemies.includes(e.def.id)) {
+              sv.seenEnemies.push(e.def.id);
+              persist();
+            }
+          }
+          break;
+        }
+        case 'enemyDie': {
+          const v = this.enemyViews.get(ev.e.id);
+          if (v) {
+            v.die('death');
+            this.enemyViews.delete(ev.e.id);
+          }
+          const fy = ev.e.flying ? -30 : 0;
+          this.fx.smokePuff(ev.e.x, ev.e.y - 10 + fy, ev.e.def.boss ? 16 : 4);
+          if (ev.e.def.boss) {
+            this.fx.explosion(ev.e.x, ev.e.y, 90, 'meteor');
+            sfx.play('explosion');
+          }
+          sfx.play('death', 0.5);
+          break;
+        }
+        case 'enemyLeak': {
+          const v = this.enemyViews.get(ev.e.id);
+          if (v) {
+            v.die('leak');
+            this.enemyViews.delete(ev.e.id);
+          }
+          break;
+        }
+        case 'lifeLost':
+          sfx.play('lifelost');
+          this.cameras.main.flash(160, 160, 20, 20, false);
+          this.ui.bumpLives();
+          break;
+        case 'gold':
+          this.fx.floatText(ev.x, ev.y, `+${ev.amount}`, '#ffe066', 15);
+          break;
+        case 'soldierSpawn': {
+          const s = ev.s;
+          let v = this.soldierViews.get(s.id);
+          if (v && !v.dead) {
+            v.setVisible(true);
+          } else {
+            const isHero = s.kind === 'hero';
+            const tex = s.sprite;
+            v = new UnitView(this, tex, s.height, isHero ? s.hero!.def.facesRight : soldierFacesRight(tex), !!s.hero?.def.flying, isHero ? 30 : 22, isHero, isHero ? 0x4ab0ff : 0x7ad0ff);
+            this.soldierViews.set(s.id, v);
+          }
+          if (s.kind === 'militia' || s.kind === 'golem') this.fx.smokePuff(s.x, s.y - 8, 5);
+          if (s.kind === 'hero') this.fx.ring(s.x, s.y, 36, 0xffe08a, 400);
+          break;
+        }
+        case 'soldierDie': {
+          const s = ev.s;
+          const v = this.soldierViews.get(s.id);
+          if (v) {
+            if (s.kind === 'hero') {
+              v.setVisible(false);
+              this.fx.smokePuff(s.x, s.y - 16, 8);
+            } else {
+              v.die(s.kind === 'militia' && s.hp > 0 ? 'fade' : 'death');
+              this.soldierViews.delete(s.id);
+            }
+          }
+          break;
+        }
+        case 'projSpawn':
+          this.spawnProj(ev.p);
+          break;
+        case 'projHit': {
+          const img = this.projViews.get(ev.p.id);
+          if (img) {
+            if (!ev.hit && (ev.p.kind === 'arrow' || ev.p.kind === 'heroArrow')) {
+              // 沒射中：箭插在地上淡出
+              img.setRotation(img.rotation + 0.3);
+              this.tweens.add({ targets: img, alpha: 0, delay: 300, duration: 400, onComplete: () => img.destroy() });
+            } else img.destroy();
+            this.projViews.delete(ev.p.id);
+          }
+          if (ev.hit) this.projImpactFx(ev.p);
+          break;
+        }
+        case 'explosion':
+          this.fx.explosion(ev.x, ev.y, ev.r, ev.kind);
+          if (ev.kind === 'bomb' || ev.kind === 'bomblet' || ev.kind === 'missile') sfx.play('explosion', ev.kind === 'bomblet' ? 0.5 : 0.8);
+          else if (ev.kind === 'meteor') sfx.play('explosion', 1);
+          else if (ev.kind === 'nova') sfx.play('freeze');
+          else if (ev.kind === 'holy') sfx.play('heal');
+          else if (ev.kind === 'shock') sfx.play('zap', 0.6);
+          break;
+        case 'towerShoot': {
+          const tp = ev.t.def.attack;
+          if (tp === 'arrow') sfx.play('arrow', 0.6);
+          else if (tp === 'bolt') sfx.play('magic', 0.6);
+          else if (tp === 'bomb') {
+            sfx.play('cannon', 0.7);
+            const m = this.world.muzzle(ev.t);
+            this.fx.smokePuff(m.x, m.y - 6, 3);
+          } else if (tp === 'tesla') sfx.play('zap', 0.8);
+          break;
+        }
+        case 'lightning':
+          this.fx.lightning(ev.pts);
+          break;
+        case 'beam':
+          if (ev.kind === 'disintegrate') {
+            this.fx.beam(ev.x1, ev.y1, ev.x2, ev.y2, 0xb050ff, 0xffe0ff);
+            sfx.play('zap');
+          } else {
+            this.fx.beam(ev.x1, ev.y1, ev.x2, ev.y2, 0x5ab0ff, 0xe0f6ff);
+            sfx.play('freeze');
+          }
+          break;
+        case 'melee':
+          this.fx.meleeHit(ev.x, ev.y, ev.heavy);
+          sfx.play(ev.heavy ? 'thud' : 'sword', 0.5);
+          break;
+        case 'heal':
+          this.fx.healFx(ev.x, ev.y);
+          sfx.play('heal', 0.4);
+          break;
+        case 'enemyHeal':
+          this.fx.healFx(ev.x, ev.y);
+          break;
+        case 'heroLevel':
+          sfx.play('levelup');
+          if (this.world.hero) {
+            this.fx.ring(this.world.hero.x, this.world.hero.y, 50, 0xffe08a, 600);
+            this.fx.stars(this.world.hero.x, this.world.hero.y - 40, 8);
+            this.fx.floatText(this.world.hero.x, this.world.hero.y - 70, `LV ${ev.level}`, '#ffe066', 22);
+          }
+          break;
+        case 'heroSkill':
+          this.heroSkillFx(ev.skill, ev.x, ev.y);
+          break;
+        case 'waveStart':
+          this.ui.waveBanner(ev.index + 1, this.world.waveCount, ev.boss);
+          if (ev.boss) {
+            sfx.play('boss');
+            this.cameras.main.shake(400, 0.004);
+          }
+          break;
+        case 'waveBonus':
+          this.fx.floatText(ev.x, ev.y - 30, `+${ev.gold}`, '#ffe066', 22);
+          break;
+        case 'status':
+          this.statusFx(ev.e, ev.kind);
+          break;
+        case 'summon':
+          this.fx.smokePuff(ev.x, ev.y - 10, 10);
+          sfx.play('boss', 0.5);
+          break;
+        case 'build': {
+          const v = new TowerView(this, ev.t);
+          v.pop();
+          this.towerViews.set(ev.t.id, v);
+          this.spotImgs[ev.t.spot].setVisible(false);
+          this.spotHits[ev.t.spot].disableInteractive();
+          this.fx.smokePuff(ev.t.x, ev.t.y - 10, 10);
+          const hit = this.add.rectangle(ev.t.x, ev.t.y - 30, 76, 84, 0xffffff, 0.001).setInteractive({ useHandCursor: true }).setDepth(ev.t.y);
+          hit.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, e2: Phaser.Types.Input.EventData) => {
+            e2?.stopPropagation?.();
+            if (this.mode === 'meteor' || this.mode === 'reinforce' || this.mode === 'hero') {
+              this.onGroundTap(ev.t.x, ev.t.y + 10);
+              return;
+            }
+            if (this.menuTarget?.tower === ev.t) this.closeMenu();
+            else this.openTowerMenu(ev.t);
+          });
+          this.towerHits.set(ev.t.id, hit);
+          break;
+        }
+        case 'upgrade': {
+          const v = this.towerViews.get(ev.t.id);
+          v?.setArt(ev.t.def.art);
+          v?.pop();
+          this.fx.stars(ev.t.x, ev.t.y - 50, 8);
+          this.fx.smokePuff(ev.t.x, ev.t.y - 10, 6);
+          break;
+        }
+        case 'sell': {
+          const v = this.towerViews.get(ev.t.id);
+          v?.destroy();
+          this.towerViews.delete(ev.t.id);
+          this.towerHits.get(ev.t.id)?.destroy();
+          this.towerHits.delete(ev.t.id);
+          this.rallyFlags.get(ev.t.id)?.destroy();
+          this.rallyFlags.delete(ev.t.id);
+          this.spotImgs[ev.t.spot].setVisible(true);
+          this.spotHits[ev.t.spot].setInteractive({ useHandCursor: true });
+          this.fx.smokePuff(ev.t.x, ev.t.y - 20, 12);
+          this.fx.floatText(ev.t.x, ev.t.y - 60, `+${ev.refund}`, '#ffe066', 20);
+          break;
+        }
+        case 'skillBuy':
+          this.fx.stars(ev.t.x, ev.t.y - 60, 6);
+          break;
+        case 'spell':
+          if (ev.kind === 'meteor') this.ui.flashSpell('meteor');
+          break;
+        case 'zone':
+          this.spawnZone(ev.z.id, ev.z.kind, ev.z.x, ev.z.y, ev.z.r, ev.z.until - this.world.time);
+          break;
+        case 'victory':
+        case 'defeat':
+          this.time.delayedCall(ev.type === 'victory' ? 1400 : 900, () => this.showResult());
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
+  private heroSkillFx(skill: string, x: number, y: number): void {
+    switch (skill) {
+      case 'rally':
+        this.fx.ring(x, y, 140, 0xffe08a, 600);
+        sfx.play('heal');
+        break;
+      case 'multishot':
+        sfx.play('arrow');
+        break;
+      case 'whirlwind':
+        this.fx.ring(x, y, 50, 0xffffff, 250);
+        sfx.play('sword', 0.6);
+        break;
+      case 'hail':
+        sfx.play('whoosh', 0.6);
+        break;
+      default:
+        break;
+    }
+  }
+
+  private statusFx(e: Enemy, kind: string): void {
+    const y = e.y - e.def.height * 0.6 + (e.flying ? -30 : 0);
+    switch (kind) {
+      case 'dodge':
+        this.fx.floatText(e.x, y - 10, 'MISS', '#d0e8ff', 13);
+        break;
+      case 'stun':
+        this.fx.stars(e.x, y - 10, 4);
+        break;
+      case 'root':
+        this.fx.leaves(e.x, e.y);
+        break;
+      case 'poison':
+        this.fx.poisonPuff(e.x, y);
+        break;
+      case 'sheep': {
+        const v = this.enemyViews.get(e.id);
+        v?.setTexture('mon_sheep', 30);
+        this.fx.smokePuff(e.x, e.y - 10, 8);
+        sfx.play('sparkle');
+        break;
+      }
+      case 'teleport':
+        this.fx.ring(e.x, e.y, 26, 0xc890ff, 300);
+        this.fx.hitSpark(e.x, e.y - 10, 6);
+        break;
+      case 'enrage':
+        this.fx.floatText(e.x, y - 20, '!!', '#ff5a4a', 26);
+        sfx.play('boss', 0.7);
+        break;
+      default:
+        break;
+    }
+  }
+
+  private spawnProj(p: Projectile): void {
+    const key = PROJ_TEX[p.kind] ?? 'pj_arrow';
+    const img = this.add.image(p.x, p.y, key).setDepth(DEPTH.proj).setScale(1 / TEX);
+    if (p.kind === 'bolt' || p.kind === 'heroBolt' || p.kind === 'enemyBolt' || p.kind === 'iceShard') img.setBlendMode('ADD');
+    if (p.kind === 'meteor') img.setScale(1.3 / TEX);
+    if (p.kind === 'bomblet') img.setScale(0.7 / TEX);
+    if (p.kind === 'heroBolt' && this.world.hero?.hero?.def.id === 'lila') img.setTexture('pj_ice');
+    this.projViews.set(p.id, img);
+  }
+
+  private projImpactFx(p: Projectile): void {
+    switch (p.kind) {
+      case 'bolt':
+      case 'heroBolt':
+        this.fx.hitSpark(p.x, p.y, 5);
+        break;
+      case 'enemyBolt':
+        this.fx.hitSpark(p.x, p.y, 3);
+        break;
+      case 'snipe':
+        this.fx.hitSpark(p.x, p.y, 7);
+        sfx.play('hit', 0.8);
+        break;
+      case 'arrow':
+      case 'heroArrow':
+      case 'axe':
+      case 'enemyArrow':
+        if (Math.random() < 0.3) sfx.play('hit', 0.35);
+        break;
+      default:
+        break;
+    }
+  }
+
+  private spawnZone(id: number, kind: string, x: number, y: number, r: number, dur: number): void {
+    const objs: Phaser.GameObjects.GameObject[] = [];
+    const base = this.add.ellipse(x, y, r * 2, r * 2 * RANGE_Y, kind === 'fire' ? 0xff6a1a : 0x9ad8ff, 0.25).setDepth(DEPTH.zone);
+    objs.push(base);
+    const em = this.add.particles(x, y, kind === 'fire' ? 'fx_fire' : 'fx_snow', {
+      x: { min: -r * 0.8, max: r * 0.8 },
+      y: { min: -r * 0.5, max: r * 0.4 },
+      lifespan: kind === 'fire' ? 500 : 900,
+      speedY: kind === 'fire' ? { min: -60, max: -20 } : { min: 30, max: 80 },
+      scale: kind === 'fire' ? { start: 0.4, end: 0 } : { start: 0.6, end: 0.2 },
+      alpha: { start: 0.9, end: 0 },
+      blendMode: kind === 'fire' ? 'ADD' : 'NORMAL',
+      frequency: 40,
+    });
+    em.setDepth(DEPTH.fx);
+    objs.push(em);
+    this.zoneViews.set(id, objs);
+    this.time.delayedCall(Math.max(100, dur * 1000), () => {
+      this.tweens.add({ targets: base, alpha: 0, duration: 300, onComplete: () => base.destroy() });
+      em.stop();
+      this.time.delayedCall(1000, () => em.destroy());
+      this.zoneViews.delete(id);
+    });
+  }
+
+  private sync(time: number): void {
+    const w = this.world;
+    const t = w.time;
+    for (const e of w.enemies) {
+      const v = this.enemyViews.get(e.id);
+      if (!v) continue;
+      let tint: number | undefined;
+      if (e.enraged) tint = 0xff8a7a;
+      if (t < e.rootUntil) tint = 0xc0a070;
+      else if (e.dots.length) tint = 0xb8ff8a;
+      else if (e.slowMul < 1 && t < e.slowUntil) tint = 0x9ad0ff;
+      v.update({
+        x: e.x,
+        y: e.y,
+        facing: e.facing,
+        moving: e.moving,
+        t,
+        hpRatio: e.hp / e.maxHp,
+        lastAttackAt: e.lastAttackAt,
+        lastHitAt: e.lastHitAt,
+        tint,
+        stunned: t < e.stunUntil,
+      });
+      if (e.dots.length && Math.random() < 0.05) this.fx.poisonPuff(e.x, e.y - e.def.height * 0.6);
+    }
+    for (const s of w.soldiers) {
+      const v = this.soldierViews.get(s.id);
+      if (!v) continue;
+      if (!s.alive) continue;
+      v.update({
+        x: s.x,
+        y: s.y,
+        facing: s.facing,
+        moving: s.moving,
+        t,
+        hpRatio: s.hp / s.maxHp,
+        lastAttackAt: s.lastAttackAt,
+        lastHitAt: s.lastHitAt,
+        tint: s.armorBuff > 0 ? 0xfff0b0 : undefined,
+      });
+      if (s.expireAt !== Infinity && s.expireAt - t < 3) v.body.setAlpha(0.5 + 0.5 * Math.abs(Math.sin(t * 8)));
+    }
+    for (const tw of w.towers) this.towerViews.get(tw.id)?.update(time, t);
+    for (const p of w.projectiles) {
+      const img = this.projViews.get(p.id);
+      if (!img) continue;
+      img.setPosition(p.x, p.y);
+      if (p.kind === 'bomb' || p.kind === 'bomblet' || p.kind === 'axe') img.rotation += 0.2;
+      else if (p.kind === 'meteor') {
+        img.setRotation(0);
+        if (Math.random() < 0.6) this.fx.fireBurst(p.x, p.y, 1);
+      } else img.setRotation(p.rot);
+    }
+  }
+
+  // ═════════════════════════ 開場 / 結算 ═════════════════════════
+
+  private introNewEnemies(ids: string[]): void {
+    const sv = save();
+    const fresh = ids.filter((id) => ENEMIES[id] && !sv.seenEnemies.includes(id));
+    if (!fresh.length) {
+      if (this.level.tutorial && this.world.towers.length === 0) this.ui.toast(T('tutBuild'), 4000);
+      return;
+    }
+    this.ui.showEnemyIntro(fresh, () => {
+      if (this.level.tutorial && this.world.towers.length === 0) this.ui.toast(T('tutBuild'), 4000);
+    });
+  }
+
+  private showResult(): void {
+    if (this.resultShown) return;
+    this.resultShown = true;
+    const w = this.world;
+    const sv = save();
+    const victory = w.result === 'victory';
+    const stars = w.stars();
+    const hero = w.hero?.hero;
+    if (hero) {
+      // 失敗也保留一半經驗，避免挫折
+      const gained = hero.xp - hero.startXp;
+      sv.heroes[hero.def.id] = { xp: Math.round(hero.startXp + (victory ? gained : gained * 0.5)) };
+    }
+    let newStars = 0;
+    if (victory) {
+      const prev = sv.stars[this.level.id] ?? 0;
+      if (stars > prev) {
+        newStars = stars - prev;
+        sv.stars[this.level.id] = stars;
+      }
+      sv.stats.victories++;
+    }
+    sv.stats.kills += w.stats.kills;
+    persist();
+    sfx.play(victory ? 'victory' : 'defeat');
+    this.ui.showResult(victory, stars, newStars);
+  }
+
+  restart(): void {
+    this.cameras.main.fadeOut(250, 0, 0, 0);
+    this.time.delayedCall(260, () => this.scene.restart({ levelId: this.level.id, difficulty: this.difficulty }));
+  }
+
+  exitToMap(nextLevel?: string): void {
+    this.cameras.main.fadeOut(250, 0, 0, 0);
+    this.time.delayedCall(260, () => {
+      this.scene.stop('LevelUI');
+      if (nextLevel) this.scene.start('Level', { levelId: nextLevel, difficulty: this.difficulty });
+      else this.scene.start('Map', { focus: this.level.id });
+    });
+  }
+
+  heroView(): UnitView | undefined {
+    return this.world.hero ? this.soldierViews.get(this.world.hero.id) : undefined;
+  }
+
+  isSoldier(s: unknown): s is Soldier {
+    return s instanceof Soldier;
+  }
+
+  inPlay(x: number, y: number): boolean {
+    return inEllipse(PLAY_W / 2, VIEW_H / 2, x, y, PLAY_W);
+  }
+}
+
+const PROJ_TEX: Record<string, string> = {
+  arrow: 'pj_arrow',
+  heroArrow: 'pj_arrow',
+  enemyArrow: 'pj_arrow',
+  bolt: 'pj_bolt',
+  heroBolt: 'pj_bolt',
+  enemyBolt: 'pj_enemybolt',
+  iceShard: 'pj_ice',
+  bomb: 'pj_bomb',
+  bomblet: 'pj_bomb',
+  missile: 'pj_missile',
+  meteor: 'pj_meteor',
+  axe: 'pj_axe',
+  snipe: 'pj_snipe',
+};
+
+/** 士兵 sprite 原圖朝向 */
+function soldierFacesRight(tex: string): boolean {
+  return !['sp_gary', 'sp_vlad'].includes(tex);
+}
+
+function rateWord(cd: number): string {
+  if (cd <= 0.5) return T('veryFast');
+  if (cd <= 0.9) return T('fast');
+  if (cd <= 1.7) return T('medium');
+  if (cd <= 2.6) return T('slow');
+  return T('verySlow');
+}
+
+export function armorWord(a: number): string {
+  if (a <= 0.01) return T('none');
+  if (a < 0.3) return T('low');
+  if (a < 0.55) return T('medium');
+  if (a < 0.8) return T('high');
+  return T('veryHigh');
+}
