@@ -90,8 +90,8 @@ export class EncyclopediaScene extends Phaser.Scene {
       const e = ENEMIES[this.sel];
       if (e) {
         const known = seen.has(e.id);
-        const img = add(this.add.image(detailX + 130, 380, e.sprite).setOrigin(0.5, 1));
-        img.setScale(Math.min(200 / img.frame.height, 220 / img.frame.width));
+        const img = add(this.add.image(detailX + 130, 400, e.sprite).setOrigin(0.5, 1));
+        img.setScale(Math.min(185 / img.frame.height, 220 / img.frame.width));
         if (!known) img.setTint(0x000000);
         else if (e.tint) img.setTint(e.tint);
         const tx = detailX + 260;
@@ -111,9 +111,10 @@ export class EncyclopediaScene extends Phaser.Scene {
           });
           let tagX = tx;
           for (const tg of e.tags ?? []) {
+            // 底框先建立、文字疊在上面（底框的深度不能低於面板，否則會被面板蓋住）
+            const r = add(this.add.rectangle(tagX - 6, 437, 10, 10, 0x7a3a1a).setOrigin(0).setStrokeStyle(2, 0x2a1608));
             const tag = add(addText(this, tagX, 440, L(tg), { size: 15, display: true }));
-            const r = add(this.add.rectangle(tagX - 6, 437, tag.width + 12, tag.height + 4, 0x7a3a1a).setOrigin(0).setStrokeStyle(2, 0x2a1608));
-            r.setDepth(-1);
+            r.setSize(tag.width + 12, tag.height + 4);
             tagX += tag.width + 24;
           }
         }

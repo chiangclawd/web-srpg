@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 7,
+    date: '2026-10-16',
+    title: { zh: '魔物換上手繪新造型', en: 'Hand-painted monsters' },
+    items: [
+      { zh: '哥布林、狼、巨魔、蝙蝠、骷髏、蠍子、惡魔、沙暴巨蟲，以及變羊與石像，全部換成和英雄同風格的手繪圖', en: 'Goblins, wolves, trolls, bats, skeletons, scorpions, demons, the Sandstorm Wyrm, plus the sheep and stone golem now share the heroes\' painted style' },
+      { zh: '圖鑑的敵人標籤恢復底框', en: 'Enemy tags in the encyclopedia have their backgrounds again' },
+    ],
+  },
+  {
     id: 6,
     date: '2026-10-16',
     title: { zh: '雙指縮放地圖', en: 'Pinch to zoom' },

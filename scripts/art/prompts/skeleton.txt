@@ -1,0 +1,8 @@
+The attached images are character sprites from my 2D fantasy tower-defense game. Use them as a strict STYLE reference: same chibi proportions (big head, compact body), same clean dark-brown outlines, same soft cel shading and painted detail level, same warm color treatment and rendering quality.
+
+Draw ONE NEW enemy sprite in exactly that style: an undead skeleton warrior — off-white bones, eerie green glow in the eye sockets, a rusty short sword in one hand and a cracked round wooden shield in the other, a tattered dark cloth hanging from the hips.
+
+Requirements:
+- Full body, single creature, 3/4 side view facing RIGHT, mid-stride walking pose.
+- Centered with generous empty margin around it; nothing cropped.
+- Background: perfectly flat, uniform solid magenta (#FF00FF) everywhere around the creature. No gradient, no ground, no cast shadow, no scenery, no text, no frame.

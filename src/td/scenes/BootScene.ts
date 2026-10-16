@@ -16,6 +16,12 @@ const SPRITES = [
 
 /** 單位紋理統一高度（像素）：顯示時再依各單位身高縮放 */
 const UNIT_TEX_H = 168;
+/**
+ * 手繪魔物（AI 生成後去背，見 scripts/art/）：載入成功就取代同名的程序繪圖紋理 mon_*，
+ * 失敗則保留程序繪圖。圖都朝右，與原本的 facesRight 一致。
+ */
+const PAINTED_MONSTERS = ['goblin', 'wolf', 'troll', 'bat', 'skeleton', 'scorpion', 'demon', 'wyrm', 'sheep', 'golem'];
+const MONSTER_TEX_H = 200;
 
 export class BootScene extends Phaser.Scene {
   private bar!: Phaser.GameObjects.Rectangle;
@@ -38,6 +44,7 @@ export class BootScene extends Phaser.Scene {
       this.bar.width = 400 * p * 0.85;
     });
     for (const s of SPRITES) this.load.image(`raw_${s}`, `assets/sprites/${s}.png`);
+    for (const m of PAINTED_MONSTERS) this.load.image(`rawmon_${m}`, `assets/sprites/mon/${m}.webp`);
     for (const h of Object.values(HEROES)) this.load.image(`rawpt_${h.id}`, `assets/portraits/${h.id}.png`);
     for (const id of STORY_PORTRAITS) this.load.image(`rawpt_${id}`, `assets/portraits/${id}.png`);
   }
@@ -69,6 +76,13 @@ export class BootScene extends Phaser.Scene {
     const towers = paintTowers(TEX);
     this.addCanvases(towers);
     this.addCanvases(paintMonsters(TEX));
+    for (const m of PAINTED_MONSTERS) {
+      const key = `rawmon_${m}`;
+      if (!this.textures.exists(key)) continue;
+      const src = this.textures.get(key).getSourceImage() as HTMLImageElement;
+      this.addCanvases({ [`mon_${m}`]: cropAndScale(src, MONSTER_TEX_H) });
+      this.textures.remove(key);
+    }
     this.addCanvases(paintFx(TEX));
     this.addCanvases(paintUi(TEX));
     // 塔圖示徽章
