@@ -179,7 +179,13 @@ export class World {
     return Math.round(t.invested * SELL_RATIO);
   }
 
+  canBuildType(type: TowerType): boolean {
+    const a = this.level.rules?.allowed;
+    return !a || a.includes(type);
+  }
+
   build(spotIndex: number, type: TowerType): Tower | null {
+    if (!this.canBuildType(type)) return null;
     const spot = this.spots[spotIndex];
     if (!spot || spot.tower) return null;
     const cost = this.buildCost(type);
@@ -399,8 +405,12 @@ export class World {
 
   // ═════════════════════════ 法術 ═════════════════════════
 
+  get spellsEnabled(): boolean {
+    return !this.level.rules?.noSpells;
+  }
+
   castMeteor(x: number, y: number): boolean {
-    if (this.meteorCd > 0) return false;
+    if (this.meteorCd > 0 || !this.spellsEnabled) return false;
     this.meteorCd = this.meteorCdMax;
     const n = this.mods.meteorCount;
     for (let i = 0; i < n; i++) {
@@ -419,7 +429,7 @@ export class World {
   }
 
   castReinforce(x: number, y: number): boolean {
-    if (this.reinfCd > 0) return false;
+    if (this.reinfCd > 0 || !this.spellsEnabled) return false;
     this.reinfCd = this.reinfCdMax;
     const m = this.mods;
     const n = m.reinfCount;

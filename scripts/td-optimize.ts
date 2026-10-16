@@ -12,7 +12,13 @@ import { HEROES } from '../src/td/data/heroes';
 import { World, type Difficulty } from '../src/td/sim/World';
 import { computeMods } from '../src/td/data/upgrades';
 import { Rng } from '../src/td/sim/math';
-import type { TowerType } from '../src/td/sim/defs';
+import type { LevelMode, TowerType } from '../src/td/sim/defs';
+import { challengeLevel } from '../src/td/data/challenges';
+
+const MODE = (process.env.MODE ?? 'campaign') as LevelMode;
+function modeLevel(id: string) {
+  return challengeLevel(LEVELS.find((l) => l.id === id)!, MODE);
+}
 
 const TYPES: (TowerType | null)[] = [null, 'archer', 'barracks', 'mage', 'artillery'];
 
@@ -44,8 +50,8 @@ function upgradesFor(idx: number): Record<string, number> {
 }
 
 export function play(levelId: string, g: Genome, heroId: string, heroXp: number, diff: Difficulty, seed: number) {
-  const level = LEVELS.find((l) => l.id === levelId)!;
-  const idx = LEVELS.indexOf(level);
+  const level = modeLevel(levelId);
+  const idx = LEVELS.findIndex((l) => l.id === levelId);
   const w = new World({ level, difficulty: diff, hero: { def: HEROES[heroId], xp: heroXp }, mods: computeMods(upgradesFor(idx)), seed });
   const dt = 1 / 30;
   let think = 0;
@@ -109,8 +115,10 @@ export function play(levelId: string, g: Genome, heroId: string, heroXp: number,
   return { score, leaks, bossHpAtLeak, livesByWave, result: w.result ?? 'timeout', lives: w.lives, stars: w.stars(), wave: w.waveIndex + 1, waves: w.waveCount, heroXp: w.hero?.hero?.xp ?? 0 };
 }
 
+let ALLOWED: (TowerType | null)[] = TYPES;
+
 function randomGenome(n: number, paths: number, rng: Rng): Genome {
-  const types = Array.from({ length: n }, () => TYPES[1 + Math.floor(rng.next() * 4)]);
+  const types = Array.from({ length: n }, () => ALLOWED[1 + Math.floor(rng.next() * (ALLOWED.length - 1))]);
   const order = Array.from({ length: n }, (_, i) => i).sort(() => rng.next() - 0.5);
   return {
     types,
@@ -131,7 +139,7 @@ function mutate(g: Genome, paths: number, rng: Rng): Genome {
   }
   if (k <= 1) {
     const i = rng.int(0, c.types.length - 1);
-    c.types[i] = TYPES[rng.int(0, 4)];
+    c.types[i] = ALLOWED[rng.int(0, ALLOWED.length - 1)];
   } else if (k <= 3) {
     const i = rng.int(0, c.order.length - 1);
     const j = rng.int(0, c.order.length - 1);
@@ -147,7 +155,9 @@ function mutate(g: Genome, paths: number, rng: Rng): Genome {
 }
 
 function optimize(levelId: string, iters: number, heroId: string, heroXp: number, diff: Difficulty) {
-  const level = LEVELS.find((l) => l.id === levelId)!;
+  const level = modeLevel(levelId);
+  const allowed = level.rules?.allowed;
+  ALLOWED = allowed ? [null, ...allowed] : TYPES;
   const rng = new Rng(Number(process.env.OPT_SEED ?? 12345));
   const evalG = (g: Genome) => {
     // 兩個亂數種子取平均，避免運氣好的個案

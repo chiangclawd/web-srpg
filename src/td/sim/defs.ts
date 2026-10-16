@@ -209,4 +209,16 @@ export interface LevelDef {
   /** 此關新出現的敵人（開場介紹卡） */
   intro?: string[];
   bgm?: 'peaceful' | 'tense' | 'dark' | 'epic' | 'finale';
+  /** 挑戰模式規則 */
+  rules?: LevelRules;
+}
+
+export type LevelMode = 'campaign' | 'heroic' | 'iron';
+
+export interface LevelRules {
+  mode: LevelMode;
+  /** 只允許這些塔 */
+  allowed?: TowerType[];
+  /** 禁用法術 */
+  noSpells?: boolean;
 }
