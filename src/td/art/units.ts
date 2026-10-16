@@ -246,12 +246,136 @@ function sheep(ctx: Ctx, w: number, h: number): void {
   ctx.fill();
 }
 
+
+function bat(ctx: Ctx, w: number, h: number): void {
+  const cx = w / 2;
+  const cy = h / 2 + 2;
+  const body = '#5a3a6a';
+  // 翅膀
+  for (const sx of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(cx + sx * 6, cy - 4);
+    ctx.quadraticCurveTo(cx + sx * 22, cy - 22, cx + sx * 34, cy - 10);
+    ctx.quadraticCurveTo(cx + sx * 28, cy - 4, cx + sx * 30, cy + 4);
+    ctx.quadraticCurveTo(cx + sx * 22, cy, cx + sx * 20, cy + 6);
+    ctx.quadraticCurveTo(cx + sx * 13, cy + 1, cx + sx * 6, cy + 6);
+    ctx.closePath();
+    fillStroke(ctx, vgrad(ctx, cy - 22, cy + 6, '#8a5aa0', '#3a2048'), 2.5);
+  }
+  ellipse(ctx, cx, cy, 9, 11);
+  fillStroke(ctx, rgrad(ctx, cx - 2, cy - 4, 1, 12, shade(body, 0.3), shade(body, -0.3)), 2.5);
+  for (const sx of [-1, 1]) {
+    poly(ctx, [cx + sx * 3, cy - 8, cx + sx * 7, cy - 18, cx + sx * 8, cy - 7]);
+    fillStroke(ctx, body, 2);
+  }
+  for (const ox of [-3.5, 3.5]) {
+    circle(ctx, cx + ox, cy - 3, 2.2);
+    ctx.fillStyle = '#ff4a4a';
+    ctx.fill();
+  }
+  ctx.fillStyle = '#fff';
+  poly(ctx, [cx - 3, cy + 3, cx - 2, cy + 7, cx - 1, cy + 3]);
+  ctx.fill();
+  poly(ctx, [cx + 1, cy + 3, cx + 2, cy + 7, cx + 3, cy + 3]);
+  ctx.fill();
+}
+
+function skeleton(ctx: Ctx, w: number, h: number): void {
+  const cx = w / 2;
+  const by = h - 3;
+  const bone = '#ece4d0';
+  // 腿骨
+  ctx.strokeStyle = OUTLINE;
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(cx - 6, by - 20);
+  ctx.lineTo(cx - 8, by);
+  ctx.moveTo(cx + 6, by - 20);
+  ctx.lineTo(cx + 8, by);
+  ctx.stroke();
+  ctx.strokeStyle = bone;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  // 骨盆
+  ellipse(ctx, cx, by - 21, 9, 4);
+  fillStroke(ctx, bone, 2.2);
+  // 脊椎與肋骨
+  roundRect(ctx, cx - 2, by - 40, 4, 20, 2);
+  fillStroke(ctx, bone, 2);
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.ellipse(cx, by - 36 + i * 5, 10 - i, 3, 0, Math.PI, 0);
+    ctx.lineWidth = 4.5;
+    ctx.strokeStyle = OUTLINE;
+    ctx.stroke();
+    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = bone;
+    ctx.stroke();
+  }
+  // 生鏽的劍
+  ctx.save();
+  ctx.translate(cx + 13, by - 30);
+  ctx.rotate(0.5);
+  roundRect(ctx, -2.5, -22, 5, 24, 2);
+  fillStroke(ctx, vgrad(ctx, -22, 2, '#c8b89a', '#8a6a4a'), 2);
+  roundRect(ctx, -6, 0, 12, 3.5, 1);
+  fillStroke(ctx, '#5a3a1e', 1.6);
+  ctx.restore();
+  // 圓盾
+  circle(ctx, cx - 12, by - 30, 8);
+  fillStroke(ctx, rgrad(ctx, cx - 14, by - 32, 1, 9, '#9a7a5a', '#5a3a1e'), 2.5);
+  // 頭骨
+  ellipse(ctx, cx + 1, by - 50, 10, 10);
+  fillStroke(ctx, rgrad(ctx, cx - 2, by - 54, 1, 12, '#ffffff', '#cfc6b0'), 2.6);
+  roundRect(ctx, cx - 4, by - 44, 10, 6, 2);
+  fillStroke(ctx, '#e8e0cc', 2);
+  for (const ox of [-3, 5]) {
+    ellipse(ctx, cx + ox, by - 51, 2.8, 3.2);
+    ctx.fillStyle = '#1a1010';
+    ctx.fill();
+    circle(ctx, cx + ox, by - 51, 1);
+    ctx.fillStyle = '#7aff9a';
+    ctx.fill();
+  }
+}
+
+function demon(ctx: Ctx, w: number, h: number): void {
+  const cx = w / 2;
+  const by = h - 3;
+  const skin = '#c0392b';
+  for (const ox of [-8, 8]) {
+    roundRect(ctx, cx + ox - 5, by - 18, 10, 18, 4);
+    fillStroke(ctx, shade(skin, -0.25), 2.5);
+  }
+  // 翅膀
+  for (const sx of [-1, 1]) {
+    poly(ctx, [cx + sx * 8, by - 40, cx + sx * 34, by - 58, cx + sx * 30, by - 38, cx + sx * 24, by - 30, cx + sx * 10, by - 28]);
+    fillStroke(ctx, vgrad(ctx, by - 58, by - 28, '#5a1a1a', '#2a0a0a'), 2.5);
+  }
+  ellipse(ctx, cx, by - 30, 15, 15);
+  fillStroke(ctx, rgrad(ctx, cx - 4, by - 36, 2, 18, shade(skin, 0.25), shade(skin, -0.3)), 3);
+  ellipse(ctx, cx + 2, by - 50, 11, 10);
+  fillStroke(ctx, rgrad(ctx, cx - 1, by - 54, 1, 12, shade(skin, 0.3), shade(skin, -0.2)), 2.8);
+  for (const sx of [-1, 1]) {
+    poly(ctx, [cx + 2 + sx * 6, by - 57, cx + 2 + sx * 13, by - 70, cx + 2 + sx * 10, by - 55]);
+    fillStroke(ctx, '#f0e0c0', 2);
+  }
+  for (const ox of [-2, 6]) {
+    circle(ctx, cx + ox, by - 51, 2.2);
+    ctx.fillStyle = '#ffe04a';
+    ctx.fill();
+  }
+}
+
 export const MONSTERS: Record<string, { w: number; h: number; paint: (ctx: Ctx, w: number, h: number) => void }> = {
   mon_goblin: { w: 64, h: 66, paint: goblin },
   mon_wolf: { w: 92, h: 60, paint: wolf },
   mon_troll: { w: 110, h: 104, paint: troll },
   mon_golem: { w: 86, h: 84, paint: golem },
   mon_sheep: { w: 56, h: 40, paint: sheep },
+  mon_bat: { w: 72, h: 44, paint: bat },
+  mon_skeleton: { w: 60, h: 66, paint: skeleton },
+  mon_demon: { w: 76, h: 76, paint: demon },
 };
 
 export function paintMonsters(s: number): Record<string, HTMLCanvasElement> {

@@ -27,7 +27,10 @@ export const DEFAULT_WAVE_GAP = 20;
 export const BUILD_TIME = 0.6;
 
 export type Difficulty = 'casual' | 'normal' | 'veteran';
-const DIFF_HP: Record<Difficulty, number> = { casual: 0.8, normal: 1, veteran: 1.25 };
+const DIFF_HP: Record<Difficulty, number> = { casual: 0.7, normal: 1, veteran: 1.25 };
+/** 首領在休閒難度額外削弱（漏掉首領＝直接失敗，休閒玩家需要更多容錯） */
+const DIFF_BOSS_HP: Record<Difficulty, number> = { casual: 0.55, normal: 1, veteran: 1.2 };
+const DIFF_GOLD: Record<Difficulty, number> = { casual: 1.2, normal: 1, veteran: 0.9 };
 
 export type SimEvent =
   | { type: 'enemySpawn'; e: Enemy }
@@ -39,7 +42,7 @@ export type SimEvent =
   | { type: 'explosion'; x: number; y: number; r: number; kind: 'bomb' | 'bomblet' | 'meteor' | 'missile' | 'nova' | 'holy' | 'shock' }
   | { type: 'towerShoot'; t: Tower; tx: number; ty: number }
   | { type: 'lightning'; pts: Vec[] }
-  | { type: 'beam'; x1: number; y1: number; x2: number; y2: number; kind: 'disintegrate' | 'ice' }
+  | { type: 'beam'; x1: number; y1: number; x2: number; y2: number; kind: 'disintegrate' | 'ice' | 'charge' }
   | { type: 'melee'; x: number; y: number; heavy: boolean }
   | { type: 'soldierSpawn'; s: Soldier }
   | { type: 'soldierDie'; s: Soldier }
@@ -122,7 +125,7 @@ export class World {
     this.rng = new Rng(opts.seed ?? opts.level.seed);
     this.difficulty = opts.difficulty ?? 'normal';
     this.paths = opts.level.paths.map((p) => new Path(p));
-    this.gold = opts.level.startGold;
+    this.gold = Math.round(opts.level.startGold * DIFF_GOLD[this.difficulty]);
     this.lives = this.maxLives = opts.level.lives;
     this.waveCount = opts.level.waves.length;
     this.spots = opts.level.spots.map((s) => ({ x: s.x, y: s.y, tower: null }));
@@ -520,7 +523,7 @@ export class World {
     const def = ENEMIES[id];
     const path = this.paths[pathIndex];
     const ln = lane ?? this.rng.range(-1, 1) * (def.flying ? 22 : 13);
-    const e = new Enemy(def, path, pathIndex, ln, DIFF_HP[this.difficulty], this.time);
+    const e = new Enemy(def, path, pathIndex, ln, def.boss ? DIFF_BOSS_HP[this.difficulty] : DIFF_HP[this.difficulty], this.time);
     e.d = d;
     path.posAt(e.d, e.lane, e);
     this.enemies.push(e);
@@ -653,7 +656,7 @@ export class World {
     if (e.d >= e.path.length) {
       e.leaked = true;
       e.alive = false;
-      const lost = e.sheep ? 1 : e.def.lives;
+      const lost = e.sheep ? 1 : e.def.boss && this.difficulty === 'casual' ? Math.ceil(e.def.lives / 2) : e.def.lives;
       this.lives -= lost;
       this.stats.leaks++;
       this.releaseEngagers(e);
@@ -716,6 +719,17 @@ export class World {
           this.emit({ type: 'summon', x: e.x, y: e.y });
           break;
         }
+        case 'blink': {
+          e.abilityCd[i] -= dt;
+          if (e.abilityCd[i] > 0) break;
+          if (e.remaining < a.distance + 120) break;
+          e.abilityCd[i] = a.cd;
+          this.releaseEngagers(e);
+          e.d += a.distance;
+          e.path.posAt(e.d, e.lane, e);
+          this.emit({ type: 'status', e, kind: 'teleport' });
+          break;
+        }
         case 'stunTowers': {
           e.abilityCd[i] -= dt;
           if (e.abilityCd[i] > 0) break;
@@ -759,7 +773,7 @@ export class World {
     }
     e.hp -= a;
     if (!silent) e.lastHitAt = this.time;
-    if (src === 'hero') this.gainHeroXp(a * 0.09);
+    if (src === 'hero') this.gainHeroXp(a * 0.07);
     if (e.hp <= 0) this.killEnemy(e, src);
     return a;
   }
@@ -1173,6 +1187,81 @@ export class World {
           const c = this.densest(inRange, 70) ?? inRange[0];
           use('blizzard');
           this.addZone({ kind: 'blizzard', x: c.x, y: c.y, r: 80, dps: 22 + 5 * lv, slow: 0.35, until: this.time + 5, source: 'hero' });
+        }
+        break;
+      }
+      case 'rain': {
+        if (ready('charge') && t && t.alive && !t.flying) {
+          const d = dist(h.x, h.y, t.x, t.y);
+          if (d > 40 && d < 170) {
+            use('charge');
+            const sx = h.x;
+            const sy = h.y;
+            const ux = (t.x - sx) / d;
+            const uy = (t.y - sy) / d;
+            for (const e of this.enemies) {
+              if (!e.alive || e.flying) continue;
+              const px = e.x - sx;
+              const py = e.y - sy;
+              const along = px * ux + py * uy;
+              if (along < -10 || along > d + 20) continue;
+              if (Math.abs(px * uy - py * ux) < 30) {
+                this.damageEnemy(e, 30 + 9 * lv, 'physical', 'hero');
+                if (e.alive) this.applyStun(e, 0.8);
+              }
+            }
+            h.x = t.x - ux * (t.def.radius + 12);
+            h.y = t.y - uy * (t.def.radius + 12);
+            this.emit({ type: 'beam', x1: sx, y1: sy - 20, x2: h.x, y2: h.y - 20, kind: 'charge' });
+          }
+        }
+        if (ready('trample')) {
+          const near = this.enemies.filter((e) => e.alive && !e.flying && dist(e.x, e.y, h.x, h.y) < 70);
+          if (near.length >= 2) {
+            use('trample');
+            for (const e of near) {
+              this.damageEnemy(e, 40 + 9 * lv, 'physical', 'hero');
+              if (e.alive) this.applyStun(e, 1.3);
+            }
+            this.emit({ type: 'explosion', x: h.x, y: h.y, r: 70, kind: 'bomblet' });
+          }
+        }
+        if (ready('lance') && t && t.alive && t.hp > 200 && dist(h.x, h.y, t.x, t.y) < 60) {
+          use('lance');
+          this.damageEnemy(t, 150 + 28 * lv, 'true', 'hero');
+          this.emit({ type: 'melee', x: t.x, y: t.y - 20, heavy: true });
+        }
+        break;
+      }
+      case 'aria': {
+        const inRange = this.enemies.filter((e) => e.alive && inEllipse(h.x, h.y, e.x, e.y, h.ranged!.range));
+        if (ready('dive') && t && t.alive && inRange.includes(t)) {
+          use('dive');
+          this.damageEnemy(t, 60 + 13 * lv, 'physical', 'hero');
+          if (t.alive) this.applyStun(t, 1.2);
+          this.emit({ type: 'beam', x1: h.x, y1: h.y - 60, x2: t.x, y2: t.y - 20, kind: 'charge' });
+          this.emit({ type: 'explosion', x: t.x, y: t.y, r: 40, kind: 'holy' });
+        }
+        if (ready('gale') && inRange.length >= 3) {
+          use('gale');
+          const c = this.densest(inRange, 70) ?? inRange[0];
+          const group = inRange.filter((e) => !e.def.boss && dist(e.x, e.y, c.x, c.y) < 90).slice(0, 6);
+          for (const e of group) {
+            this.releaseEngagers(e);
+            e.d = Math.max(0, e.d - 85);
+            e.path.posAt(e.d, e.lane, e);
+            this.damageEnemy(e, 20 + 4 * lv, 'physical', 'hero');
+            this.emit({ type: 'status', e, kind: 'teleport' });
+          }
+        }
+        if (ready('storm') && inRange.length >= 2) {
+          use('storm');
+          for (let k = 0; k < 6; k++) {
+            const e = inRange[Math.floor(this.rng.next() * inRange.length)];
+            if (!e.alive) continue;
+            this.damageEnemy(e, 40 + 9 * lv, 'magic', 'hero');
+            this.emit({ type: 'lightning', pts: [{ x: e.x + this.rng.range(-20, 20), y: e.y - 260 }, { x: e.x, y: e.y - e.def.height * 0.5 }] });
+          }
         }
         break;
       }

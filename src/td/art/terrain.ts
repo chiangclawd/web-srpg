@@ -8,6 +8,7 @@ import {
   drawBush,
   drawCampfire,
   drawCastle,
+  drawDeadTree,
   drawFlowers,
   drawHouse,
   drawPine,
@@ -176,7 +177,33 @@ export function paintLevel(level: LevelDef, worldW: number, offX: number, s: num
   items.sort((a, b) => a.y - b.y);
   for (const it of items) it.draw();
 
-  // 8) 雪地：散落雪點；秋天：落葉
+  // 8) 荒地：裂痕與紫色微光；秋天：落葉
+  if (level.theme === 'waste') {
+    for (let i = 0; i < 70; i++) {
+      const x = x0 + rnd() * worldW;
+      const y = rnd() * H;
+      if (near(x, y, 6)) continue;
+      ctx.strokeStyle = 'rgba(30,18,12,0.45)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      let cx = x;
+      let cy = y;
+      for (let k = 0; k < 4; k++) {
+        cx += (rnd() - 0.5) * 26;
+        cy += (rnd() - 0.5) * 12;
+        ctx.lineTo(cx, cy);
+      }
+      ctx.stroke();
+    }
+    for (let i = 0; i < 26; i++) {
+      const x = x0 + rnd() * worldW;
+      const y = rnd() * H;
+      ctx.fillStyle = rgrad(ctx, x, y, 0, 26, 'rgba(180,90,255,0.22)', 'rgba(180,90,255,0)');
+      circle(ctx, x, y, 26);
+      ctx.fill();
+    }
+  }
   if (level.theme === 'autumn') {
     for (let i = 0; i < 500; i++) {
       ctx.fillStyle = alpha(['#d9822b', '#c4512a', '#e3a93a'][i % 3], 0.7);
@@ -196,6 +223,11 @@ export function paintLevel(level: LevelDef, worldW: number, offX: number, s: num
 }
 
 function tree(ctx: Ctx, x: number, y: number, r: number, th: ThemePalette, theme: string, rnd: () => number): void {
+  if (theme === 'waste') {
+    if (rnd() < 0.6) drawDeadTree(ctx, x, y, r * 1.2, rnd);
+    else drawPine(ctx, x, y, r * 0.9, th.pine, false);
+    return;
+  }
   if (theme === 'snow' || (theme === 'forest' && rnd() < 0.45)) drawPine(ctx, x, y, r * 0.95, th.pine, th.snowy);
   else drawTree(ctx, x, y, r, th.canopy, rnd, th.snowy);
 }

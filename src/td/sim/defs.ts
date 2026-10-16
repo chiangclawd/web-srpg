@@ -20,7 +20,8 @@ export type EnemyAbility =
   | { kind: 'spawnOnDeath'; enemy: string; count: number }
   | { kind: 'enrage'; belowHp: number; speedMul: number }
   | { kind: 'stunTowers'; radius: number; duration: number; cd: number }
-  | { kind: 'aoeMelee'; radius: number };
+  | { kind: 'aoeMelee'; radius: number }
+  | { kind: 'blink'; distance: number; cd: number };
 
 export interface EnemyDef {
   id: string;
@@ -32,6 +33,8 @@ export interface EnemyDef {
   height: number;
   /** 原圖面向右？用於 flipX */
   facesRight: boolean;
+  /** 染色（同一張圖做出變種） */
+  tint?: number;
   hp: number;
   /** 像素 / 秒 */
   speed: number;

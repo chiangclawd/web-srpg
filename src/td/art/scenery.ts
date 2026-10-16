@@ -399,3 +399,37 @@ export function drawAltar(ctx: Ctx, x: number, y: number, s: number): void {
   circle(ctx, x, y - 34 * s, 30 * s);
   ctx.fill();
 }
+
+/** 枯樹（教派荒地） */
+export function drawDeadTree(ctx: Ctx, x: number, y: number, r: number, rnd: () => number): void {
+  groundShadow(ctx, x + r * 0.2, y + 2, r * 0.8, r * 0.3, 0.3);
+  const branch = (bx: number, by: number, len: number, ang: number, w: number, depth: number) => {
+    const ex = bx + Math.cos(ang) * len;
+    const ey = by + Math.sin(ang) * len;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#1e140c';
+    ctx.lineWidth = w + 3;
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+    ctx.strokeStyle = '#5a4434';
+    ctx.lineWidth = w;
+    ctx.stroke();
+    if (depth > 0) {
+      branch(ex, ey, len * 0.68, ang - 0.5 - rnd() * 0.3, w * 0.62, depth - 1);
+      branch(ex, ey, len * 0.62, ang + 0.45 + rnd() * 0.3, w * 0.62, depth - 1);
+    }
+  };
+  branch(x, y, r * 0.9, -Math.PI / 2 + (rnd() - 0.5) * 0.2, r * 0.28, 3);
+}
+
+/** 毒沼泡泡 */
+export function drawBubbles(ctx: Ctx, x: number, y: number, rnd: () => number): void {
+  for (let i = 0; i < 4; i++) {
+    circle(ctx, x + (rnd() - 0.5) * 30, y + (rnd() - 0.5) * 12, 2 + rnd() * 3);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(200,255,160,0.7)';
+    ctx.stroke();
+  }
+}

@@ -21,29 +21,60 @@ const DEFAULT_PLAN: TowerType[] = ['barracks', 'archer', 'mage', 'archer', 'arti
 function run(levelId: string, diff: Difficulty, heroId = 'arthur', heroXp = 0, upgrades: Record<string, number> = {}, verbose = false, seed = 1) {
   const level = LEVELS.find((l) => l.id === levelId)!;
   const world = new World({ level, difficulty: diff, hero: { def: HEROES[heroId], xp: heroXp }, mods: computeMods(upgrades), seed });
-  // 建造點依覆蓋度排序
-  const order = world.spots
-    .map((s, i) => {
-      let c = 0;
-      for (const p of world.paths) for (const q of p.pts) if (inEllipse(s.x, s.y, q.x, q.y, 160)) c++;
-      return { i, c };
-    })
-    .sort((a, b) => b.c - a.c)
-    .map((o) => o.i);
+  // 建造點排序：輪流替每條路徑挑覆蓋最好的點（多路線關卡每條路都要有防守）
+  const cov = world.spots.map((sp) => world.paths.map((p) => p.pts.filter((q) => inEllipse(sp.x, sp.y, q.x, q.y, 160) && q.x > 0 && q.x < 1280).length));
+  const order: number[] = [];
+  const used = new Set<number>();
+  while (order.length < world.spots.length) {
+    let added = false;
+    for (let pi = 0; pi < world.paths.length; pi++) {
+      let best = -1;
+      let bc = -1;
+      cov.forEach((c, i) => {
+        if (used.has(i)) return;
+        const score = c[pi] * 2 + c.reduce((a2, b2) => a2 + b2, 0) * 0.3;
+        if (c[pi] > 0 && score > bc) {
+          bc = score;
+          best = i;
+        }
+      });
+      if (best >= 0) {
+        used.add(best);
+        order.push(best);
+        added = true;
+      }
+    }
+    if (!added) {
+      world.spots.forEach((_, i) => {
+        if (!used.has(i)) {
+          used.add(i);
+          order.push(i);
+        }
+      });
+    }
+  }
+  const minTowers = Math.max(4, world.paths.length * 2);
   // 依本關敵人組成調整建塔計畫（模擬玩家看了開場介紹後的反應）
   let airHp = 0;
   let armorHp = 0;
   let totalHp = 0;
+  let airN = 0;
+  let totalN = 0;
   for (const wv of level.waves)
     for (const gr of wv.groups) {
       const e = ENEMIES[gr.enemy];
+      if (e.boss) continue;
       const hp = e.hp * gr.count;
       totalHp += hp;
-      if (e.flying) airHp += hp;
+      totalN += gr.count;
+      if (e.flying) {
+        airHp += hp;
+        airN += gr.count;
+      }
       if (e.armor >= 0.5) armorHp += hp;
     }
   const PLAN: TowerType[] =
-    airHp / totalHp > 0.15
+    airHp / totalHp > 0.12 || airN / totalN > 0.15
       ? ['barracks', 'archer', 'mage', 'archer', 'mage', 'barracks', 'archer', 'artillery', 'mage', 'archer']
       : armorHp / totalHp > 0.15
         ? ['barracks', 'mage', 'archer', 'artillery', 'mage', 'barracks', 'archer', 'mage', 'artillery']
@@ -66,7 +97,7 @@ function run(levelId: string, diff: Difficulty, heroId = 'arthur', heroXp = 0, u
     // 決策：先蓋到 4 座 → 之後優先升級最便宜的 → 再擴建
     const nextSpot = order.find((i) => !world.spots[i].tower);
     const planType = PLAN[planIdx % PLAN.length];
-    if (world.towers.length < 4 && nextSpot !== undefined) {
+    if (world.towers.length < minTowers && nextSpot !== undefined) {
       if (world.gold >= world.buildCost(planType)) {
         world.build(nextSpot, planType);
         planIdx++;

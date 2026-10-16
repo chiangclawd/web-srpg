@@ -1,13 +1,13 @@
 import { catmullRom } from '../sim/Path';
 import type { Vec } from '../sim/math';
 import { artRng, circle, ellipse, fillStroke, mkCanvas, poly, rgrad, shade, alpha, type Ctx } from './paint';
-import { drawCastle, drawHouse, drawPine, drawTree, drawTent } from './scenery';
+import { drawAltar, drawCastle, drawDeadTree, drawHouse, drawPine, drawTree, drawTent } from './scenery';
 
 /**
  * 世界地圖：羊皮紙風格大陸。南方草原（王國）→ 中部森林 → 北方雪原 → 東方楓林 → 東北蠻族要塞。
  * 座標同關卡 1280×720（mapPos 比例 × 尺寸）。
  */
-export function paintWorldMap(w: number, h: number, offX: number, s: number, nodes: Vec[]): HTMLCanvasElement {
+export function paintWorldMap(w: number, h: number, offX: number, s: number, nodes: (Vec & { theme: string })[]): HTMLCanvasElement {
   const [cv, ctx] = mkCanvas(w * s, h * s);
   ctx.scale(s, s);
   ctx.translate(offX, 0);
@@ -67,11 +67,9 @@ export function paintWorldMap(w: number, h: number, offX: number, s: number, nod
     circle(ctx, x, y, r);
     ctx.fill();
   };
-  region(250, 560, 380, '#a8c870', 0.8);
-  region(560, 340, 300, '#4f8a3a', 0.75);
-  region(700, 80, 360, '#eef4f8', 0.95);
-  region(980, 300, 300, '#c8a24a', 0.8);
-  region(1150, 140, 260, '#7a6a5a', 0.85);
+  // 依各關主題在節點周圍鋪地區色
+  const REGION: Record<string, string> = { grass: '#a8c870', forest: '#4f8a3a', snow: '#eef4f8', autumn: '#c8a24a', waste: '#6a5a5e' };
+  for (const n of nodes) region(n.x, n.y, n.theme === 'waste' ? 190 : 210, REGION[n.theme] ?? '#a8c870', 0.75);
   // 紙張紋理
   for (let i = 0; i < 4000; i++) {
     ctx.fillStyle = `rgba(${rnd() < 0.5 ? '60,40,10' : '255,250,230'},${0.04 + rnd() * 0.05})`;
@@ -110,43 +108,62 @@ export function paintWorldMap(w: number, h: number, offX: number, s: number, nod
       ctx.fill();
     }
   };
-  const mts: [number, number, number][] = [];
-  for (let i = 0; i < 26; i++) mts.push([380 + rnd() * 700, 60 + rnd() * 140, 0.7 + rnd() * 0.6]);
-  for (let i = 0; i < 10; i++) mts.push([1000 + rnd() * 260, 380 + rnd() * 200, 0.6 + rnd() * 0.4]);
-  mts.sort((a, b) => a[1] - b[1]);
-  for (const [x, y, sc] of mts) {
-    if (nodes.some((n) => Math.hypot(n.x - x, n.y - y) < 60)) continue;
-    mountain(x, y, sc, y < 200);
+  // 依主題在節點周圍散佈景物（避開節點與路線）
+  const nearNode = (x: number, y: number, r: number) => nodes.some((n) => Math.hypot(n.x - x, n.y - y) < r);
+  type Item = { y: number; draw: () => void };
+  const items: Item[] = [];
+  for (const n of nodes) {
+    const count = n.theme === 'waste' ? 12 : 16;
+    for (let i = 0; i < count; i++) {
+      const a = rnd() * Math.PI * 2;
+      const d = 50 + rnd() * 110;
+      const x = n.x + Math.cos(a) * d;
+      const y = n.y + Math.sin(a) * d * 0.7;
+      if (nearNode(x, y, 44) || x < 60 || x > 1220 || y < 40 || y > 690) continue;
+      switch (n.theme) {
+        case 'snow':
+          if (rnd() < 0.35) items.push({ y, draw: () => mountain(x, y, 0.6 + rnd() * 0.5, true) });
+          else items.push({ y, draw: () => drawPine(ctx, x, y, 10, '#2f5f4c', true) });
+          break;
+        case 'forest':
+          items.push({ y, draw: () => (rnd() < 0.5 ? drawPine(ctx, x, y, 11, '#2f6a34', false) : drawTree(ctx, x, y, 11, ['#3f8a2c', '#4f9a33'], rnd, false)) });
+          break;
+        case 'autumn':
+          if (rnd() < 0.2) items.push({ y, draw: () => mountain(x, y, 0.5 + rnd() * 0.4, false) });
+          else items.push({ y, draw: () => drawTree(ctx, x, y, 10, ['#d9822b', '#c4512a', '#e3a93a'], rnd, false) });
+          break;
+        case 'waste':
+          if (rnd() < 0.3) items.push({ y, draw: () => mountain(x, y, 0.5 + rnd() * 0.4, false) });
+          else items.push({ y, draw: () => drawDeadTree(ctx, x, y, 12, rnd) });
+          break;
+        default:
+          items.push({ y, draw: () => drawTree(ctx, x, y, 10, ['#4f9a33', '#5fae3c'], rnd, false) });
+      }
+    }
   }
-  // 森林
-  for (let i = 0; i < 70; i++) {
-    const x = 420 + rnd() * 320;
-    const y = 250 + rnd() * 220;
-    if (nodes.some((n) => Math.hypot(n.x - x, n.y - y) < 46)) continue;
-    if (rnd() < 0.5) drawPine(ctx, x, y, 11, '#2f6a34', false);
-    else drawTree(ctx, x, y, 11, ['#3f8a2c', '#4f9a33'], rnd, false);
+  // 北方遠山
+  for (let i = 0; i < 18; i++) {
+    const x = 380 + rnd() * 760;
+    const y = 50 + rnd() * 50;
+    if (!nearNode(x, y, 70)) items.push({ y, draw: () => mountain(x, y, 0.7 + rnd() * 0.5, true) });
   }
-  // 楓林
-  for (let i = 0; i < 40; i++) {
-    const x = 860 + rnd() * 260;
-    const y = 220 + rnd() * 200;
-    if (nodes.some((n) => Math.hypot(n.x - x, n.y - y) < 46)) continue;
-    drawTree(ctx, x, y, 10, ['#d9822b', '#c4512a', '#e3a93a'], rnd, false);
-  }
-  // 雪地針葉
-  for (let i = 0; i < 26; i++) {
-    const x = 560 + rnd() * 320;
-    const y = 120 + rnd() * 110;
-    if (nodes.some((n) => Math.hypot(n.x - x, n.y - y) < 46)) continue;
-    drawPine(ctx, x, y, 10, '#2f5f4c', true);
-  }
+  items.sort((a, b) => a.y - b.y);
+  for (const it of items) it.draw();
   // 王都與村莊
   drawCastle(ctx, 120, 640, 0.55);
   drawHouse(ctx, 300, 600, 0.45);
   drawHouse(ctx, 380, 650, 0.4);
-  // 蠻族營地
-  drawTent(ctx, 1150, 150, 0.6, '#8a3a2a');
-  drawTent(ctx, 1190, 170, 0.5, '#6a2a1a');
+  // 教派深淵之門（最終關附近）
+  const last = nodes[nodes.length - 1];
+  if (last) {
+    drawAltar(ctx, last.x + 70, last.y - 40, 0.7);
+    ctx.fillStyle = rgrad(ctx, last.x + 70, last.y - 60, 4, 70, 'rgba(160,60,255,0.45)', 'rgba(160,60,255,0)');
+    circle(ctx, last.x + 70, last.y - 60, 70);
+    ctx.fill();
+  }
+  // 蠻族營地（北方）
+  drawTent(ctx, 1040, 70, 0.55, '#8a3a2a');
+  drawTent(ctx, 1080, 86, 0.45, '#6a2a1a');
   ctx.restore();
   // 海岸線描邊
   pathLand();

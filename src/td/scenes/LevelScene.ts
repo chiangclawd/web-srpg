@@ -867,6 +867,10 @@ export class LevelScene extends Phaser.Scene {
           if (ev.kind === 'disintegrate') {
             this.fx.beam(ev.x1, ev.y1, ev.x2, ev.y2, 0xb050ff, 0xffe0ff);
             sfx.play('zap');
+          } else if (ev.kind === 'charge') {
+            this.fx.beam(ev.x1, ev.y1, ev.x2, ev.y2, 0xffd27a, 0xffffff);
+            this.fx.smokePuff(ev.x2, ev.y2 + 10, 6);
+            sfx.play('lance');
           } else {
             this.fx.beam(ev.x1, ev.y1, ev.x2, ev.y2, 0x5ab0ff, 0xe0f6ff);
             sfx.play('freeze');
@@ -898,6 +902,7 @@ export class LevelScene extends Phaser.Scene {
           this.ui.waveBanner(ev.index + 1, this.world.waveCount, ev.boss);
           if (ev.boss) {
             sfx.play('boss');
+            sfx.playBgm(this.level.id === 'l12' ? 'finale' : 'epic');
             this.cameras.main.shake(400, 0.004);
           }
           break;
@@ -1103,7 +1108,7 @@ export class LevelScene extends Phaser.Scene {
     for (const e of w.enemies) {
       const v = this.enemyViews.get(e.id);
       if (!v) continue;
-      let tint: number | undefined;
+      let tint: number | undefined = e.sheep ? undefined : e.def.tint;
       if (e.enraged) tint = 0xff8a7a;
       if (t < e.rootUntil) tint = 0xc0a070;
       else if (e.dots.length) tint = 0xb8ff8a;

@@ -233,7 +233,7 @@ export class LevelUIScene extends Phaser.Scene {
 
   showEnemyInfo(e: EnemyDef): void {
     const stats: [string, string][] = [
-      [T('hp'), String(Math.round(e.hp * (this.lvl.difficulty === 'veteran' ? 1.25 : this.lvl.difficulty === 'casual' ? 0.8 : 1)))],
+      [T('hp'), String(Math.round(e.hp * (this.lvl.difficulty === 'veteran' ? 1.25 : this.lvl.difficulty === 'casual' ? 0.7 : 1)))],
       [T('armor'), armorWord(e.armor)],
       [T('magicRes'), armorWord(e.magicResist)],
       [T('speed'), e.speed >= 60 ? T('veryFast') : e.speed >= 45 ? T('fast') : e.speed >= 28 ? T('medium') : T('slow')],
@@ -301,6 +301,7 @@ export class LevelUIScene extends Phaser.Scene {
     const img = this.add.image(-150, 40, e.sprite).setOrigin(0.5, 1);
     img.setScale(Math.min(140 / img.frame.height, 160 / img.frame.width));
     if (!e.facesRight) img.setFlipX(true);
+    if (e.tint) img.setTint(e.tint);
     c.add(img);
     const name = addText(this, -40, -74, L(e.name), { size: 26, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false });
     const desc = addText(this, -40, -36, L(e.desc), { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: 250 });

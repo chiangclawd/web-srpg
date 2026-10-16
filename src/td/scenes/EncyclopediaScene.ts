@@ -85,6 +85,7 @@ export class EncyclopediaScene extends Phaser.Scene {
         const k = Math.min(52 / fh, 52 / fw);
         b.icon.setDisplaySize(fw * k, fh * k);
         if (!known) b.icon.setTint(0x000000);
+        else if (e.tint) b.icon.setTint(e.tint);
       });
       const e = ENEMIES[this.sel];
       if (e) {
@@ -92,6 +93,7 @@ export class EncyclopediaScene extends Phaser.Scene {
         const img = add(this.add.image(detailX + 130, 380, e.sprite).setOrigin(0.5, 1));
         img.setScale(Math.min(200 / img.frame.height, 220 / img.frame.width));
         if (!known) img.setTint(0x000000);
+        else if (e.tint) img.setTint(e.tint);
         const tx = detailX + 260;
         add(addText(this, tx, 196, known ? L(e.name) : '???', { size: 32, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }));
         add(addText(this, tx, 244, known ? L(e.desc) : T('unknown'), { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: detailW - 290 }));

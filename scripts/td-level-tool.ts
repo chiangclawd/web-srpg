@@ -60,6 +60,31 @@ function check(): number {
         console.log(line + '  ⚠ ' + issues.join('; '));
       } else console.log(line);
     });
+    // 路徑覆蓋率：每條路有多少比例（畫面內）落在至少一個建造點射程內
+    paths.forEach((p, pi) => {
+      let inView = 0;
+      let covered = 0;
+      let gap = 0;
+      let maxGap = 0;
+      for (const q of p.pts) {
+        if (q.x < 0 || q.x > W || q.y < 0 || q.y > H) continue;
+        inView++;
+        const c = lv.spots.some((s) => inEllipse(s.x, s.y, q.x, q.y, 150));
+        if (c) {
+          covered++;
+          gap = 0;
+        } else {
+          gap += 4;
+          maxGap = Math.max(maxGap, gap);
+        }
+      }
+      const pct = (covered / Math.max(1, inView)) * 100;
+      const msg = `  path ${pi} coverage ${pct.toFixed(0)}% maxGap ${maxGap}px`;
+      if (pct < 70 || maxGap > 260) {
+        problems++;
+        console.log(msg + '  ⚠ poorly covered');
+      } else console.log(msg);
+    });
     const hs = lv.heroStart;
     console.log(`  heroStart (${hs.x},${hs.y}) pathDist=${pathDist(paths, hs.x, hs.y).toFixed(0)}`);
   }

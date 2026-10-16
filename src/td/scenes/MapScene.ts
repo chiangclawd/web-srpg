@@ -43,7 +43,7 @@ export class MapScene extends Phaser.Scene {
 
   create(): void {
     setupCamera(this);
-    const nodes = LEVELS.map((l) => ({ x: l.mapPos.x * PLAY_W, y: l.mapPos.y * VIEW_H }));
+    const nodes = LEVELS.map((l) => ({ x: l.mapPos.x * PLAY_W, y: l.mapPos.y * VIEW_H, theme: l.theme }));
     const s = RS >= 2 ? 1.25 : 1;
     if (!this.textures.exists('bg_map')) this.textures.addCanvas('bg_map', paintWorldMap(WORLD_W, VIEW_H, PLAY_X0, s, nodes));
     this.add.image(-PLAY_X0, 0, 'bg_map').setOrigin(0).setScale(1 / s);
