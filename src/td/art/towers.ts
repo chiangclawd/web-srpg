@@ -28,6 +28,12 @@ export interface TowerArtInfo {
   topY: number;
   barrel?: string;
   barrelY?: number;
+  /** 塔頂單位畫在塔身後面（被城垛擋住下半身，像站在塔裡） */
+  behind?: boolean;
+  /** 塔頂單位的水平偏移（避開塔頂裝飾） */
+  unitX?: number;
+  /** 砲管縮放（手繪塔的砲台比較小） */
+  barrelScale?: number;
 }
 
 export const TOWER_ART: Record<string, TowerArtInfo> = {
@@ -52,6 +58,47 @@ export const TOWER_ART: Record<string, TowerArtInfo> = {
   tw_barracks_paladin: { topY: 70 },
   tw_barracks_barbarian: { topY: 64 },
 };
+
+/**
+ * AI 手繪塔（public/assets/sprites/tw/*.webp，264×320、地面線 y=288）的錨點。
+ * 圖檔比程式畫的塔高，只有成功載入時才套用，否則沿用上面的數值。
+ */
+export const PAINTED_TOWER_ART: Record<string, TowerArtInfo> = {
+  tw_archer_1: { topY: 70, behind: true },
+  tw_archer_2: { topY: 77, behind: true },
+  tw_archer_3: { topY: 116, behind: true },
+  tw_archer_ranger: { topY: 104 },
+  tw_archer_marksman: { topY: 133, behind: true },
+  tw_mage_1: { topY: 62, behind: true },
+  tw_mage_2: { topY: 78, behind: true },
+  tw_mage_3: { topY: 106, behind: true },
+  tw_mage_arcane: { topY: 111, behind: true, unitX: -13 },
+  tw_mage_elemental: { topY: 101, behind: true },
+  tw_art_1: { topY: 28, barrel: 'barrel_1', barrelY: 31, barrelScale: 0.72 },
+  tw_art_2: { topY: 42, barrel: 'barrel_2', barrelY: 47, barrelScale: 0.72 },
+  tw_art_3: { topY: 50, barrel: 'barrel_3', barrelY: 55, barrelScale: 0.75 },
+  tw_art_tesla: { topY: 122 },
+  tw_art_bertha: { topY: 48, barrel: 'barrel_bertha', barrelY: 53, barrelScale: 0.72 },
+  tw_barracks_1: { topY: 55 },
+  tw_barracks_2: { topY: 66 },
+  tw_barracks_3: { topY: 79 },
+  tw_barracks_paladin: { topY: 67 },
+  tw_barracks_barbarian: { topY: 60 },
+};
+
+/** 畫面上的射擊高度（距地面）：模擬的 muzzle 固定較低，投射物出發時由畫面補上差距 */
+export function visualMuzzleH(art: string): number {
+  const info = TOWER_ART[art];
+  if (!info) return 0;
+  if (info.barrel) return (info.barrelY ?? 30) + 22 * (info.barrelScale ?? 1);
+  if (art === 'tw_art_tesla') return info.topY + 2;
+  return info.topY + 10;
+}
+
+export function usePaintedTower(key: string): void {
+  const info = PAINTED_TOWER_ART[key];
+  if (info) TOWER_ART[key] = info;
+}
 
 const WOOD = '#a0703c';
 const WOOD_D = '#6e4522';
@@ -423,15 +470,20 @@ function mageElemental(ctx: Ctx, cx: number, by: number): void {
 function artBase(ctx: Ctx, cx: number, by: number, h: number, w: number, base: string, merl: number, seed: number): void {
   pad(ctx, cx, by, w / 2 + 4);
   // 圓形矮牆
-  ctx.beginPath();
-  ctx.ellipse(cx, by - 6, w / 2, 16, 0, 0, Math.PI);
-  ctx.lineTo(cx - w / 2, by - 6 - h);
-  ctx.ellipse(cx, by - 6 - h, w / 2, 16, 0, Math.PI, 0, true);
-  ctx.closePath();
+  const wall = () => {
+    ctx.beginPath();
+    ctx.ellipse(cx, by - 6, w / 2, 16, 0, 0, Math.PI);
+    ctx.lineTo(cx - w / 2, by - 6 - h);
+    ctx.ellipse(cx, by - 6 - h, w / 2, 16, 0, Math.PI, 0, true);
+    ctx.closePath();
+  };
+  wall();
   ctx.save();
   ctx.clip();
   stoneBricks(ctx, cx - w / 2, by - h - 24, w, h + 34, base, Math.max(2, Math.round(h / 12)), seed);
   ctx.restore();
+  // save/restore 不會保存路徑：畫完磚塊後要重建牆的路徑再描邊（否則會描到最後一塊磚，出現多餘的黑框）
+  wall();
   ctx.lineWidth = 3;
   ctx.strokeStyle = OUTLINE;
   ctx.stroke();

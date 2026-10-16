@@ -11,6 +11,16 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 8,
+    date: '2026-10-16',
+    title: { zh: '防禦塔換上手繪新造型', en: 'Hand-painted towers' },
+    items: [
+      { zh: '弓箭、法師、兵營、砲塔共 20 種造型（含所有分支）全部重繪，升級時外觀變化更明顯', en: 'All 20 tower looks (every level and branch) are repainted, so upgrades read at a glance' },
+      { zh: '弓箭手和法師站在城垛後面，箭矢、法球、砲彈從塔頂射出', en: 'Archers and mages stand behind the battlements; arrows, bolts and shells now fly from the tower tops' },
+      { zh: '建造選單的塔圖示也一起更新', en: 'Build-menu tower icons match the new art' },
+    ],
+  },
+  {
     id: 7,
     date: '2026-10-16',
     title: { zh: '魔物換上手繪新造型', en: 'Hand-painted monsters' },

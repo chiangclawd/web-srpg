@@ -1,0 +1,17 @@
+Image 1 is a row of 5 defense towers from my 2D fantasy tower-defense game, drawn in a flat placeholder style (ignore the grey fill inside them). Images 2-3 show the TARGET art style: polished hand-painted chibi fantasy game art with clean dark-brown outlines, soft cel shading, rich painted textures and warm lighting.
+
+Paint a NEW, polished version of the same 5 towers as one game sprite sheet:
+- Exactly 5 separate towers in ONE horizontal row, in the same order and at the same positions as image 1, evenly spaced with clear empty gaps between them, all standing on the same ground line, all at the same scale as in image 1 (left ones are smaller/lower levels, so keep their relative sizes).
+- Each tower stands on its own small round dirt base.
+- Slightly top-down front view, like image 1.
+- Keep each tower recognizably the same building type and keep its main features, but render it as a rich, detailed painted asset: carved stone blocks, wood grain, metal trims and rivets, banners with painted folds, small moss and weathering, highlights from the upper-left.
+- The top of every mage tower must be an EMPTY, flat, open crenellated platform (no roof, no spire) where one mage will stand.
+- Do NOT draw any people, soldiers, archers, mages, creatures or cannon barrels.
+- Background: perfectly flat solid magenta (#FF00FF) everywhere around the towers. No shadows on the background, no text, no labels, no frame.
+
+The 5 towers, left to right:
+1. Level 1 Mage Tower: a short purple-grey stone tower with a small glowing purple crystal floating at one side and an arched purple door.
+2. Level 2 Mage Tower: a taller purple-grey stone tower with two floating purple crystals and a purple stripe.
+3. Level 3 Mage Tower: a tall purple-grey stone tower with gold bands, a purple banner with a gold star and two floating crystals.
+4. Arcane Spire: a dark violet stone tower with glowing violet magic runes (NO lava, NO orange), large purple crystal spikes growing from its base and a big glowing crystal floating above it.
+5. Elemental Tower (the only one with lava): a sandy-brown stone tower with glowing orange lava cracks and two floating rock chunks above it.

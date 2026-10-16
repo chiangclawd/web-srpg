@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { TEX, VIEW_H, addText, setupCamera, viewW } from '../config';
-import { paintTowers } from '../art/towers';
+import { BARREL_ORIGIN, TOWER_ART, TW_BASE, TW_W, paintTowers, PAINTED_TOWER_ART, usePaintedTower } from '../art/towers';
 import { paintMonsters } from '../art/units';
 import { paintFx } from '../art/fx';
 import { paintUi, towerBadge } from '../art/ui';
@@ -45,6 +45,7 @@ export class BootScene extends Phaser.Scene {
     });
     for (const s of SPRITES) this.load.image(`raw_${s}`, `assets/sprites/${s}.png`);
     for (const m of PAINTED_MONSTERS) this.load.image(`rawmon_${m}`, `assets/sprites/mon/${m}.webp`);
+    for (const k of Object.keys(PAINTED_TOWER_ART)) this.load.image(`rawtw_${k}`, `assets/sprites/tw/${k}.webp`);
     for (const h of Object.values(HEROES)) this.load.image(`rawpt_${h.id}`, `assets/portraits/${h.id}.png`);
     for (const id of STORY_PORTRAITS) this.load.image(`rawpt_${id}`, `assets/portraits/${id}.png`);
   }
@@ -74,6 +75,19 @@ export class BootScene extends Phaser.Scene {
 
   private generate(): void {
     const towers = paintTowers(TEX);
+    // 手繪塔：圖檔已是 TW_W×TW_H×TEX，直接畫進畫布取代程式畫的塔（徽章也會跟著換）
+    for (const k of Object.keys(PAINTED_TOWER_ART)) {
+      const key = `rawtw_${k}`;
+      if (!this.textures.exists(key) || !towers[k]) continue;
+      const src = this.textures.get(key).getSourceImage() as HTMLImageElement;
+      const cv = towers[k];
+      const ctx = cv.getContext('2d')!;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      ctx.drawImage(src, 0, 0, cv.width, cv.height);
+      usePaintedTower(k);
+      this.textures.remove(key);
+    }
     this.addCanvases(towers);
     this.addCanvases(paintMonsters(TEX));
     for (const m of PAINTED_MONSTERS) {
@@ -90,7 +104,7 @@ export class BootScene extends Phaser.Scene {
       icb_archer: towerBadge(towers.tw_archer_1, TEX, '#3a5a2a'),
       icb_barracks: towerBadge(towers.tw_barracks_1, TEX, '#2a4a7a'),
       icb_mage: towerBadge(towers.tw_mage_1, TEX, '#4a2a6a'),
-      icb_artillery: towerBadge(towers.tw_art_1, TEX, '#6a3a1a'),
+      icb_artillery: towerBadge(withBarrel(towers, 'tw_art_1'), TEX, '#6a3a1a'),
       icb_ranger: towerBadge(towers.tw_archer_ranger, TEX, '#2a5a2a'),
       icb_marksman: towerBadge(towers.tw_archer_marksman, TEX, '#5a3a1a'),
       icb_paladin: towerBadge(towers.tw_barracks_paladin, TEX, '#2a4a7a'),
@@ -98,7 +112,7 @@ export class BootScene extends Phaser.Scene {
       icb_arcane: towerBadge(towers.tw_mage_arcane, TEX, '#4a2a6a'),
       icb_elemental: towerBadge(towers.tw_mage_elemental, TEX, '#6a3a1a'),
       icb_tesla: towerBadge(towers.tw_art_tesla, TEX, '#1a3a6a'),
-      icb_bertha: towerBadge(towers.tw_art_bertha, TEX, '#4a3a2a'),
+      icb_bertha: towerBadge(withBarrel(towers, 'tw_art_bertha'), TEX, '#4a3a2a'),
     };
     this.addCanvases(badges);
     // 單位 sprite：裁掉透明邊並縮成統一高度
@@ -150,6 +164,23 @@ function alphaBBox(img: HTMLImageElement): { x: number; y: number; w: number; h:
   void cv;
   if (x1 < x0) return { x: 0, y: 0, w: img.width, h: img.height };
   return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+}
+
+/** 砲塔圖示要連砲管一起畫（砲管是獨立紋理） */
+function withBarrel(towers: Record<string, HTMLCanvasElement>, art: string): HTMLCanvasElement {
+  const src = towers[art];
+  const info = TOWER_ART[art];
+  const bar = info?.barrel ? towers[info.barrel] : undefined;
+  if (!bar) return src;
+  const [cv, ctx] = mkCanvas(src.width, src.height);
+  ctx.drawImage(src, 0, 0);
+  const k = info.barrelScale ?? 1;
+  const bw = bar.width * k;
+  const bh = bar.height * k;
+  const x = (TW_W / 2) * TEX - bw * BARREL_ORIGIN.x;
+  const y = (TW_BASE - (info.barrelY ?? 30)) * TEX - bh * BARREL_ORIGIN.y;
+  ctx.drawImage(bar, x, y, bw, bh);
+  return cv;
 }
 
 function cropAndScale(img: HTMLImageElement, targetH: number): HTMLCanvasElement {

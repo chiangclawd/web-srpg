@@ -16,7 +16,28 @@ H_LO, H_HI = 30.0, 62.0  # stricter ramp for enclosed holes not connected to the
 
 
 def key(path_in: str, path_out: str, target_h: int = 256) -> None:
+    img, bg = key_image(path_in)
+    s = target_h / img.height
+    img = img.resize((max(1, round(img.width * s)), target_h), Image.LANCZOS)
+    img.save(path_out, optimize=True)
+    print(f'{path_out}: bg={bg.round().astype(int).tolist()} size={img.size}')
+
+
+def key_image(path_in: str):
+    """Return (trimmed RGBA image at the source resolution, background colour)."""
     rgb = np.asarray(Image.open(path_in).convert('RGB')).astype(np.float32)
+    rgba, bg = key_array(rgb, return_bg=True)
+    alpha = rgba[..., 3].astype(np.float32) / 255
+    h, w = alpha.shape
+    img = Image.fromarray(rgba, 'RGBA')
+    ys, xs = np.where(alpha > 0.05)
+    pad = 6
+    box = (max(0, xs.min() - pad), max(0, ys.min() - pad), min(w, xs.max() + pad + 1), min(h, ys.max() + pad + 1))
+    return img.crop(box), bg
+
+
+def key_array(rgb, return_bg=False):
+    """Key an RGB float array; returns an RGBA uint8 array (untrimmed)."""
     h, w, _ = rgb.shape
     border = np.concatenate([rgb[:6].reshape(-1, 3), rgb[-6:].reshape(-1, 3), rgb[:, :6].reshape(-1, 3), rgb[:, -6:].reshape(-1, 3)])
     bg = np.median(border, axis=0)
@@ -50,15 +71,7 @@ def key(path_in: str, path_out: str, target_h: int = 256) -> None:
     out = rgb.copy()
     out[soft] = np.clip((rgb[soft] - (1 - a[soft]) * bg) / np.maximum(a[soft], 0.02), 0, 255)
     rgba = np.dstack([out, alpha * 255]).astype(np.uint8)
-    img = Image.fromarray(rgba, 'RGBA')
-    ys, xs = np.where(alpha > 0.05)
-    pad = 6
-    box = (max(0, xs.min() - pad), max(0, ys.min() - pad), min(w, xs.max() + pad + 1), min(h, ys.max() + pad + 1))
-    img = img.crop(box)
-    s = target_h / img.height
-    img = img.resize((max(1, round(img.width * s)), target_h), Image.LANCZOS)
-    img.save(path_out, optimize=True)
-    print(f'{path_out}: bg={bg.round().astype(int).tolist()} size={img.size}')
+    return (rgba, bg) if return_bg else rgba
 
 
 if __name__ == '__main__':
