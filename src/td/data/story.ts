@@ -79,6 +79,10 @@ export const STORY: Record<string, StoryLine[]> = {
     { who: 'aria', text: { zh: '我在西方沙海上空看見教派的旗幟……殘黨跟沙漠遊牧民結盟了。', en: 'I saw cult banners over the western sands. The remnants have allied with the desert nomads.' } },
     { who: 'rain', text: { zh: '小心腳下！巨蠍鑽進沙裡時刀槍不入，等牠們冒出來再打。', en: 'Watch the sand! Scorpions are untouchable while burrowed. Strike when they surface.' } },
   ],
+  l14: [
+    { who: 'lila', text: { zh: '地底傳來的震動越來越強……教派用禁咒喚醒了沙海的遠古巨蟲。', en: 'The tremors are getting stronger. The cult used a forbidden rite to wake the ancient wyrm.' } },
+    { who: 'arthur', text: { zh: '牠鑽進沙裡時誰都碰不到。守住每一段路，等牠冒出來就全力攻擊！', en: 'Nothing can touch it underground. Hold every stretch of road and strike hard when it surfaces!' } },
+  ],
 };
 
 /** 通關最終關後的尾聲 */

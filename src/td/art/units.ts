@@ -450,6 +450,82 @@ function scorpion(ctx: Ctx, w: number, h: number): void {
   }
 }
 
+/** 沙暴巨蟲（首領）：從沙堆中拱起的節狀身軀，張開的巨口朝右 */
+function wyrm(ctx: Ctx, w: number, h: number): void {
+  const by = h - 4;
+  // 沙堆
+  ellipse(ctx, w * 0.42, by - 10, w * 0.4, 13);
+  fillStroke(ctx, vgrad(ctx, by - 24, by, '#f0d496', '#b48a4a'), 3, '#6a4a22');
+  // 身體節：由左下拱起到右上
+  const segs: [number, number, number][] = [];
+  for (let i = 0; i < 9; i++) {
+    const t = i / 8;
+    const x = w * (0.16 + t * 0.52);
+    const y = by - 14 - Math.sin(t * Math.PI * 0.95) * (h * 0.5) - t * h * 0.18;
+    segs.push([x, y, 17 - t * 3]);
+  }
+  for (const [x, y, r] of segs) {
+    circle(ctx, x, y, r);
+    fillStroke(ctx, rgrad(ctx, x - r * 0.3, y - r * 0.4, 2, r, '#d8a870', '#7a4a2a'), 3);
+    // 腹甲
+    ctx.strokeStyle = 'rgba(255,230,180,0.55)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.7, 0.2, Math.PI - 0.2);
+    ctx.stroke();
+  }
+  // 背刺
+  for (let i = 1; i < segs.length - 1; i += 2) {
+    const [x, y, r] = segs[i];
+    poly(ctx, [x - 5, y - r + 3, x, y - r - 11, x + 5, y - r + 3]);
+    fillStroke(ctx, '#5a3a5a', 2);
+  }
+  // 頭
+  const [hx, hy] = segs[segs.length - 1];
+  const head = () => {
+    ctx.beginPath();
+    ctx.moveTo(hx - 14, hy - 16);
+    ctx.quadraticCurveTo(hx + 22, hy - 30, hx + 40, hy - 10);
+    ctx.lineTo(hx + 20, hy - 2);
+    ctx.lineTo(hx + 38, hy + 10);
+    ctx.quadraticCurveTo(hx + 14, hy + 26, hx - 14, hy + 14);
+    ctx.closePath();
+  };
+  head();
+  fillStroke(ctx, vgrad(ctx, hy - 28, hy + 24, '#e0b07a', '#6a3a24'), 3.5);
+  // 口腔
+  poly(ctx, [hx + 6, hy - 4, hx + 38, hy - 10, hx + 20, hy - 2, hx + 38, hy + 10]);
+  ctx.fillStyle = '#5a1020';
+  ctx.fill();
+  // 牙
+  ctx.fillStyle = '#fff6e0';
+  for (let k = 0; k < 4; k++) {
+    const tx = hx + 14 + k * 6;
+    poly(ctx, [tx, hy - 6 - k * 0.8, tx + 3, hy + 1, tx + 6, hy - 7 - k * 0.8]);
+    ctx.fill();
+    poly(ctx, [tx, hy + 5 + k * 0.6, tx + 3, hy - 1, tx + 6, hy + 6 + k * 0.6]);
+    ctx.fill();
+  }
+  // 眼
+  for (const [ex, ey] of [
+    [hx + 8, hy - 16],
+    [hx - 2, hy - 13],
+  ]) {
+    ctx.fillStyle = rgrad(ctx, ex, ey, 0, 6, 'rgba(255,200,60,1)', 'rgba(255,120,0,0)');
+    circle(ctx, ex, ey, 6);
+    ctx.fill();
+    circle(ctx, ex, ey, 2.4);
+    ctx.fillStyle = '#ffe680';
+    ctx.fill();
+  }
+  // 揚沙
+  for (let i = 0; i < 10; i++) {
+    circle(ctx, w * 0.12 + i * w * 0.07, by - 18 - (i % 3) * 5, 2.4);
+    ctx.fillStyle = 'rgba(220,180,110,0.8)';
+    ctx.fill();
+  }
+}
+
 /** 鑽地時地面隆起的沙堆 */
 function sandMound(ctx: Ctx, w: number, h: number): void {
   const cx = w / 2;
@@ -473,6 +549,7 @@ export const MONSTERS: Record<string, { w: number; h: number; paint: (ctx: Ctx, 
   mon_skeleton: { w: 60, h: 66, paint: skeleton },
   mon_demon: { w: 76, h: 76, paint: demon },
   mon_scorpion: { w: 96, h: 64, paint: scorpion },
+  mon_wyrm: { w: 160, h: 140, paint: wyrm },
   fx_mound: { w: 56, h: 22, paint: sandMound },
 };
 

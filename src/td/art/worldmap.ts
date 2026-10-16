@@ -192,6 +192,19 @@ export function paintWorldMap(w: number, h: number, offX: number, s: number, nod
   ctx.lineWidth = 3;
   ctx.strokeStyle = '#f0d8a0';
   ctx.stroke();
+  // 外傳路線（金色虛線，只連外傳關卡）
+  const side = nodes.filter((n) => n.bonus);
+  if (side.length >= 2) {
+    const sr = catmullRom(side, 20);
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = 'rgba(90,50,10,0.55)';
+    ctx.beginPath();
+    sr.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+    ctx.stroke();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#ffc860';
+    ctx.stroke();
+  }
   ctx.setLineDash([]);
   // 羅盤
   compass(ctx, 1180, 600);

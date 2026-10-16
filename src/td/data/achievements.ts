@@ -42,6 +42,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'boss_carl', name: { zh: '叛將伏誅', en: 'Traitor’s End' }, desc: { zh: '擊敗墮落將軍卡爾', en: 'Defeat Carl the Fallen' }, icon: 'ic_skull' },
   { id: 'boss_bishop', name: { zh: '破除聖光', en: 'Lights Out' }, desc: { zh: '擊敗黑暗主教', en: 'Defeat the Dark Bishop' }, icon: 'ic_skull' },
   { id: 'boss_rin', name: { zh: '血月終結', en: 'Blood Moon Set' }, desc: { zh: '擊敗副教主凜', en: 'Defeat Rin, the Vice Hierarch' }, icon: 'ic_skull' },
+  { id: 'boss_wyrm', name: { zh: '沙海平定', en: 'Sands Stilled' }, desc: { zh: '擊敗沙暴巨蟲', en: 'Defeat the Sandstorm Wyrm' }, icon: 'ic_skull' },
   { id: 'heroic_first', name: { zh: '英雄本色', en: 'True Hero' }, desc: { zh: '完成任一英雄挑戰', en: 'Complete any Heroic challenge' }, icon: 'ic_crown' },
   { id: 'iron_first', name: { zh: '鋼鐵意志', en: 'Iron Will' }, desc: { zh: '完成任一鋼鐵挑戰', en: 'Complete any Iron challenge' }, icon: 'ic_shield' },
   { id: 'heroic_all', name: { zh: '傳奇英雄', en: 'Legend' }, desc: { zh: '完成所有英雄挑戰', en: 'Complete every Heroic challenge' }, icon: 'ic_crown' },
@@ -66,6 +67,7 @@ const BOSS_ACH: Record<string, string> = {
   carl: 'boss_carl',
   high_priest: 'boss_bishop',
   sub_priest: 'boss_rin',
+  wyrm: 'boss_wyrm',
 };
 
 /** 依本場結果與累計存檔判定新解鎖的成就（會寫入 save.achievements） */

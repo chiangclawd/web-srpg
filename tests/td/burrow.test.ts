@@ -48,3 +48,13 @@ test('towers do not target burrowed enemies', () => {
   run(w, 2);
   assert.equal(e.hp, e.maxHp, 'an archer in range never hits it');
 });
+
+test('the Sandstorm Wyrm burrows and calls up scorpions', () => {
+  const w = mkWorld();
+  const boss = w.spawnEnemy('wyrm', 0, 50);
+  assert.ok(boss.def.boss);
+  boss.abilityCd = boss.abilityCd.map(() => 0.05);
+  run(w, 0.3);
+  assert.equal(boss.burrowed, true);
+  assert.ok(w.enemies.some((e) => e.def.id === 'scorpion'), 'summons scorpions');
+});

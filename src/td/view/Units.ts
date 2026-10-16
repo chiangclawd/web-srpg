@@ -84,8 +84,10 @@ export class UnitView {
         this.mound = this.scene.add.image(0, 0, 'fx_mound').setOrigin(0.5, 1).setScale(1 / TEX);
         this.setVisible(false);
       }
+      // 沙堆大小隨單位體型（首領的沙堆比較大）
+      const k = Math.max(1, (this.hpWidth + 10) / 46);
       this.mound.setPosition(s.x, s.y + 2 + Math.sin(s.t * 14) * 1.2).setDepth(s.y);
-      this.mound.setScale((1 / TEX) * (1 + Math.sin(s.t * 9) * 0.06), 1 / TEX);
+      this.mound.setScale((k / TEX) * (1 + Math.sin(s.t * 9) * 0.06), (k * 0.85) / TEX);
       return;
     }
     if (this.mound) {

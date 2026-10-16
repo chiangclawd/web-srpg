@@ -19,6 +19,7 @@ const IRON_TOWERS: TowerType[][] = [
   ['mage', 'artillery'],
   // 外傳
   ['mage', 'barracks'],
+  ['mage', 'artillery'],
 ];
 
 export function ironTowers(level: LevelDef): TowerType[] {
