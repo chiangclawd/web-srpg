@@ -36,6 +36,7 @@ npm run dev            # http://localhost:5173/td.html
 npm run build          # 兩個入口（index.html = SRPG、td.html = 塔防）一起打包
 npm run td:sim         # headless 平衡模擬：AI 打完所有關卡，輸出勝負/星數/漏怪（MODE=heroic|iron|endless 測挑戰模式）
 npm run td:levels      # 關卡幾何檢查（建造點壓路/重疊/HUD/水域/建築、每條路的建造點覆蓋率）
+npm run test:td        # 模擬與資料單元測試（經濟、戰鬥、波次、挑戰/無盡產生器、劇情、成就、存檔遷移）
 npm run td:optimize    # 爬山法搜尋最佳建塔計畫，確認每關「好玩家」能三星（ITERS=120 可加深搜尋）
 npx tsx scripts/td-level-tool.ts suggest l3 11   # 自動建議建造點
 ```

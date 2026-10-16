@@ -15,7 +15,8 @@
     "tauri:build": "tauri build",
     "td:sim": "tsx scripts/td-sim.ts",
     "td:levels": "tsx scripts/td-level-tool.ts",
-    "td:optimize": "tsx scripts/td-optimize.ts"
+    "td:optimize": "tsx scripts/td-optimize.ts",
+    "test:td": "tsx --test tests/td/*.test.ts"
   },
   "dependencies": {
     "@fontsource/luckiest-guy": "^5.3.0",
