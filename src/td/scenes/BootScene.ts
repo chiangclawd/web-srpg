@@ -6,6 +6,7 @@ import { paintFx } from '../art/fx';
 import { paintUi, towerBadge } from '../art/ui';
 import { mkCanvas } from '../art/paint';
 import { HEROES } from '../data/heroes';
+import { STORY_PORTRAITS } from '../data/story';
 
 const SPRITES = [
   'aria', 'arthur', 'baron', 'carl', 'cult_leader', 'elena', 'enemy_archer', 'enemy_cavalry', 'enemy_flier', 'enemy_lance',
@@ -38,6 +39,7 @@ export class BootScene extends Phaser.Scene {
     });
     for (const s of SPRITES) this.load.image(`raw_${s}`, `assets/sprites/${s}.png`);
     for (const h of Object.values(HEROES)) this.load.image(`rawpt_${h.id}`, `assets/portraits/${h.id}.png`);
+    for (const id of STORY_PORTRAITS) this.load.image(`rawpt_${id}`, `assets/portraits/${id}.png`);
   }
 
   create(): void {
@@ -92,6 +94,14 @@ export class BootScene extends Phaser.Scene {
       const src = this.textures.get(key).getSourceImage() as HTMLImageElement;
       const cv = cropAndScale(src, UNIT_TEX_H);
       this.addCanvases({ [`sp_${s}`]: cv });
+      this.textures.remove(key);
+    }
+    // 劇情立繪
+    for (const id of STORY_PORTRAITS) {
+      const key = `rawpt_${id}`;
+      if (!this.textures.exists(key)) continue;
+      const src = this.textures.get(key).getSourceImage() as HTMLImageElement;
+      this.addCanvases({ [`pt_${id}`]: scaleImage(src, 320) });
       this.textures.remove(key);
     }
     // 英雄頭像（圓形裁切）

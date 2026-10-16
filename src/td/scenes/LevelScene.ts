@@ -10,10 +10,11 @@ import { Enemy, Soldier, Tower, type Projectile } from '../sim/entities';
 import type { LevelDef, LevelMode, TowerLevelDef, TowerType } from '../sim/defs';
 import { challengeLevel } from '../data/challenges';
 import { evaluateAchievements } from '../data/achievements';
+import { STORY } from '../data/story';
 import { RANGE_Y, inEllipse } from '../sim/math';
 import { paintLevel, paintBuildSpot } from '../art/terrain';
 import { THEMES } from '../art/scenery';
-import { DEPTH, Fx } from '../view/Fx';
+import { DEPTH, Fx, camShake } from '../view/Fx';
 import { TowerView, UnitView } from '../view/Units';
 import { RadialMenu, type RadialOption } from '../view/RadialMenu';
 import { IconButton } from '../ui/widgets';
@@ -176,8 +177,16 @@ export class LevelScene extends Phaser.Scene {
     sfx.playBgm(this.level.bgm ?? 'tense');
     this.cameras.main.fadeIn(400, 0, 0, 0);
 
-    // 開場：介紹新敵人
-    this.time.delayedCall(500, () => this.introNewEnemies(this.level.intro ?? []));
+    // 開場：劇情（首次進入戰役）→ 介紹新敵人
+    this.time.delayedCall(500, () => {
+      const story = STORY[this.level.id];
+      const seen = save().storySeen;
+      if (this.mode0 === 'campaign' && story && !seen.includes(this.level.id)) {
+        seen.push(this.level.id);
+        persist();
+        this.ui.showStory(story, () => this.introNewEnemies(this.level.intro ?? []));
+      } else this.introNewEnemies(this.level.intro ?? []);
+    });
   }
 
   private onResize(): void {
@@ -917,7 +926,7 @@ export class LevelScene extends Phaser.Scene {
           if (ev.boss) {
             sfx.play('boss');
             sfx.playBgm(this.level.id === 'l12' ? 'finale' : 'epic');
-            this.cameras.main.shake(400, 0.004);
+            camShake(this, 400, 0.004);
           }
           break;
         case 'waveBonus':

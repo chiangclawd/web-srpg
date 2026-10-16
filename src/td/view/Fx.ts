@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TEX, addText } from '../config';
+import { save } from '../save';
 
 export const DEPTH = {
   bg: -1000,
@@ -140,8 +141,8 @@ export class Fx {
     const crack = s.add.image(x, y, 'fx_crack').setDepth(DEPTH.decal).setScale((r / 48) * (1 / TEX) * 1.1);
     crack.setAlpha(0.85);
     s.tweens.add({ targets: crack, alpha: 0, delay: 2200, duration: 1200, onComplete: () => crack.destroy() });
-    if (big) s.cameras.main.shake(180, 0.006);
-    else if (kind === 'bomb') s.cameras.main.shake(90, 0.0025);
+    if (big) camShake(s, 180, 0.006);
+    else if (kind === 'bomb') camShake(s, 90, 0.0025);
   }
 
   ring(x: number, y: number, r: number, color: number, dur: number): void {
@@ -257,4 +258,9 @@ export class Fx {
     this.scene.tweens.add({ targets: g, alpha: 0, duration: 380, onComplete: () => g.destroy() });
     this.spark.explode(10, x2, y2);
   }
+}
+
+/** 畫面震動（可在設定中關閉） */
+export function camShake(scene: Phaser.Scene, ms: number, k: number): void {
+  if (save().settings.shake) scene.cameras.main.shake(ms, k);
 }

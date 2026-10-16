@@ -5,7 +5,7 @@ import type { LevelDef } from '../sim/defs';
 import { TW_BASE, TW_H } from '../art/towers';
 import { Button, IconButton, dimmer, panel } from '../ui/widgets';
 import { T, getLang, setLang } from '../i18n';
-import { save, persist } from '../save';
+import { save, persist, resetProgress } from '../save';
 import { sfx } from '../audio';
 import { Path } from '../sim/Path';
 
@@ -129,12 +129,14 @@ export class MenuScene extends Phaser.Scene {
     const w = viewW(this);
     const c = this.add.container(WORLD_W / 2, VIEW_H / 2).setDepth(5000);
     c.add(dimmer(this, w * 2, VIEW_H * 2, 0.55).setPosition(-w, -VIEW_H));
-    c.add(panel(this, 0, 0, 440, 330));
-    c.add(addText(this, 0, -126, T('settings'), { size: 32, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0.5));
+    c.add(panel(this, 0, 0, 460, 440));
+    c.add(addText(this, 0, -178, T('settings'), { size: 32, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0.5));
     const sv = save();
-    const row = (y: number, label: string, key: 'music' | 'sfx') => {
-      c.add(addText(this, -160, y, label, { size: 22, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
-      const b = new IconButton(this, 130, y, 50, sv.settings[key] > 0 ? 'ic_sound_on' : 'ic_sound_off', () => {
+    const label = (y: number, text: string) =>
+      c.add(addText(this, -170, y, text, { size: 22, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
+    const row = (y: number, text: string, key: 'music' | 'sfx') => {
+      label(y, text);
+      const b = new IconButton(this, 140, y, 50, sv.settings[key] > 0 ? 'ic_sound_on' : 'ic_sound_off', () => {
         sv.settings[key] = sv.settings[key] > 0 ? 0 : key === 'music' ? 0.6 : 0.8;
         persist();
         sfx.refreshVolumes();
@@ -142,9 +144,35 @@ export class MenuScene extends Phaser.Scene {
       });
       c.add(b);
     };
-    row(-62, T('music'), 'music');
-    row(0, T('sound'), 'sfx');
-    c.add(new Button(this, 0, 110, 200, 52, 'OK', () => c.destroy(), { color: 'green' }));
+    row(-114, T('music'), 'music');
+    row(-56, T('sound'), 'sfx');
+    label(2, T('shake'));
+    const shakeBtn = new IconButton(this, 140, 2, 50, sv.settings.shake ? 'ic_check' : 'ic_close', () => {
+      sv.settings.shake = !sv.settings.shake;
+      persist();
+      shakeBtn.setIcon(sv.settings.shake ? 'ic_check' : 'ic_close');
+      if (sv.settings.shake) this.cameras.main.shake(160, 0.004);
+    });
+    c.add(shakeBtn);
+    // 清除進度：按兩次才生效
+    let armed = false;
+    const wipe = new Button(this, 0, 80, 240, 46, T('resetProgress'), () => {
+      if (!armed) {
+        armed = true;
+        wipe.label.setText(T('confirmWipe'));
+        this.time.delayedCall(3000, () => {
+          if (!wipe.active) return;
+          armed = false;
+          wipe.label.setText(T('resetProgress'));
+        });
+        return;
+      }
+      resetProgress();
+      c.destroy();
+      this.cameras.main.flash(250, 255, 255, 255);
+    }, { color: 'red', text: { size: 18 } });
+    c.add(wipe);
+    c.add(new Button(this, 0, 160, 200, 52, 'OK', () => c.destroy(), { color: 'green' }));
     c.setScale(0.8);
     this.tweens.add({ targets: c, scale: 1, duration: 200, ease: 'Back.easeOut' });
   }

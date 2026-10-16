@@ -17,12 +17,16 @@ export interface SaveData {
   /** 挑戰模式完成紀錄（各 1 星） */
   challenges: Record<string, { heroic?: boolean; iron?: boolean }>;
   achievements: string[];
+  /** 已看過開場劇情的關卡 */
+  storySeen: string[];
   settings: {
     music: number;
     sfx: number;
     lang: Lang;
     difficulty: Difficulty;
     speed: number;
+    /** 爆炸 / 首領登場時畫面震動 */
+    shake: boolean;
   };
   stats: { kills: number; plays: number; victories: number; towers: number };
 }
@@ -39,7 +43,8 @@ function defaults(): SaveData {
     unlockedSeen: ['l1'],
     challenges: {},
     achievements: [],
-    settings: { music: 0.6, sfx: 0.8, lang: nav.startsWith('zh') ? 'zh' : 'en', difficulty: 'normal', speed: 1 },
+    storySeen: [],
+    settings: { music: 0.6, sfx: 0.8, lang: nav.startsWith('zh') ? 'zh' : 'en', difficulty: 'normal', speed: 1, shake: true },
     stats: { kills: 0, plays: 0, victories: 0, towers: 0 },
   };
 }
@@ -77,6 +82,14 @@ export function persist(): void {
   } catch {
     // 私密模式 / 容量不足：靜默失敗
   }
+}
+
+/** 清除所有進度（保留音量 / 語言等設定） */
+export function resetProgress(): void {
+  const keep = data.settings;
+  data = defaults();
+  data.settings = keep;
+  persist();
 }
 
 /** 戰役星數 + 挑戰星數（英雄 / 鋼鐵各 1 星） */

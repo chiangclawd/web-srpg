@@ -122,6 +122,10 @@ const STR = {
   achievements: { zh: '成就', en: 'Achievements' },
   achUnlocked: { zh: '解鎖成就', en: 'Achievement unlocked' },
   bossHp: { zh: '首領', en: 'Boss' },
+  skip: { zh: '略過', en: 'Skip' },
+  shake: { zh: '畫面震動', en: 'Screen shake' },
+  resetProgress: { zh: '清除進度', en: 'Reset progress' },
+  confirmWipe: { zh: '再按一次確認清除', en: 'Tap again to confirm' },
 } satisfies Record<string, L10n>;
 
 export type StrKey = keyof typeof STR;
