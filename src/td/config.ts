@@ -96,9 +96,45 @@ export interface TextOpts {
   lineSpacing?: number;
 }
 
+/**
+ * 手機字體放大：整個 1280×720 畫面在手機上會縮到約一半，14px 的字實際只剩 7px。
+ * 依畫面縮放比例把小字放大，讓實際顯示至少約 11 CSS px（最多放大 1.35 倍，避免撐爆版面）。
+ * 桌機縮放比例 ≥ 1，不受影響。以橫向尺寸計算（直向開啟時也一樣）。
+ */
+const MIN_CSS_PX = 11;
+const MAX_BOOST = 1.35;
+
+function screenScale(): number {
+  if (typeof window === 'undefined') return 1;
+  const w = Math.max(window.innerWidth, window.innerHeight);
+  const h = Math.min(window.innerWidth, window.innerHeight);
+  return Math.min(w / computeViewW(), h / VIEW_H);
+}
+
+let textMin = MIN_CSS_PX / screenScale();
+
+/** 邏輯字級 → 實際使用的字級（小螢幕放大） */
+export function fontPx(size: number): number {
+  if (size >= textMin) return size;
+  return Math.round(Math.min(textMin, size * MAX_BOOST));
+}
+
+/**
+ * 手機上彈出面板整體放大的倍率（字與版面一起放大，不會擠爆版面）。
+ * 讓面板裡的 1 邏輯像素至少約 0.7 CSS px；桌機、平板為 1。
+ */
+export function uiZoom(): number {
+  return Phaser.Math.Clamp(0.7 / screenScale(), 1, 1.35);
+}
+
+/** 視窗大小改變時重新計算（之後建立的文字才會套用） */
+export function refreshTextScale(): void {
+  textMin = MIN_CSS_PX / screenScale();
+}
+
 /** 統一文字樣式：粗描邊卡通字 */
 export function textStyle(o: TextOpts = {}): Phaser.Types.GameObjects.Text.TextStyle {
-  const size = o.size ?? 20;
+  const size = fontPx(o.size ?? 20);
   const st: Phaser.Types.GameObjects.Text.TextStyle = {
     fontFamily: o.display ? FONT_DISPLAY : FONT_BODY,
     fontSize: `${size}px`,
@@ -119,7 +155,20 @@ export function textStyle(o: TextOpts = {}): Phaser.Types.GameObjects.Text.TextS
 
 export function addText(scene: Phaser.Scene, x: number, y: number, s: string, o: TextOpts = {}): Phaser.GameObjects.Text {
   const t = scene.add.text(x, y, s, textStyle(o));
-  if (o.wrap && CJK.test(s)) kinsoku(t, s, o.wrap, o.size ?? 20);
+  if (o.wrap && CJK.test(s)) {
+    const r = cjkWrap(t, s);
+    if (r.changed) {
+      t.setWordWrapWidth(o.wrap + fontPx(o.size ?? 20), true);
+      t.setText(r.text);
+    }
+  }
+  return t;
+}
+
+/** 單行文字太寬就等比縮小（手機放大字體、英文版較長時） */
+export function fitText<T extends Phaser.GameObjects.Text>(t: T, maxW: number): T {
+  t.setScale(1);
+  if (t.width > maxW) t.setScale(maxW / t.width);
   return t;
 }
 
@@ -128,10 +177,11 @@ const CJK = /[\u3000-\u9fff\uff00-\uffef]/;
 const NO_LINE_START = '。，、．！？：；」』）】》〉〕…～,.!?:;)';
 
 /**
- * 中文自動換行時，句號、逗號等標點不該落到行首：把上一行最後一個字一起帶下來。
- * 處理完改用手動換行，換行寬度放寬一個字，避免之後被重新折行。
+ * 依文字物件目前的換行寬度把字串排成多行，並處理中文避頭點：
+ * 句號、逗號等標點不該落到行首，把上一行最後一個字一起帶下來。
+ * 回傳含手動換行的字串；改過的話，呼叫端要把換行寬度放寬一個字，避免又被重新折行。
  */
-function kinsoku(t: Phaser.GameObjects.Text, s: string, wrap: number, size: number): void {
+export function cjkWrap(t: Phaser.GameObjects.Text, s: string): { text: string; changed: boolean } {
   let changed = false;
   const out: string[] = [];
   for (const para of s.split('\n')) {
@@ -146,9 +196,7 @@ function kinsoku(t: Phaser.GameObjects.Text, s: string, wrap: number, size: numb
     }
     out.push(...(lines.length ? lines : ['']));
   }
-  if (!changed) return;
-  t.setWordWrapWidth(wrap + size, true);
-  t.setText(out.join('\n'));
+  return { text: out.join('\n'), changed };
 }
 
 /** 程序繪圖紋理的解析度倍率（畫在 2 倍大小，顯示時縮 0.5） */

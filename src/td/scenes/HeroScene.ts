@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { VIEW_H, addText, setupCamera, viewW } from '../config';
+import { VIEW_H, addText, fitText, setupCamera, viewW } from '../config';
 import { HEROES, HERO_ORDER, HERO_XP_TABLE, HERO_MAX_LEVEL, heroLevelForXp } from '../data/heroes';
 import { LEVELS } from '../data/levels';
 import { heroStats } from '../sim/World';
@@ -102,7 +102,7 @@ export class HeroScene extends Phaser.Scene {
     // 技能
     add(addText(this, tx, 380, T('skills'), { size: 20, display: true, color: '#7a4a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }));
     h.skills.forEach((sk, i) => {
-      const sy = 436 + i * 46;
+      const sy = 432 + i * 50;
       const ok = lv >= sk.unlockLevel;
       const ib = add(this.add.image(tx + 24, sy, 'ui_badge_blue').setDisplaySize(48, 48));
       const ic = add(this.add.image(tx + 24, sy, `sk_${sk.id}`).setDisplaySize(30, 30));
@@ -110,22 +110,23 @@ export class HeroScene extends Phaser.Scene {
         ib.setTint(0x666666);
         ic.setTint(0x666666);
       }
-      add(addText(this, tx + 58, sy - 12, `${L(sk.name)}  (LV${sk.unlockLevel})`, { size: 17, display: true, color: ok ? '#4a2a10' : '#8a7a6a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
-      add(addText(this, tx + 58, sy + 12, L(sk.desc), { size: 14, color: ok ? '#3a2412' : '#8a7a6a', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0, 0.5));
+      add(addText(this, tx + 58, sy - 12, `${L(sk.name)}  (LV${sk.unlockLevel})`, { size: 18, display: true, color: ok ? '#4a2a10' : '#8a7a6a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
+      add(fitText(addText(this, tx + 58, sy + 13, L(sk.desc), { size: 16, color: ok ? '#3a2412' : '#8a7a6a', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0, 0.5), px + Math.min(w - 220, 1000) / 2 - 24 - (tx + 58)));
     });
     // 絕招（手動施放）
     {
-      const sy = 436 + h.skills.length * 46;
+      const sy = 432 + h.skills.length * 50;
       add(this.add.image(tx + 24, sy, 'ui_badge_gold').setDisplaySize(48, 48));
       add(this.add.image(tx + 24, sy, h.ult.icon).setDisplaySize(30, 30));
-      add(addText(this, tx + 58, sy - 12, `${L(h.ult.name)}  (${T('ultimate')})`, { size: 17, display: true, color: '#8a4a00', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
-      const wrap = px + 330 - 90 - (tx + 58) - 12;
-      add(addText(this, tx + 58, sy + 4, L(h.ult.desc), { size: 13, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap }).setOrigin(0, 0));
+      add(addText(this, tx + 58, sy - 12, `${L(h.ult.name)}  (${T('ultimate')})`, { size: 18, display: true, color: '#8a4a00', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
+      // 一行放不下就縮小
+      const room = px + Math.min(w - 220, 1000) / 2 - 24 - (tx + 58);
+      add(fitText(addText(this, tx + 58, sy + 13, L(h.ult.desc), { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0, 0.5), room));
     }
     if (unlocked) {
       const selected = sv.selectedHero === h.id;
       add(
-        new Button(this, px + 330, 600, 180, 56, selected ? T('selected') : T('select'), () => {
+        new Button(this, px + Math.min(w - 220, 1000) / 2 - 110, 140, 170, 52, selected ? T('selected') : T('select'), () => {
           sv.selectedHero = h.id;
           persist();
           sfx.play('levelup', 0.6);
@@ -134,7 +135,7 @@ export class HeroScene extends Phaser.Scene {
       );
     } else {
       const lvName = LEVELS.find((l) => l.id === h.unlockAfter);
-      add(addText(this, px + 330, 600, T('unlockAfter', L(lvName?.name)), { size: 16, display: true, color: '#c0392b', stroke: '#f4e2b8', strokeW: 2, shadow: false, wrap: 220, align: 'center' }).setOrigin(0.5));
+      add(addText(this, px + Math.min(w - 220, 1000) / 2 - 110, 140, T('unlockAfter', L(lvName?.name)), { size: 16, display: true, color: '#c0392b', stroke: '#f4e2b8', strokeW: 2, shadow: false, wrap: 200, align: 'center' }).setOrigin(0.5));
     }
     add(new IconButton(this, 44, 40, 60, 'ic_close', () => this.back()));
   }

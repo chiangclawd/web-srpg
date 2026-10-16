@@ -1,12 +1,12 @@
 import Phaser from 'phaser';
-import { PLAY_W, PLAY_X0, VIEW_H, WORLD_W, bgScale, addText, setupCamera, viewW } from '../config';
+import { PLAY_W, PLAY_X0, VIEW_H, WORLD_W, bgScale, addText, fitText, setupCamera, viewW } from '../config';
 import { LEVELS } from '../data/levels';
 import { UPGRADE_COLUMNS } from '../data/upgrades';
 import { HEROES } from '../data/heroes';
 import { paintWorldMap } from '../art/worldmap';
 import { showTipBubble } from '../ui/tip';
 import { DAILY_MODS, dailyBaseLevel, dailyKey, dailySpec } from '../data/daily';
-import { Button, IconButton, panel } from '../ui/widgets';
+import { Button, IconButton, panel, popIn } from '../ui/widgets';
 import { L, T, getLang } from '../i18n';
 import { save, persist, totalStars } from '../save';
 import { sfx } from '../audio';
@@ -200,9 +200,12 @@ export class MapScene extends Phaser.Scene {
     const c = this.add.container(left + w / 2, 335).setDepth(650);
     c.add(panel(this, 0, 0, pw, ph));
     c.add(addText(this, 0, -ph / 2 + 36, T('dailyTitle', key), { size: 26, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0.5));
-    c.add(addText(this, 0, -ph / 2 + 70, T('dailyHint'), { size: 14, color: '#5a3a1a', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: pw - 60, align: 'center' }).setOrigin(0.5, 0));
-    c.add(addText(this, 0, -ph / 2 + 130, `${idx + 1}. ${L(lv.name)}`, { size: 24, display: true, color: '#7a4a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0.5));
-    let y = -ph / 2 + 176;
+    const hint = addText(this, 0, -ph / 2 + 64, T('dailyHint'), { size: 14, color: '#5a3a1a', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: pw - 60, align: 'center' }).setOrigin(0.5, 0);
+    c.add(hint);
+    // 手機字體放大後提示可能變兩行：下面的內容跟著往下排
+    const nameY = hint.y + hint.height + 26;
+    c.add(addText(this, 0, nameY, `${idx + 1}. ${L(lv.name)}`, { size: 24, display: true, color: '#7a4a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0.5));
+    let y = nameY + 44;
     for (const id of spec.mods) {
       const m = DAILY_MODS[id];
       const col = m.good ? '#2a6a1a' : '#9a2a1a';
@@ -225,14 +228,13 @@ export class MapScene extends Phaser.Scene {
     }, { color: 'green', icon: 'ic_reinforce', iconSize: 34, text: { size: 26 }, disabled: !cleared });
     c.add(go);
     if (!cleared) {
-      c.add(addText(this, 0, ph / 2 - 92, T('dailyNeedLevel', `${idx + 1}. ${L(lv.name)}`), { size: 15, color: '#9a2a1a', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0.5));
+      c.add(fitText(addText(this, 0, ph / 2 - 92, T('dailyNeedLevel', `${idx + 1}. ${L(lv.name)}`), { size: 15, color: '#9a2a1a', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0.5), pw - 40));
     }
     c.add(new IconButton(this, pw / 2 - 18, -ph / 2 + 18, 40, 'ic_close', () => {
       this.infoPanel?.destroy();
       this.infoPanel = null;
     }));
-    c.setScale(0.85).setAlpha(0);
-    this.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 220, ease: 'Back.easeOut' });
+    popIn(this, c, 0, { w: pw, h: ph }, 0.85, 220);
     this.infoPanel = c;
   }
 
@@ -350,8 +352,7 @@ export class MapScene extends Phaser.Scene {
       this.infoPanel = null;
     }));
     this.tweens.add({ targets: go, scale: 1.05, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    c.setScale(0.85).setAlpha(0);
-    this.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 220, ease: 'Back.easeOut' });
+    popIn(this, c, 0, { w: pw, h: ph }, 0.85, 220);
     this.infoPanel = c;
   }
 }

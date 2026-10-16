@@ -3,7 +3,7 @@ import { PLAY_W, PLAY_X0, TEX, VIEW_H, WORLD_W, addText, bgScale, setupCamera, v
 import { paintLevel } from '../art/terrain';
 import type { LevelDef } from '../sim/defs';
 import { TW_BASE, TW_H } from '../art/towers';
-import { Button, IconButton, dimmer, panel } from '../ui/widgets';
+import { Button, IconButton, dimmer, panel, popIn } from '../ui/widgets';
 import { L, T, getLang, setLang } from '../i18n';
 import { CHANGELOG } from '../data/changelog';
 import { consumeCrashNotice } from '../crashGuard';
@@ -147,22 +147,27 @@ export class MenuScene extends Phaser.Scene {
     const w = viewW(this);
     const c = this.add.container(WORLD_W / 2, VIEW_H / 2).setDepth(5000);
     c.add(dimmer(this, w * 2, VIEW_H * 2, 0.55).setPosition(-w, -VIEW_H));
-    c.add(panel(this, 0, 0, 640, 520));
-    c.add(addText(this, 0, -222, T('news'), { size: 32, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0.5));
-    let y = -178;
+    c.add(panel(this, 0, 0, 640, 560));
+    c.add(addText(this, 0, -242, T('news'), { size: 32, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0.5));
+    // 內文放在子容器：英文或手機放大字體後太長就整塊縮小，不壓到 OK 鈕
+    const top = -200;
+    const body = this.add.container(-276, top);
+    let y = 0;
     for (const e of CHANGELOG.slice(0, 2)) {
-      c.add(addText(this, -276, y, `${L(e.title)}　${e.date}`, { size: 20, display: true, color: '#7a4a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
+      body.add(addText(this, 0, y, `${L(e.title)}　${e.date}`, { size: 20, display: true, color: '#7a4a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0));
       y += 30;
       for (const it of e.items) {
-        const t = addText(this, -262, y, `• ${L(it)}`, { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: 540, lineSpacing: 3 }).setOrigin(0, 0);
-        c.add(t);
+        const t = addText(this, 14, y, `•\u00a0${L(it)}`, { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: 540, lineSpacing: 3 }).setOrigin(0, 0);
+        body.add(t);
         y += t.height + 8;
       }
       y += 12;
     }
-    c.add(new Button(this, 0, 214, 200, 52, 'OK', () => c.destroy(), { color: 'green' }));
-    c.setScale(0.8);
-    this.tweens.add({ targets: c, scale: 1, duration: 200, ease: 'Back.easeOut' });
+    const room = 236 - 26 - 14 - top;
+    if (y > room) body.setScale(room / y);
+    c.add(body);
+    c.add(new Button(this, 0, 236, 200, 52, 'OK', () => c.destroy(), { color: 'green' }));
+    popIn(this, c, 0, { w: 640, h: 560 }, 0.8, 200);
   }
 
   private go(): void {
@@ -249,8 +254,7 @@ export class MenuScene extends Phaser.Scene {
       });
     }, { color: 'wood', text: { size: 18 } }));
     c.add(new Button(this, 0, 208, 200, 52, 'OK', () => c.destroy(), { color: 'green' }));
-    c.setScale(0.8);
-    this.tweens.add({ targets: c, scale: 1, duration: 200, ease: 'Back.easeOut' });
+    popIn(this, c, 0, { w: 460, h: 540 }, 0.8, 200);
   }
 
   private reloadTimer: Phaser.Time.TimerEvent | null = null;

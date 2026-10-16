@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { VIEW_H, addText, viewW } from '../config';
+import { VIEW_H, addText, cjkWrap, fontPx, uiZoom, viewW } from '../config';
 import { SPEAKERS, type StoryLine } from '../data/story';
 import { Button, dimmer, panel } from './widgets';
 import { L, T } from '../i18n';
@@ -15,7 +15,10 @@ export function playDialog(scene: Phaser.Scene, lines: StoryLine[], done: () => 
   const dim = dimmer(scene, w, VIEW_H, opts.dim ?? 0.5);
   c.add(dim);
   const bw = Math.min(w - 80, 1100);
-  const box = scene.add.container(w / 2, VIEW_H - 92);
+  // 手機上整個對話框放大，底邊貼齊畫面下緣
+  const z = Math.max(1, Math.min(uiZoom(), (w - 20) / bw));
+  const boxY = VIEW_H - 22 - 70 * z;
+  const box = scene.add.container(w / 2, boxY).setScale(z);
   box.add(panel(scene, 0, 0, bw, 140, 'ui_dark', 22));
   const name = addText(scene, -bw / 2 + 30, -50, '', { size: 24, display: true, color: '#ffd36b' });
   const text = addText(scene, -bw / 2 + 30, -14, '', { size: 21, color: '#f4e8cc', wrap: bw - 60, lineSpacing: 6 });
@@ -36,7 +39,9 @@ export function playDialog(scene: Phaser.Scene, lines: StoryLine[], done: () => 
     done();
   };
   // 略過鈕放在對話框右上角，不蓋住 HUD 的暫停 / 加速鈕
-  c.add(new Button(scene, w / 2 + bw / 2 - 80, VIEW_H - 92 - 70 - 24, 130, 40, `${T('skip')} ▶▶`, () => finish(), { color: 'grey', text: { size: 15 } }));
+  c.add(new Button(scene, w / 2 + (bw / 2 - 80) * z, boxY - 70 * z - 24, 130, 40, `${T('skip')} ▶▶`, () => finish(), { color: 'grey', text: { size: 15 } }));
+  // 先排好整句的換行再逐字顯示：打字時不會跳行，中文標點也不會落在行首
+  const textPx = fontPx(21);
   const next = () => {
     if (typing && text.text.length < full.length) {
       typing.remove();
@@ -54,7 +59,9 @@ export function playDialog(scene: Phaser.Scene, lines: StoryLine[], done: () => 
     const enemy = !!sp?.enemy;
     name.setText(L(sp?.name ?? { zh: ln.who, en: ln.who }));
     name.setColor(enemy ? '#ff8a6a' : '#ffd36b');
-    full = L(ln.text);
+    text.setWordWrapWidth(bw - 60, true);
+    full = cjkWrap(text, L(ln.text)).text;
+    text.setWordWrapWidth(bw - 60 + textPx, true);
     text.setText('');
     portrait?.destroy();
     portrait = null;

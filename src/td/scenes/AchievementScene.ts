@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { VIEW_H, addText, setupCamera, viewW } from '../config';
+import { VIEW_H, addText, fitText, setupCamera, viewW } from '../config';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { IconButton, panel } from '../ui/widgets';
 import { L, T } from '../i18n';
@@ -35,7 +35,7 @@ export class AchievementScene extends Phaser.Scene {
     const got = new Set(save().achievements);
     add(addText(this, w / 2, 40, `${T('achievements')}  ${got.size} / ${ACHIEVEMENTS.length}`, { size: 34, display: true, color: '#ffd36b', strokeW: 6 }).setOrigin(0.5));
     const cols = 4;
-    const cw = Math.min(296, (w - 60) / cols);
+    const cw = Math.min(360, (w - 60) / cols);
     const rows = Math.ceil(ACHIEVEMENTS.length / cols);
     // 列距隨成就數量縮放，全部放進一個畫面
     const pitch = Math.min(88, (VIEW_H - 112 - 50) / Math.max(1, rows - 1));
@@ -53,26 +53,33 @@ export class AchievementScene extends Phaser.Scene {
         badge.setAlpha(0.8);
       }
       const tx = x - cw / 2 + 76;
-      add(
-        addText(this, tx, y - 14, L(a.name), {
+      const title = add(
+        addText(this, tx, 0, L(a.name), {
           size: 16,
           display: true,
           color: ok ? '#4a2a10' : '#9a8a70',
           stroke: ok ? '#f4e2b8' : '#1a1008',
           strokeW: ok ? 2 : 3,
           shadow: false,
-        }).setOrigin(0, 0.5),
+        }),
       );
-      add(
-        addText(this, tx, y + 12, L(a.desc), {
+      const desc = add(
+        addText(this, tx, 0, L(a.desc), {
           size: 12,
           color: ok ? '#3a2412' : '#8a7a62',
           stroke: '#000000',
           strokeW: 0,
           shadow: false,
           wrap: cw - 96,
-        }).setOrigin(0, 0.5),
+        }),
       );
+      // 標題＋說明整塊垂直置中；手機字體放大後太高就縮小說明
+      fitText(title, cw - 92);
+      const room = ch - 10 - title.displayHeight;
+      if (desc.height > room) desc.setScale(room / desc.height);
+      const top = y - (title.displayHeight + desc.displayHeight) / 2;
+      title.setPosition(tx, top);
+      desc.setPosition(tx, top + title.displayHeight);
     });
     add(new IconButton(this, 44, 40, 60, 'ic_close', () => this.back()));
   }

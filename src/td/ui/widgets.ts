@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TEX, addText, type TextOpts } from '../config';
+import { TEX, addText, uiZoom, type TextOpts } from '../config';
 import { sfx } from '../audio';
 
 /** 9-slice 面板（紋理是 2 倍解析度，所以寬高乘 TEX 再整體縮回） */
@@ -40,6 +40,8 @@ export class Button extends Phaser.GameObjects.Container {
     }
     this.label = addText(scene, tx, -3, text, { size: Math.round(h * 0.4), display: true, ...o.text }).setOrigin(0.5);
     this.add(this.label);
+    this.labelRoom = w - 16 - (o.icon && text ? (o.iconSize ?? h * 0.62) * 0.9 : 0);
+    this.fitLabel();
     this.hit = scene.add.rectangle(0, 0, w, h, 0xffffff, 0.001);
     this.hit.setInteractive({ useHandCursor: true });
     this.add(this.hit);
@@ -79,7 +81,16 @@ export class Button extends Phaser.GameObjects.Container {
 
   setText(s: string): this {
     this.label.setText(s);
+    this.fitLabel();
     return this;
+  }
+
+  private labelRoom = 0;
+
+  /** 字太長（手機放大字體、英文版）就縮小到塞得進按鈕 */
+  private fitLabel(): void {
+    this.label.setScale(1);
+    if (this.label.width > this.labelRoom) this.label.setScale(this.labelRoom / this.label.width);
   }
 }
 
@@ -146,10 +157,40 @@ export function dimmer(scene: Phaser.Scene, w: number, h: number, alpha = 0.6): 
   return r;
 }
 
-/** 彈出動畫 */
-export function popIn(scene: Phaser.Scene, target: Phaser.GameObjects.Components.Transform & Phaser.GameObjects.GameObject, delay = 0): void {
+/**
+ * 彈出動畫。給了面板尺寸（以容器原點為中心的寬高）時，手機上會整體放大（uiZoom），
+ * 並限制在畫面內、不超出可視範圍。
+ */
+export function popIn(
+  scene: Phaser.Scene,
+  target: Phaser.GameObjects.Components.Transform & Phaser.GameObjects.GameObject,
+  delay = 0,
+  size?: { w: number; h: number },
+  from = 0.6,
+  duration = 320,
+): number {
+  const z = size ? panelZoom(scene, target, size) : 1;
   const tr = target as unknown as { scale: number };
-  tr.scale = 0.6;
+  tr.scale = from * z;
   (target as unknown as Phaser.GameObjects.Components.Alpha).setAlpha?.(0);
-  scene.tweens.add({ targets: target, scale: 1, alpha: 1, duration: 320, delay, ease: 'Back.easeOut' });
+  scene.tweens.add({ targets: target, scale: z, alpha: 1, duration, delay, ease: 'Back.easeOut' });
+  return z;
+}
+
+/** 面板在這台裝置上的放大倍率，順便把位置夾回畫面內 */
+export function panelZoom(scene: Phaser.Scene, target: Phaser.GameObjects.Components.Transform, size: { w: number; h: number }): number {
+  const want = uiZoom();
+  if (want <= 1) return 1;
+  const cam = scene.cameras.main;
+  const fixed = (target as unknown as { scrollFactorX?: number }).scrollFactorX === 0;
+  const vx = fixed ? 0 : cam.scrollX;
+  const vy = fixed ? 0 : cam.scrollY;
+  const vw = cam.width / cam.zoom;
+  const vh = cam.height / cam.zoom;
+  const z = Math.max(1, Math.min(want, (vw - 16) / size.w, (vh - 12) / size.h));
+  const hw = (size.w * z) / 2;
+  const hh = (size.h * z) / 2;
+  target.x = Phaser.Math.Clamp(target.x, vx + 8 + hw, Math.max(vx + 8 + hw, vx + vw - 8 - hw));
+  target.y = Phaser.Math.Clamp(target.y, vy + 6 + hh, Math.max(vy + 6 + hh, vy + vh - 6 - hh));
+  return z;
 }
