@@ -14,9 +14,13 @@ import { computeMods } from '../src/td/data/upgrades';
 import { Rng } from '../src/td/sim/math';
 import type { LevelMode, TowerType } from '../src/td/sim/defs';
 import { challengeLevel } from '../src/td/data/challenges';
+import { dailyKey, dailyLevel, dailySpec } from '../src/td/data/daily';
 
 const MODE = (process.env.MODE ?? 'campaign') as LevelMode;
+/** MODE=daily 時要測哪一天（預設今天） */
+const DAILY_KEY = process.env.DAILY_KEY ?? dailyKey();
 function modeLevel(id: string) {
+  if (MODE === 'daily') return dailyLevel(LEVELS.find((l) => l.id === id)!, DAILY_KEY);
   return challengeLevel(LEVELS.find((l) => l.id === id)!, MODE);
 }
 
@@ -189,7 +193,7 @@ function optimize(levelId: string, iters: number, heroId: string, heroXp: number
 
 const [, , lv, diff] = process.argv;
 const ITERS = Number(process.env.ITERS ?? 60);
-const levels = lv && lv !== 'all' ? [lv] : LEVELS.map((l) => l.id);
+const levels = MODE === 'daily' ? [dailySpec(DAILY_KEY).levelId] : lv && lv !== 'all' ? [lv] : LEVELS.map((l) => l.id);
 const heroId = process.env.HERO ?? 'elena';
 for (const id of levels) {
   const idx = LEVELS.findIndex((l) => l.id === id);

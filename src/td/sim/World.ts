@@ -661,7 +661,7 @@ export class World {
     if (this.waveState === 'spawning' && this.spawnQueue.length === 0) {
       if (this.waveIndex + 1 < this.waveCount) {
         this.waveState = 'gap';
-        this.gapTotal = this.level.waves[this.waveIndex].gap ?? DEFAULT_WAVE_GAP;
+        this.gapTotal = (this.level.waves[this.waveIndex].gap ?? DEFAULT_WAVE_GAP) * (this.level.rules?.gapMul ?? 1);
         this.nextWaveAt = this.time + this.gapTotal;
       } else {
         this.waveState = 'done';
@@ -674,7 +674,10 @@ export class World {
     const def = ENEMIES[id];
     const path = this.paths[pathIndex];
     const ln = lane ?? this.rng.range(-1, 1) * (def.flying ? 22 : 13);
-    const e = new Enemy(def, path, pathIndex, ln, (def.boss ? DIFF_BOSS_HP[this.difficulty] : DIFF_HP[this.difficulty]) * hpMul, this.time);
+    const r = this.level.rules;
+    const e = new Enemy(def, path, pathIndex, ln, (def.boss ? DIFF_BOSS_HP[this.difficulty] : DIFF_HP[this.difficulty]) * hpMul * (r?.enemyHpMul ?? 1), this.time);
+    if (r?.enemySpeedMul) e.speed *= r.enemySpeedMul;
+    if (r?.enemyArmorAdd) e.armor = Math.min(0.9, e.armor + r.enemyArmorAdd);
     e.d = d;
     e.waveMul = hpMul;
     path.posAt(e.d, e.lane, e);
@@ -959,7 +962,7 @@ export class World {
     e.alive = false;
     e.hp = 0;
     this.releaseEngagers(e);
-    const g = e.def.gold;
+    const g = Math.round(e.def.gold * (this.level.rules?.bountyMul ?? 1));
     this.gold += g;
     this.stats.goldEarned += g;
     this.stats.kills++;

@@ -228,7 +228,7 @@ export interface LevelDef {
   bonus?: boolean;
 }
 
-export type LevelMode = 'campaign' | 'heroic' | 'iron' | 'endless';
+export type LevelMode = 'campaign' | 'heroic' | 'iron' | 'endless' | 'daily';
 
 export interface LevelRules {
   mode: LevelMode;
@@ -238,4 +238,10 @@ export interface LevelRules {
   noSpells?: boolean;
   /** 單一敵人漏失最多扣幾條命（無盡模式避免首領一擊結束） */
   leakCap?: number;
+  /** 每日挑戰修正：敵人血量 / 速度倍率、護甲加值、賞金倍率、波次間隔倍率 */
+  enemyHpMul?: number;
+  enemySpeedMul?: number;
+  enemyArmorAdd?: number;
+  bountyMul?: number;
+  gapMul?: number;
 }

@@ -9,6 +9,7 @@ import { World, type Difficulty, type SimEvent } from '../sim/World';
 import { Enemy, Soldier, Tower, type Projectile } from '../sim/entities';
 import type { LevelDef, LevelMode, TowerLevelDef, TowerType } from '../sim/defs';
 import { challengeLevel } from '../data/challenges';
+import { dailyKey, dailyLevel } from '../data/daily';
 import { evaluateAchievements } from '../data/achievements';
 import { STORY } from '../data/story';
 import { GEMS_PER_ACHIEVEMENT, ITEMS, KEG, gemReward, type ItemId } from '../data/items';
@@ -42,6 +43,7 @@ export class LevelScene extends Phaser.Scene {
   mode: Mode = 'idle';
   /** 本場結算獲得的寶石（結算畫面顯示） */
   gemsEarned = 0;
+  dailyKey = '';
 
   private acc = 0;
   private enemyViews = new Map<number, UnitView>();
@@ -73,7 +75,9 @@ export class LevelScene extends Phaser.Scene {
   init(data: { levelId: string; difficulty?: Difficulty; mode?: LevelMode }): void {
     this.mode0 = data.mode ?? 'campaign';
     this.baseLevel = getLevel(data.levelId)!;
-    this.level = challengeLevel(this.baseLevel, this.mode0);
+    // 每日挑戰：開局時的日期決定修正（跨午夜也記在開局那天）
+    this.dailyKey = dailyKey();
+    this.level = this.mode0 === 'daily' ? dailyLevel(this.baseLevel, this.dailyKey) : challengeLevel(this.baseLevel, this.mode0);
     this.difficulty = data.difficulty ?? save().settings.difficulty;
     this.paused = false;
     this.speed = save().settings.speed ?? 1;
@@ -1316,11 +1320,21 @@ export class LevelScene extends Phaser.Scene {
     const prevCampaignStars = sv.stars[this.level.id] ?? 0;
     const reached = victory ? w.waveCount : Math.max(0, w.waveIndex + 1);
     let newRecord = false;
+    let dailyFirst = false;
     if (this.mode0 === 'endless') {
       const prev = sv.endless[this.level.id] ?? 0;
       if (reached > prev) {
         sv.endless[this.level.id] = reached;
         newRecord = true;
+      }
+    } else if (this.mode0 === 'daily') {
+      if (victory) {
+        const prev = sv.daily[this.dailyKey] ?? 0;
+        dailyFirst = prev === 0;
+        if (stars > prev) {
+          sv.daily[this.dailyKey] = stars;
+          newStars = stars - prev;
+        }
       }
     } else if (victory) {
       if (this.mode0 === 'campaign') {
@@ -1363,7 +1377,7 @@ export class LevelScene extends Phaser.Scene {
       sv,
     );
     // 寶石：本場獎勵＋新成就
-    const firstClear = this.mode0 === 'campaign' ? victory && prevCampaignStars === 0 : newStars > 0;
+    const firstClear = this.mode0 === 'campaign' ? victory && prevCampaignStars === 0 : this.mode0 === 'daily' ? dailyFirst : newStars > 0;
     const gems = gemReward(this.mode0, victory, stars, firstClear, reached) + fresh.length * GEMS_PER_ACHIEVEMENT;
     sv.gems = (sv.gems ?? 0) + gems;
     this.gemsEarned = gems;

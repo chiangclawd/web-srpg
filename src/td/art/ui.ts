@@ -732,7 +732,34 @@ function snowflakeIcon(c: Ctx, w: number): void {
   fillStroke(c, '#ffffff', 2);
 }
 
+function shareIcon(c: Ctx, w: number): void {
+  // 三個節點連線（通用分享符號）
+  const pts: [number, number][] = [
+    [w * 0.68, w * 0.26],
+    [w * 0.3, w * 0.5],
+    [w * 0.68, w * 0.74],
+  ];
+  c.lineCap = 'round';
+  for (const [lw, col] of [
+    [8, OUTLINE],
+    [4, '#fff6dc'],
+  ] as const) {
+    c.lineWidth = lw;
+    c.strokeStyle = col;
+    c.beginPath();
+    c.moveTo(...pts[0]);
+    c.lineTo(...pts[1]);
+    c.lineTo(...pts[2]);
+    c.stroke();
+  }
+  for (const [x, y] of pts) {
+    circle(c, x, y, 8);
+    fillStroke(c, '#7ad0ff', 3);
+  }
+}
+
 const ICONS: Record<string, Fn> = {
+  ic_share: shareIcon,
   ic_gem: gemIcon,
   it_keg: kegIcon,
   it_frost: frostIcon,
