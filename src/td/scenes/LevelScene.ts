@@ -708,6 +708,11 @@ export class LevelScene extends Phaser.Scene {
     if (!a) return;
     const w = this.world;
     let target: { x: number; y: number } | null = null;
+    // 劇情 / 介紹卡等對話框開著時先不提示
+    if (this.ui?.hasModal()) {
+      a.setVisible(false);
+      return;
+    }
     if (w.towers.length === 0 && !this.menu) {
       // 推薦建造點：最靠近路徑中段的點
       const mid = w.paths[0].posAt(w.paths[0].length * 0.55);

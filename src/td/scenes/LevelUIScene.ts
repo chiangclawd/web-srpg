@@ -271,6 +271,10 @@ export class LevelUIScene extends Phaser.Scene {
     for (const id of ITEM_ORDER) this.itemSlots[id]?.btn.badge.setTint(m === id ? 0xffe08a : 0xffffff);
   }
 
+  hasModal(): boolean {
+    return !!this.modal;
+  }
+
   /** 更新道具數量（用掉或開場時） */
   refreshItems(): void {
     const inv = save().items;

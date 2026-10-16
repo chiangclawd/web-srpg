@@ -35,7 +35,8 @@ export function playDialog(scene: Phaser.Scene, lines: StoryLine[], done: () => 
     c.destroy();
     done();
   };
-  c.add(new Button(scene, w - 90, 40, 140, 44, `${T('skip')} ▶▶`, () => finish(), { color: 'grey', text: { size: 16 } }));
+  // 略過鈕放在對話框右上角，不蓋住 HUD 的暫停 / 加速鈕
+  c.add(new Button(scene, w / 2 + bw / 2 - 80, VIEW_H - 92 - 70 - 24, 130, 40, `${T('skip')} ▶▶`, () => finish(), { color: 'grey', text: { size: 15 } }));
   const next = () => {
     if (typing && text.text.length < full.length) {
       typing.remove();
