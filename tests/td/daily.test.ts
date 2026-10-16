@@ -13,13 +13,14 @@ test('the daily key is the local calendar date', () => {
 
 test('daily specs are deterministic, varied and well formed', () => {
   const levels = new Set<string>();
-  for (let d = 1; d <= 60; d++) {
+  for (let d = 1; d <= 400; d++) {
     const key = dailyKey(new Date(2026, 10, d));
     const a = dailySpec(key);
     assert.deepEqual(a, dailySpec(key), 'same day, same challenge');
     assert.ok(DAILY_POOL.includes(a.levelId));
     assert.equal(a.mods.length, 2);
     assert.notEqual(a.mods[0], a.mods[1]);
+    assert.ok(!(a.mods.includes('poor') && a.mods.includes('rich')), 'no self-cancelling pair');
     assert.ok(!DAILY_MODS[a.mods[0]].good, 'first modifier is always a harsh one');
     assert.equal(a.towers.length, 2);
     if (['l7', 'l8', 'l9', 'l10', 'l13'].includes(a.levelId)) assert.ok(DAILY_MODS[a.mods[1]].good, 'late levels pair the harsh modifier with a helpful one');
@@ -45,7 +46,7 @@ test('modifiers change the simulation', () => {
 });
 
 test('a daily level applies its own spec', () => {
-  for (let d = 1; d <= 20; d++) {
+  for (let d = 1; d <= 400; d++) {
     const key = dailyKey(new Date(2026, 11, d));
     const spec = dailySpec(key);
     const base = dailyBaseLevel(key);

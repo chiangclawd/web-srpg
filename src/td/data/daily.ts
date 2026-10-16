@@ -34,7 +34,8 @@ export const DAILY_MODS: Record<DailyModId, DailyMod> = {
 
 const HARSH: DailyModId[] = ['swift', 'tough', 'armored', 'poor', 'fragile', 'noSpells', 'limited', 'pricey'];
 const GOOD: DailyModId[] = ['rich', 'bounty'];
-const ANY: DailyModId[] = [...HARSH, ...GOOD, ...GOOD];
+// 第二個修正：一半機率是有利的
+const ANY: DailyModId[] = [...HARSH, ...GOOD, ...GOOD, ...GOOD, ...GOOD];
 /** 後期關卡本身就難：第二個修正一定是有利的，避免兩個嚴苛修正疊成無解 */
 const LATE = new Set(['l7', 'l8', 'l9', 'l10', 'l13']);
 const TOWER_PAIRS: TowerType[][] = [
@@ -73,7 +74,8 @@ export function dailySpec(key: string): DailySpec {
   const a = HARSH[Math.floor(rng.next() * HARSH.length)];
   const pool = LATE.has(levelId) ? GOOD : ANY;
   let b = pool[Math.floor(rng.next() * pool.length)];
-  while (b === a) b = pool[Math.floor(rng.next() * pool.length)];
+  // 不重複，也不配出互相抵銷的組合（國庫空虛＋戰爭基金）
+  while (b === a || (a === 'poor' && b === 'rich')) b = pool[Math.floor(rng.next() * pool.length)];
   const towers = TOWER_PAIRS[Math.floor(rng.next() * TOWER_PAIRS.length)];
   return { key, levelId, mods: [a, b], towers };
 }
