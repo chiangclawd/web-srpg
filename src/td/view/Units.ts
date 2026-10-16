@@ -349,7 +349,8 @@ export class TowerView {
       this.glow.setScale(0.45 + flash * 0.4);
     }
     const stunned = simTime < t.stunUntil;
-    this.base.setTint(stunned ? 0x8a8aff : 0xffffff);
+    // 冰封 → 藍；夏儂加護 → 金
+    this.base.setTint(stunned ? 0x8a8aff : simTime < t.hasteUntil ? 0xffe8a0 : 0xffffff);
   }
 
   /** 剛蓋好 / 升級的彈跳動畫 */

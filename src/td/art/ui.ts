@@ -802,6 +802,10 @@ const ICONS: Record<string, Fn> = {
   ult_lila: snowflakeIcon,
   ult_rain: fastIcon,
   ult_aria: boltIcon,
+  sk_sanctuary: crossIcon,
+  sk_smite: sunIcon,
+  sk_aegis: fastIcon,
+  ult_sharon: bookIcon,
 };
 
 /** 所有已註冊的圖示 key（測試用） */

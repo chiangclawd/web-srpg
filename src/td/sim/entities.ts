@@ -50,6 +50,8 @@ export class Enemy {
   waveMul = 1;
   /** 冰霜水晶：冰凍到此時間（畫面顯示冰藍色） */
   frozenUntil = 0;
+  /** 審判聖典：此時間前承受傷害提高 */
+  vulnUntil = 0;
   /** 鑽地中：無法被選為目標、免疫傷害與控制 */
   burrowed = false;
   burrowUntil = 0;
@@ -169,6 +171,8 @@ export class Tower {
   aimY = 0;
   lastShotAt = -10;
   stunUntil = 0;
+  /** 夏儂的智慧加護：此時間前攻速提高 */
+  hasteUntil = 0;
   golem: Soldier | null = null;
   golemRespawnAt = 0;
 

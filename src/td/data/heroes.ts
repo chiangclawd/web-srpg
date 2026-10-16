@@ -228,6 +228,55 @@ export const HEROES: Record<string, HeroDef> = {
       },
     ],
   },
+  sharon: {
+    id: 'sharon',
+    name: { zh: '夏儂', en: 'Sharon' },
+    title: { zh: '聖典學者', en: 'Lorekeeper' },
+    desc: { zh: '研讀聖典的學者：治療友軍、加速防禦塔、揭露敵人弱點。', en: 'A scholar of scripture who heals allies, quickens towers and exposes weaknesses.' },
+    sprite: 'sp_sharon',
+    portrait: 'pt_sharon',
+    facesRight: true,
+    height: 50,
+    hp: 240,
+    hpPerLevel: 22,
+    armor: 0.1,
+    dmg: [13, 20],
+    dmgPerLevel: 2,
+    cd: 1.2,
+    speed: 70,
+    regen: 10,
+    ranged: { range: 165, kind: 'magic', dmgKind: 'magic' },
+    unlockAfter: 'l10',
+    ult: {
+      name: { zh: '審判聖典', en: 'Judgment' },
+      desc: { zh: '治療範圍內友軍；範圍內敵人承受的傷害提高 30% 並減速 8 秒。', en: 'Heals allies in the area; enemies there take 30% more damage and are slowed for 8 seconds.' },
+      icon: 'ult_sharon',
+      cd: 50,
+    },
+    skills: [
+      {
+        id: 'sanctuary',
+        name: { zh: '聖域', en: 'Sanctuary' },
+        desc: { zh: '治療周圍的友軍與自己。', en: 'Heals nearby allies and herself.' },
+        unlockLevel: 1,
+        cd: 9,
+      },
+      {
+        id: 'smite',
+        name: { zh: '聖光制裁', en: 'Smite' },
+        desc: { zh: '對射程內血量最高的敵人造成真實傷害並緩速。', en: 'Deals true damage to the toughest enemy in range and slows it.' },
+        unlockLevel: 4,
+        cd: 8,
+      },
+      {
+        id: 'aegis',
+        name: { zh: '智慧加護', en: 'Aegis of Wisdom' },
+        desc: { zh: '附近防禦塔攻擊速度提高 35%，持續 6 秒。', en: 'Nearby towers attack 35% faster for 6 seconds.' },
+        unlockLevel: 7,
+        cd: 18,
+      },
+    ],
+  },
 };
 
-export const HERO_ORDER = ['arthur', 'elena', 'lila', 'rain', 'aria'];
+export const HERO_ORDER = ['arthur', 'elena', 'lila', 'rain', 'aria', 'sharon'];

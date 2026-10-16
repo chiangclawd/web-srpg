@@ -49,7 +49,7 @@ export class HeroScene extends Phaser.Scene {
     HERO_ORDER.forEach((id, i) => {
       const h = HEROES[id];
       const unlocked = heroUnlocked(id);
-      const y = 140 + i * 110;
+      const y = 126 + i * 98;
       const b = add(
         new IconButton(this, 90, y, 88, `ptc_${id}`, () => {
           this.viewing = id;
@@ -136,7 +136,7 @@ export class HeroScene extends Phaser.Scene {
       const lvName = LEVELS.find((l) => l.id === h.unlockAfter);
       add(addText(this, px + 330, 600, T('unlockAfter', L(lvName?.name)), { size: 16, display: true, color: '#c0392b', stroke: '#f4e2b8', strokeW: 2, shadow: false, wrap: 220, align: 'center' }).setOrigin(0.5));
     }
-    add(new IconButton(this, 44, VIEW_H - 44, 64, 'ic_close', () => this.back()));
+    add(new IconButton(this, 44, 40, 60, 'ic_close', () => this.back()));
   }
 
   private back(): void {

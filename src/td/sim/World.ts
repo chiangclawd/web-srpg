@@ -26,6 +26,10 @@ export const HERO_RESPAWN = 15;
 export const SELL_RATIO = 0.6;
 export const DEFAULT_WAVE_GAP = 20;
 export const BUILD_TIME = 0.6;
+/** 夏儂加護：塔攻速倍率 */
+export const TOWER_HASTE = 1.35;
+/** 審判聖典：敵人承受傷害倍率 */
+export const VULN_MUL = 1.3;
 
 export type Difficulty = 'casual' | 'normal' | 'veteran';
 const DIFF_HP: Record<Difficulty, number> = { casual: 0.7, normal: 1, veteran: 1.25 };
@@ -541,6 +545,21 @@ export class World {
         }
         break;
       }
+      case 'sharon': {
+        r = 110;
+        for (const o of this.soldiers) {
+          if (!o.alive || !inEllipse(x, y, o.x, o.y, r)) continue;
+          o.hp = Math.min(o.maxHp, o.hp + 80 + 15 * lv);
+          this.emit({ type: 'heal', x: o.x, y: o.y });
+        }
+        for (const e of near(r)) {
+          if (e.burrowed) continue;
+          e.vulnUntil = Math.max(e.vulnUntil, this.time + 8);
+          this.applySlow(e, 0.6, 4);
+        }
+        this.emit({ type: 'explosion', x, y, r, kind: 'holy' });
+        break;
+      }
       default:
         return false;
     }
@@ -922,6 +941,7 @@ export class World {
     let a = amount;
     if (kind === 'physical') a *= 1 - clamp(e.armor - e.armorShred - pierce, 0, 0.95);
     else if (kind === 'magic') a *= 1 - clamp(e.magicResist, 0, 0.95);
+    if (this.time < e.vulnUntil) a *= VULN_MUL;
     if (e.shield > 0) {
       const absorb = Math.min(e.shield, a);
       e.shield -= absorb;
@@ -1424,6 +1444,37 @@ export class World {
         }
         break;
       }
+      case 'sharon': {
+        if (ready('sanctuary')) {
+          const allies = this.soldiers.filter((o) => o.alive && dist(o.x, o.y, h.x, h.y) < 130);
+          if (allies.some((o) => o.hp < o.maxHp * 0.75)) {
+            use('sanctuary');
+            for (const o of allies) {
+              o.hp = Math.min(o.maxHp, o.hp + 40 + 9 * lv);
+              this.emit({ type: 'heal', x: o.x, y: o.y });
+            }
+          }
+        }
+        const inRange = this.enemies.filter((e) => e.alive && !e.burrowed && inEllipse(h.x, h.y, e.x, e.y, h.ranged!.range));
+        if (ready('smite') && inRange.length) {
+          const e = inRange.reduce((a, b) => (b.hp > a.hp ? b : a));
+          use('smite');
+          this.damageEnemy(e, 55 + 13 * lv, 'true', 'hero');
+          if (e.alive) this.applySlow(e, 0.6, 2);
+          this.emit({ type: 'explosion', x: e.x, y: e.y, r: 30, kind: 'holy' });
+        }
+        if (ready('aegis') && inRange.length) {
+          const near = this.towers.filter((t) => t.type !== 'barracks' && dist(t.x, t.y, h.x, h.y) < 220);
+          if (near.length >= 2) {
+            use('aegis');
+            for (const t of near) {
+              t.hasteUntil = this.time + 6;
+              this.emit({ type: 'heal', x: t.x, y: t.y - 30, big: true });
+            }
+          }
+        }
+        break;
+      }
       default:
         break;
     }
@@ -1527,7 +1578,7 @@ export class World {
     if (now < t.buildUntil || now < t.stunUntil) return;
     for (const k in t.skillCd) t.skillCd[k] -= dt;
     this.towerSkills(t);
-    t.cd -= dt;
+    t.cd -= now < t.hasteUntil ? dt * TOWER_HASTE : dt;
     if (t.cd > 0) return;
     const range = this.towerRange(t);
     const target = this.pickTarget(t, range, t.def.hitsAir);

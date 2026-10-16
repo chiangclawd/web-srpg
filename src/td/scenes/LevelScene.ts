@@ -1235,6 +1235,7 @@ export class LevelScene extends Phaser.Scene {
       if (e.enraged) tint = 0xff8a7a;
       if (t < e.rootUntil) tint = 0xc0a070;
       else if (e.dots.length) tint = 0xb8ff8a;
+      else if (t < e.vulnUntil) tint = 0xd8a0ff;
       else if (e.slowMul < 1 && t < e.slowUntil) tint = 0x9ad0ff;
       const frozen = t < e.frozenUntil;
       if (frozen) tint = 0xb8e4ff;
@@ -1374,7 +1375,7 @@ export class LevelScene extends Phaser.Scene {
   }
 
   private heroUltFx(hero: string, x: number, y: number, r: number): void {
-    const COLORS: Record<string, number> = { arthur: 0xffe08a, elena: 0x9aff7a, lila: 0x9ae4ff, rain: 0xff9a5a, aria: 0xc8b0ff };
+    const COLORS: Record<string, number> = { arthur: 0xffe08a, elena: 0x9aff7a, lila: 0x9ae4ff, rain: 0xff9a5a, aria: 0xc8b0ff, sharon: 0xd8a0ff };
     const col = COLORS[hero] ?? 0xffffff;
     this.fx.ring(x, y, r, col, 500);
     this.fx.ring(x, y, r * 0.6, col, 380);
@@ -1397,6 +1398,10 @@ export class LevelScene extends Phaser.Scene {
       case 'aria':
         sfx.play('zap');
         this.cameras.main.flash(200, 220, 200, 255);
+        break;
+      case 'sharon':
+        sfx.play('heal');
+        this.cameras.main.flash(220, 240, 220, 255);
         break;
     }
     this.ui.ultPop();
