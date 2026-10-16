@@ -634,8 +634,11 @@ export class LevelUIScene extends Phaser.Scene {
       const next = LEVELS[idx + 1];
       c.add(new Button(this, -150, 140, 140, 52, T('retry'), () => this.lvl.restart(), { color: 'gold' }));
       c.add(new Button(this, 0, 140, 140, 52, T('toMap'), () => this.lvl.exitToMap(), { color: 'blue' }));
-      if (next) c.add(new Button(this, 150, 140, 140, 52, T('next'), () => this.lvl.exitToMap(next.id), { color: 'green' }));
-      else c.add(new Button(this, 150, 140, 140, 52, T('epilogue'), () => this.lvl.exitToEnding(), { color: 'green' }));
+      // 主線最終關 → 尾聲；外傳關卡之間 → 下一關；最後一關 → 回地圖
+      const finale = !this.lvl.level.bonus && (!next || next.bonus);
+      if (finale) c.add(new Button(this, 150, 140, 140, 52, T('epilogue'), () => this.lvl.exitToEnding(), { color: 'green' }));
+      else if (next) c.add(new Button(this, 150, 140, 140, 52, T('next'), () => this.lvl.exitToMap(next.id), { color: 'green' }));
+      else c.add(new Button(this, 150, 140, 140, 52, 'OK', () => this.lvl.exitToMap(), { color: 'green' }));
     } else {
       const tip = addText(this, 0, -30, TIPS[Math.floor(Math.random() * TIPS.length)][save().settings.lang], {
         size: 18,
