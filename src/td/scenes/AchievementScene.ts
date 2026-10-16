@@ -36,11 +36,14 @@ export class AchievementScene extends Phaser.Scene {
     add(addText(this, w / 2, 40, `${T('achievements')}  ${got.size} / ${ACHIEVEMENTS.length}`, { size: 34, display: true, color: '#ffd36b', strokeW: 6 }).setOrigin(0.5));
     const cols = 4;
     const cw = Math.min(296, (w - 60) / cols);
-    const ch = 80;
+    const rows = Math.ceil(ACHIEVEMENTS.length / cols);
+    // 列距隨成就數量縮放，全部放進一個畫面
+    const pitch = Math.min(88, (VIEW_H - 112 - 50) / Math.max(1, rows - 1));
+    const ch = pitch - 8;
     const x0 = w / 2 - (cols * cw) / 2 + cw / 2;
     ACHIEVEMENTS.forEach((a, i) => {
       const x = x0 + (i % cols) * cw;
-      const y = 112 + Math.floor(i / cols) * (ch + 8);
+      const y = 112 + Math.floor(i / cols) * pitch;
       const ok = got.has(a.id);
       add(panel(this, x, y, cw - 10, ch, ok ? 'ui_panel' : 'ui_dark', 18));
       const badge = add(this.add.image(x - cw / 2 + 42, y, ok ? 'ui_badge_green' : 'ui_badge_grey').setDisplaySize(52, 52));
@@ -71,7 +74,7 @@ export class AchievementScene extends Phaser.Scene {
         }).setOrigin(0, 0.5),
       );
     });
-    add(new IconButton(this, 44, VIEW_H - 44, 64, 'ic_close', () => this.back()));
+    add(new IconButton(this, 44, 40, 60, 'ic_close', () => this.back()));
   }
 
   private back(): void {

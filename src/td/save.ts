@@ -17,6 +17,8 @@ export interface SaveData {
   /** 挑戰模式完成紀錄（各 1 星） */
   challenges: Record<string, { heroic?: boolean; iron?: boolean }>;
   achievements: string[];
+  /** 無盡模式每關最佳波數 */
+  endless: Record<string, number>;
   /** 已看過開場劇情的關卡 */
   storySeen: string[];
   settings: {
@@ -43,6 +45,7 @@ function defaults(): SaveData {
     unlockedSeen: ['l1'],
     challenges: {},
     achievements: [],
+    endless: {},
     storySeen: [],
     settings: { music: 0.6, sfx: 0.8, lang: nav.startsWith('zh') ? 'zh' : 'en', difficulty: 'normal', speed: 1, shake: true },
     stats: { kills: 0, plays: 0, victories: 0, towers: 0 },

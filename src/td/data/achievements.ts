@@ -27,6 +27,8 @@ export interface LevelOutcome {
   sheep: number;
   heroLevel: number;
   bossesKilled: string[];
+  /** 到達的波數（無盡模式用） */
+  wave: number;
 }
 
 export const ACHIEVEMENTS: AchievementDef[] = [
@@ -53,6 +55,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'meteor_master', name: { zh: '天降神罰', en: 'Skyfall' }, desc: { zh: '一關內用流星火雨擊殺 15 名敵人', en: 'Kill 15 enemies with Meteor Rain in one level' }, icon: 'ic_meteor' },
   { id: 'shepherd', name: { zh: '牧羊人', en: 'Shepherd' }, desc: { zh: '一關內把 5 名敵人變成綿羊', en: 'Polymorph 5 enemies in one level' }, icon: 'sk_polymorph' },
   { id: 'minimalist', name: { zh: '以少勝多', en: 'Minimalist' }, desc: { zh: '第 3 關以後只用 6 座以內的塔通關', en: 'Win level 3 or later with 6 towers or fewer' }, icon: 'ic_check' },
+  { id: 'endless_15', name: { zh: '堅守不退', en: 'Holdout' }, desc: { zh: '無盡模式撐到第 15 波', en: 'Reach wave 15 in Endless mode' }, icon: 'ic_skull' },
+  { id: 'endless_30', name: { zh: '無盡守望', en: 'Eternal Watch' }, desc: { zh: '無盡模式撐到第 30 波', en: 'Reach wave 30 in Endless mode' }, icon: 'ic_crown' },
   { id: 'hero_max', name: { zh: '傳奇之路', en: 'Legendary' }, desc: { zh: '任一英雄達到 10 級', en: 'Raise any hero to level 10' }, icon: 'ic_crown' },
 ];
 
@@ -97,6 +101,8 @@ export function evaluateAchievements(o: LevelOutcome, sv: SaveData): string[] {
   if (o.meteorKills >= 15) unlock('meteor_master');
   if (o.sheep >= 5) unlock('shepherd');
   if (o.heroLevel >= 10) unlock('hero_max');
+  if (o.mode === 'endless' && o.wave >= 15) unlock('endless_15');
+  if (o.mode === 'endless' && o.wave >= 30) unlock('endless_30');
   sv.achievements = [...got];
   return fresh;
 }

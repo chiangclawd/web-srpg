@@ -82,6 +82,7 @@ interface SpawnEntry {
   at: number;
   enemy: string;
   path: number;
+  hpMul: number;
 }
 
 export class World {
@@ -505,7 +506,7 @@ export class World {
     for (const g of w.groups) {
       if (ENEMIES[g.enemy]?.boss) boss = true;
       for (let i = 0; i < g.count; i++) {
-        this.spawnQueue.push({ at: this.time + (g.delay ?? 0) + i * g.interval, enemy: g.enemy, path: g.path });
+        this.spawnQueue.push({ at: this.time + (g.delay ?? 0) + i * g.interval, enemy: g.enemy, path: g.path, hpMul: w.hpMul ?? 1 });
       }
     }
     this.spawnQueue.sort((a, b) => a.at - b.at);
@@ -516,7 +517,7 @@ export class World {
   private updateWaves(): void {
     while (this.spawnQueue.length && this.spawnQueue[0].at <= this.time) {
       const s = this.spawnQueue.shift()!;
-      this.spawnEnemy(s.enemy, s.path, 0);
+      this.spawnEnemy(s.enemy, s.path, 0, undefined, s.hpMul);
     }
     if (this.waveState === 'spawning' && this.spawnQueue.length === 0) {
       if (this.waveIndex + 1 < this.waveCount) {
@@ -530,12 +531,13 @@ export class World {
     if (this.waveState === 'gap' && this.time >= this.nextWaveAt) this.startWave();
   }
 
-  spawnEnemy(id: string, pathIndex: number, d: number, lane?: number): Enemy {
+  spawnEnemy(id: string, pathIndex: number, d: number, lane?: number, hpMul = 1): Enemy {
     const def = ENEMIES[id];
     const path = this.paths[pathIndex];
     const ln = lane ?? this.rng.range(-1, 1) * (def.flying ? 22 : 13);
-    const e = new Enemy(def, path, pathIndex, ln, def.boss ? DIFF_BOSS_HP[this.difficulty] : DIFF_HP[this.difficulty], this.time);
+    const e = new Enemy(def, path, pathIndex, ln, (def.boss ? DIFF_BOSS_HP[this.difficulty] : DIFF_HP[this.difficulty]) * hpMul, this.time);
     e.d = d;
+    e.waveMul = hpMul;
     path.posAt(e.d, e.lane, e);
     this.enemies.push(e);
     this.emit({ type: 'enemySpawn', e });
@@ -667,7 +669,8 @@ export class World {
     if (e.d >= e.path.length) {
       e.leaked = true;
       e.alive = false;
-      const lost = e.sheep ? 1 : e.def.boss && this.difficulty === 'casual' ? Math.ceil(e.def.lives / 2) : e.def.lives;
+      let lost = e.sheep ? 1 : e.def.boss && this.difficulty === 'casual' ? Math.ceil(e.def.lives / 2) : e.def.lives;
+      if (this.level.rules?.leakCap) lost = Math.min(lost, this.level.rules.leakCap);
       this.lives -= lost;
       this.stats.leaks++;
       this.releaseEngagers(e);
@@ -724,7 +727,7 @@ export class World {
           if (e.abilityCd[i] > 0) break;
           e.abilityCd[i] = a.cd;
           for (let k = 0; k < a.count; k++) {
-            this.spawnEnemy(a.enemy, e.pathIndex, Math.max(0, e.d - 20 - k * 18), this.rng.range(-14, 14));
+            this.spawnEnemy(a.enemy, e.pathIndex, Math.max(0, e.d - 20 - k * 18), this.rng.range(-14, 14), e.waveMul);
           }
           e.lastAttackAt = this.time;
           this.emit({ type: 'summon', x: e.x, y: e.y });
@@ -805,7 +808,7 @@ export class World {
     this.emit({ type: 'gold', x: e.x, y: e.y - e.def.height, amount: g });
     const sod = e.def.abilities?.find((a) => a.kind === 'spawnOnDeath');
     if (sod && sod.kind === 'spawnOnDeath' && !e.sheep) {
-      for (let k = 0; k < sod.count; k++) this.spawnEnemy(sod.enemy, e.pathIndex, Math.max(0, e.d - k * 10), this.rng.range(-14, 14));
+      for (let k = 0; k < sod.count; k++) this.spawnEnemy(sod.enemy, e.pathIndex, Math.max(0, e.d - k * 10), this.rng.range(-14, 14), e.waveMul);
     }
   }
 

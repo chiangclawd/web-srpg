@@ -167,6 +167,8 @@ export interface WaveDef {
   groups: GroupDef[];
   /** 本波結束到下一波自動開始的秒數 */
   gap?: number;
+  /** 本波敵人血量倍率（無盡模式逐波提升） */
+  hpMul?: number;
 }
 
 export type ThemeId = 'grass' | 'forest' | 'snow' | 'waste' | 'autumn';
@@ -213,7 +215,7 @@ export interface LevelDef {
   rules?: LevelRules;
 }
 
-export type LevelMode = 'campaign' | 'heroic' | 'iron';
+export type LevelMode = 'campaign' | 'heroic' | 'iron' | 'endless';
 
 export interface LevelRules {
   mode: LevelMode;
@@ -221,4 +223,6 @@ export interface LevelRules {
   allowed?: TowerType[];
   /** 禁用法術 */
   noSpells?: boolean;
+  /** 單一敵人漏失最多扣幾條命（無盡模式避免首領一擊結束） */
+  leakCap?: number;
 }

@@ -46,6 +46,9 @@ export class Enemy {
   lastAttackAt = -1;
   spawnedAt: number;
 
+  /** 波次血量倍率（召喚物沿用） */
+  waveMul = 1;
+
   constructor(
     readonly def: EnemyDef,
     public path: Path,

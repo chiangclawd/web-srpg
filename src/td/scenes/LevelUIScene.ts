@@ -152,7 +152,7 @@ export class LevelUIScene extends Phaser.Scene {
       this.livesTxt.setText(String(Math.max(0, w.lives)));
       this.livesTxt.setColor(w.lives <= 5 ? '#ff7a6a' : '#fff6dc');
     }
-    this.waveTxt.setText(`${Math.max(0, w.waveIndex + 1)}/${w.waveCount}`);
+    this.waveTxt.setText(`${Math.max(0, w.waveIndex + 1)}/${this.lvl.mode0 === 'endless' ? '∞' : w.waveCount}`);
     // 英雄
     const h = w.hero;
     if (h?.hero && this.heroBtn) {
@@ -348,7 +348,7 @@ export class LevelUIScene extends Phaser.Scene {
 
   waveBanner(n: number, total: number, boss: boolean): void {
     const w = viewW(this);
-    const txt = boss ? T('bossIncoming') : `${T('wave')} ${n} / ${total}`;
+    const txt = boss ? T('bossIncoming') : this.lvl.mode0 === 'endless' ? `${T('wave')} ${n}` : `${T('wave')} ${n} / ${total}`;
     const t = addText(this, w / 2, VIEW_H * 0.3, txt, { size: boss ? 44 : 38, display: true, color: boss ? '#ff6a4a' : '#ffe8a8', strokeW: 7 }).setOrigin(0.5);
     t.setDepth(70).setScale(0.4).setAlpha(0);
     this.tweens.add({ targets: t, scale: 1, alpha: 1, duration: 260, ease: 'Back.easeOut' });
@@ -533,6 +533,46 @@ export class LevelUIScene extends Phaser.Scene {
       c.add(new Button(this, -100, 120, 170, 56, T('retry'), () => this.lvl.restart(), { color: 'green' }));
       c.add(new Button(this, 100, 120, 170, 56, T('toMap'), () => this.lvl.exitToMap(), { color: 'blue' }));
     }
+    this.modal = c;
+    c.setScale(0.6).setAlpha(0);
+    this.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 350, ease: 'Back.easeOut' });
+  }
+
+  /** 無盡模式結算：到達波數＋最佳紀錄 */
+  showEndlessResult(reached: number, best: number, newRecord: boolean): void {
+    this.closeModal();
+    this.hideInfo();
+    const w = viewW(this);
+    const c = this.add.container(w / 2, VIEW_H / 2).setDepth(100);
+    c.add(dimmer(this, w * 2, VIEW_H * 2, 0.6).setPosition(-w, -VIEW_H));
+    c.add(panel(this, 0, 20, 500, 380));
+    c.add(addText(this, 0, -150, T('endlessOver'), { size: 44, display: true, color: '#ffb05a', strokeW: 8 }).setOrigin(0.5));
+    // 骷髏圖示＋波數置中排成一列
+    const big = addText(this, 0, -58, T('waveReached', reached), { size: 36, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0, 0.5);
+    const rowW = 56 + 14 + big.width;
+    big.x = -rowW / 2 + 70;
+    c.add(this.add.image(-rowW / 2 + 28, -58, 'ic_skull').setDisplaySize(56, 56));
+    c.add(big);
+    if (newRecord) {
+      const nr = addText(this, 0, 2, T('newRecord'), { size: 30, display: true, color: '#ffe066', strokeW: 6 }).setOrigin(0.5).setScale(0);
+      c.add(nr);
+      this.tweens.add({ targets: nr, scale: 1, duration: 420, delay: 450, ease: 'Back.easeOut', onStart: () => sfx.play('star') });
+      this.tweens.add({ targets: nr, angle: { from: -4, to: 4 }, duration: 600, yoyo: true, repeat: -1, delay: 900 });
+    } else {
+      c.add(addText(this, 0, 2, T('bestWave', best), { size: 22, display: true, color: '#7a5a30', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0.5));
+    }
+    const w0 = this.lvl.world;
+    c.add(
+      addText(this, 0, 52, `${T('enemies')} ${w0.stats.kills}   ·   ${T('gold')} +${w0.stats.goldEarned}`, {
+        size: 17,
+        color: '#4a2a10',
+        stroke: '#f4e2b8',
+        strokeW: 2,
+        shadow: false,
+      }).setOrigin(0.5),
+    );
+    c.add(new Button(this, -100, 140, 170, 56, T('retry'), () => this.lvl.restart(), { color: 'green' }));
+    c.add(new Button(this, 100, 140, 170, 56, T('toMap'), () => this.lvl.exitToMap(), { color: 'blue' }));
     this.modal = c;
     c.setScale(0.6).setAlpha(0);
     this.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 350, ease: 'Back.easeOut' });

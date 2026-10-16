@@ -2,6 +2,7 @@
  * 塔防 headless 平衡模擬：用簡單的 AI 打每一關，確認可以過關、星數合理。
  *   npx tsx scripts/td-sim.ts            → 全部關卡、普通難度
  *   npx tsx scripts/td-sim.ts l3 veteran → 指定關卡與難度
+ *   MODE=endless npx tsx scripts/td-sim.ts → 無盡模式（看 AI 撐到第幾波）
  *
  * AI 策略（刻意「普通玩家」程度，不是最佳解）：
  *   - 依覆蓋度排序建造點，輪流蓋 箭塔 / 兵營 / 法塔 / 砲塔
@@ -12,14 +13,16 @@ import { LEVELS } from '../src/td/data/levels';
 import { HEROES } from '../src/td/data/heroes';
 import { World, type Difficulty } from '../src/td/sim/World';
 import { inEllipse } from '../src/td/sim/math';
-import type { TowerType } from '../src/td/sim/defs';
+import type { LevelMode, TowerType } from '../src/td/sim/defs';
+import { challengeLevel } from '../src/td/data/challenges';
 import { computeMods } from '../src/td/data/upgrades';
 import { ENEMIES } from '../src/td/data/enemies';
 
 const DEFAULT_PLAN: TowerType[] = ['barracks', 'archer', 'mage', 'archer', 'artillery', 'barracks', 'mage', 'archer', 'artillery', 'mage', 'barracks'];
 
 function run(levelId: string, diff: Difficulty, heroId = 'arthur', heroXp = 0, upgrades: Record<string, number> = {}, verbose = false, seed = 1) {
-  const level = LEVELS.find((l) => l.id === levelId)!;
+  const MODE = (process.env.MODE ?? 'campaign') as LevelMode;
+  const level = challengeLevel(LEVELS.find((l) => l.id === levelId)!, MODE);
   const world = new World({ level, difficulty: diff, hero: { def: HEROES[heroId], xp: heroXp }, mods: computeMods(upgrades), seed });
   // 建造點排序：輪流替每條路徑挑覆蓋最好的點（多路線關卡每條路都要有防守）
   const cov = world.spots.map((sp) => world.paths.map((p) => p.pts.filter((q) => inEllipse(sp.x, sp.y, q.x, q.y, 160) && q.x > 0 && q.x < 1280).length));
@@ -85,7 +88,8 @@ function run(levelId: string, diff: Difficulty, heroId = 'arthur', heroXp = 0, u
   const dt = 1 / 30;
   let thinkT = 0;
   world.callNextWave();
-  let maxT = 60 * 40;
+  const maxT = MODE === 'endless' ? 60 * 240 : 60 * 40;
+  const towerCap = MODE === 'endless' ? world.spots.length : 9;
   while (!world.result && world.time < maxT) {
     world.step(dt);
     for (const ev of world.drainEvents()) {
@@ -125,7 +129,7 @@ function run(levelId: string, diff: Difficulty, heroId = 'arthur', heroXp = 0, u
           }
         }
       }
-      if (!acted && nextSpot !== undefined && world.towers.length < 9 && (ups.length === 0 || world.towers.length < 6)) {
+      if (!acted && nextSpot !== undefined && world.towers.length < towerCap && (ups.length === 0 || world.towers.length < 6)) {
         if (world.gold >= world.buildCost(planType) + 30) {
           world.build(nextSpot, planType);
           planIdx++;
@@ -202,7 +206,7 @@ for (const d of diffs) {
       const avgLives = rs.reduce((a, r) => a + r.lives, 0) / rs.length;
       const leaks: Record<string, number> = {};
       for (const r of rs) for (const [k, v] of Object.entries(r.leaks)) leaks[k] = (leaks[k] ?? 0) + v;
-      console.log(`${d.padEnd(8)} ${id} ${hero.padEnd(7)} wins ${wins}/${rs.length} avgLives ${avgLives.toFixed(1)} stars ${rs.map((r) => r.stars).join(',')} heroLv ${rs[0].heroLv} leaks ${JSON.stringify(leaks)}`);
+      console.log(`${d.padEnd(8)} ${id} ${hero.padEnd(7)} waves ${rs.map((r) => r.wave).join(',')} wins ${wins}/${rs.length} avgLives ${avgLives.toFixed(1)} stars ${rs.map((r) => r.stars).join(',')} heroLv ${rs[0].heroLv} leaks ${JSON.stringify(leaks)}`);
       if (hero === 'arthur') xp = Math.max(xp, rs[0].heroXp);
     }
   }

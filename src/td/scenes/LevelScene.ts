@@ -1208,7 +1208,15 @@ export class LevelScene extends Phaser.Scene {
       sv.heroes[hero.def.id] = { xp: Math.round(hero.startXp + (victory ? gained : gained * 0.5)) };
     }
     let newStars = 0;
-    if (victory) {
+    const reached = victory ? w.waveCount : Math.max(0, w.waveIndex + 1);
+    let newRecord = false;
+    if (this.mode0 === 'endless') {
+      const prev = sv.endless[this.level.id] ?? 0;
+      if (reached > prev) {
+        sv.endless[this.level.id] = reached;
+        newRecord = true;
+      }
+    } else if (victory) {
       if (this.mode0 === 'campaign') {
         const prev = sv.stars[this.level.id] ?? 0;
         if (stars > prev) {
@@ -1217,13 +1225,14 @@ export class LevelScene extends Phaser.Scene {
         }
       } else {
         const c = (sv.challenges[this.level.id] ??= {});
-        if (!c[this.mode0]) {
-          c[this.mode0] = true;
+        const m = this.mode0 as 'heroic' | 'iron';
+        if (!c[m]) {
+          c[m] = true;
           newStars = 1;
         }
       }
-      sv.stats.victories++;
     }
+    if (victory) sv.stats.victories++;
     sv.stats.kills += w.stats.kills;
     sv.stats.towers = (sv.stats.towers ?? 0) + w.stats.towersBuilt;
     const fresh = evaluateAchievements(
@@ -1243,12 +1252,14 @@ export class LevelScene extends Phaser.Scene {
         sheep: w.stats.sheep,
         heroLevel: hero?.level ?? 0,
         bossesKilled: w.stats.bossesKilled,
+        wave: reached,
       },
       sv,
     );
     persist();
-    sfx.play(victory ? 'victory' : 'defeat');
-    this.ui.showResult(victory, stars, newStars);
+    sfx.play(victory || newRecord ? 'victory' : 'defeat');
+    if (this.mode0 === 'endless') this.ui.showEndlessResult(reached, sv.endless[this.level.id] ?? reached, newRecord);
+    else this.ui.showResult(victory, stars, newStars);
     fresh.forEach((id, i) => this.time.delayedCall(1800 + i * 2200, () => this.ui.achievementToast(id)));
   }
 

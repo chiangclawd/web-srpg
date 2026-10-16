@@ -5,7 +5,7 @@ import { UPGRADE_COLUMNS } from '../data/upgrades';
 import { HEROES } from '../data/heroes';
 import { paintWorldMap } from '../art/worldmap';
 import { Button, IconButton, panel } from '../ui/widgets';
-import { L, T } from '../i18n';
+import { L, T, getLang } from '../i18n';
 import { save, persist, totalStars } from '../save';
 import { sfx } from '../audio';
 import type { Difficulty } from '../sim/World';
@@ -187,21 +187,22 @@ export class MapScene extends Phaser.Scene {
     // 模式分頁：戰役 / 英雄挑戰 / 鋼鐵挑戰（通關戰役後解鎖，各給 1 星）
     const beaten = (sv.stars[lv.id] ?? 0) > 0;
     const ch = sv.challenges[lv.id] ?? {};
-    const modes: LevelMode[] = ['campaign', 'heroic', 'iron'];
+    const modes: LevelMode[] = ['campaign', 'heroic', 'iron', 'endless'];
+    const TAB_COLOR = { campaign: 'gold', heroic: 'red', iron: 'blue', endless: 'green' } as const;
     modes.forEach((m, k) => {
       const locked = m !== 'campaign' && !beaten;
-      const label = m === 'campaign' ? T('campaign') : m === 'heroic' ? T('heroic') : T('iron');
+      const label = T(m);
       const done = m === 'heroic' ? ch.heroic : m === 'iron' ? ch.iron : false;
-      const b = new Button(this, (k - 1) * 124, -ph / 2 + 78, 118, 38, label, () => {
+      const b = new Button(this, (k - 1.5) * 92, -ph / 2 + 78, 88, 38, label, () => {
         if (locked) {
           sfx.play('error');
           this.toastMsg(T('unlockChallenge'));
           return;
         }
         this.showLevel(i, m);
-      }, { color: mode === m ? (m === 'campaign' ? 'gold' : m === 'heroic' ? 'red' : 'blue') : 'grey', text: { size: 15 }, sound: !locked });
-      if (locked) b.add(this.add.image(46, -10, 'ic_lock').setDisplaySize(20, 20));
-      if (done) b.add(this.add.image(48, -12, 'ic_star').setDisplaySize(22, 22));
+      }, { color: mode === m ? TAB_COLOR[m] : 'grey', text: { size: getLang() === 'zh' ? (label.length >= 4 ? 14 : 16) : 13 }, sound: !locked });
+      if (locked) b.add(this.add.image(34, -10, 'ic_lock').setDisplaySize(20, 20));
+      if (done) b.add(this.add.image(36, -12, 'ic_star').setDisplaySize(22, 22));
       c.add(b);
     });
     if (mode === 'campaign') {
@@ -210,6 +211,11 @@ export class MapScene extends Phaser.Scene {
         c.add(this.add.image((k - 1) * 46, -ph / 2 + 130, k < stars ? 'ic_star' : 'ic_star_empty').setDisplaySize(40, 40));
       }
       c.add(addText(this, -pw / 2 + 28, -ph / 2 + 158, L(lv.desc), { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: pw - 56, lineSpacing: 4 }));
+    } else if (mode === 'endless') {
+      const best = sv.endless[lv.id] ?? 0;
+      c.add(this.add.image(-96, -ph / 2 + 130, 'ic_skull').setDisplaySize(40, 40));
+      c.add(addText(this, -68, -ph / 2 + 130, best ? T('bestWave', best) : T('noRecord'), { size: 22, display: true, color: '#2a5a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
+      c.add(addText(this, 0, -ph / 2 + 176, T('endlessRules'), { size: 17, display: true, color: '#2a5a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false, wrap: pw - 56, align: 'center', lineSpacing: 6 }).setOrigin(0.5, 0));
     } else {
       const done = mode === 'heroic' ? ch.heroic : ch.iron;
       c.add(this.add.image(0, -ph / 2 + 130, done ? 'ic_star' : 'ic_star_empty').setDisplaySize(44, 44));
