@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import '@fontsource/luckiest-guy/400.css';
-import { RS, VIEW_H, applyQuality, computeViewW, isTouchDevice } from './config';
+import { RS, VIEW_H, applyQuality, computeViewW, isTouchDevice, refreshTextScale } from './config';
 import { loadSave, persist } from './save';
 import { crashGuard } from './crashGuard';
 import { BootScene } from './scenes/BootScene';
@@ -56,6 +56,7 @@ window.addEventListener('resize', () => {
   if (resizeTimer) clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
     if (window.innerWidth < window.innerHeight) return;
+    refreshTextScale();
     const w = Math.round(computeViewW() * RS);
     if (Math.abs(w - game.scale.width) > 2) game.scale.setGameSize(w, Math.round(VIEW_H * RS));
   }, 150);

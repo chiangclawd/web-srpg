@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 4,
+    date: '2026-10-16',
+    title: { zh: '手機文字更清楚', en: 'Readable text on phones' },
+    items: [
+      { zh: '手機上的小字自動放大；關卡資訊、每日挑戰、結算、劇情對話等視窗整體放大', en: 'Small text is enlarged on phones; level info, daily challenge, results and story dialogs are scaled up as a whole' },
+      { zh: '修正多處文字擠在一起或超出框外（成就、商店、英雄、更新內容）', en: 'Fixed overlapping or clipped text in achievements, shop, heroes and what\'s new' },
+    ],
+  },
+  {
     id: 3,
     date: '2026-10-16',
     title: { zh: '每日挑戰與分享成績', en: 'Daily Challenge & sharing' },

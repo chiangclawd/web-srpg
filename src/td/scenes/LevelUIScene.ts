@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { VIEW_H, addText, setupCamera, viewW } from '../config';
+import { VIEW_H, addText, fontPx, setupCamera, uiZoom, viewW } from '../config';
 import { ENEMIES } from '../data/enemies';
 import { ACHIEVEMENTS } from '../data/achievements';
 import type { StoryLine } from '../data/story';
@@ -7,7 +7,7 @@ import { LEVELS } from '../data/levels';
 import { HERO_XP_TABLE, HERO_MAX_LEVEL } from '../data/heroes';
 import { ITEMS, ITEM_ORDER, GOLD_SACK, POTION_LIVES, type ItemId } from '../data/items';
 import type { EnemyDef } from '../sim/defs';
-import { IconButton, Button, panel, dimmer } from '../ui/widgets';
+import { IconButton, Button, panel, dimmer, popIn } from '../ui/widgets';
 import { playDialog } from '../ui/dialog';
 import { showTipBubble } from '../ui/tip';
 import { shareResult } from '../ui/share';
@@ -438,16 +438,19 @@ export class LevelUIScene extends Phaser.Scene {
       parts.push(ds);
       y += ds.height + 6;
     }
+    const rowH = fontPx(14) + 8;
     d.stats.forEach(([k, v], i) => {
       const col = i % 2;
       const row = Math.floor(i / 2);
-      parts.push(addText(this, left + col * (bw / 2 - 8), y + row * 22, k ? `${k}: ${v}` : v, { size: 14, color: k ? '#fff6dc' : '#9ad8ff', strokeW: 2 }));
+      parts.push(addText(this, left + col * (bw / 2 - 8), y + row * rowH, k ? `${k}: ${v}` : v, { size: 14, color: k ? '#fff6dc' : '#9ad8ff', strokeW: 2 }));
     });
-    y += Math.ceil(d.stats.length / 2) * 22 + 8;
+    y += Math.ceil(d.stats.length / 2) * rowH + 8;
     const bh = Math.max(56, y);
     c.add(panel(this, 0, bh / 2, bw, bh, 'ui_dark', 18));
     c.add(parts);
-    c.setY(VIEW_H - bh - 10);
+    // 手機放大，底邊對齊畫面下緣
+    c.setScale(Math.max(1, Math.min(uiZoom(), (VIEW_H * 0.45) / bh)));
+    c.setY(VIEW_H - bh * c.scale - 10);
     c.setDepth(50);
     c.setAlpha(0);
     this.tweens.add({ targets: c, alpha: 1, duration: 120 });
@@ -530,11 +533,13 @@ export class LevelUIScene extends Phaser.Scene {
     const name = addText(this, -40, -74, L(e.name), { size: 26, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false });
     const desc = addText(this, -40, -36, L(e.desc), { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: 250 });
     c.add([name, desc]);
-    (e.tags ?? []).forEach((tg, i) => {
-      const tag = addText(this, -40 + i * 92, 50, L(tg), { size: 14, display: true, color: '#fff6dc', strokeW: 3 });
-      const tb = this.add.rectangle(-40 + i * 92 - 6, 47, tag.width + 12, 24, 0x7a3a1a).setOrigin(0).setStrokeStyle(2, 0x2a1608);
+    let tagX = -40;
+    for (const tg of e.tags ?? []) {
+      const tag = addText(this, tagX, 50, L(tg), { size: 14, display: true, color: '#fff6dc', strokeW: 3 });
+      const tb = this.add.rectangle(tagX - 6, 47, tag.width + 12, tag.height + 2, 0x7a3a1a).setOrigin(0).setStrokeStyle(2, 0x2a1608);
       c.add([tb, tag]);
-    });
+      tagX += tag.width + 22;
+    }
     const ok = new Button(this, 0, 104, 160, 46, 'OK', () => {
       this.closeModal();
       this.lvl.togglePause(false);
@@ -542,8 +547,7 @@ export class LevelUIScene extends Phaser.Scene {
     }, { color: 'green' });
     c.add(ok);
     this.modal = c;
-    c.setScale(0.7).setAlpha(0);
-    this.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 260, ease: 'Back.easeOut' });
+    popIn(this, c, 0, { w: 520, h: 280 }, 0.7, 260);
   }
 
   // ───────── 開場劇情 ─────────
@@ -594,8 +598,7 @@ export class LevelUIScene extends Phaser.Scene {
     c.add(new Button(this, 0, 92, 240, 52, T('restart'), () => this.lvl.restart(), { color: 'gold' }));
     c.add(new Button(this, 0, 154, 240, 52, T('quit'), () => this.lvl.exitToMap(), { color: 'red' }));
     this.modal = c;
-    c.setScale(0.8).setAlpha(0);
-    this.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 200, ease: 'Back.easeOut' });
+    popIn(this, c, 0, { w: 420, h: 380 }, 0.8, 200);
   }
 
   // ───────── 結算 ─────────
@@ -697,8 +700,7 @@ export class LevelUIScene extends Phaser.Scene {
     }
     if (victory) this.addShare(c, this.shareText(stars));
     this.modal = c;
-    c.setScale(0.6).setAlpha(0);
-    this.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 350, ease: 'Back.easeOut' });
+    popIn(this, c, 0, { w: 520, h: 440 }, 0.6, 350);
   }
 
   /** 結算面板右上角的分享鈕 */
@@ -764,8 +766,7 @@ export class LevelUIScene extends Phaser.Scene {
     c.add(new Button(this, -100, 140, 170, 56, T('retry'), () => this.lvl.restart(), { color: 'green' }));
     c.add(new Button(this, 100, 140, 170, 56, T('toMap'), () => this.lvl.exitToMap(), { color: 'blue' }));
     this.modal = c;
-    c.setScale(0.6).setAlpha(0);
-    this.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 350, ease: 'Back.easeOut' });
+    popIn(this, c, 0, { w: 520, h: 440 }, 0.6, 350);
   }
 }
 

@@ -109,11 +109,13 @@ export class EncyclopediaScene extends Phaser.Scene {
           stats.forEach(([k, v], i) => {
             add(addText(this, tx + (i % 2) * 200, 330 + Math.floor(i / 2) * 32, `${k}: ${v}`, { size: 18, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }));
           });
-          (e.tags ?? []).forEach((tg, i) => {
-            const tag = add(addText(this, tx + i * 110, 440, L(tg), { size: 15, display: true }));
-            const r = add(this.add.rectangle(tx + i * 110 - 6, 437, tag.width + 12, 26, 0x7a3a1a).setOrigin(0).setStrokeStyle(2, 0x2a1608));
+          let tagX = tx;
+          for (const tg of e.tags ?? []) {
+            const tag = add(addText(this, tagX, 440, L(tg), { size: 15, display: true }));
+            const r = add(this.add.rectangle(tagX - 6, 437, tag.width + 12, tag.height + 4, 0x7a3a1a).setOrigin(0).setStrokeStyle(2, 0x2a1608));
             r.setDepth(-1);
-          });
+            tagX += tag.width + 24;
+          }
         }
       }
     }
@@ -140,8 +142,8 @@ export class EncyclopediaScene extends Phaser.Scene {
       const sy = 430 + i * 56;
       add(this.add.image(tx + 20, sy, 'ui_badge_blue').setDisplaySize(44, 44));
       add(this.add.image(tx + 20, sy, `sk_${sk.id}`).setDisplaySize(28, 28));
-      add(addText(this, tx + 52, sy - 11, L(sk.name), { size: 16, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
-      add(addText(this, tx + 52, sy + 11, L(sk.desc), { size: 13, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0, 0.5));
+      add(addText(this, tx + 52, sy - 12, L(sk.name), { size: 16, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
+      add(addText(this, tx + 52, sy + 13, L(sk.desc), { size: 14, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0, 0.5));
     });
   }
 

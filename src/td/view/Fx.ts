@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TEX, addText } from '../config';
+import { TEX, addText, fontPx } from '../config';
 import { save } from '../save';
 
 export const DEPTH = {
@@ -204,7 +204,8 @@ export class Fx {
     let t = this.textPool.pop();
     if (!t) t = addText(this.scene, x, y, text, { size, color, display: true }).setOrigin(0.5).setDepth(DEPTH.float);
     else {
-      t.setText(text).setColor(color).setFontSize(size).setStroke('#2a1708', Math.max(2, Math.round(size / 6)));
+      const px = fontPx(size);
+      t.setText(text).setColor(color).setFontSize(px).setStroke('#2a1708', Math.max(2, Math.round(px / 6)));
       t.setPosition(x, y).setVisible(true).setAlpha(1);
     }
     t.setScale(0.6);

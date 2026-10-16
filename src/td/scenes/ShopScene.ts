@@ -45,7 +45,7 @@ export class ShopScene extends Phaser.Scene {
     this.gemTxt = add(addText(this, w - 146, 44, '0', { size: 24, display: true, color: '#e0c0ff' }).setOrigin(0, 0.5));
     add(addText(this, w / 2, 92, T('shopHint'), { size: 16, color: '#c8b8d8' }).setOrigin(0.5));
 
-    const cw = Math.min(270, (w - 80) / ITEM_ORDER.length);
+    const cw = Math.min(320, (w - 80) / ITEM_ORDER.length);
     const x0 = w / 2 - ((ITEM_ORDER.length - 1) * cw) / 2;
     ITEM_ORDER.forEach((id, i) => {
       const it = ITEMS[id];
@@ -56,9 +56,11 @@ export class ShopScene extends Phaser.Scene {
       const icon = add(this.add.image(x, y - 120, it.icon).setDisplaySize(80, 80));
       this.tweens.add({ targets: icon, y: y - 126, duration: 1100 + i * 130, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
       add(addText(this, x, y - 40, L(it.name), { size: 24, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0.5));
-      add(
-        addText(this, x, y + 12, L(it.desc), { size: 15, color: '#3a2412', stroke: '#000000', strokeW: 0, shadow: false, wrap: cw - 56, align: 'center', lineSpacing: 4 }).setOrigin(0.5, 0.5),
+      const desc = add(
+        addText(this, x, y - 20, L(it.desc), { size: 15, color: '#3a2412', stroke: '#000000', strokeW: 0, shadow: false, wrap: cw - 56, align: 'center', lineSpacing: 4 }).setOrigin(0.5, 0),
       );
+      // 說明到「持有」之間只有這麼高：太長（英文、手機大字）就縮小
+      if (desc.height > 84) desc.setScale(84 / desc.height);
       this.owned[id] = add(addText(this, x, y + 78, '', { size: 18, display: true, color: '#2a5a8a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0.5));
       const btn = add(new Button(this, x, y + 138, Math.min(170, cw - 50), 54, String(it.price), () => this.buy(id), { color: 'green', icon: 'ic_gem', iconSize: 30, text: { size: 24 } }));
       this.buyBtns[id] = btn;
