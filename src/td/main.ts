@@ -60,6 +60,15 @@ window.addEventListener(
   { once: true },
 );
 
+// 離線遊玩：正式版註冊 service worker（範圍只限 td.html）
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('td-sw.js', { scope: './td' }).catch(() => {
+      // 不支援或被沙盒擋下：照常線上遊玩
+    });
+  });
+}
+
 // 方便除錯 / 自動化測試
 (window as unknown as { __td: Phaser.Game }).__td = game;
 

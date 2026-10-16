@@ -5,7 +5,8 @@ import type { LevelDef } from '../sim/defs';
 import { TW_BASE, TW_H } from '../art/towers';
 import { Button, IconButton, dimmer, panel } from '../ui/widgets';
 import { T, getLang, setLang } from '../i18n';
-import { save, persist, resetProgress } from '../save';
+import { save, persist, resetProgress, exportSave, importSave } from '../save';
+import { showTextDialog } from '../ui/textDialog';
 import { sfx } from '../audio';
 import { Path } from '../sim/Path';
 
@@ -133,8 +134,8 @@ export class MenuScene extends Phaser.Scene {
     const w = viewW(this);
     const c = this.add.container(WORLD_W / 2, VIEW_H / 2).setDepth(5000);
     c.add(dimmer(this, w * 2, VIEW_H * 2, 0.55).setPosition(-w, -VIEW_H));
-    c.add(panel(this, 0, 0, 460, 500));
-    c.add(addText(this, 0, -208, T('settings'), { size: 32, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0.5));
+    c.add(panel(this, 0, 0, 460, 540));
+    c.add(addText(this, 0, -228, T('settings'), { size: 32, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0.5));
     const sv = save();
     const label = (y: number, text: string) =>
       c.add(addText(this, -170, y, text, { size: 22, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
@@ -148,10 +149,10 @@ export class MenuScene extends Phaser.Scene {
       });
       c.add(b);
     };
-    row(-144, T('music'), 'music');
-    row(-88, T('sound'), 'sfx');
-    label(-32, T('shake'));
-    const shakeBtn = new IconButton(this, 140, -32, 50, sv.settings.shake ? 'ic_check' : 'ic_close', () => {
+    row(-164, T('music'), 'music');
+    row(-108, T('sound'), 'sfx');
+    label(-52, T('shake'));
+    const shakeBtn = new IconButton(this, 140, -52, 50, sv.settings.shake ? 'ic_check' : 'ic_close', () => {
       sv.settings.shake = !sv.settings.shake;
       persist();
       shakeBtn.setIcon(sv.settings.shake ? 'ic_check' : 'ic_close');
@@ -159,10 +160,10 @@ export class MenuScene extends Phaser.Scene {
     });
     c.add(shakeBtn);
     // 畫質：自動 → 高 → 省電，改了要重新載入（渲染倍率在遊戲建立時決定）
-    label(24, T('quality'));
+    label(4, T('quality'));
     const QS: Quality[] = ['auto', 'high', 'low'];
     const qName = (q: Quality) => T(q === 'auto' ? 'qAuto' : q === 'high' ? 'qHigh' : 'qLow');
-    const qBtn = new Button(this, 120, 24, 110, 44, qName(sv.settings.quality ?? 'auto'), () => {
+    const qBtn = new Button(this, 120, 4, 110, 44, qName(sv.settings.quality ?? 'auto'), () => {
       const cur = sv.settings.quality ?? 'auto';
       sv.settings.quality = QS[(QS.indexOf(cur) + 1) % QS.length];
       persist();
@@ -172,7 +173,7 @@ export class MenuScene extends Phaser.Scene {
     c.add(qBtn);
     // 清除進度：按兩次才生效
     let armed = false;
-    const wipe = new Button(this, 0, 104, 240, 46, T('resetProgress'), () => {
+    const wipe = new Button(this, 0, 134, 240, 46, T('resetProgress'), () => {
       if (!armed) {
         armed = true;
         wipe.label.setText(T('confirmWipe'));
@@ -188,7 +189,25 @@ export class MenuScene extends Phaser.Scene {
       this.cameras.main.flash(250, 255, 255, 255);
     }, { color: 'red', text: { size: 18 } });
     c.add(wipe);
-    c.add(new Button(this, 0, 180, 200, 52, 'OK', () => c.destroy(), { color: 'green' }));
+    // 存檔備份 / 還原（換裝置時用）
+    c.add(new Button(this, -88, 70, 160, 46, T('backup'), () => {
+      showTextDialog({ title: T('backupTitle'), hint: T('backupHint'), text: exportSave(), readOnly: true, okLabel: 'OK', copyLabel: T('copy'), copiedLabel: T('copied') });
+    }, { color: 'blue', text: { size: 18 } }));
+    c.add(new Button(this, 88, 70, 160, 46, T('restore'), () => {
+      showTextDialog({
+        title: T('restoreTitle'),
+        hint: T('restoreHint'),
+        readOnly: false,
+        okLabel: T('restore'),
+        cancelLabel: T('cancel'),
+        onOk: (v) => {
+          if (!importSave(v)) return T('importBad');
+          window.setTimeout(() => window.location.reload(), 300);
+          return null;
+        },
+      });
+    }, { color: 'wood', text: { size: 18 } }));
+    c.add(new Button(this, 0, 208, 200, 52, 'OK', () => c.destroy(), { color: 'green' }));
     c.setScale(0.8);
     this.tweens.add({ targets: c, scale: 1, duration: 200, ease: 'Back.easeOut' });
   }

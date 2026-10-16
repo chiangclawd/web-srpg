@@ -67,26 +67,67 @@ function defaults(): SaveData {
 
 let data: SaveData = defaults();
 
+/** 舊存檔缺少的欄位補上預設值 */
+function migrate(parsed: Partial<SaveData>): SaveData {
+  const d = defaults();
+  return {
+    ...d,
+    ...parsed,
+    settings: { ...d.settings, ...(parsed.settings ?? {}) },
+    heroes: { ...d.heroes, ...(parsed.heroes ?? {}) },
+    stats: { ...d.stats, ...(parsed.stats ?? {}) },
+    items: { ...d.items, ...(parsed.items ?? {}) },
+  };
+}
+
 export function loadSave(): SaveData {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Partial<SaveData>;
-      const d = defaults();
-      data = {
-        ...d,
-        ...parsed,
-        settings: { ...d.settings, ...(parsed.settings ?? {}) },
-        heroes: { ...d.heroes, ...(parsed.heroes ?? {}) },
-        stats: { ...d.stats, ...(parsed.stats ?? {}) },
-        items: { ...d.items, ...(parsed.items ?? {}) },
-      };
-    }
+    if (raw) data = migrate(JSON.parse(raw) as Partial<SaveData>);
   } catch {
     data = defaults();
   }
   setLang(data.settings.lang);
   return data;
+}
+
+// ───────── 備份碼（換裝置 / 換瀏覽器時手動搬存檔） ─────────
+
+const CODE_PREFIX = 'KB1:';
+
+function toBase64(text: string): string {
+  const bytes = new TextEncoder().encode(text);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+function fromBase64(b64: string): string {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+/** 把目前進度編成一段可複製的文字 */
+export function exportSave(): string {
+  return CODE_PREFIX + toBase64(JSON.stringify(data));
+}
+
+/** 讀入備份碼；格式不對回傳 false 且不動到現有存檔 */
+export function importSave(code: string): boolean {
+  const c = code.replace(/\s+/g, '');
+  if (!c.startsWith(CODE_PREFIX)) return false;
+  try {
+    const parsed = JSON.parse(fromBase64(c.slice(CODE_PREFIX.length))) as Partial<SaveData>;
+    if (!parsed || typeof parsed !== 'object' || typeof parsed.stars !== 'object' || parsed.stars === null) return false;
+    data = migrate(parsed);
+    persist();
+    setLang(data.settings.lang);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function save(): SaveData {

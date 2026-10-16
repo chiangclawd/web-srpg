@@ -54,3 +54,30 @@ test('reset progress keeps settings and persists', () => {
   persist();
   assert.equal(JSON.parse(store.get(KEY)!).stars.l3, 2);
 });
+
+const { exportSave, importSave } = await import('../../src/td/save');
+
+test('a backup code round-trips progress, including non-ASCII text', () => {
+  store.set(KEY, JSON.stringify({ stars: { l1: 3, l5: 2 }, gems: 77, endless: { l2: 18 }, settings: { lang: 'zh' } }));
+  loadSave();
+  const code = exportSave();
+  assert.ok(code.startsWith('KB1:'));
+  store.set(KEY, JSON.stringify({ stars: {} }));
+  loadSave();
+  assert.deepEqual(save().stars, {});
+  // 貼上時常夾帶換行或空白
+  assert.equal(importSave(`  ${code.slice(0, 20)}\n${code.slice(20)} `), true);
+  assert.deepEqual(save().stars, { l1: 3, l5: 2 });
+  assert.equal(save().gems, 77);
+  assert.equal(save().endless.l2, 18);
+  assert.deepEqual(JSON.parse(store.get(KEY)!).stars, { l1: 3, l5: 2 }, 'imported data is persisted');
+});
+
+test('invalid backup codes are rejected without touching the save', () => {
+  store.set(KEY, JSON.stringify({ stars: { l1: 1 } }));
+  loadSave();
+  for (const bad of ['', 'hello', 'KB1:', 'KB1:!!!notbase64', 'KB1:' + btoa('{"no":"stars"}'), 'KB2:' + btoa('{"stars":{}}')]) {
+    assert.equal(importSave(bad), false, `rejects ${bad}`);
+  }
+  assert.deepEqual(save().stars, { l1: 1 });
+});
