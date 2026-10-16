@@ -1,0 +1,12 @@
+Image 1 is the layout of the world map in my 2D fantasy tower-defense game, drawn in a flat placeholder style. Image 2 shows the game's TARGET art style: polished hand-painted cartoon fantasy art with clean dark-brown outlines, soft cel shading, rich painted textures and warm lighting.
+
+Repaint image 1 as a beautiful, polished, hand-painted fantasy WORLD MAP in the style of image 2, seen from above with a slight tilt, like a premium mobile strategy game's campaign map.
+
+Keep the layout EXACTLY as in image 1 (same framing, same positions and proportions):
+- The island coastline shape, with the deep blue sea all around it (painted waves, a few small rocks in the sea).
+- The river flowing from the snowy mountains at the top-center down to the south coast, in the same place.
+- Sandy desert with palms, cacti and dunes in the upper-left; green meadows on the left; the royal castle with blue roofs at the bottom-left coast and two small cottages near the river mouth.
+- A green forest in the middle-left around the river; snowy mountains with pine trees along the top-center and top-right; a golden-orange autumn forest in the center-right; a dark rocky wasteland with dead trees and grey mountains in the lower right, and on the far right a glowing purple portal altar.
+- Mountains, trees and buildings as small illustrated map icons, placed where image 1 has them. Keep the open ground between them open: do NOT add new big objects where image 1 has empty land.
+
+Do NOT draw any roads, paths, dotted lines, flags, markers, numbers, labels, text, frame, compass or UI. No watermark.

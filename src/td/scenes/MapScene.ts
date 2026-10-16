@@ -3,7 +3,7 @@ import { PLAY_W, PLAY_X0, VIEW_H, WORLD_W, bgScale, addText, fitText, setupCamer
 import { LEVELS } from '../data/levels';
 import { UPGRADE_COLUMNS } from '../data/upgrades';
 import { HEROES } from '../data/heroes';
-import { paintWorldMap } from '../art/worldmap';
+import { mapRoads, paintWorldMap } from '../art/worldmap';
 import { showTipBubble } from '../ui/tip';
 import { DAILY_MODS, dailyBaseLevel, dailyKey, dailySpec } from '../data/daily';
 import { Button, IconButton, panel, popIn } from '../ui/widgets';
@@ -49,9 +49,12 @@ export class MapScene extends Phaser.Scene {
   create(): void {
     setupCamera(this);
     const nodes = LEVELS.map((l) => ({ x: l.mapPos.x * PLAY_W, y: l.mapPos.y * VIEW_H, theme: l.theme, bonus: l.bonus }));
-    const s = bgScale(1.25);
-    if (!this.textures.exists('bg_map')) this.textures.addCanvas('bg_map', paintWorldMap(WORLD_W, VIEW_H, PLAY_X0, s, nodes));
-    this.add.image(-PLAY_X0, 0, 'bg_map').setOrigin(0).setScale(1 / s);
+    if (this.textures.exists('worldmap')) this.paintedMap(nodes);
+    else {
+      const s = bgScale(1.25);
+      if (!this.textures.exists('bg_map')) this.textures.addCanvas('bg_map', paintWorldMap(WORLD_W, VIEW_H, PLAY_X0, s, nodes));
+      this.add.image(-PLAY_X0, 0, 'bg_map').setOrigin(0).setScale(1 / s);
+    }
 
     const sv = save();
     let lastUnlocked = 0;
@@ -127,6 +130,40 @@ export class MapScene extends Phaser.Scene {
     const focusIdx = this.focus ? LEVELS.findIndex((l) => l.id === this.focus) : -1;
     const auto = focusIdx >= 0 && isUnlocked(focusIdx + 1) && focusIdx + 1 < LEVELS.length ? focusIdx + 1 : lastUnlocked;
     this.time.delayedCall(350, () => this.showLevel(auto));
+  }
+
+  /** 手繪世界地圖（Gemini 依程序地圖構圖重繪）＋向量虛線路線 */
+  private paintedMap(nodes: { x: number; y: number; bonus?: boolean }[]): void {
+    const img = this.add.image(-PLAY_X0, 0, 'worldmap').setOrigin(0);
+    img.setScale(WORLD_W / img.width, VIEW_H / img.height);
+    const g = this.add.graphics();
+    const dashed = (pts: { x: number; y: number }[], width: number, color: number, a: number) => {
+      g.lineStyle(width, color, a);
+      // 8 實 9 空的虛線（Graphics 沒有 setLineDash，沿路徑自己切）
+      let acc = 0;
+      for (let i = 1; i < pts.length; i++) {
+        const p0 = pts[i - 1];
+        const p1 = pts[i];
+        const len = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+        let t = 0;
+        while (t < len) {
+          const phase = acc % 17;
+          const step = Math.min(len - t, phase < 8 ? 8 - phase : 17 - phase);
+          if (phase < 8) {
+            const a0 = t / len;
+            const a1 = (t + step) / len;
+            g.lineBetween(p0.x + (p1.x - p0.x) * a0, p0.y + (p1.y - p0.y) * a0, p0.x + (p1.x - p0.x) * a1, p0.y + (p1.y - p0.y) * a1);
+          }
+          t += step;
+          acc += step;
+        }
+      }
+    };
+    const roads = mapRoads(nodes);
+    dashed(roads.main, 6, 0x3c1e0a, 0.55);
+    dashed(roads.main, 3, 0xf0d8a0, 1);
+    dashed(roads.side, 6, 0x5a320a, 0.55);
+    dashed(roads.side, 3, 0xffc860, 1);
   }
 
   private buildHud(): void {

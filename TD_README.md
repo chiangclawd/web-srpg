@@ -75,6 +75,8 @@ python3 scripts/art/slice_towers.py raw/archer.png orig_frames/ out/ tw_archer_1
 - 4 張家族圖加試作約 US$0.51
 - 砲管（`barrel_*.webp`，160×160、旋轉軸 (80,100)）一樣一張圖畫 4 個：`scripts/art/slice_barrels.py` 去背切開，砲座底部對齊原本位置、砲座中心對準旋轉軸；砲口朝右上（瞄準左邊時 flipX）
 
+世界地圖（`public/assets/worldmap.webp`）：先用 `paintWorldMap(..., { base: true })` 畫出不含路線的程序地圖當構圖參考，交給 `gemini-3-pro-image`（2K、21:9，約 US$0.13／張，構圖貼合度比 flash 好）重繪；裁成 1560×720 比例、×1.4 解析度並烘上暗角。路線虛線由 MapScene 用 Graphics 依關卡座標畫，所以調整關卡位置不必重畫地圖（提示詞：`scripts/art/prompts/worldmap.txt`）。
+
 標題主視覺（`public/assets/keyart.webp`，21:9）以塔、魔物和英雄 sprite 當風格參考生成，再用兩次「只改局部」的編輯把左邊守軍裡誤畫的哥布林換成士兵（提示詞：`scripts/art/prompts/keyart*.txt`，共 4 張約 US$0.16）。MenuScene 有這張圖就用它（緩慢呼吸縮放＋落葉），沒有就退回程序繪製的地圖；分享預覽圖 `public/td-og.jpg` 是同一畫面只留標題、1200×630 截圖。
 
 ## 🧱 架構

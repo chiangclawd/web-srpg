@@ -1,7 +1,7 @@
 // Gemini 圖片生成：讀參考圖 + 提示詞 → 存原圖。金鑰由環境的網路密鑰自動附加（x-goog-api-key），程式裡不放金鑰。
 // 用法：node scripts/art/gemini-image.mjs <out.png> <prompt-file> [ref1.png ref2.png ...]
 // 注意：Node 內建 fetch 預設不走 HTTPS_PROXY，要用 NODE_USE_ENV_PROXY=1 執行，金鑰才會被代理附加。
-// 環境變數：GEMINI_IMAGE_MODEL（預設 gemini-2.5-flash-image）、ART_LEDGER（花費紀錄檔）
+// 環境變數：GEMINI_IMAGE_MODEL（預設 gemini-2.5-flash-image）、GEMINI_ASPECT（如 16:9）、GEMINI_SIZE（1K/2K/4K，gemini-3 系列）、ART_LEDGER（花費紀錄檔）
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -20,7 +20,10 @@ const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models
   headers: { 'content-type': 'application/json' },
   body: JSON.stringify({
     contents: [{ role: 'user', parts }],
-    generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: process.env.GEMINI_ASPECT ?? '1:1' } },
+    generationConfig: {
+      responseModalities: ['IMAGE'],
+      imageConfig: { aspectRatio: process.env.GEMINI_ASPECT ?? '1:1', ...(process.env.GEMINI_SIZE ? { imageSize: process.env.GEMINI_SIZE } : {}) },
+    },
   }),
 });
 const body = await res.json();
