@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 6,
+    date: '2026-10-16',
+    title: { zh: '雙指縮放地圖', en: 'Pinch to zoom' },
+    items: [
+      { zh: '戰鬥中可雙指放大地圖（最多 2.2 倍），放大後拖曳移動；縮回就看到整張地圖。電腦可用滾輪', en: 'Pinch to zoom the battlefield (up to 2.2x) and drag to move around; pinch back out to see the whole map. Mouse wheel on desktop' },
+      { zh: '拖曳地圖時不會再誤點蓋塔', en: 'Dragging the map no longer triggers accidental builds' },
+    ],
+  },
+  {
     id: 5,
     date: '2026-10-16',
     title: { zh: '手機按鈕更好按', en: 'Bigger buttons on phones' },
