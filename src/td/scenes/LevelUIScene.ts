@@ -5,6 +5,7 @@ import { ACHIEVEMENTS } from '../data/achievements';
 import type { StoryLine } from '../data/story';
 import { LEVELS } from '../data/levels';
 import { HERO_XP_TABLE, HERO_MAX_LEVEL } from '../data/heroes';
+import { ITEMS, ITEM_ORDER, GOLD_SACK, POTION_LIVES, type ItemId } from '../data/items';
 import type { EnemyDef } from '../sim/defs';
 import { IconButton, Button, panel, dimmer } from '../ui/widgets';
 import { playDialog } from '../ui/dialog';
@@ -48,6 +49,8 @@ export class LevelUIScene extends Phaser.Scene {
   private bossBar: Phaser.GameObjects.Container | null = null;
   private bossFill: Phaser.GameObjects.Rectangle | null = null;
   private bossId = -1;
+  private itemBar!: Phaser.GameObjects.Container;
+  private itemSlots: Partial<Record<ItemId, { btn: IconButton; count: Phaser.GameObjects.Text; dot: Phaser.GameObjects.Arc }>> = {};
 
   constructor() {
     super('LevelUI');
@@ -116,6 +119,23 @@ export class LevelUIScene extends Phaser.Scene {
       }
     });
 
+    // 右下：道具列
+    this.itemBar = this.add.container(0, 0);
+    this.itemSlots = {};
+    ITEM_ORDER.forEach((id, i) => {
+      const x = -30 - (ITEM_ORDER.length - 1 - i) * 56;
+      const btn = new IconButton(this, x, -32, 50, ITEMS[id].icon, () => this.lvl.useItem(id), 'ui_badge', 0.7);
+      const dot = this.add.circle(x + 17, -13, 10, 0x2a1608).setStrokeStyle(2, 0xe0b050);
+      const count = addText(this, x + 17, -13, '0', { size: 12, display: true }).setOrigin(0.5);
+      this.itemBar.add([btn, dot, count]);
+      this.itemSlots[id] = { btn, count, dot };
+      if (!this.lvl.world.spellsEnabled) {
+        btn.setEnabled(false);
+        this.itemBar.add(this.add.image(x - 15, -15, 'ic_lock').setDisplaySize(18, 18));
+      }
+    });
+    this.refreshItems();
+
     this.layout();
     this.scale.on('resize', this.layout, this);
     this.events.once('shutdown', () => this.scale.off('resize', this.layout, this));
@@ -128,6 +148,7 @@ export class LevelUIScene extends Phaser.Scene {
     this.speedBtn.setPosition(w - 98, 36);
     this.speedTxt.setPosition(w - 98, 66);
     this.bottomLeft.setPosition(8, VIEW_H - 14);
+    this.itemBar.setPosition(w - 8, VIEW_H - 8);
     if (this.modal) this.modal.setPosition(w / 2, VIEW_H / 2);
   }
 
@@ -245,8 +266,50 @@ export class LevelUIScene extends Phaser.Scene {
     this.tweens.add({ targets: s.btn, scale: 1.2, duration: 100, yoyo: true });
   }
 
-  onModeChange(_m: string): void {
-    // 由 refresh() 處理高亮
+  onModeChange(m: string): void {
+    // 法術高亮由 refresh() 處理；道具在這裡
+    for (const id of ITEM_ORDER) this.itemSlots[id]?.btn.badge.setTint(m === id ? 0xffe08a : 0xffffff);
+  }
+
+  /** 更新道具數量（用掉或開場時） */
+  refreshItems(): void {
+    const inv = save().items;
+    for (const id of ITEM_ORDER) {
+      const sl = this.itemSlots[id];
+      if (!sl) continue;
+      const n = inv[id] ?? 0;
+      sl.count.setText(String(n));
+      sl.btn.icon.setAlpha(n > 0 ? 1 : 0.4);
+      sl.dot.setFillStyle(n > 0 ? 0x2a1608 : 0x5a1a10);
+    }
+  }
+
+  /** 使用道具時在畫面中央彈出圖示與效果文字 */
+  itemPop(id: ItemId): void {
+    const w = viewW(this);
+    const c = this.add.container(w / 2, VIEW_H * 0.42).setDepth(65);
+    const icon = this.add.image(0, 0, ITEMS[id].icon).setDisplaySize(84, 84);
+    c.add(icon);
+    const label = id === 'potion' ? `+${POTION_LIVES} ❤` : id === 'gold' ? `+${GOLD_SACK}` : L(ITEMS[id].name);
+    const color = id === 'potion' ? '#ff8a9a' : id === 'gold' ? '#ffe066' : id === 'frost' ? '#9ae4ff' : '#ffb05a';
+    c.add(addText(this, 0, 56, label, { size: 28, display: true, color, strokeW: 6 }).setOrigin(0.5));
+    c.setScale(0.3).setAlpha(0);
+    this.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 220, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: c, alpha: 0, y: c.y - 40, delay: 900, duration: 400, onComplete: () => c.destroy() });
+    if (id === 'potion') this.tweens.add({ targets: this.livesTxt, scale: 1.4, duration: 140, yoyo: true, repeat: 1 });
+  }
+
+  /** 結算面板上的寶石獎勵列 */
+  private gemLine(c: Phaser.GameObjects.Container, y: number): void {
+    const n = this.lvl.gemsEarned;
+    if (n <= 0) return;
+    const t = addText(this, 0, y, T('gemsEarned', n), { size: 20, display: true, color: '#8a3ad0', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0, 0.5);
+    const rowW = 30 + 6 + t.width;
+    t.x = -rowW / 2 + 36;
+    const g = this.add.image(-rowW / 2 + 15, y, 'ic_gem').setDisplaySize(30, 30);
+    c.add([g, t]);
+    g.setScale(0);
+    this.tweens.add({ targets: g, scale: 30 / 56 / 2, duration: 300, delay: 900, ease: 'Back.easeOut' });
   }
 
   bumpLives(): void {
@@ -472,6 +535,7 @@ export class LevelUIScene extends Phaser.Scene {
       c.add(
         addText(this, 0, 30, this.lvl.mode0 === 'heroic' ? T('heroic') : T('iron'), { size: 22, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0.5),
       );
+      this.gemLine(c, 72);
       c.add(new Button(this, -100, 140, 170, 52, T('retry'), () => this.lvl.restart(), { color: 'gold' }));
       c.add(new Button(this, 100, 140, 170, 52, T('toMap'), () => this.lvl.exitToMap(), { color: 'blue' }));
     } else if (victory) {
@@ -513,6 +577,7 @@ export class LevelUIScene extends Phaser.Scene {
         }).setOrigin(0.5);
         c.add(ht);
       }
+      this.gemLine(c, 84);
       const idx = LEVELS.findIndex((l) => l.id === this.lvl.level.id);
       const next = LEVELS[idx + 1];
       c.add(new Button(this, -150, 140, 140, 52, T('retry'), () => this.lvl.restart(), { color: 'gold' }));
@@ -530,6 +595,7 @@ export class LevelUIScene extends Phaser.Scene {
         align: 'center',
       }).setOrigin(0.5);
       c.add(tip);
+      this.gemLine(c, 50);
       c.add(new Button(this, -100, 120, 170, 56, T('retry'), () => this.lvl.restart(), { color: 'green' }));
       c.add(new Button(this, 100, 120, 170, 56, T('toMap'), () => this.lvl.exitToMap(), { color: 'blue' }));
     }
@@ -571,6 +637,7 @@ export class LevelUIScene extends Phaser.Scene {
         shadow: false,
       }).setOrigin(0.5),
     );
+    this.gemLine(c, 86);
     c.add(new Button(this, -100, 140, 170, 56, T('retry'), () => this.lvl.restart(), { color: 'green' }));
     c.add(new Button(this, 100, 140, 170, 56, T('toMap'), () => this.lvl.exitToMap(), { color: 'blue' }));
     this.modal = c;

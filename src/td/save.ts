@@ -19,6 +19,10 @@ export interface SaveData {
   achievements: string[];
   /** 無盡模式每關最佳波數 */
   endless: Record<string, number>;
+  /** 商店貨幣 */
+  gems: number;
+  /** 道具庫存 */
+  items: Record<string, number>;
   /** 已看過開場劇情的關卡 */
   storySeen: string[];
   settings: {
@@ -46,6 +50,9 @@ function defaults(): SaveData {
     challenges: {},
     achievements: [],
     endless: {},
+    gems: 0,
+    // 新玩家各送一個，讓道具列一開始就看得到
+    items: { keg: 1, frost: 1, potion: 1, gold: 1 },
     storySeen: [],
     settings: { music: 0.6, sfx: 0.8, lang: nav.startsWith('zh') ? 'zh' : 'en', difficulty: 'normal', speed: 1, shake: true },
     stats: { kills: 0, plays: 0, victories: 0, towers: 0 },
@@ -66,6 +73,7 @@ export function loadSave(): SaveData {
         settings: { ...d.settings, ...(parsed.settings ?? {}) },
         heroes: { ...d.heroes, ...(parsed.heroes ?? {}) },
         stats: { ...d.stats, ...(parsed.stats ?? {}) },
+        items: { ...d.items, ...(parsed.items ?? {}) },
       };
     }
   } catch {

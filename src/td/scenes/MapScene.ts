@@ -138,6 +138,11 @@ export class MapScene extends Phaser.Scene {
     const total = LEVELS.length * 5;
     const st = addText(this, left + 62, 34, `${totalStars()} / ${total}`, { size: 22, display: true, color: '#ffe066' }).setOrigin(0, 0.5);
     this.hud.push(sp, si, st);
+    // 寶石
+    const gp = panel(this, left + 280, 34, 150, 46, 'ui_dark', 18);
+    const gi = this.add.image(left + 226, 34, 'ic_gem').setDisplaySize(30, 30);
+    const gt = addText(this, left + 248, 34, String(save().gems ?? 0), { size: 22, display: true, color: '#e0c0ff' }).setOrigin(0, 0.5);
+    this.hud.push(gp, gi, gt);
     // 底部按鈕
     const back = new IconButton(this, left + 44, VIEW_H - 44, 64, 'ic_close', () => this.leave('Menu'));
     const avail = starsAvailable();
@@ -152,7 +157,8 @@ export class MapScene extends Phaser.Scene {
     const hb = new Button(this, right - 310, VIEW_H - 42, 140, 56, T('heroes'), () => this.leave('Hero'), { color: 'blue', icon: `ptc_${hero.id}`, iconSize: 38, text: { size: 20 } });
     const enc = new Button(this, right - 150, VIEW_H - 42, 140, 56, T('encyclopedia'), () => this.leave('Encyclopedia'), { color: 'wood', icon: 'ic_book', iconSize: 34, text: { size: 20 } });
     const ach = new Button(this, right - 630, VIEW_H - 42, 140, 56, T('achievements'), () => this.leave('Achievements'), { color: 'wood', icon: 'ic_crown', iconSize: 34, text: { size: 20 } });
-    this.hud.push(back, up, hb, enc, ach);
+    const shop = new Button(this, right - 790, VIEW_H - 42, 140, 56, T('shop'), () => this.leave('Shop'), { color: 'red', icon: 'ic_gem', iconSize: 32, text: { size: 20 } });
+    this.hud.push(back, up, hb, enc, ach, shop);
     for (const o of [back, up, hb, enc, sp, si, st]) (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(500);
     this.hud.forEach((o) => (o as unknown as Phaser.GameObjects.Components.Depth).setDepth?.(500));
     void up;

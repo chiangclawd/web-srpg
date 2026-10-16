@@ -13,6 +13,8 @@ const HUD_ZONES = [
   { x0: 0, y0: 0, x1: 340, y1: 86 },
   { x0: 1110, y0: 0, x1: 1280, y1: 86 },
   { x0: 0, y0: 610, x1: 330, y1: 720 },
+  // 右下道具列
+  { x0: 1048, y0: 652, x1: 1280, y1: 720 },
 ];
 const MIN_PATH_DIST = 58;
 const MIN_SPACING = 92;

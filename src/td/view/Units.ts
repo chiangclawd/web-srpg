@@ -16,6 +16,8 @@ export interface UnitVisualState {
   lastHitAt: number;
   tint?: number;
   stunned?: boolean;
+  /** 冰霜水晶：包在冰塊裡 */
+  frozen?: boolean;
 }
 
 /**
@@ -31,6 +33,7 @@ export class UnitView {
   private phase = Math.random() * 10;
   private stars: Phaser.GameObjects.Image[] = [];
   private ring: Phaser.GameObjects.Ellipse | null = null;
+  private ice: Phaser.GameObjects.Image | null = null;
   dead = false;
 
   constructor(
@@ -119,6 +122,17 @@ export class UnitView {
       this.hpFg.width = Math.max(0, this.hpWidth * s.hpRatio);
       this.hpFg.fillColor = s.hpRatio > 0.5 ? this.hpFg.fillColor : s.hpRatio > 0.25 ? 0xf0c030 : 0xe04030;
     }
+    // 冰塊
+    if (s.frozen) {
+      if (!this.ice) {
+        this.ice = this.scene.add.image(0, 0, 'fx_iceblock').setOrigin(0.5, 1);
+        this.ice.setDisplaySize(Math.max(30, this.hpWidth + 12), this.height * 1.08);
+      }
+      this.ice.setPosition(s.x, s.y + fy + 3).setDepth(this.body.depth + 0.5);
+    } else if (this.ice) {
+      this.ice.destroy();
+      this.ice = null;
+    }
     // 暈眩星星
     if (s.stunned) {
       if (!this.stars.length) {
@@ -151,6 +165,7 @@ export class UnitView {
     this.hpFg.destroy();
     this.stars.forEach((s) => s.destroy());
     this.ring?.destroy();
+    this.ice?.destroy();
     const b = this.body;
     const flip = b.flipX ? -1 : 1;
     if (kind === 'death') {
@@ -179,6 +194,7 @@ export class UnitView {
     this.hpFg.destroy();
     this.stars.forEach((s) => s.destroy());
     this.ring?.destroy();
+    this.ice?.destroy();
   }
 }
 

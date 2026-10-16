@@ -580,7 +580,134 @@ function retryIcon(c: Ctx, w: number): void {
   fillStroke(c, '#fff6dc', 2.5);
 }
 
+
+// ───────── 商店：寶石與道具 ─────────
+
+function gemIcon(c: Ctx, w: number): void {
+  const m = w / 2;
+  // 切面寶石：上冠 + 下錐
+  poly(c, [m - 20, m - 6, m - 11, m - 18, m + 11, m - 18, m + 20, m - 6, m, m + 22]);
+  fillStroke(c, vgrad(c, m - 18, m + 22, '#c8a0ff', '#6a2ad0'), 3);
+  c.fillStyle = 'rgba(255,255,255,0.55)';
+  poly(c, [m - 11, m - 18, m - 4, m - 6, m - 20, m - 6]);
+  c.fill();
+  c.fillStyle = 'rgba(255,255,255,0.3)';
+  poly(c, [m - 4, m - 6, m + 4, m - 6, m, m + 22]);
+  c.fill();
+  c.strokeStyle = 'rgba(60,10,120,0.6)';
+  c.lineWidth = 1.5;
+  c.beginPath();
+  c.moveTo(m - 20, m - 6);
+  c.lineTo(m + 20, m - 6);
+  c.moveTo(m - 4, m - 6);
+  c.lineTo(m, m + 22);
+  c.lineTo(m + 4, m - 6);
+  c.stroke();
+}
+
+function kegIcon(c: Ctx, w: number): void {
+  const m = w / 2;
+  // 木桶
+  roundRect(c, m - 15, m - 10, 30, 30, 8);
+  fillStroke(c, vgrad(c, m - 10, m + 20, '#c07a3a', '#6a3a14'), 3);
+  for (const y of [m - 3, m + 12]) {
+    c.fillStyle = '#5a5a62';
+    c.fillRect(m - 15, y - 2, 30, 4);
+  }
+  c.fillStyle = '#ffe080';
+  c.font = 'bold 13px Arial';
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillText('TNT', m, m + 5);
+  // 引信 + 火花
+  c.strokeStyle = OUTLINE;
+  c.lineWidth = 3;
+  c.beginPath();
+  c.moveTo(m, m - 10);
+  c.quadraticCurveTo(m + 4, m - 18, m + 10, m - 20);
+  c.stroke();
+  poly(c, starPts(m + 12, m - 21, 8, 3, 6));
+  fillStroke(c, '#ffd040', 2, '#c04010');
+}
+
+function frostIcon(c: Ctx, w: number): void {
+  const m = w / 2;
+  // 三根冰晶
+  const shard = (cx: number, cy: number, h: number, wd: number, rot: number) => {
+    c.save();
+    c.translate(cx, cy);
+    c.rotate(rot);
+    poly(c, [0, -h, wd, -h * 0.2, wd * 0.6, h * 0.5, -wd * 0.6, h * 0.5, -wd, -h * 0.2]);
+    fillStroke(c, vgrad(c, -h, h * 0.5, '#f0ffff', '#3aa0e0'), 2.5);
+    c.restore();
+  };
+  shard(m - 11, m + 6, 15, 7, -0.45);
+  shard(m + 11, m + 6, 15, 7, 0.45);
+  shard(m, m + 2, 22, 9, 0);
+  c.fillStyle = 'rgba(255,255,255,0.8)';
+  c.fillRect(m - 2, m - 16, 3, 12);
+}
+
+function potionIcon(c: Ctx, w: number): void {
+  const m = w / 2;
+  // 瓶身
+  c.beginPath();
+  c.moveTo(m - 6, m - 16);
+  c.lineTo(m - 6, m - 6);
+  c.arc(m, m + 7, 16, -Math.PI / 2 - 0.4, Math.PI * 1.5 + 0.4, false);
+  c.lineTo(m + 6, m - 16);
+  c.closePath();
+  fillStroke(c, 'rgba(220,240,255,0.9)', 3);
+  // 紅色藥水
+  c.save();
+  c.beginPath();
+  c.arc(m, m + 7, 13, 0, Math.PI * 2);
+  c.clip();
+  c.fillStyle = vgrad(c, m - 2, m + 20, '#ff6a7a', '#b01030');
+  c.fillRect(m - 16, m - 1, 32, 24);
+  c.restore();
+  // 愛心
+  c.fillStyle = '#fff0f0';
+  c.beginPath();
+  c.arc(m - 3, m + 7, 3.5, Math.PI, 0);
+  c.arc(m + 3, m + 7, 3.5, Math.PI, 0);
+  c.lineTo(m, m + 15);
+  c.closePath();
+  c.fill();
+  // 軟木塞
+  roundRect(c, m - 7, m - 22, 14, 8, 2);
+  fillStroke(c, '#b07a40', 2.5);
+}
+
+function sackIcon(c: Ctx, w: number): void {
+  const m = w / 2;
+  // 錢袋
+  c.beginPath();
+  c.moveTo(m - 7, m - 12);
+  c.bezierCurveTo(m - 26, m + 2, m - 22, m + 22, m, m + 22);
+  c.bezierCurveTo(m + 22, m + 22, m + 26, m + 2, m + 7, m - 12);
+  c.closePath();
+  fillStroke(c, vgrad(c, m - 12, m + 22, '#d8b070', '#8a5a24'), 3);
+  poly(c, [m - 9, m - 22, m + 9, m - 22, m + 5, m - 12, m - 5, m - 12]);
+  fillStroke(c, '#c09050', 2.5);
+  c.fillStyle = '#c03020';
+  c.fillRect(m - 8, m - 14, 16, 4);
+  c.fillStyle = '#ffe066';
+  c.font = 'bold 18px Arial';
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.strokeStyle = '#6a3a00';
+  c.lineWidth = 3;
+  c.strokeText('$', m, m + 7);
+  c.fillText('$', m, m + 7);
+}
+
 const ICONS: Record<string, Fn> = {
+  ic_gem: gemIcon,
+  it_keg: kegIcon,
+  it_frost: frostIcon,
+  it_potion: potionIcon,
+  it_gold: sackIcon,
   ic_upgrade: arrowUp,
   ic_sell: coinIcon,
   ic_coin: coinIcon,

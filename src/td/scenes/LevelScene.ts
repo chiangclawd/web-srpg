@@ -11,6 +11,7 @@ import type { LevelDef, LevelMode, TowerLevelDef, TowerType } from '../sim/defs'
 import { challengeLevel } from '../data/challenges';
 import { evaluateAchievements } from '../data/achievements';
 import { STORY } from '../data/story';
+import { GEMS_PER_ACHIEVEMENT, ITEMS, KEG, gemReward, type ItemId } from '../data/items';
 import { RANGE_Y, inEllipse } from '../sim/math';
 import { paintLevel, paintBuildSpot } from '../art/terrain';
 import { THEMES } from '../art/scenery';
@@ -26,7 +27,7 @@ import type { LevelUIScene, InfoData } from './LevelUIScene';
 const STEP = 1 / 60;
 const BG_SCALE = RS >= 2 ? 1.5 : 1;
 
-type Mode = 'idle' | 'hero' | 'meteor' | 'reinforce' | 'rally';
+type Mode = 'idle' | 'hero' | 'meteor' | 'reinforce' | 'rally' | 'keg';
 
 export class LevelScene extends Phaser.Scene {
   world!: World;
@@ -40,6 +41,8 @@ export class LevelScene extends Phaser.Scene {
   paused = false;
   speed = 1;
   mode: Mode = 'idle';
+  /** 本場結算獲得的寶石（結算畫面顯示） */
+  gemsEarned = 0;
 
   private acc = 0;
   private enemyViews = new Map<number, UnitView>();
@@ -76,6 +79,7 @@ export class LevelScene extends Phaser.Scene {
     this.paused = false;
     this.speed = save().settings.speed ?? 1;
     this.mode = 'idle';
+    this.gemsEarned = 0;
     this.acc = 0;
     this.enemyViews = new Map();
     this.soldierViews = new Map();
@@ -239,7 +243,7 @@ export class LevelScene extends Phaser.Scene {
 
   private onSpotTap(i: number): void {
     if (this.world.result) return;
-    if (this.mode === 'meteor' || this.mode === 'reinforce') {
+    if (this.mode === 'meteor' || this.mode === 'reinforce' || this.mode === 'keg') {
       const s = this.world.spots[i];
       this.onGroundTap(s.x, s.y);
       return;
@@ -280,6 +284,9 @@ export class LevelScene extends Phaser.Scene {
         }
         return;
       }
+      case 'keg':
+        if (this.consumeItem('keg', x, y)) this.setMode('idle');
+        return;
       case 'rally': {
         const t = this.menuTarget?.tower;
         if (t && w.setRally(t, x, y)) {
@@ -337,6 +344,8 @@ export class LevelScene extends Phaser.Scene {
       this.ui.toast(T('meteorDesc'));
     } else if (m === 'reinforce') {
       this.ui.toast(T('reinforceDesc'));
+    } else if (m === 'keg') {
+      this.ui.toast(L(ITEMS.keg.desc));
     } else if (m === 'rally') {
       const t = this.menuTarget?.tower;
       if (t) this.drawRange(t.x, t.y, t.def.range, 0x6aa0ff);
@@ -369,6 +378,39 @@ export class LevelScene extends Phaser.Scene {
     }
     this.closeMenu();
     this.setMode(this.mode === kind ? 'idle' : kind);
+  }
+
+  /** 道具列按鈕：需要目標的進入選位模式，其餘立即使用 */
+  useItem(id: ItemId): void {
+    if (!this.world.spellsEnabled) {
+      sfx.play('error');
+      this.ui.toast(T('noSpells'));
+      return;
+    }
+    if ((save().items[id] ?? 0) <= 0) {
+      sfx.play('error');
+      this.ui.toast(T('noItems'));
+      return;
+    }
+    if (ITEMS[id].targeted) {
+      this.closeMenu();
+      this.setMode(this.mode === id ? 'idle' : (id as Mode));
+      return;
+    }
+    this.consumeItem(id);
+  }
+
+  private consumeItem(id: ItemId, x = 0, y = 0): boolean {
+    if (!this.world.useItem(id, x, y)) {
+      sfx.play('error');
+      if (id === 'potion') this.ui.toast(T('livesFull'));
+      return false;
+    }
+    const sv = save();
+    sv.items[id] = Math.max(0, (sv.items[id] ?? 0) - 1);
+    persist();
+    this.ui.refreshItems();
+    return true;
   }
 
   togglePause(force?: boolean): void {
@@ -640,6 +682,11 @@ export class LevelScene extends Phaser.Scene {
     this.positionExitMarks();
   }
 
+  /** 右下角道具列（HUD）遮住的區域：波次按鈕與出口標記要避開 */
+  private underItemBar(x: number, y: number, right: number): boolean {
+    return x > right - 250 && y > VIEW_H - 90;
+  }
+
   private positionExitMarks(): void {
     const v = this.viewRect();
     for (const img of this.exitMarks) {
@@ -647,7 +694,7 @@ export class LevelScene extends Phaser.Scene {
       let pos = p.posAt(p.length);
       for (let d = p.length; d > 0; d -= 8) {
         const q = p.posAt(d);
-        if (q.x > v.left + 30 && q.x < v.right - 30 && q.y > 60 && q.y < VIEW_H - 30) {
+        if (q.x > v.left + 30 && q.x < v.right - 30 && q.y > 60 && q.y < VIEW_H - 30 && !this.underItemBar(q.x, q.y, v.right)) {
           pos = q;
           break;
         }
@@ -690,7 +737,7 @@ export class LevelScene extends Phaser.Scene {
       let pos = p.posAt(0);
       for (let d = 0; d < p.length; d += 8) {
         const q = p.posAt(d);
-        if (q.x > v.left + 40 && q.x < v.right - 40 && q.y > 70 && q.y < VIEW_H - 40) {
+        if (q.x > v.left + 40 && q.x < v.right - 40 && q.y > 70 && q.y < VIEW_H - 40 && !this.underItemBar(q.x, q.y, v.right)) {
           pos = q;
           break;
         }
@@ -935,6 +982,9 @@ export class LevelScene extends Phaser.Scene {
         case 'status':
           this.statusFx(ev.e, ev.kind);
           break;
+        case 'item':
+          this.itemFx(ev.id, ev.x, ev.y);
+          break;
         case 'summon':
           this.fx.smokePuff(ev.x, ev.y - 10, 10);
           sfx.play('boss', 0.5);
@@ -949,7 +999,7 @@ export class LevelScene extends Phaser.Scene {
           const hit = this.add.rectangle(ev.t.x, ev.t.y - 30, 76, 84, 0xffffff, 0.001).setInteractive({ useHandCursor: true }).setDepth(ev.t.y);
           hit.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, e2: Phaser.Types.Input.EventData) => {
             e2?.stopPropagation?.();
-            if (this.mode === 'meteor' || this.mode === 'reinforce' || this.mode === 'hero') {
+            if (this.mode === 'meteor' || this.mode === 'reinforce' || this.mode === 'hero' || this.mode === 'keg') {
               this.onGroundTap(ev.t.x, ev.t.y + 10);
               return;
             }
@@ -1136,6 +1186,8 @@ export class LevelScene extends Phaser.Scene {
       if (t < e.rootUntil) tint = 0xc0a070;
       else if (e.dots.length) tint = 0xb8ff8a;
       else if (e.slowMul < 1 && t < e.slowUntil) tint = 0x9ad0ff;
+      const frozen = t < e.frozenUntil;
+      if (frozen) tint = 0xb8e4ff;
       v.update({
         x: e.x,
         y: e.y,
@@ -1146,7 +1198,8 @@ export class LevelScene extends Phaser.Scene {
         lastAttackAt: e.lastAttackAt,
         lastHitAt: e.lastHitAt,
         tint,
-        stunned: t < e.stunUntil,
+        stunned: t < e.stunUntil && !frozen,
+        frozen,
       });
       if (e.dots.length && Math.random() < 0.05) this.fx.poisonPuff(e.x, e.y - e.def.height * 0.6);
     }
@@ -1208,6 +1261,7 @@ export class LevelScene extends Phaser.Scene {
       sv.heroes[hero.def.id] = { xp: Math.round(hero.startXp + (victory ? gained : gained * 0.5)) };
     }
     let newStars = 0;
+    const prevCampaignStars = sv.stars[this.level.id] ?? 0;
     const reached = victory ? w.waveCount : Math.max(0, w.waveIndex + 1);
     let newRecord = false;
     if (this.mode0 === 'endless') {
@@ -1256,11 +1310,37 @@ export class LevelScene extends Phaser.Scene {
       },
       sv,
     );
+    // 寶石：本場獎勵＋新成就
+    const firstClear = this.mode0 === 'campaign' ? victory && prevCampaignStars === 0 : newStars > 0;
+    const gems = gemReward(this.mode0, victory, stars, firstClear, reached) + fresh.length * GEMS_PER_ACHIEVEMENT;
+    sv.gems = (sv.gems ?? 0) + gems;
+    this.gemsEarned = gems;
     persist();
     sfx.play(victory || newRecord ? 'victory' : 'defeat');
     if (this.mode0 === 'endless') this.ui.showEndlessResult(reached, sv.endless[this.level.id] ?? reached, newRecord);
     else this.ui.showResult(victory, stars, newStars);
     fresh.forEach((id, i) => this.time.delayedCall(1800 + i * 2200, () => this.ui.achievementToast(id)));
+  }
+
+  private itemFx(id: ItemId, x: number, y: number): void {
+    switch (id) {
+      case 'keg':
+        sfx.play('explosion');
+        this.fx.ring(x, y, KEG.r, 0xffa040, 420);
+        break;
+      case 'frost':
+        sfx.play('freeze');
+        this.cameras.main.flash(350, 150, 210, 255);
+        for (const e of this.world.enemies) if (e.alive) this.fx.ring(e.x, e.y - 10, 26, 0x9ae4ff, 500);
+        break;
+      case 'potion':
+        sfx.play('heal');
+        break;
+      case 'gold':
+        sfx.play('coin');
+        break;
+    }
+    this.ui.itemPop(id);
   }
 
   restart(): void {

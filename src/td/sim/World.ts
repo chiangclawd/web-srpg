@@ -1,3 +1,4 @@
+import { FROST_SEC, GOLD_SACK, KEG, POTION_LIVES, type ItemId } from '../data/items';
 import { Path } from './Path';
 import { Rng, clamp, dist, dist2, ellipseDist, inEllipse, type Vec } from './math';
 import type { DamageKind, EnemyDef, HeroDef, LevelDef, Range2, TowerLevelDef, TowerType } from './defs';
@@ -59,6 +60,7 @@ export type SimEvent =
   | { type: 'sell'; t: Tower; refund: number }
   | { type: 'skillBuy'; t: Tower; skill: string }
   | { type: 'spell'; kind: 'meteor' | 'reinforce'; x: number; y: number }
+  | { type: 'item'; id: ItemId; x: number; y: number }
   | { type: 'zone'; z: Zone }
   | { type: 'lifeLost'; amount: number; x: number; y: number }
   | { type: 'victory' }
@@ -426,6 +428,39 @@ export class World {
       this.addProjectile(p);
     }
     this.emit({ type: 'spell', kind: 'meteor', x, y });
+    return true;
+  }
+
+  /** 道具（消耗品）：與法術相同，鋼鐵挑戰中不可用 */
+  useItem(id: ItemId, x = 0, y = 0): boolean {
+    if (!this.spellsEnabled || this.result) return false;
+    switch (id) {
+      case 'keg':
+        for (const e of this.enemies) {
+          if (!e.alive || e.flying || !inEllipse(x, y, e.x, e.y, KEG.r)) continue;
+          this.damageEnemy(e, KEG.dmg, 'true', 'spell');
+          if (e.alive) this.applyStun(e, KEG.stun);
+        }
+        this.emit({ type: 'explosion', x, y, r: KEG.r, kind: 'meteor' });
+        break;
+      case 'frost':
+        if (!this.enemies.some((e) => e.alive)) return false;
+        for (const e of this.enemies) {
+          if (!e.alive) continue;
+          const dur = e.def.boss ? FROST_SEC * 0.3 : FROST_SEC;
+          e.stunUntil = Math.max(e.stunUntil, this.time + dur);
+          e.frozenUntil = Math.max(e.frozenUntil, this.time + dur);
+        }
+        break;
+      case 'potion':
+        if (this.lives >= this.maxLives) return false;
+        this.lives = Math.min(this.maxLives, this.lives + POTION_LIVES);
+        break;
+      case 'gold':
+        this.gold += GOLD_SACK;
+        break;
+    }
+    this.emit({ type: 'item', id, x, y });
     return true;
   }
 

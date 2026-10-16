@@ -48,6 +48,8 @@ export class Enemy {
 
   /** 波次血量倍率（召喚物沿用） */
   waveMul = 1;
+  /** 冰霜水晶：冰凍到此時間（畫面顯示冰藍色） */
+  frozenUntil = 0;
 
   constructor(
     readonly def: EnemyDef,

@@ -64,6 +64,29 @@ const FX: Record<string, { w: number; h: number; paint: Fn }> = {
       fillStroke(c, vgrad(c, 2, w, '#fff3a0', '#f0a020'), 2);
     },
   },
+  fx_iceblock: {
+    w: 48,
+    h: 64,
+    paint: (c, w, h) => {
+      // 半透明冰塊：圓角方塊 + 斜向高光 + 裂紋
+      roundRect(c, 3, 3, w - 6, h - 6, 8);
+      c.fillStyle = vgrad(c, 0, h, 'rgba(220,250,255,0.55)', 'rgba(90,170,240,0.6)');
+      c.fill();
+      c.lineWidth = 2.5;
+      c.strokeStyle = 'rgba(235,255,255,0.95)';
+      c.stroke();
+      c.fillStyle = 'rgba(255,255,255,0.5)';
+      poly(c, [9, 10, 18, 10, 9, 34]);
+      c.fill();
+      c.strokeStyle = 'rgba(255,255,255,0.7)';
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.moveTo(w - 12, h - 18);
+      c.lineTo(w - 20, h - 28);
+      c.lineTo(w - 15, h - 36);
+      c.stroke();
+    },
+  },
   fx_ring: {
     w: 128,
     h: 128,
