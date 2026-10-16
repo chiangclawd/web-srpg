@@ -1,0 +1,8 @@
+The attached images are character sprites from my 2D fantasy tower-defense game. Use them as a strict STYLE reference: same chibi proportions (big head, compact body), same clean dark-brown outlines, same soft cel shading and painted detail level, same warm color treatment and rendering quality.
+
+Draw ONE NEW enemy sprite in exactly that style: the Sandstorm Wyrm boss — a giant armored sandworm bursting up out of a small mound of desert sand, segmented tan-and-bronze armored body with dark purple spikes along its back, huge round toothy maw with rows of white fangs, small glowing amber eyes. Imposing boss creature.
+
+Requirements:
+- Full body, single creature, 3/4 side view, head facing RIGHT and rearing up out of the sand.
+- Centered with generous empty margin around it; nothing cropped.
+- Background: perfectly flat, uniform solid magenta (#FF00FF) everywhere around the creature. No gradient, no ground, no cast shadow, no scenery, no text, no frame.

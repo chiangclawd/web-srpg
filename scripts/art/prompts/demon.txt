@@ -1,0 +1,8 @@
+The attached images are character sprites from my 2D fantasy tower-defense game. Use them as a strict STYLE reference: same chibi proportions (big head, compact body), same clean dark-brown outlines, same soft cel shading and painted detail level, same warm color treatment and rendering quality.
+
+Draw ONE NEW enemy sprite in exactly that style: a winged imp demon — crimson red skin, small curved black horns, leathery dark-red bat wings, glowing yellow eyes, a wicked grin, clawed hands and a pointed tail.
+
+Requirements:
+- Full body, single creature, 3/4 side view facing RIGHT, hovering in an aggressive pose.
+- Centered with generous empty margin around it; nothing cropped.
+- Background: perfectly flat, uniform solid bright green (#00FF00) everywhere around the creature. No gradient, no ground, no cast shadow, no scenery, no text, no frame.

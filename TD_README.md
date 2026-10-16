@@ -47,6 +47,21 @@ MODE=daily DAILY_KEY=2026-10-20 npm run td:optimize   # 檢查某天的每日挑
 npx tsx scripts/td-level-tool.ts suggest l3 11   # 自動建議建造點
 ```
 
+## 🎨 美術流程（AI 手繪魔物）
+
+魔物 sprite（`public/assets/sprites/mon/*.webp`）由 Gemini 圖片模型生成，以既有的 chibi 敵人 sprite 當風格參考：
+
+```bash
+# 金鑰由雲端環境的「網路密鑰」自動附加（x-goog-api-key → generativelanguage.googleapis.com），程式不放金鑰
+NODE_USE_ENV_PROXY=1 node scripts/art/gemini-image.mjs raw/troll.png scripts/art/prompts/troll.txt \
+  public/assets/sprites/enemy_sword.png public/assets/sprites/enemy_archer.png public/assets/sprites/enemy_mage.png
+python3 scripts/art/key.py raw/troll.png keyed/troll.png 256   # 去背（取邊框背景色）、裁切、縮放
+# 再轉成 WebP 放到 public/assets/sprites/mon/；BootScene 載入後取代同名的程序繪圖紋理 mon_*（載入失敗則保留程序繪圖）
+```
+
+- 模型：`gemini-2.5-flash-image`（約 US$0.04／張）；提示詞在 `scripts/art/prompts/`，背景用洋紅色，紫／紅色角色改用綠色
+- 首批 10 張（8 種魔物＋變羊＋石像）約 US$0.39
+
 ## 🧱 架構
 
 ```
