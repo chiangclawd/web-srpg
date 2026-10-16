@@ -215,6 +215,9 @@ export interface ScenarioDef {
 export interface DialogueLine {
   speaker: string;
   text: string;
+  /** 全英化（Part B）：lang='en' 時顯示這些，未填則 fallback 到 zh 版本。 */
+  speaker_en?: string;
+  text_en?: string;
 }
 
 export interface CutsceneScript {

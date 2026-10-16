@@ -50,7 +50,7 @@ import {
 import { EQUIPMENT } from './data/equipment';
 import type { CommanderProgress } from './types';
 import { audio, type BgmMood } from './utils/audio';
-import { getSettings, cycleAnimSpeed, cycleDifficulty, difficultyLabel, getEnemyAttackMul, cycleTheme, getThemeColors } from './utils/settings';
+import { getSettings, cycleAnimSpeed, cycleDifficulty, difficultyLabel, getEnemyAttackMul, getPlayerDefenseMul, cycleTheme, getThemeColors, toggleColorblind, toggleThreatAlwaysOn } from './utils/settings';
 import { tryUnlockAchievement } from './utils/achievementToast';
 import { CHAPTER_COMPLETE_ACHIEVEMENT } from './data/achievements';
 import { addHitRect } from './utils/uiHit';
@@ -221,6 +221,8 @@ export class BattleScene extends Phaser.Scene {
     // 威脅疊圖在棋盤之上、選取高亮(5)與單位之下，避免蓋住可移動綠格與 sprite
     this.threatGfx = this.add.graphics();
     this.threatGfx.setDepth(4);
+    // 無障礙（Wave 8）：threatAlwaysOn 開啟時，戰鬥開始即開威脅疊圖（後續每回合自動重繪）
+    if (getSettings().threatAlwaysOn) this.threatActive = true;
     this.highlightGfx = this.add.graphics();
     this.highlightGfx.setDepth(5);
 
@@ -1179,8 +1181,36 @@ export class BattleScene extends Phaser.Scene {
     );
     items.push(themeTxt);
 
+    // 無障礙：色盲輔助（Wave 8）
+    const cbTxt = this.makeMenuLabel(
+      w / 2,
+      h / 2 + 190,
+      `色盲輔助：${getSettings().colorblindMode ? '開' : '關'}`,
+      '#9ad28a',
+      () => {
+        const on = toggleColorblind();
+        cbTxt.setText(`色盲輔助：${on ? '開' : '關'}`);
+      }
+    );
+    items.push(cbTxt);
+
+    // 無障礙：常駐威脅範圍（Wave 8）— 切換後立即套用到當前戰場
+    const threatTxt = this.makeMenuLabel(
+      w / 2,
+      h / 2 + 235,
+      `常駐威脅範圍：${getSettings().threatAlwaysOn ? '開' : '關'}`,
+      '#d2a08a',
+      () => {
+        const on = toggleThreatAlwaysOn();
+        threatTxt.setText(`常駐威脅範圍：${on ? '開' : '關'}`);
+        this.threatActive = on;
+        this.drawThreatOverlay();
+      }
+    );
+    items.push(threatTxt);
+
     items.push(
-      this.makeMenuLabel(w / 2, h / 2 + 200, '回標題', '#cc8888', () => {
+      this.makeMenuLabel(w / 2, h / 2 + 290, '回標題', '#cc8888', () => {
         this.unpause();
         this.scene.start('TitleScene');
       })
@@ -1762,6 +1792,7 @@ export class BattleScene extends Phaser.Scene {
       attackerEmpower: isCounter ? undefined : atk.pendingEmpower?.empower,
       defenderStanceMul: def.stanceMods?.incomingMul,
       enemyAttackMul: getEnemyAttackMul(),
+      playerDefenseMul: getPlayerDefenseMul(),
       attackerWeaponHitBonus: atk.weapon?.hitBonus,
       attackerWeaponCritBonus: atk.weapon?.critBonus,
       flankMul: flank.mul,
@@ -1803,8 +1834,14 @@ export class BattleScene extends Phaser.Scene {
     } else {
       def.showFloatingText('MISS', '#dddddd', '22px');
     }
+    // 色盲輔助（Wave 8）：剋制標示加形狀（🔺=剋、▼=弱）；不啟用時跟原本一致。
+    const cb = getSettings().colorblindMode;
     const tag =
-      result.counterLabel === '優勢' ? '【剋】' : result.counterLabel === '劣勢' ? '【弱】' : '';
+      result.counterLabel === '優勢'
+        ? cb ? '【剋🔺】' : '【剋】'
+        : result.counterLabel === '劣勢'
+        ? cb ? '【弱▼】' : '【弱】'
+        : '';
     const flankTag = flank.label ? `【${flank.label}】` : '';
     const bondTag = bond.name ? `【${bond.name}】` : '';
     const arrow = isCounter ? `反擊 ${def.name}` : `→ ${def.name}`;
@@ -2120,6 +2157,7 @@ export class BattleScene extends Phaser.Scene {
       attackerEmpower: attacker.pendingEmpower?.empower,
       defenderStanceMul: defender.stanceMods?.incomingMul,
       enemyAttackMul: getEnemyAttackMul(),
+      playerDefenseMul: getPlayerDefenseMul(),
       attackerWeaponHitBonus: attacker.weapon?.hitBonus,
       attackerWeaponCritBonus: attacker.weapon?.critBonus,
       flankMul: flank.mul,
@@ -2150,8 +2188,14 @@ export class BattleScene extends Phaser.Scene {
         })
       : null;
 
+    // 色盲輔助：剋制標示加形狀（Wave 8）
+    const cbT = getSettings().colorblindMode;
     const tag = (lbl: '優勢' | '劣勢' | '普通') =>
-      lbl === '優勢' ? '【剋】' : lbl === '劣勢' ? '【弱】' : '';
+      lbl === '優勢'
+        ? cbT ? '【剋🔺】' : '【剋】'
+        : lbl === '劣勢'
+        ? cbT ? '【弱▼】' : '【弱】'
+        : '';
 
     // 追擊（速度差達門檻）：攻方 / 守方可能各打兩下，預判須反映加倍傷害
     const atkDoubles = doublesAttack(attacker.speed, defender.speed);
@@ -2338,6 +2382,7 @@ export class BattleScene extends Phaser.Scene {
         defenderAdjacentAllies: this.countAdjacentAllies(defender),
         defenderStanceMul: defender.stanceMods?.incomingMul,
         enemyAttackMul: getEnemyAttackMul(),
+        playerDefenseMul: getPlayerDefenseMul(),
         attackerWeaponHitBonus: attacker.weapon?.hitBonus,
         attackerWeaponCritBonus: attacker.weapon?.critBonus,
       });
