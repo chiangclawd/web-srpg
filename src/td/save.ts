@@ -28,6 +28,8 @@ export interface SaveData {
   storySeen: string[];
   /** 已看過的首次提示 */
   tipsSeen: string[];
+  /** 已看過的最新更新內容編號 */
+  newsSeen: number;
   settings: {
     music: number;
     sfx: number;
@@ -60,6 +62,7 @@ function defaults(): SaveData {
     items: { keg: 1, frost: 1, potion: 1, gold: 1 },
     storySeen: [],
     tipsSeen: [],
+    newsSeen: 0,
     settings: { music: 0.6, sfx: 0.8, lang: nav.startsWith('zh') ? 'zh' : 'en', difficulty: 'normal', speed: 1, shake: true, quality: 'auto' },
     stats: { kills: 0, plays: 0, victories: 0, towers: 0 },
   };

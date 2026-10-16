@@ -1,7 +1,9 @@
 # 🏰 王國防線 Kingdom Bastion — 塔防新作
 
 > 與《西方戰術 SRPG》共用世界觀的商業級塔防遊戲（玩法參考 Kingdom Rush 系列）。
-> 線上版：部署後位於 `https://chiangclawd.github.io/web-srpg/td.html`
+> 線上版：https://chiangclawd.github.io/web-srpg/td.html （合併到 main 後由 GitHub Pages 自動部署；分享連結會顯示預覽卡片）
+>
+> 每次部署新內容時，在 `src/td/data/changelog.ts` 最前面加一筆，玩家開啟遊戲時會自動看到「更新內容」。
 
 ## 🎮 遊戲內容
 

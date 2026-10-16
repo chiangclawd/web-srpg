@@ -105,3 +105,14 @@ test('achievement ids are unique and endless milestones unlock', () => {
   assert.ok(!fresh.includes('first_win'));
   assert.deepEqual(evaluateAchievements(o, sv), [], 'no duplicates on a second evaluation');
 });
+
+test('changelog entries are newest first, uniquely numbered and bilingual', async () => {
+  const { CHANGELOG } = await import('../../src/td/data/changelog');
+  assert.ok(CHANGELOG.length > 0);
+  for (let i = 1; i < CHANGELOG.length; i++) assert.ok(CHANGELOG[i - 1].id > CHANGELOG[i].id, 'ids strictly decrease');
+  for (const e of CHANGELOG) {
+    assert.ok(e.title.zh && e.title.en);
+    assert.ok(e.items.length > 0 && e.items.length <= 8, 'fits in the news panel');
+    for (const it of e.items) assert.ok(it.zh && it.en);
+  }
+});
