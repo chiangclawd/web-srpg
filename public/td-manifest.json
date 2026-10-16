@@ -1,0 +1,12 @@
+{
+  "name": "王國防線 Kingdom Bastion",
+  "short_name": "王國防線",
+  "description": "塔防策略遊戲 — 建塔、升級、指揮英雄守住王國",
+  "display": "standalone",
+  "orientation": "landscape",
+  "start_url": "./td.html",
+  "scope": ".",
+  "background_color": "#120d08",
+  "theme_color": "#1b130b",
+  "lang": "zh-TW"
+}

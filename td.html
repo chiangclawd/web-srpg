@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="王國防線" />
+    <meta name="theme-color" content="#1b130b" />
+    <link rel="manifest" href="td-manifest.json" />
+    <title>王國防線 Kingdom Bastion</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #120d08;
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+        font-family: "Trebuchet MS", "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+        color: #f3e6c8;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+      }
+      #game {
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+      }
+      #game canvas {
+        display: block;
+        touch-action: none;
+      }
+      #rotate-prompt { display: none; }
+      @media (max-width: 900px) and (orientation: portrait) {
+        #rotate-prompt {
+          display: flex;
+          position: fixed;
+          inset: 0;
+          background: #120d08;
+          align-items: center;
+          justify-content: center;
+          flex-direction: column;
+          gap: 20px;
+          z-index: 9999;
+          text-align: center;
+          padding: 24px;
+        }
+        #rotate-prompt .icon { font-size: 64px; animation: rot 1.6s ease-in-out infinite; }
+        #rotate-prompt .title { font-size: 22px; font-weight: bold; color: #ffd36b; }
+        #rotate-prompt .desc { font-size: 15px; color: #b8a888; line-height: 1.5; }
+        #game { visibility: hidden; }
+      }
+      @keyframes rot {
+        0%, 50%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(-90deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <div id="rotate-prompt">
+      <div class="icon">📱</div>
+      <div class="title">請將裝置橫向使用</div>
+      <div class="desc">王國防線為橫屏遊戲<br/>Rotate your device to play</div>
+    </div>
+    <script type="module" src="/src/td/main.ts"></script>
+  </body>
+</html>

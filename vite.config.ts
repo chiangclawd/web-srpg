@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 // 把 package.json 版本 + 當前 git short SHA + build 日期注入成全域常數，
 // TitleScene 右下角顯示，使用者可確認部署是否真的拿到最新 commit。
@@ -31,5 +32,12 @@ export default defineConfig({
     target: 'es2022',
     outDir: 'dist',
     sourcemap: true,
+    rollupOptions: {
+      // 多頁面：index.html = 戰術 SRPG、td.html = 塔防《王國防線》
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        td: fileURLToPath(new URL('./td.html', import.meta.url)),
+      },
+    },
   },
 });

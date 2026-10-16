@@ -1,0 +1,170 @@
+import { setLang, type Lang } from './i18n';
+import type { Difficulty } from './sim/World';
+import type { Quality } from './config';
+
+const KEY = 'kb_td_save_v1';
+
+export interface SaveData {
+  version: 1;
+  /** 每關最佳星數 */
+  stars: Record<string, number>;
+  /** 星數升級（每欄已購買階數） */
+  upgrades: Record<string, number>;
+  heroes: Record<string, { xp: number }>;
+  selectedHero: string;
+  seenEnemies: string[];
+  /** 已播放過解鎖動畫的關卡 */
+  unlockedSeen: string[];
+  /** 挑戰模式完成紀錄（各 1 星） */
+  challenges: Record<string, { heroic?: boolean; iron?: boolean }>;
+  achievements: string[];
+  /** 無盡模式每關最佳波數 */
+  endless: Record<string, number>;
+  /** 商店貨幣 */
+  gems: number;
+  /** 道具庫存 */
+  items: Record<string, number>;
+  /** 已看過開場劇情的關卡 */
+  storySeen: string[];
+  /** 已看過的首次提示 */
+  tipsSeen: string[];
+  settings: {
+    music: number;
+    sfx: number;
+    lang: Lang;
+    difficulty: Difficulty;
+    speed: number;
+    /** 爆炸 / 首領登場時畫面震動 */
+    shake: boolean;
+    /** 畫質（重新整理後生效） */
+    quality: Quality;
+  };
+  stats: { kills: number; plays: number; victories: number; towers: number };
+}
+
+function defaults(): SaveData {
+  const nav = typeof navigator !== 'undefined' ? navigator.language : 'zh-TW';
+  return {
+    version: 1,
+    stars: {},
+    upgrades: {},
+    heroes: { arthur: { xp: 0 }, elena: { xp: 0 }, lila: { xp: 0 }, rain: { xp: 0 }, aria: { xp: 0 }, sharon: { xp: 0 } },
+    selectedHero: 'arthur',
+    seenEnemies: [],
+    unlockedSeen: ['l1'],
+    challenges: {},
+    achievements: [],
+    endless: {},
+    gems: 0,
+    // 新玩家各送一個，讓道具列一開始就看得到
+    items: { keg: 1, frost: 1, potion: 1, gold: 1 },
+    storySeen: [],
+    tipsSeen: [],
+    settings: { music: 0.6, sfx: 0.8, lang: nav.startsWith('zh') ? 'zh' : 'en', difficulty: 'normal', speed: 1, shake: true, quality: 'auto' },
+    stats: { kills: 0, plays: 0, victories: 0, towers: 0 },
+  };
+}
+
+let data: SaveData = defaults();
+
+/** 舊存檔缺少的欄位補上預設值 */
+function migrate(parsed: Partial<SaveData>): SaveData {
+  const d = defaults();
+  return {
+    ...d,
+    ...parsed,
+    settings: { ...d.settings, ...(parsed.settings ?? {}) },
+    heroes: { ...d.heroes, ...(parsed.heroes ?? {}) },
+    stats: { ...d.stats, ...(parsed.stats ?? {}) },
+    items: { ...d.items, ...(parsed.items ?? {}) },
+  };
+}
+
+export function loadSave(): SaveData {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) data = migrate(JSON.parse(raw) as Partial<SaveData>);
+  } catch {
+    data = defaults();
+  }
+  setLang(data.settings.lang);
+  return data;
+}
+
+// ───────── 備份碼（換裝置 / 換瀏覽器時手動搬存檔） ─────────
+
+const CODE_PREFIX = 'KB1:';
+
+function toBase64(text: string): string {
+  const bytes = new TextEncoder().encode(text);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+function fromBase64(b64: string): string {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+/** 把目前進度編成一段可複製的文字 */
+export function exportSave(): string {
+  return CODE_PREFIX + toBase64(JSON.stringify(data));
+}
+
+/** 讀入備份碼；格式不對回傳 false 且不動到現有存檔 */
+export function importSave(code: string): boolean {
+  const c = code.replace(/\s+/g, '');
+  if (!c.startsWith(CODE_PREFIX)) return false;
+  try {
+    const parsed = JSON.parse(fromBase64(c.slice(CODE_PREFIX.length))) as Partial<SaveData>;
+    if (!parsed || typeof parsed !== 'object' || typeof parsed.stars !== 'object' || parsed.stars === null) return false;
+    data = migrate(parsed);
+    persist();
+    setLang(data.settings.lang);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function save(): SaveData {
+  return data;
+}
+
+export function persist(): void {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(data));
+  } catch {
+    // 私密模式 / 容量不足：靜默失敗
+  }
+}
+
+/** 清除所有進度（保留音量 / 語言等設定） */
+export function resetProgress(): void {
+  const keep = data.settings;
+  data = defaults();
+  data.settings = keep;
+  persist();
+}
+
+/** 戰役星數 + 挑戰星數（英雄 / 鋼鐵各 1 星） */
+export function totalStars(): number {
+  const campaign = Object.values(data.stars).reduce((a, b) => a + b, 0);
+  let ch = 0;
+  for (const c of Object.values(data.challenges ?? {})) ch += (c.heroic ? 1 : 0) + (c.iron ? 1 : 0);
+  return campaign + ch;
+}
+
+export function spentStars(costs: (col: string, n: number) => number): number {
+  let s = 0;
+  for (const [col, n] of Object.entries(data.upgrades)) s += costs(col, n);
+  return s;
+}
+
+export function resetSave(): void {
+  data = defaults();
+  persist();
+}
