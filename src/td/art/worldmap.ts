@@ -1,13 +1,15 @@
 import { catmullRom } from '../sim/Path';
 import type { Vec } from '../sim/math';
 import { artRng, circle, ellipse, fillStroke, mkCanvas, poly, rgrad, shade, alpha, type Ctx } from './paint';
-import { drawAltar, drawCastle, drawDeadTree, drawHouse, drawPine, drawTree, drawTent } from './scenery';
+import { drawAltar, drawCactus, drawCastle, drawDeadTree, drawDuneRipples, drawHouse, drawPalm, drawPine, drawTree, drawTent } from './scenery';
 
 /**
  * 世界地圖：羊皮紙風格大陸。南方草原（王國）→ 中部森林 → 北方雪原 → 東方楓林 → 東北蠻族要塞。
  * 座標同關卡 1280×720（mapPos 比例 × 尺寸）。
  */
-export function paintWorldMap(w: number, h: number, offX: number, s: number, nodes: (Vec & { theme: string })[]): HTMLCanvasElement {
+export function paintWorldMap(w: number, h: number, offX: number, s: number, nodes: (Vec & { theme: string; bonus?: boolean })[]): HTMLCanvasElement {
+  // 外傳關卡不在主線路線上
+  const main = nodes.filter((n) => !n.bonus);
   const [cv, ctx] = mkCanvas(w * s, h * s);
   ctx.scale(s, s);
   ctx.translate(offX, 0);
@@ -68,8 +70,12 @@ export function paintWorldMap(w: number, h: number, offX: number, s: number, nod
     ctx.fill();
   };
   // 依各關主題在節點周圍鋪地區色
-  const REGION: Record<string, string> = { grass: '#a8c870', forest: '#4f8a3a', snow: '#eef4f8', autumn: '#c8a24a', waste: '#6a5a5e' };
-  for (const n of nodes) region(n.x, n.y, n.theme === 'waste' ? 190 : 210, REGION[n.theme] ?? '#a8c870', 0.75);
+  const REGION: Record<string, string> = { grass: '#a8c870', forest: '#4f8a3a', snow: '#eef4f8', autumn: '#c8a24a', waste: '#6a5a5e', desert: '#ecd28c' };
+  for (const n of nodes) {
+    // 沙漠要蓋過周圍的草原色，加深一些
+    if (n.theme === 'desert') region(n.x, n.y, 230, REGION.desert, 0.95);
+    region(n.x, n.y, n.theme === 'waste' ? 190 : 210, REGION[n.theme] ?? '#a8c870', 0.75);
+  }
   // 紙張紋理
   for (let i = 0; i < 4000; i++) {
     ctx.fillStyle = `rgba(${rnd() < 0.5 ? '60,40,10' : '255,250,230'},${0.04 + rnd() * 0.05})`;
@@ -136,6 +142,11 @@ export function paintWorldMap(w: number, h: number, offX: number, s: number, nod
           if (rnd() < 0.3) items.push({ y, draw: () => mountain(x, y, 0.5 + rnd() * 0.4, false) });
           else items.push({ y, draw: () => drawDeadTree(ctx, x, y, 12, rnd) });
           break;
+        case 'desert':
+          if (rnd() < 0.5) items.push({ y, draw: () => drawCactus(ctx, x, y, 9, rnd) });
+          else if (rnd() < 0.6) items.push({ y, draw: () => drawPalm(ctx, x, y, 9, rnd) });
+          else items.push({ y, draw: () => drawDuneRipples(ctx, x, y, rnd) });
+          break;
         default:
           items.push({ y, draw: () => drawTree(ctx, x, y, 10, ['#4f9a33', '#5fae3c'], rnd, false) });
       }
@@ -154,7 +165,7 @@ export function paintWorldMap(w: number, h: number, offX: number, s: number, nod
   drawHouse(ctx, 300, 600, 0.45);
   drawHouse(ctx, 380, 650, 0.4);
   // 教派深淵之門（最終關附近）
-  const last = nodes[nodes.length - 1];
+  const last = main[main.length - 1];
   if (last) {
     drawAltar(ctx, last.x + 70, last.y - 40, 0.7);
     ctx.fillStyle = rgrad(ctx, last.x + 70, last.y - 60, 4, 70, 'rgba(160,60,255,0.45)', 'rgba(160,60,255,0)');
@@ -171,7 +182,7 @@ export function paintWorldMap(w: number, h: number, offX: number, s: number, nod
   ctx.strokeStyle = '#5a4a2a';
   ctx.stroke();
   // 路線虛線
-  const road = catmullRom(nodes, 20);
+  const road = catmullRom(main, 20);
   ctx.setLineDash([8, 9]);
   ctx.lineWidth = 6;
   ctx.strokeStyle = 'rgba(60,30,10,0.55)';

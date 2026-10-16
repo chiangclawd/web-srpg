@@ -108,6 +108,21 @@ export const THEMES: Record<ThemeId, ThemePalette> = {
     water: '#5a7a6a',
     tuft: '#4c4234',
   },
+  desert: {
+    ground: '#dcbc78',
+    groundLight: '#ead08f',
+    groundDark: '#c29e5a',
+    path: '#c49a5c',
+    pathEdge: '#8a6236',
+    canopy: ['#5f9a3a', '#6fae44', '#4f8a30'],
+    pine: '#4f8a30',
+    trunk: '#8a6236',
+    rock: '#c4865a',
+    flower: ['#ff8a5c', '#ffd36b', '#ff5c7a'],
+    snowy: false,
+    water: '#3ab0c0',
+    tuft: '#b49a50',
+  },
 };
 
 /** 圓頂闊葉樹 */
@@ -430,6 +445,98 @@ export function drawBubbles(ctx: Ctx, x: number, y: number, rnd: () => number): 
     circle(ctx, x + (rnd() - 0.5) * 30, y + (rnd() - 0.5) * 12, 2 + rnd() * 3);
     ctx.lineWidth = 1.5;
     ctx.strokeStyle = 'rgba(200,255,160,0.7)';
+    ctx.stroke();
+  }
+}
+
+/** 棕櫚樹（沙漠綠洲） */
+export function drawPalm(ctx: Ctx, x: number, y: number, r: number, rnd: () => number): void {
+  groundShadow(ctx, x + r * 0.3, y + 2, r * 0.9, r * 0.3, 0.28);
+  const lean = (rnd() - 0.5) * 0.5;
+  const tx = x + lean * r * 1.6;
+  const ty = y - r * 2.1;
+  // 樹幹：一節一節
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = OUTLINE;
+  ctx.lineWidth = r * 0.34 + 3;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.quadraticCurveTo(x + lean * r * 0.4, y - r, tx, ty);
+  ctx.stroke();
+  ctx.strokeStyle = '#a07a46';
+  ctx.lineWidth = r * 0.34;
+  ctx.stroke();
+  for (let k = 1; k < 6; k++) {
+    const t = k / 6;
+    const px = x + (tx - x) * t + lean * r * 0.2 * Math.sin(t * Math.PI);
+    const py = y + (ty - y) * t;
+    ctx.strokeStyle = 'rgba(90,60,30,0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(px - r * 0.16, py);
+    ctx.lineTo(px + r * 0.16, py + 2);
+    ctx.stroke();
+  }
+  // 葉子
+  const n = 7;
+  for (let i = 0; i < n; i++) {
+    const a = -Math.PI / 2 + ((i - (n - 1) / 2) / n) * Math.PI * 1.9 + (rnd() - 0.5) * 0.2;
+    const len = r * (1.2 + rnd() * 0.3);
+    const ex = tx + Math.cos(a) * len;
+    const ey = ty + Math.sin(a) * len * 0.55 + len * 0.35;
+    const mx = tx + Math.cos(a) * len * 0.5;
+    const my = ty + Math.sin(a) * len * 0.5 - r * 0.25;
+    ctx.beginPath();
+    ctx.moveTo(tx, ty);
+    ctx.quadraticCurveTo(mx, my - r * 0.18, ex, ey);
+    ctx.quadraticCurveTo(mx, my + r * 0.12, tx, ty);
+    fillStroke(ctx, i % 2 ? '#5f9a3a' : '#4f8a30', 2);
+  }
+  circle(ctx, tx, ty + 2, r * 0.14);
+  fillStroke(ctx, '#7a4a20', 1.5);
+}
+
+/** 仙人掌 */
+export function drawCactus(ctx: Ctx, x: number, y: number, r: number, rnd: () => number): void {
+  groundShadow(ctx, x + r * 0.2, y + 2, r * 0.6, r * 0.22, 0.28);
+  const body = (bx: number, by: number, w: number, h: number) => {
+    roundRect(ctx, bx - w / 2, by - h, w, h, w / 2);
+    fillStroke(ctx, vgrad(ctx, by - h, by, '#7ab84a', '#4a8a2a'), 2.5);
+    ctx.strokeStyle = 'rgba(40,80,20,0.5)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(bx, by - h + w * 0.4);
+    ctx.lineTo(bx, by - 3);
+    ctx.stroke();
+  };
+  const w = r * 0.5;
+  const h = r * 1.8;
+  // 側枝
+  if (rnd() < 0.85) {
+    const side = rnd() < 0.5 ? -1 : 1;
+    const ay = y - h * (0.4 + rnd() * 0.15);
+    roundRect(ctx, side > 0 ? x : x - w * 1.2, ay - w * 0.35, w * 1.2, w * 0.7, w * 0.35);
+    fillStroke(ctx, '#5a9a38', 2.5);
+    body(x + side * w * 1.05, ay + w * 0.2, w * 0.75, h * 0.42);
+  }
+  body(x, y, w, h);
+  if (rnd() < 0.4) {
+    circle(ctx, x, y - h + 2, w * 0.28);
+    fillStroke(ctx, '#ff7a9a', 1.5);
+  }
+}
+
+/** 沙丘紋路：地面上淺色弧線 */
+export function drawDuneRipples(ctx: Ctx, x: number, y: number, rnd: () => number): void {
+  const n = 2 + Math.floor(rnd() * 3);
+  for (let i = 0; i < n; i++) {
+    const w = 30 + rnd() * 40;
+    const yy = y + i * 7;
+    ctx.strokeStyle = i % 2 ? 'rgba(255,240,200,0.45)' : 'rgba(150,110,60,0.25)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x - w / 2, yy);
+    ctx.quadraticCurveTo(x, yy - 6, x + w / 2, yy);
     ctx.stroke();
   }
 }

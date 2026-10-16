@@ -52,7 +52,7 @@ export type SimEvent =
   | { type: 'heroSkill'; skill: string; x: number; y: number }
   | { type: 'waveStart'; index: number; boss: boolean }
   | { type: 'waveBonus'; gold: number; x: number; y: number }
-  | { type: 'status'; e: Enemy; kind: 'stun' | 'root' | 'poison' | 'sheep' | 'teleport' | 'dodge' | 'enrage' | 'slow' }
+  | { type: 'status'; e: Enemy; kind: 'stun' | 'root' | 'poison' | 'sheep' | 'teleport' | 'dodge' | 'enrage' | 'slow' | 'burrow' | 'surface' }
   | { type: 'summon'; x: number; y: number }
   | { type: 'enemyHeal'; x: number; y: number }
   | { type: 'build'; t: Tower }
@@ -452,7 +452,7 @@ export class World {
       case 'frost':
         if (!this.enemies.some((e) => e.alive)) return false;
         for (const e of this.enemies) {
-          if (!e.alive) continue;
+          if (!e.alive || e.burrowed) continue;
           const dur = e.def.boss ? FROST_SEC * 0.3 : FROST_SEC;
           e.stunUntil = Math.max(e.stunUntil, this.time + dur);
           e.frozenUntil = Math.max(e.frozenUntil, this.time + dur);
@@ -511,7 +511,7 @@ export class World {
         r = 105;
         for (const e of near(r)) {
           this.damageEnemy(e, 50 + 12 * lv, 'magic', 'hero');
-          if (!e.alive) continue;
+          if (!e.alive || e.burrowed) continue;
           const dur = e.def.boss ? 0.9 : 3;
           e.stunUntil = Math.max(e.stunUntil, this.time + dur);
           e.frozenUntil = Math.max(e.frozenUntil, this.time + dur);
@@ -785,6 +785,10 @@ export class World {
       if (en && en.kind === 'enrage') sp *= en.speedMul;
     }
     if (e.sheep) sp = Math.min(sp, 24);
+    if (e.burrowed) {
+      const b = e.def.abilities?.find((a) => a.kind === 'burrow');
+      if (b && b.kind === 'burrow') sp *= b.speedMul;
+    }
     e.d += sp * dt;
     e.moving = true;
     if (e.d >= e.path.length) {
@@ -865,6 +869,23 @@ export class World {
           this.emit({ type: 'status', e, kind: 'teleport' });
           break;
         }
+        case 'burrow': {
+          if (e.burrowed) {
+            if (this.time >= e.burrowUntil || e.remaining < 30) {
+              e.burrowed = false;
+              this.emit({ type: 'status', e, kind: 'surface' });
+            }
+            break;
+          }
+          e.abilityCd[i] -= dt;
+          if (e.abilityCd[i] > 0 || e.remaining < 120 || this.time < e.stunUntil) break;
+          e.abilityCd[i] = a.cd;
+          e.burrowed = true;
+          e.burrowUntil = this.time + a.dur;
+          this.releaseEngagers(e);
+          this.emit({ type: 'status', e, kind: 'burrow' });
+          break;
+        }
         case 'stunTowers': {
           e.abilityCd[i] -= dt;
           if (e.abilityCd[i] > 0) break;
@@ -897,7 +918,7 @@ export class World {
 
   /** 對敵人造成傷害；回傳實際傷害 */
   damageEnemy(e: Enemy, amount: number, kind: DamageKind, src: DamageSourceKind, pierce = 0, silent = false): number {
-    if (!e.alive || amount <= 0) return 0;
+    if (!e.alive || amount <= 0 || e.burrowed) return 0;
     let a = amount;
     if (kind === 'physical') a *= 1 - clamp(e.armor - e.armorShred - pierce, 0, 0.95);
     else if (kind === 'magic') a *= 1 - clamp(e.magicResist, 0, 0.95);
@@ -939,12 +960,14 @@ export class World {
   }
 
   applySlow(e: Enemy, mul: number, dur: number): void {
+    if (e.burrowed) return;
     if (e.def.boss) dur *= 0.5;
     if (mul < e.slowMul || this.time >= e.slowUntil) e.slowMul = Math.min(e.slowMul, mul);
     e.slowUntil = Math.max(e.slowUntil, this.time + dur);
   }
 
   applyStun(e: Enemy, dur: number): void {
+    if (e.burrowed) return;
     if (e.def.boss) dur *= 0.3;
     e.stunUntil = Math.max(e.stunUntil, this.time + dur);
     this.emit({ type: 'status', e, kind: 'stun' });
@@ -1009,7 +1032,7 @@ export class World {
     const r = s.engageR;
     const rangedMode = this.isRangedMode(s);
     for (const e of this.enemies) {
-      if (!e.alive) continue;
+      if (!e.alive || e.burrowed) continue;
       if (e.flying && !rangedMode) continue;
       const anchorX = rangedMode ? s.x : s.homeX;
       const anchorY = rangedMode ? s.y : s.homeY;
@@ -1065,7 +1088,7 @@ export class World {
     if (tg) {
       const anchorX = rangedMode ? s.x : s.homeX;
       const anchorY = rangedMode ? s.y : s.homeY;
-      const lost = !tg.alive || (tg.flying && !rangedMode) || !inEllipse(anchorX, anchorY, tg.x, tg.y, s.engageR + (rangedMode ? 0 : 40));
+      const lost = !tg.alive || tg.burrowed || (tg.flying && !rangedMode) || !inEllipse(anchorX, anchorY, tg.x, tg.y, s.engageR + (rangedMode ? 0 : 40));
       if (lost) this.releaseTarget(s);
     }
     s.retargetIn -= dt;
@@ -1490,7 +1513,7 @@ export class World {
   }
 
   private enemiesInRange(t: Tower, range: number, air: boolean): Enemy[] {
-    return this.enemies.filter((e) => e.alive && (air || !e.flying) && inEllipse(t.x, t.y, e.x, e.y, range));
+    return this.enemies.filter((e) => e.alive && !e.burrowed && (air || !e.flying) && inEllipse(t.x, t.y, e.x, e.y, range));
   }
 
   private updateTower(t: Tower, dt: number): void {

@@ -75,6 +75,10 @@ export const STORY: Record<string, StoryLine[]> = {
     { who: 'cult_leader', text: { zh: '王國、蠻族、教派……一切都將歸於深淵。', en: 'Kingdom, horde, cult. All will return to the abyss.' } },
     { who: 'arthur', text: { zh: '這是最後一戰。為了王國，為了所有人，守住終焉之門！', en: 'This is the last battle. For the kingdom and for everyone, hold the Gate of the End!' } },
   ],
+  l13: [
+    { who: 'aria', text: { zh: '我在西方沙海上空看見教派的旗幟……殘黨跟沙漠遊牧民結盟了。', en: 'I saw cult banners over the western sands. The remnants have allied with the desert nomads.' } },
+    { who: 'rain', text: { zh: '小心腳下！巨蠍鑽進沙裡時刀槍不入，等牠們冒出來再打。', en: 'Watch the sand! Scorpions are untouchable while burrowed. Strike when they surface.' } },
+  ],
 };
 
 /** 通關最終關後的尾聲 */

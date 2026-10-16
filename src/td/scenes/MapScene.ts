@@ -46,7 +46,7 @@ export class MapScene extends Phaser.Scene {
 
   create(): void {
     setupCamera(this);
-    const nodes = LEVELS.map((l) => ({ x: l.mapPos.x * PLAY_W, y: l.mapPos.y * VIEW_H, theme: l.theme }));
+    const nodes = LEVELS.map((l) => ({ x: l.mapPos.x * PLAY_W, y: l.mapPos.y * VIEW_H, theme: l.theme, bonus: l.bonus }));
     const s = RS >= 2 ? 1.25 : 1;
     if (!this.textures.exists('bg_map')) this.textures.addCanvas('bg_map', paintWorldMap(WORLD_W, VIEW_H, PLAY_X0, s, nodes));
     this.add.image(-PLAY_X0, 0, 'bg_map').setOrigin(0).setScale(1 / s);
@@ -59,11 +59,11 @@ export class MapScene extends Phaser.Scene {
       const n = nodes[i];
       const stars = sv.stars[lv.id] ?? 0;
       const c = this.add.container(n.x, n.y);
-      const glow = this.add.image(0, -4, 'fx_soft').setTint(stars ? 0x7ab0ff : 0xffd84a).setBlendMode('ADD').setScale(1.1).setAlpha(0.7);
+      const glow = this.add.image(0, -4, 'fx_soft').setTint(lv.bonus ? 0xffa040 : stars ? 0x7ab0ff : 0xffd84a).setBlendMode('ADD').setScale(1.1).setAlpha(0.7);
       const base = this.add.ellipse(0, 6, 46, 18, 0x2a1a0c, 0.5);
       const pole = this.add.rectangle(-2, -14, 4, 42, 0x3a2412);
       const flagTex = this.add.graphics();
-      flagTex.fillStyle(stars ? 0x3a6ad0 : 0xc0392b, 1);
+      flagTex.fillStyle(lv.bonus ? 0xe0a020 : stars ? 0x3a6ad0 : 0xc0392b, 1);
       flagTex.lineStyle(2.5, 0x1a0a04, 1);
       flagTex.beginPath();
       flagTex.moveTo(0, -34);

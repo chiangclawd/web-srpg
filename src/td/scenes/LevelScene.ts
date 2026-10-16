@@ -1102,6 +1102,12 @@ export class LevelScene extends Phaser.Scene {
       case 'dodge':
         this.fx.floatText(e.x, y - 10, 'MISS', '#d0e8ff', 13);
         break;
+      case 'burrow':
+      case 'surface':
+        this.fx.smokePuff(e.x, e.y - 4, 7);
+        this.fx.ring(e.x, e.y, 26, 0xe8c888, 300);
+        sfx.play('thud', 0.35);
+        break;
       case 'stun':
         this.fx.stars(e.x, y - 10, 4);
         break;
@@ -1225,6 +1231,7 @@ export class LevelScene extends Phaser.Scene {
         tint,
         stunned: t < e.stunUntil && !frozen,
         frozen,
+        burrowed: e.burrowed,
       });
       if (e.dots.length && Math.random() < 0.05) this.fx.poisonPuff(e.x, e.y - e.def.height * 0.6);
     }

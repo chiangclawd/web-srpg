@@ -6,11 +6,14 @@ import {
   THEMES,
   drawAltar,
   drawBush,
+  drawCactus,
   drawCampfire,
   drawCastle,
   drawDeadTree,
+  drawDuneRipples,
   drawFlowers,
   drawHouse,
+  drawPalm,
   drawPine,
   drawRock,
   drawRuin,
@@ -132,7 +135,7 @@ export function paintLevel(level: LevelDef, worldW: number, offX: number, s: num
   }
 
   // 程序散佈：邊緣森林帶 + 零星灌木/石頭/花
-  const density = level.theme === 'forest' ? 1.6 : level.theme === 'snow' ? 0.8 : 1;
+  const density = level.theme === 'forest' ? 1.6 : level.theme === 'snow' ? 0.8 : level.theme === 'desert' ? 0.55 : 1;
   const edgeTrees = Math.round(120 * density);
   for (let i = 0; i < edgeTrees; i++) {
     // 偏向畫面邊緣
@@ -163,7 +166,8 @@ export function paintLevel(level: LevelDef, worldW: number, offX: number, s: num
     const k = rnd();
     if (k < 0.35) {
       const r = 9 + rnd() * 6;
-      items.push({ y, draw: () => drawBush(ctx, x, y, r, th.canopy[0], rnd) });
+      if (level.theme === 'desert') items.push({ y, draw: () => drawCactus(ctx, x, y, r * 0.9, rnd) });
+      else items.push({ y, draw: () => drawBush(ctx, x, y, r, th.canopy[0], rnd) });
     } else if (k < 0.55) {
       const r = 5 + rnd() * 7;
       items.push({ y, draw: () => drawRock(ctx, x, y, r, th.rock, rnd, th.snowy) });
@@ -204,6 +208,14 @@ export function paintLevel(level: LevelDef, worldW: number, offX: number, s: num
       ctx.fill();
     }
   }
+  if (level.theme === 'desert') {
+    for (let i = 0; i < 90; i++) {
+      const x = x0 + rnd() * worldW;
+      const y = rnd() * H;
+      if (near(x, y, 30)) continue;
+      drawDuneRipples(ctx, x, y, rnd);
+    }
+  }
   if (level.theme === 'autumn') {
     for (let i = 0; i < 500; i++) {
       ctx.fillStyle = alpha(['#d9822b', '#c4512a', '#e3a93a'][i % 3], 0.7);
@@ -223,6 +235,11 @@ export function paintLevel(level: LevelDef, worldW: number, offX: number, s: num
 }
 
 function tree(ctx: Ctx, x: number, y: number, r: number, th: ThemePalette, theme: string, rnd: () => number): void {
+  if (theme === 'desert') {
+    if (rnd() < 0.45) drawPalm(ctx, x, y, r * 0.95, rnd);
+    else drawCactus(ctx, x, y, r * 0.75, rnd);
+    return;
+  }
   if (theme === 'waste') {
     if (rnd() < 0.6) drawDeadTree(ctx, x, y, r * 1.2, rnd);
     else drawPine(ctx, x, y, r * 0.9, th.pine, false);

@@ -18,6 +18,8 @@ export interface UnitVisualState {
   stunned?: boolean;
   /** 冰霜水晶：包在冰塊裡 */
   frozen?: boolean;
+  /** 鑽地中：只顯示移動的沙堆 */
+  burrowed?: boolean;
 }
 
 /**
@@ -34,6 +36,7 @@ export class UnitView {
   private stars: Phaser.GameObjects.Image[] = [];
   private ring: Phaser.GameObjects.Ellipse | null = null;
   private ice: Phaser.GameObjects.Image | null = null;
+  private mound: Phaser.GameObjects.Image | null = null;
   dead = false;
 
   constructor(
@@ -76,6 +79,21 @@ export class UnitView {
 
   update(s: UnitVisualState): void {
     if (this.dead) return;
+    if (s.burrowed) {
+      if (!this.mound) {
+        this.mound = this.scene.add.image(0, 0, 'fx_mound').setOrigin(0.5, 1).setScale(1 / TEX);
+        this.setVisible(false);
+      }
+      this.mound.setPosition(s.x, s.y + 2 + Math.sin(s.t * 14) * 1.2).setDepth(s.y);
+      this.mound.setScale((1 / TEX) * (1 + Math.sin(s.t * 9) * 0.06), 1 / TEX);
+      return;
+    }
+    if (this.mound) {
+      this.mound.destroy();
+      this.mound = null;
+      this.body.setVisible(true);
+      this.shadow.setVisible(true);
+    }
     const t = s.t + this.phase;
     let ox = 0;
     let oy = 0;
@@ -166,6 +184,7 @@ export class UnitView {
     this.stars.forEach((s) => s.destroy());
     this.ring?.destroy();
     this.ice?.destroy();
+    this.mound?.destroy();
     const b = this.body;
     const flip = b.flipX ? -1 : 1;
     if (kind === 'death') {
@@ -195,6 +214,7 @@ export class UnitView {
     this.stars.forEach((s) => s.destroy());
     this.ring?.destroy();
     this.ice?.destroy();
+    this.mound?.destroy();
   }
 }
 

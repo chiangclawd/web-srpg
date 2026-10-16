@@ -21,7 +21,9 @@ export type EnemyAbility =
   | { kind: 'enrage'; belowHp: number; speedMul: number }
   | { kind: 'stunTowers'; radius: number; duration: number; cd: number }
   | { kind: 'aoeMelee'; radius: number }
-  | { kind: 'blink'; distance: number; cd: number };
+  | { kind: 'blink'; distance: number; cd: number }
+  /** 鑽入地下：期間無法被攻擊、阻擋，移動加速 */
+  | { kind: 'burrow'; cd: number; dur: number; speedMul: number };
 
 export interface EnemyDef {
   id: string;
@@ -180,7 +182,7 @@ export interface WaveDef {
   hpMul?: number;
 }
 
-export type ThemeId = 'grass' | 'forest' | 'snow' | 'waste' | 'autumn';
+export type ThemeId = 'grass' | 'forest' | 'snow' | 'waste' | 'autumn' | 'desert';
 
 export type DecorItem =
   | { kind: 'house'; x: number; y: number; scale?: number }
@@ -222,6 +224,8 @@ export interface LevelDef {
   bgm?: 'peaceful' | 'tense' | 'dark' | 'epic' | 'finale';
   /** 挑戰模式規則 */
   rules?: LevelRules;
+  /** 外傳關卡（戰役完結後解鎖，不在主線路線上） */
+  bonus?: boolean;
 }
 
 export type LevelMode = 'campaign' | 'heroic' | 'iron' | 'endless';

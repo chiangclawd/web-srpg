@@ -367,6 +367,102 @@ function demon(ctx: Ctx, w: number, h: number): void {
   }
 }
 
+function scorpion(ctx: Ctx, w: number, h: number): void {
+  const cx = w / 2;
+  const by = h - 3;
+  const shell = '#c2763a';
+  const dark = '#6a3414';
+  // 腳（後排先畫）
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 4; i++) {
+    const lx = cx - 14 + i * 9;
+    for (const [lw, col] of [
+      [5, OUTLINE],
+      [2.6, shade(dark, 0.15)],
+    ] as const) {
+      ctx.strokeStyle = col;
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.moveTo(lx, by - 12);
+      ctx.lineTo(lx - 5, by - 6);
+      ctx.lineTo(lx - 3, by);
+      ctx.stroke();
+    }
+  }
+  // 尾巴：一節節往上捲到頭頂
+  const segs = [
+    [cx - 22, by - 16, 7],
+    [cx - 30, by - 25, 6.5],
+    [cx - 32, by - 37, 6],
+    [cx - 26, by - 47, 5.5],
+    [cx - 15, by - 52, 5],
+  ];
+  for (const [x, y, r] of segs) {
+    circle(ctx, x, y, r);
+    fillStroke(ctx, rgrad(ctx, x - 2, y - 2, 1, r, '#e8a060', shell), 2.5);
+  }
+  // 毒針
+  poly(ctx, [cx - 12, by - 56, cx - 2, by - 50, cx - 10, by - 47]);
+  fillStroke(ctx, '#3a1a3a', 2.2);
+  circle(ctx, cx - 3, by - 50, 1.8);
+  ctx.fillStyle = '#9aff4a';
+  ctx.fill();
+  // 身體（分節甲殼）
+  ellipse(ctx, cx, by - 15, 20, 9);
+  fillStroke(ctx, vgrad(ctx, by - 24, by - 6, '#e09a58', dark), 3);
+  ctx.strokeStyle = 'rgba(60,20,0,0.5)';
+  ctx.lineWidth = 1.5;
+  for (const ox of [-8, 0, 8]) {
+    ctx.beginPath();
+    ctx.moveTo(cx + ox, by - 23);
+    ctx.quadraticCurveTo(cx + ox + 2, by - 15, cx + ox, by - 7);
+    ctx.stroke();
+  }
+  // 頭與螯
+  ellipse(ctx, cx + 20, by - 15, 8, 7);
+  fillStroke(ctx, vgrad(ctx, by - 22, by - 8, '#e8a462', dark), 2.5);
+  for (const [oy, sc] of [
+    [-6, 1],
+    [4, 0.85],
+  ] as const) {
+    ctx.strokeStyle = OUTLINE;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(cx + 24, by - 15 + oy * 0.5);
+    ctx.lineTo(cx + 34, by - 15 + oy);
+    ctx.stroke();
+    ctx.strokeStyle = shell;
+    ctx.lineWidth = 2.6;
+    ctx.stroke();
+    // 螯鉗
+    ctx.save();
+    ctx.translate(cx + 38, by - 15 + oy);
+    ctx.scale(sc, sc);
+    poly(ctx, [-5, -4, 9, -7, 4, -1, 10, 3, -5, 4]);
+    fillStroke(ctx, vgrad(ctx, -7, 4, '#eaa868', dark), 2.2);
+    ctx.restore();
+  }
+  // 眼
+  for (const ox of [18, 23]) {
+    circle(ctx, cx + ox, by - 20, 1.8);
+    ctx.fillStyle = '#1a0a00';
+    ctx.fill();
+  }
+}
+
+/** 鑽地時地面隆起的沙堆 */
+function sandMound(ctx: Ctx, w: number, h: number): void {
+  const cx = w / 2;
+  const by = h - 2;
+  ellipse(ctx, cx, by - 7, 24, 8);
+  fillStroke(ctx, vgrad(ctx, by - 15, by, '#f0d496', '#b48a4a'), 2.5, '#6a4a22');
+  for (let i = 0; i < 6; i++) {
+    circle(ctx, cx - 18 + i * 7, by - 12 - (i % 2) * 3, 2.2);
+    ctx.fillStyle = '#d8b06a';
+    ctx.fill();
+  }
+}
+
 export const MONSTERS: Record<string, { w: number; h: number; paint: (ctx: Ctx, w: number, h: number) => void }> = {
   mon_goblin: { w: 64, h: 66, paint: goblin },
   mon_wolf: { w: 92, h: 60, paint: wolf },
@@ -376,6 +472,8 @@ export const MONSTERS: Record<string, { w: number; h: number; paint: (ctx: Ctx, 
   mon_bat: { w: 72, h: 44, paint: bat },
   mon_skeleton: { w: 60, h: 66, paint: skeleton },
   mon_demon: { w: 76, h: 76, paint: demon },
+  mon_scorpion: { w: 96, h: 64, paint: scorpion },
+  fx_mound: { w: 56, h: 22, paint: sandMound },
 };
 
 export function paintMonsters(s: number): Record<string, HTMLCanvasElement> {
