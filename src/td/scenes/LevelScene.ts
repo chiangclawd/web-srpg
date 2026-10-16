@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PLAY_W, PLAY_X0, TEX, VIEW_H, WORLD_W, bgScale, freeCanvasTexture, setupCamera, uiZoom, viewW } from '../config';
+import { PLAY_W, PLAY_X0, RS, TEX, VIEW_H, WORLD_W, bgScale, freeCanvasTexture, isTouchDevice, setupCamera, uiZoom, viewW } from '../config';
 import { getLevel } from '../data/levels';
 import { HEROES } from '../data/heroes';
 import { TOWERS, TOWER_ORDER } from '../data/towers';
@@ -53,6 +53,11 @@ export class LevelScene extends Phaser.Scene {
   private zoneViews = new Map<number, Phaser.GameObjects.GameObject[]>();
   private spotImgs: Phaser.GameObjects.Image[] = [];
   private spotHits: Phaser.GameObjects.Ellipse[] = [];
+  /** 玩家縮放（1 = 看到整張地圖；手機雙指放大，桌機滾輪） */
+  private userZoom = 1;
+  /** 目前這次按壓：拖曳超過門檻就不算點擊 */
+  private gesture: { downTime: number; sx: number; sy: number; scrollX: number; scrollY: number; moved: boolean } | null = null;
+  private pinch: { dist: number; zoom: number } | null = null;
   private towerHits = new Map<number, Phaser.GameObjects.Rectangle>();
   private menu: RadialMenu | null = null;
   private menuTarget: { spot?: number; tower?: Tower } | null = null;
@@ -139,9 +144,9 @@ export class LevelScene extends Phaser.Scene {
       const img = this.add.image(s.x, s.y, 'spot_tex').setScale(1 / TEX).setDepth(DEPTH.decal + 10);
       this.spotImgs.push(img);
       const hit = this.add.ellipse(s.x, s.y - 4, 84, 56, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
-      hit.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
+      hit.on('pointerup', (p: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
         ev?.stopPropagation?.();
-        this.onSpotTap(i);
+        if (this.isTap(p)) this.onSpotTap(i);
       });
       hit.on('pointerover', () => img.setTint(0xfff0c0));
       hit.on('pointerout', () => img.clearTint());
@@ -152,8 +157,9 @@ export class LevelScene extends Phaser.Scene {
     this.makeAmbient();
 
     // 全域點擊
-    this.input.on('pointerdown', (p: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
-      if (over.length) return;
+    this.setupGestures();
+    this.input.on('pointerup', (p: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
+      if (over.length || !this.isTap(p)) return;
       this.onGroundTap(p.worldX, p.worldY);
     });
     this.input.keyboard?.on('keydown-SPACE', () => this.togglePause());
@@ -186,6 +192,16 @@ export class LevelScene extends Phaser.Scene {
     sfx.playBgm(this.level.bgm ?? 'tense');
     this.cameras.main.fadeIn(400, 0, 0, 0);
 
+    // 觸控裝置第一次進關：提示可以雙指縮放
+    if (isTouchDevice() && !save().tipsSeen.includes('zoom')) {
+      this.time.delayedCall(2500, () => {
+        if (!this.sys.isActive() || this.ui?.hasModal()) return;
+        save().tipsSeen.push('zoom');
+        persist();
+        this.ui.toast(T('tipZoom'), 4000);
+      });
+    }
+
     // 開場：劇情（首次進入戰役）→ 介紹新敵人
     this.time.delayedCall(500, () => {
       const story = STORY[this.level.id];
@@ -206,7 +222,104 @@ export class LevelScene extends Phaser.Scene {
 
   private layoutCamera(): void {
     const w = viewW(this);
+    this.userZoom = 1;
+    this.cameras.main.setZoom(RS);
     this.cameras.main.setScroll(-(w - PLAY_W) / 2, 0);
+  }
+
+  // ═════════════════════════ 縮放 / 平移 ═════════════════════════
+
+  /**
+   * 手機：雙指縮放、放大後單指拖曳平移；桌機：滾輪縮放、拖曳平移。
+   * 點擊一律在放開時判定（移動超過門檻就當成拖曳），避免拖地圖時誤蓋塔。
+   */
+  private setupGestures(): void {
+    const MAX_ZOOM = 2.2;
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      const a = this.input.pointer1;
+      const b = this.input.pointer2;
+      if (a?.isDown && b?.isDown) {
+        // 第二指放下：開始雙指縮放，這次按壓不算點擊
+        this.pinch = { dist: Phaser.Math.Distance.Between(a.x, a.y, b.x, b.y), zoom: this.userZoom };
+        if (this.gesture) this.gesture.moved = true;
+        return;
+      }
+      const cam = this.cameras.main;
+      this.gesture = { downTime: p.downTime, sx: p.x, sy: p.y, scrollX: cam.scrollX, scrollY: cam.scrollY, moved: false };
+    });
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+      const a = this.input.pointer1;
+      const b = this.input.pointer2;
+      if (this.pinch && a?.isDown && b?.isDown) {
+        const d = Phaser.Math.Distance.Between(a.x, a.y, b.x, b.y);
+        this.zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, Phaser.Math.Clamp((this.pinch.zoom * d) / Math.max(1, this.pinch.dist), 1, MAX_ZOOM));
+        return;
+      }
+      const g = this.gesture;
+      if (!g || !p.isDown || p.downTime !== g.downTime) return;
+      const dx = p.x - g.sx;
+      const dy = p.y - g.sy;
+      // 門檻 10 CSS px（換算成畫布像素）
+      if (!g.moved && Math.hypot(dx, dy) > 10 * this.scale.displayScale.x) g.moved = true;
+      if (g.moved && this.userZoom > 1 && !this.pinch) {
+        const cam = this.cameras.main;
+        cam.setScroll(g.scrollX - dx / cam.zoom, g.scrollY - dy / cam.zoom);
+        this.clampScroll();
+      }
+    });
+    this.input.on('pointerup', () => {
+      const a = this.input.pointer1;
+      const b = this.input.pointer2;
+      if (!a?.isDown && !b?.isDown) {
+        this.pinch = null;
+        // 縮回接近 1 倍就貼齊整張地圖
+        if (this.userZoom < 1.08 && this.userZoom !== 1) this.zoomAt(0, 0, 1);
+      } else if (this.pinch) {
+        // 放開一指：剩下那指從現在位置開始拖（不要跳）
+        const rest = a?.isDown ? a : b;
+        const cam = this.cameras.main;
+        if (rest) this.gesture = { downTime: rest.downTime, sx: rest.x, sy: rest.y, scrollX: cam.scrollX, scrollY: cam.scrollY, moved: true };
+        this.pinch = null;
+      }
+    });
+    this.input.on('wheel', (p: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) => {
+      this.zoomAt(p.x, p.y, Phaser.Math.Clamp(this.userZoom * (dy > 0 ? 0.88 : 1.14), 1, MAX_ZOOM));
+    });
+  }
+
+  /** 這次放開算不算「點擊」（沒有拖曳、不是雙指） */
+  private isTap(p: Phaser.Input.Pointer): boolean {
+    const g = this.gesture;
+    if (!g || g.downTime !== p.downTime) return !this.pinch;
+    return !g.moved && !this.pinch;
+  }
+
+  /** 以畫面上某點為中心縮放（該點底下的世界座標保持不動） */
+  private zoomAt(sx: number, sy: number, z: number): void {
+    const cam = this.cameras.main;
+    const wx = cam.scrollX + sx / cam.zoom;
+    const wy = cam.scrollY + sy / cam.zoom;
+    this.userZoom = z;
+    cam.setZoom(RS * z);
+    cam.setScroll(wx - sx / cam.zoom, wy - sy / cam.zoom);
+    this.clampScroll();
+  }
+
+  /** 平移範圍限制在原本整張地圖的可見範圍內 */
+  private clampScroll(): void {
+    const cam = this.cameras.main;
+    const w = viewW(this);
+    const x0 = -(w - PLAY_W) / 2;
+    const visW = w / this.userZoom;
+    const visH = VIEW_H / this.userZoom;
+    cam.setScroll(Phaser.Math.Clamp(cam.scrollX, x0, x0 + w - visW), Phaser.Math.Clamp(cam.scrollY, 0, VIEW_H - visH));
+  }
+
+  /** 目前畫面上看得到的世界範圍（考慮玩家縮放） */
+  visibleRect(): Phaser.Geom.Rectangle {
+    const cam = this.cameras.main;
+    const w = viewW(this);
+    return new Phaser.Geom.Rectangle(cam.scrollX, cam.scrollY, w / this.userZoom, VIEW_H / this.userZoom);
   }
 
   /** 世界座標可見範圍 */
@@ -730,8 +843,9 @@ export class LevelScene extends Phaser.Scene {
 
   /** 環狀選單：手機上放大，並夾在畫面內（靠邊的建造點選單不會被切掉） */
   private radial(x: number, y: number, opts: RadialOption[], radius: number): RadialMenu {
-    const z = uiZoom();
-    const v = this.viewRect();
+    // 地圖放大時選單也跟著放大會太大：除以玩家縮放，維持在螢幕上的大小
+    const z = uiZoom() / this.userZoom;
+    const v = this.visibleRect();
     const ex = (radius + 40) * z;
     const cx = Phaser.Math.Clamp(x, v.left + ex, Math.max(v.left + ex, v.right - ex));
     const cy = Phaser.Math.Clamp(y, v.top + (radius + 34) * z, Math.max(v.top + (radius + 34) * z, v.bottom - (radius + 48) * z));
@@ -1058,8 +1172,9 @@ export class LevelScene extends Phaser.Scene {
           this.spotHits[ev.t.spot].disableInteractive();
           this.fx.smokePuff(ev.t.x, ev.t.y - 10, 10);
           const hit = this.add.rectangle(ev.t.x, ev.t.y - 30, 76, 84, 0xffffff, 0.001).setInteractive({ useHandCursor: true }).setDepth(ev.t.y);
-          hit.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, e2: Phaser.Types.Input.EventData) => {
+          hit.on('pointerup', (p2: Phaser.Input.Pointer, _x: number, _y: number, e2: Phaser.Types.Input.EventData) => {
             e2?.stopPropagation?.();
+            if (!this.isTap(p2)) return;
             if (this.mode === 'meteor' || this.mode === 'reinforce' || this.mode === 'hero' || this.mode === 'keg' || this.mode === 'ult') {
               this.onGroundTap(ev.t.x, ev.t.y + 10);
               return;
