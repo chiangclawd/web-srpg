@@ -194,7 +194,7 @@ const heroId = process.env.HERO ?? 'elena';
 for (const id of levels) {
   const idx = LEVELS.findIndex((l) => l.id === id);
   // 假設英雄等級隨關卡推進（約每關 +0.8 級）
-  const xpByIdx = [0, 300, 700, 1200, 1900, 2800, 3800, 5000, 6500, 8200, 10000, 12000];
+  const xpByIdx = [0, 300, 700, 1200, 1900, 2800, 3800, 5000, 6500, 8200, 10000, 12000, 13500, 13500];
   const t0 = Date.now();
   const { best, r } = optimize(id, ITERS, heroId, xpByIdx[idx] ?? 0, (diff as Difficulty) ?? 'normal');
   const plan = best.order.filter((i) => best.types[i]).slice(0, best.nTowers).map((i) => `${i}:${best.types[i]![0]}`).join(' ');
