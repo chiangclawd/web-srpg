@@ -125,6 +125,19 @@ const FX: Record<string, { w: number; h: number; paint: Fn }> = {
       fillStroke(c, '#6fbf3a', 1.2, '#2a5a14');
     },
   },
+  fx_butterfly: {
+    w: 18,
+    h: 14,
+    paint: (c) => {
+      ellipse(c, 5, 6, 4.5, 5.5);
+      fillStroke(c, '#ffffff', 1.2, '#3a2a18');
+      ellipse(c, 13, 6, 4.5, 5.5);
+      fillStroke(c, '#ffffff', 1.2, '#3a2a18');
+      ellipse(c, 9, 7, 1.3, 4.5);
+      c.fillStyle = '#3a2a18';
+      c.fill();
+    },
+  },
   fx_snow: {
     w: 12,
     h: 12,

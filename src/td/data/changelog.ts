@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 13,
+    date: '2026-10-16',
+    title: { zh: '會動的戰場', en: 'Living battlefields' },
+    items: [
+      { zh: '營火會冒煙、噴火星，祭壇散發紫光，湖面與河流閃閃發亮', en: 'Campfires smoke and spark, altars pulse with purple light, lakes and rivers glitter' },
+      { zh: '草原與森林有蝴蝶飛舞，荒地飄著紫色微光，沙漠吹起陣陣風沙', en: 'Butterflies over meadows and forests, purple motes drifting across the wastelands, sand gusts in the desert' },
+    ],
+  },
+  {
     id: 12,
     date: '2026-10-16',
     title: { zh: '14 張戰場全部手繪', en: 'All 14 battlefields hand-painted' },
