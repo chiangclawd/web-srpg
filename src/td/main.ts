@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import '@fontsource/luckiest-guy/400.css';
-import { RS, VIEW_H, applyQuality, computeViewW } from './config';
-import { loadSave } from './save';
+import { RS, VIEW_H, applyQuality, computeViewW, isTouchDevice } from './config';
+import { loadSave, persist } from './save';
+import { crashGuard } from './crashGuard';
 import { BootScene } from './scenes/BootScene';
 import { MenuScene } from './scenes/MenuScene';
 import { MapScene } from './scenes/MapScene';
@@ -14,13 +15,21 @@ import { AchievementScene } from './scenes/AchievementScene';
 import { EndingScene } from './scenes/EndingScene';
 import { ShopScene } from './scenes/ShopScene';
 
-applyQuality(loadSave().settings.quality);
+{
+  const sv = loadSave();
+  applyQuality(
+    crashGuard(sv.settings.quality ?? 'auto', () => {
+      sv.settings.quality = 'low';
+      persist();
+    }),
+  );
+}
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
-  width: computeViewW() * RS,
-  height: VIEW_H * RS,
+  width: Math.round(computeViewW() * RS),
+  height: Math.round(VIEW_H * RS),
   backgroundColor: '#120d08',
   scene: [BootScene, MenuScene, MapScene, LevelScene, LevelUIScene, UpgradeScene, HeroScene, EncyclopediaScene, AchievementScene, EndingScene, ShopScene],
   scale: {
@@ -29,6 +38,8 @@ const game = new Phaser.Game({
   },
   render: {
     antialias: true,
+    // 多重取樣（MSAA）讓繪圖緩衝區記憶體變 4 倍；手機像素密度高，關掉幾乎看不出差別
+    antialiasGL: !isTouchDevice() && RS > 1,
     pixelArt: false,
     roundPixels: false,
     powerPreference: 'high-performance',
@@ -45,8 +56,8 @@ window.addEventListener('resize', () => {
   if (resizeTimer) clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
     if (window.innerWidth < window.innerHeight) return;
-    const w = computeViewW() * RS;
-    if (Math.abs(w - game.scale.width) > 2) game.scale.setGameSize(w, VIEW_H * RS);
+    const w = Math.round(computeViewW() * RS);
+    if (Math.abs(w - game.scale.width) > 2) game.scale.setGameSize(w, Math.round(VIEW_H * RS));
   }, 150);
 });
 
