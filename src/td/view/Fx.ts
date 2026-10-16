@@ -197,11 +197,30 @@ export class Fx {
   }
 
   /** 漂浮文字（金幣、提示） */
+  private textPool: Phaser.GameObjects.Text[] = [];
+
   floatText(x: number, y: number, text: string, color = '#ffe066', size = 18): void {
-    const t = addText(this.scene, x, y, text, { size, color, display: true }).setOrigin(0.5).setDepth(DEPTH.float);
+    let t = this.textPool.pop();
+    if (!t) t = addText(this.scene, x, y, text, { size, color, display: true }).setOrigin(0.5).setDepth(DEPTH.float);
+    else {
+      t.setText(text).setColor(color).setFontSize(size).setStroke('#2a1708', Math.max(2, Math.round(size / 6)));
+      t.setPosition(x, y).setVisible(true).setAlpha(1);
+    }
     t.setScale(0.6);
-    this.scene.tweens.add({ targets: t, scale: 1, duration: 140, ease: 'Back.easeOut' });
-    this.scene.tweens.add({ targets: t, y: y - 34, alpha: 0, delay: 350, duration: 650, onComplete: () => t.destroy() });
+    const tt = t;
+    this.scene.tweens.add({ targets: tt, scale: 1, duration: 140, ease: 'Back.easeOut' });
+    this.scene.tweens.add({
+      targets: tt,
+      y: y - 34,
+      alpha: 0,
+      delay: 350,
+      duration: 650,
+      onComplete: () => {
+        tt.setVisible(false);
+        if (this.textPool.length < 40) this.textPool.push(tt);
+        else tt.destroy();
+      },
+    });
   }
 
   lightning(pts: { x: number; y: number }[]): void {

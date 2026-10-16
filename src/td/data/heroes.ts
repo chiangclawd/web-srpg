@@ -1,7 +1,7 @@
 import type { HeroDef } from '../sim/defs';
 
 /** 英雄等級經驗門檻（累積 XP），最高 10 級 */
-export const HERO_XP_TABLE = [0, 300, 750, 1350, 2100, 3000, 4100, 5400, 6900, 8600];
+export const HERO_XP_TABLE = [0, 400, 1000, 1800, 2900, 4300, 6000, 8000, 10500, 13500];
 export const HERO_MAX_LEVEL = HERO_XP_TABLE.length;
 
 export function heroLevelForXp(xp: number): number {

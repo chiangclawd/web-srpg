@@ -12,6 +12,8 @@ export interface SaveData {
   heroes: Record<string, { xp: number }>;
   selectedHero: string;
   seenEnemies: string[];
+  /** 已播放過解鎖動畫的關卡 */
+  unlockedSeen: string[];
   settings: {
     music: number;
     sfx: number;
@@ -31,6 +33,7 @@ function defaults(): SaveData {
     heroes: { arthur: { xp: 0 }, elena: { xp: 0 }, lila: { xp: 0 } },
     selectedHero: 'arthur',
     seenEnemies: [],
+    unlockedSeen: ['l1'],
     settings: { music: 0.6, sfx: 0.8, lang: nav.startsWith('zh') ? 'zh' : 'en', difficulty: 'normal', speed: 1 },
     stats: { kills: 0, plays: 0, victories: 0 },
   };

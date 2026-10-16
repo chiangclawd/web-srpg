@@ -51,6 +51,11 @@ export class LevelScene extends Phaser.Scene {
   private waveBtns: { path: number; btn: IconButton; ring: Phaser.GameObjects.Graphics }[] = [];
   private seenIntro = new Set<string>();
   private resultShown = false;
+  private lastTapTouch = false;
+  private skullArmedUntil = 0;
+  private tutArrow: Phaser.GameObjects.Image | null = null;
+  private exitMarks: Phaser.GameObjects.Image[] = [];
+  private projPool: Phaser.GameObjects.Image[] = [];
   private ambient: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
 
   constructor() {
@@ -77,6 +82,10 @@ export class LevelScene extends Phaser.Scene {
     this.menu = null;
     this.menuTarget = null;
     this.resultShown = false;
+    this.tutArrow = null;
+    this.exitMarks = [];
+    this.projPool = [];
+    this.skullArmedUntil = 0;
     this.seenIntro = new Set(save().seenEnemies);
   }
 
@@ -137,12 +146,21 @@ export class LevelScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-TWO', () => this.ui?.spellButton('reinforce'));
 
     this.scale.on('resize', this.onResize, this);
+    const onHide = () => {
+      if (document.hidden && !this.paused && !this.world.result) this.togglePause(true);
+    };
+    document.addEventListener('visibilitychange', onHide);
     this.events.once('shutdown', () => {
+      document.removeEventListener('visibilitychange', onHide);
       this.scale.off('resize', this.onResize, this);
       this.scene.stop('LevelUI');
     });
 
     this.createWaveButtons();
+    this.createExitMarks();
+    if (this.level.tutorial) {
+      this.tutArrow = this.add.image(0, 0, 'fx_arrow').setScale(1 / TEX).setDepth(DEPTH.menu + 5).setVisible(false);
+    }
 
     // HUD
     this.scene.launch('LevelUI', { level: this });
@@ -158,6 +176,7 @@ export class LevelScene extends Phaser.Scene {
   private onResize(): void {
     this.layoutCamera();
     this.positionWaveButtons();
+    this.positionExitMarks();
   }
 
   private layoutCamera(): void {
@@ -570,8 +589,9 @@ export class LevelScene extends Phaser.Scene {
 
   private createWaveButtons(): void {
     this.level.paths.forEach((_, i) => {
-      const btn = new IconButton(this, 0, 0, 52, 'ic_skull', () => this.callWave(), 'ui_badge_red', 0.7);
+      const btn = new IconButton(this, 0, 0, 52, 'ic_skull', () => this.onSkullTap(), 'ui_badge_red', 0.7);
       btn.setDepth(DEPTH.menu - 10);
+      btn.hit.on('pointerdown', (p: Phaser.Input.Pointer) => (this.lastTapTouch = p.wasTouch));
       const ring = this.add.graphics().setDepth(DEPTH.menu - 11);
       btn.setVisible(false);
       this.waveBtns.push({ path: i, btn, ring });
@@ -579,6 +599,65 @@ export class LevelScene extends Phaser.Scene {
       btn.hit.on('pointerout', () => this.ui?.hideInfo());
     });
     this.positionWaveButtons();
+  }
+
+  /** 出口標記（王國盾徽）：放在每條路最後一段可見處 */
+  private createExitMarks(): void {
+    const seen = new Set<string>();
+    for (const p of this.world.paths) {
+      const end = p.posAt(p.length);
+      const key = `${Math.round(end.x / 40)}:${Math.round(end.y / 40)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const img = this.add.image(0, 0, 'ic_shield').setDisplaySize(40, 40).setDepth(DEPTH.float - 20);
+      img.setData('path', p);
+      this.exitMarks.push(img);
+      this.tweens.add({ targets: img, scale: img.scale * 1.12, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    }
+    this.positionExitMarks();
+  }
+
+  private positionExitMarks(): void {
+    const v = this.viewRect();
+    for (const img of this.exitMarks) {
+      const p = img.getData('path') as import('../sim/Path').Path;
+      let pos = p.posAt(p.length);
+      for (let d = p.length; d > 0; d -= 8) {
+        const q = p.posAt(d);
+        if (q.x > v.left + 30 && q.x < v.right - 30 && q.y > 60 && q.y < VIEW_H - 30) {
+          pos = q;
+          break;
+        }
+      }
+      img.setPosition(pos.x, pos.y - 26);
+    }
+  }
+
+  private updateTutorial(time: number): void {
+    const a = this.tutArrow;
+    if (!a) return;
+    const w = this.world;
+    let target: { x: number; y: number } | null = null;
+    if (w.towers.length === 0 && !this.menu) {
+      // 推薦建造點：最靠近路徑中段的點
+      const mid = w.paths[0].posAt(w.paths[0].length * 0.55);
+      let best = w.spots[0];
+      for (const s of w.spots) if (Math.hypot(s.x - mid.x, s.y - mid.y) < Math.hypot(best.x - mid.x, best.y - mid.y)) best = s;
+      target = { x: best.x, y: best.y - 34 };
+    } else if (w.towers.length > 0 && w.waveIndex < 0 && !this.menu) {
+      const b = this.waveBtns.find((x) => x.btn.visible);
+      if (b) target = { x: b.btn.x, y: b.btn.y - 40 };
+    }
+    if (!target) {
+      a.setVisible(false);
+      if (w.waveIndex >= 0) {
+        a.destroy();
+        this.tutArrow = null;
+      }
+      return;
+    }
+    a.setVisible(true);
+    a.setPosition(target.x, target.y - Math.abs(Math.sin(time / 220)) * 14);
   }
 
   private positionWaveButtons(): void {
@@ -596,6 +675,18 @@ export class LevelScene extends Phaser.Scene {
       wb.btn.setPosition(pos.x, pos.y - 6);
       wb.ring.setPosition(pos.x, pos.y - 6);
     }
+  }
+
+  /** 觸控：第一下顯示下一波內容，3 秒內再點一下才呼叫（滑鼠有 hover 預覽，直接呼叫） */
+  private onSkullTap(): void {
+    const first = this.world.waveIndex < 0;
+    if (this.lastTapTouch && !first && this.time.now > this.skullArmedUntil) {
+      this.skullArmedUntil = this.time.now + 3000;
+      this.ui.showWavePreview(this.world.nextWaveEnemies());
+      return;
+    }
+    this.skullArmedUntil = 0;
+    this.callWave();
   }
 
   callWave(): void {
@@ -651,6 +742,7 @@ export class LevelScene extends Phaser.Scene {
     this.handleEvents(w.drainEvents());
     this.sync(time);
     this.updateWaveButtons(time);
+    this.updateTutorial(time);
     this.ui?.refresh();
     // 選單打開時更新可負擔狀態（金幣變動）
   }
@@ -742,8 +834,8 @@ export class LevelScene extends Phaser.Scene {
             if (!ev.hit && (ev.p.kind === 'arrow' || ev.p.kind === 'heroArrow')) {
               // 沒射中：箭插在地上淡出
               img.setRotation(img.rotation + 0.3);
-              this.tweens.add({ targets: img, alpha: 0, delay: 300, duration: 400, onComplete: () => img.destroy() });
-            } else img.destroy();
+              this.tweens.add({ targets: img, alpha: 0, delay: 300, duration: 400, onComplete: () => this.releaseProj(img) });
+            } else this.releaseProj(img);
             this.projViews.delete(ev.p.id);
           }
           if (ev.hit) this.projImpactFx(ev.p);
@@ -938,12 +1030,22 @@ export class LevelScene extends Phaser.Scene {
 
   private spawnProj(p: Projectile): void {
     const key = PROJ_TEX[p.kind] ?? 'pj_arrow';
-    const img = this.add.image(p.x, p.y, key).setDepth(DEPTH.proj).setScale(1 / TEX);
+    const img = (this.projPool.pop() ?? this.add.image(0, 0, key)).setTexture(key).setPosition(p.x, p.y);
+    img.setDepth(DEPTH.proj).setScale(1 / TEX).setAlpha(1).setVisible(true).setRotation(0).setBlendMode('NORMAL');
     if (p.kind === 'bolt' || p.kind === 'heroBolt' || p.kind === 'enemyBolt' || p.kind === 'iceShard') img.setBlendMode('ADD');
     if (p.kind === 'meteor') img.setScale(1.3 / TEX);
     if (p.kind === 'bomblet') img.setScale(0.7 / TEX);
     if (p.kind === 'heroBolt' && this.world.hero?.hero?.def.id === 'lila') img.setTexture('pj_ice');
     this.projViews.set(p.id, img);
+  }
+
+  private releaseProj(img: Phaser.GameObjects.Image): void {
+    if (this.projPool.length > 120) {
+      img.destroy();
+      return;
+    }
+    img.setVisible(false);
+    this.projPool.push(img);
   }
 
   private projImpactFx(p: Projectile): void {

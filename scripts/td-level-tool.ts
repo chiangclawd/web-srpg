@@ -36,7 +36,18 @@ function check(): number {
       const pd = pathDist(paths, s.x, s.y);
       const issues: string[] = [];
       if (pd < MIN_PATH_DIST) issues.push(`too close to path (${pd.toFixed(0)})`);
-      if (s.x < 40 || s.x > W - 40 || s.y < 70 || s.y > H - 20) issues.push('out of bounds');
+      if (s.x < 64 || s.x > W - 64 || s.y < 70 || s.y > H - 20) issues.push('out of bounds');
+      for (const d of lv.decor ?? []) {
+        if (d.kind === 'river') {
+          const rp = new Path(d.points);
+          const rd = rp.nearest({ x: s.x, y: s.y }).dist;
+          if (rd < d.width / 2 + 42) issues.push(`in river (${rd.toFixed(0)})`);
+        } else if (d.kind === 'lake') {
+          if (Math.hypot((s.x - d.x) / (d.rx + 40), (s.y - d.y) / (d.ry + 30)) < 1) issues.push('in lake');
+        } else if (d.kind === 'house' || d.kind === 'castle' || d.kind === 'camp' || d.kind === 'tower_ruin' || d.kind === 'altar') {
+          if (Math.hypot(s.x - d.x, (s.y - d.y) * 1.3) < 80) issues.push(`overlaps ${d.kind}`);
+        }
+      }
       if (inHud(s.x, s.y, 30)) issues.push('under HUD');
       lv.spots.forEach((o, j) => {
         if (j > i && Math.hypot(o.x - s.x, o.y - s.y) < MIN_SPACING) issues.push(`overlaps spot ${j}`);

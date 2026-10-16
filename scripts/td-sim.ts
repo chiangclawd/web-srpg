@@ -18,9 +18,9 @@ import { ENEMIES } from '../src/td/data/enemies';
 
 const DEFAULT_PLAN: TowerType[] = ['barracks', 'archer', 'mage', 'archer', 'artillery', 'barracks', 'mage', 'archer', 'artillery', 'mage', 'barracks'];
 
-function run(levelId: string, diff: Difficulty, heroId = 'arthur', heroXp = 0, upgrades: Record<string, number> = {}, verbose = false) {
+function run(levelId: string, diff: Difficulty, heroId = 'arthur', heroXp = 0, upgrades: Record<string, number> = {}, verbose = false, seed = 1) {
   const level = LEVELS.find((l) => l.id === levelId)!;
-  const world = new World({ level, difficulty: diff, hero: { def: HEROES[heroId], xp: heroXp }, mods: computeMods(upgrades) });
+  const world = new World({ level, difficulty: diff, hero: { def: HEROES[heroId], xp: heroXp }, mods: computeMods(upgrades), seed });
   // 建造點依覆蓋度排序
   const order = world.spots
     .map((s, i) => {
@@ -49,6 +49,7 @@ function run(levelId: string, diff: Difficulty, heroId = 'arthur', heroXp = 0, u
         ? ['barracks', 'mage', 'archer', 'artillery', 'mage', 'barracks', 'archer', 'mage', 'artillery']
         : DEFAULT_PLAN;
   let planIdx = 0;
+  let heroPlaced = false;
   const leaks: Record<string, number> = {};
   const dt = 1 / 30;
   let thinkT = 0;
@@ -114,10 +115,12 @@ function run(levelId: string, diff: Difficulty, heroId = 'arthur', heroXp = 0, u
     const target = world.enemies.find((e) => !e.flying && e.remaining < 600);
     if (target && world.meteorCd <= 0) world.castMeteor(target.x, target.y);
     if (target && world.reinfCd <= 0) world.castReinforce(target.x, target.y);
-    // 英雄跟著最前面的敵人
-    if (world.hero && world.hero.alive && target && !world.hero.hero!.moveTo && Math.hypot(world.hero.x - target.x, world.hero.y - target.y) > 150) {
-      const p = target.path.posAt(Math.max(0, target.d - 140));
-      world.moveHero(p.x, p.y);
+    // 英雄守在最長路徑 65% 處（大多數玩家會把英雄放在塔群附近的咽喉點）
+    if (world.hero && world.hero.alive && !heroPlaced) {
+      const p = world.paths.reduce((a, b) => (b.length > a.length ? b : a));
+      const q = p.posAt(p.length * 0.65);
+      world.moveHero(q.x, q.y);
+      heroPlaced = true;
     }
     if (process.env.EARLY && world.waveState === 'gap' && world.nextWaveAt - world.time < 8) world.callNextWave();
     if (verbose && Math.floor(world.time) % 30 === 0) {
@@ -143,10 +146,10 @@ function run(levelId: string, diff: Difficulty, heroId = 'arthur', heroXp = 0, u
 const [, , lv, diff] = process.argv;
 const diffs: Difficulty[] = diff ? [diff as Difficulty] : ['normal'];
 const levels = lv && lv !== 'all' ? [lv] : LEVELS.map((l) => l.id);
+const SEEDS = Number(process.env.SEEDS ?? 3);
 for (const d of diffs) {
   let xp = 0;
   for (const id of levels) {
-    // 假設前面每關平均拿 2.5 星，依序平均點升級樹
     const idx = LEVELS.findIndex((l) => l.id === id);
     const stars = Math.floor(idx * 2.5);
     const ups: Record<string, number> = {};
@@ -162,9 +165,14 @@ for (const d of diffs) {
       }
     }
     for (const hero of ['arthur', 'elena']) {
-      const r = run(id, d, hero, xp, ups, !!process.env.VERBOSE);
-      console.log(`${d.padEnd(8)} ${hero.padEnd(7)} ${JSON.stringify(r)}`);
-      if (hero === 'arthur') xp = r.heroXp;
+      const rs = [];
+      for (let sd = 1; sd <= SEEDS; sd++) rs.push(run(id, d, hero, xp, ups, !!process.env.VERBOSE, sd * 977));
+      const wins = rs.filter((r) => r.result === 'victory').length;
+      const avgLives = rs.reduce((a, r) => a + r.lives, 0) / rs.length;
+      const leaks: Record<string, number> = {};
+      for (const r of rs) for (const [k, v] of Object.entries(r.leaks)) leaks[k] = (leaks[k] ?? 0) + v;
+      console.log(`${d.padEnd(8)} ${id} ${hero.padEnd(7)} wins ${wins}/${rs.length} avgLives ${avgLives.toFixed(1)} stars ${rs.map((r) => r.stars).join(',')} heroLv ${rs[0].heroLv} leaks ${JSON.stringify(leaks)}`);
+      if (hero === 'arthur') xp = Math.max(xp, rs[0].heroXp);
     }
   }
 }

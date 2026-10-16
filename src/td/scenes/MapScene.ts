@@ -82,7 +82,34 @@ export class MapScene extends Phaser.Scene {
       });
       c.add(hit);
       this.tweens.add({ targets: glow, alpha: 0.3, duration: 900, yoyo: true, repeat: -1 });
-      if (!stars) this.tweens.add({ targets: c, y: n.y - 5, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      const fresh = !sv.unlockedSeen.includes(lv.id);
+      if (fresh) {
+        // 新解鎖：旗子從天而降 + 星光
+        sv.unlockedSeen.push(lv.id);
+        persist();
+        c.setY(n.y - 120).setAlpha(0);
+        this.tweens.add({
+          targets: c,
+          y: n.y,
+          alpha: 1,
+          delay: 700,
+          duration: 520,
+          ease: 'Bounce.easeOut',
+          onStart: () => sfx.play('whoosh', 0.5),
+          onComplete: () => {
+            sfx.play('star');
+            const burst = this.add.particles(n.x, n.y - 10, 'fx_star', {
+              speed: { min: 60, max: 160 },
+              lifespan: 700,
+              scale: { start: 0.5, end: 0 },
+              emitting: false,
+            });
+            burst.explode(14);
+            this.time.delayedCall(900, () => burst.destroy());
+            if (!stars) this.tweens.add({ targets: c, y: n.y - 5, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+          },
+        });
+      } else if (!stars) this.tweens.add({ targets: c, y: n.y - 5, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     });
 
     this.buildHud();

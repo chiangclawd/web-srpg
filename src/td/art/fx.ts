@@ -173,6 +173,17 @@ const FX: Record<string, { w: number; h: number; paint: Fn }> = {
       c.fill();
     },
   },
+  fx_arrow: {
+    w: 44,
+    h: 52,
+    paint: (c) => {
+      poly(c, [14, 2, 30, 2, 30, 26, 42, 26, 22, 50, 2, 26, 14, 26]);
+      fillStroke(c, vgrad(c, 2, 50, '#fff3a0', '#f0a020'), 3.5, '#4a2400');
+      poly(c, [17, 6, 21, 6, 21, 28, 17, 28]);
+      c.fillStyle = 'rgba(255,255,255,0.6)';
+      c.fill();
+    },
+  },
   // ── 投射物 ──
   pj_arrow: {
     w: 34,
