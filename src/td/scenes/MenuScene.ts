@@ -61,6 +61,48 @@ export class MenuScene extends Phaser.Scene {
 
   create(): void {
     setupCamera(this);
+    this.walkers = [];
+    const painted = this.textures.exists('keyart');
+    if (painted) this.keyArt();
+    else this.proceduralBg();
+    // 暗化上方讓標題突出（手繪主視覺的天空本來就亮，壓淡一點就好）
+    const g = this.add.graphics().setName('shade');
+    const a = painted ? 0.42 : 0.75;
+    g.fillGradientStyle(0x120804, 0x120804, 0x120804, 0x120804, a, a, 0, 0);
+    g.fillRect(0, 0, WORLD_W, painted ? 320 : 380);
+    g.setDepth(1000);
+    this.build();
+    this.scale.on('resize', this.build, this);
+    this.events.once('shutdown', () => this.scale.off('resize', this.build, this));
+    sfx.playBgm('peaceful');
+    this.cameras.main.fadeIn(500, 0, 0, 0);
+    if ((CHANGELOG[0]?.id ?? 0) > (save().newsSeen ?? 0)) this.time.delayedCall(700, () => this.showNews());
+    if (consumeCrashNotice()) this.time.delayedCall(500, () => this.crashNotice());
+  }
+
+  /** 手繪標題主視覺：蓋滿最寬的畫面（1560×720），緩慢呼吸縮放＋飄落的葉子 */
+  private keyArt(): void {
+    const img = this.add.image(WORLD_W / 2, VIEW_H / 2, 'keyart').setName('bg');
+    const k = Math.max(WORLD_W / img.width, VIEW_H / img.height) * 1.01;
+    img.setScale(k);
+    this.tweens.add({ targets: img, scale: k * 1.035, duration: 16000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.add
+      .particles(0, 0, 'fx_leaf', {
+        x: { min: 0, max: WORLD_W },
+        y: -10,
+        lifespan: 11000,
+        speedY: { min: 22, max: 45 },
+        speedX: { min: -35, max: 15 },
+        rotate: { start: 0, end: 360 },
+        scale: { min: 0.35, max: 0.6 },
+        tint: [0xd9822b, 0xc4512a, 0xe3a93a],
+        frequency: 650,
+      })
+      .setDepth(900);
+  }
+
+  /** 沒有主視覺圖時：程序繪製的地圖＋裝飾塔＋走路的敵人 */
+  private proceduralBg(): void {
     const bgS = bgScale(1.25);
     if (!this.textures.exists('bg_menu')) this.textures.addCanvas('bg_menu', paintLevel(MENU_LEVEL, WORLD_W, PLAY_X0, bgS));
     this.add.image(0, 0, 'bg_menu').setOrigin(0).setScale(1 / bgS).setName('bg');
@@ -82,18 +124,6 @@ export class MenuScene extends Phaser.Scene {
       img.setScale((k.startsWith('mon_') ? 34 : 44) / img.frame.height);
       this.walkers.push({ img, d: i * 170, speed: 26 + (i % 3) * 6, path, right: k.startsWith('mon_') });
     });
-    // 暗化上方讓標題突出
-    const g = this.add.graphics().setName('shade');
-    g.fillGradientStyle(0x120804, 0x120804, 0x120804, 0x120804, 0.75, 0.75, 0, 0);
-    g.fillRect(0, 0, WORLD_W, 380);
-    g.setDepth(1000);
-    this.build();
-    this.scale.on('resize', this.build, this);
-    this.events.once('shutdown', () => this.scale.off('resize', this.build, this));
-    sfx.playBgm('peaceful');
-    this.cameras.main.fadeIn(500, 0, 0, 0);
-    if ((CHANGELOG[0]?.id ?? 0) > (save().newsSeen ?? 0)) this.time.delayedCall(700, () => this.showNews());
-    if (consumeCrashNotice()) this.time.delayedCall(500, () => this.crashNotice());
   }
 
   /** 上次當機、已自動改用省電畫質：提示一次 */

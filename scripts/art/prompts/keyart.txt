@@ -1,0 +1,11 @@
+Images 1-2 show the exact art style of my 2D fantasy tower-defense game "Kingdom Bastion": polished hand-painted chibi cartoon game art with clean dark-brown outlines, soft cel shading, rich painted textures and warm lighting. Image 1 shows the game's defense towers and monsters; image 2 shows the hero (a young blond knight in blue-and-silver armor).
+
+Paint the game's TITLE SCREEN KEY ART as one wide, cinematic landscape illustration in exactly that style:
+- A lush green fantasy valley seen from a slightly elevated three-quarter view, warm golden late-afternoon light, a few soft clouds.
+- Far in the background at the CENTER: a SMALL, distant white-stone royal castle with blue cone roofs and blue flags on a low hill on the horizon. The castle's highest flag must be BELOW the vertical middle of the image; everything above the middle line in the center is open sky.
+- A winding dirt road comes from the lower RIGHT edge and snakes toward the castle.
+- LEFT third (only allies here, no monsters at all on the left half): the defenders. A stone archer tower and a purple mage tower like image 1 stand beside the road, with tiny archers on top; the blond knight hero from image 2 stands in front with his sword raised, small soldiers with shields behind him.
+- RIGHT third (all monsters stay on the right half): the invading horde marching up the road from the lower right: green goblins, a big green troll with a club, grey wolves, skeletons, red winged imps and dark bats in the sky above them, all exactly like image 1.
+- Small details everywhere: autumn trees, rocks, flowers, wooden fences, a stream with a little bridge.
+- Composition rule: the TOP HALF of the middle third must be open bright sky with only soft clouds, because the big game logo will be placed there; keep the very center calm (grassy fields and the road), because menu buttons go there. Put the busy action in the left and right thirds and along the bottom.
+- No text, no letters, no logo, no watermark, no UI, no border.

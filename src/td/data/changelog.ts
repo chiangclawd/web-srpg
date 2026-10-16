@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 9,
+    date: '2026-10-16',
+    title: { zh: '全新標題畫面', en: 'New title screen' },
+    items: [
+      { zh: '標題畫面換成手繪主視覺：騎士與守軍迎戰巨魔、惡魔大軍，背景是遠方的王城', en: 'A hand-painted title illustration: the knight and his garrison face a horde of trolls and imps, with the royal castle in the distance' },
+      { zh: '分享連結時的預覽圖也換成新主視覺', en: 'Shared links now preview the new artwork' },
+    ],
+  },
+  {
     id: 8,
     date: '2026-10-16',
     title: { zh: '防禦塔換上手繪新造型', en: 'Hand-painted towers' },
