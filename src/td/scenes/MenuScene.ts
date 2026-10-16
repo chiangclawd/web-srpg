@@ -4,7 +4,8 @@ import { paintLevel } from '../art/terrain';
 import type { LevelDef } from '../sim/defs';
 import { TW_BASE, TW_H } from '../art/towers';
 import { Button, IconButton, dimmer, panel } from '../ui/widgets';
-import { T, getLang, setLang } from '../i18n';
+import { L, T, getLang, setLang } from '../i18n';
+import { CHANGELOG } from '../data/changelog';
 import { save, persist, resetProgress, exportSave, importSave } from '../save';
 import { showTextDialog } from '../ui/textDialog';
 import { sfx } from '../audio';
@@ -90,6 +91,7 @@ export class MenuScene extends Phaser.Scene {
     this.events.once('shutdown', () => this.scale.off('resize', this.build, this));
     sfx.playBgm('peaceful');
     this.cameras.main.fadeIn(500, 0, 0, 0);
+    if ((CHANGELOG[0]?.id ?? 0) > (save().newsSeen ?? 0)) this.time.delayedCall(700, () => this.showNews());
   }
 
   private build(): void {
@@ -121,7 +123,34 @@ export class MenuScene extends Phaser.Scene {
       this.build();
     }, { color: 'grey' }).setDepth(2000);
     const ver = addText(this, cx + w / 2 - 12, VIEW_H - 10, `v${__APP_VERSION__} · ${__GIT_SHA__}`, { size: 13, color: '#e8d8b8', strokeW: 3 }).setOrigin(1, 1).setDepth(2000);
-    this.ui.push(title, sub, start, set, cred, srpg, lang, ver);
+    const news = new Button(this, cx - w / 2 + 84, 40, 140, 44, T('news'), () => this.showNews(), { color: 'grey', text: { size: 16 } }).setDepth(2000);
+    this.ui.push(title, sub, start, set, cred, srpg, lang, ver, news);
+  }
+
+  /** 更新內容：有新的條目時開場自動跳出一次 */
+  private showNews(): void {
+    const sv = save();
+    sv.newsSeen = Math.max(sv.newsSeen ?? 0, CHANGELOG[0]?.id ?? 0);
+    persist();
+    const w = viewW(this);
+    const c = this.add.container(WORLD_W / 2, VIEW_H / 2).setDepth(5000);
+    c.add(dimmer(this, w * 2, VIEW_H * 2, 0.55).setPosition(-w, -VIEW_H));
+    c.add(panel(this, 0, 0, 640, 520));
+    c.add(addText(this, 0, -222, T('news'), { size: 32, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0.5));
+    let y = -178;
+    for (const e of CHANGELOG.slice(0, 2)) {
+      c.add(addText(this, -276, y, `${L(e.title)}　${e.date}`, { size: 20, display: true, color: '#7a4a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
+      y += 30;
+      for (const it of e.items) {
+        const t = addText(this, -262, y, `• ${L(it)}`, { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: 540, lineSpacing: 3 }).setOrigin(0, 0);
+        c.add(t);
+        y += t.height + 8;
+      }
+      y += 12;
+    }
+    c.add(new Button(this, 0, 214, 200, 52, 'OK', () => c.destroy(), { color: 'green' }));
+    c.setScale(0.8);
+    this.tweens.add({ targets: c, scale: 1, duration: 200, ease: 'Back.easeOut' });
   }
 
   private go(): void {

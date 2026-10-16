@@ -146,6 +146,7 @@ const STR = {
   epilogue: { zh: '尾聲', en: 'Epilogue' },
   shake: { zh: '畫面震動', en: 'Screen shake' },
   quality: { zh: '畫質', en: 'Graphics' },
+  news: { zh: '更新內容', en: 'What’s new' },
   backup: { zh: '備份存檔', en: 'Back up' },
   restore: { zh: '還原存檔', en: 'Restore' },
   backupTitle: { zh: '存檔備份碼', en: 'Save backup code' },
