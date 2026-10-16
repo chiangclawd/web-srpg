@@ -160,6 +160,7 @@ const STR = {
   qAuto: { zh: '自動', en: 'Auto' },
   qHigh: { zh: '高', en: 'High' },
   qLow: { zh: '省電', en: 'Low' },
+  crashLowQ: { zh: '上次遊戲意外關閉（可能是記憶體不足），已自動切換為「省電」畫質。可在設定中調回。', en: 'The game closed unexpectedly last time (probably low memory), so graphics were set to Low. You can change this in Settings.' },
   qReload: { zh: '重新載入以套用', en: 'Reloading to apply' },
   resetProgress: { zh: '清除進度', en: 'Reset progress' },
   confirmWipe: { zh: '再按一次確認清除', en: 'Tap again to confirm' },

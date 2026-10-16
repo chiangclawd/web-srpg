@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 2,
+    date: '2026-10-16',
+    title: { zh: '修正 iPhone 閃退', en: 'iPhone crash fix' },
+    items: [
+      { zh: '大幅降低手機的記憶體用量，修正 iPhone 橫向遊玩時頁面「重複發生問題」而無法開啟', en: 'Much lower memory use on phones; fixes the page crashing ("a problem repeatedly occurred") on iPhone in landscape' },
+      { zh: '萬一又意外關閉，下次開啟會自動改用「省電」畫質', en: 'If the game still closes unexpectedly, it switches to Low graphics on the next launch' },
+    ],
+  },
+  {
     id: 1,
     date: '2026-10-16',
     title: { zh: '首次公開測試', en: 'First public test' },

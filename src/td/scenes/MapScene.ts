@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PLAY_W, PLAY_X0, RS, VIEW_H, WORLD_W, addText, setupCamera, viewW } from '../config';
+import { PLAY_W, PLAY_X0, VIEW_H, WORLD_W, bgScale, addText, setupCamera, viewW } from '../config';
 import { LEVELS } from '../data/levels';
 import { UPGRADE_COLUMNS } from '../data/upgrades';
 import { HEROES } from '../data/heroes';
@@ -48,7 +48,7 @@ export class MapScene extends Phaser.Scene {
   create(): void {
     setupCamera(this);
     const nodes = LEVELS.map((l) => ({ x: l.mapPos.x * PLAY_W, y: l.mapPos.y * VIEW_H, theme: l.theme, bonus: l.bonus }));
-    const s = RS >= 2 ? 1.25 : 1;
+    const s = bgScale(1.25);
     if (!this.textures.exists('bg_map')) this.textures.addCanvas('bg_map', paintWorldMap(WORLD_W, VIEW_H, PLAY_X0, s, nodes));
     this.add.image(-PLAY_X0, 0, 'bg_map').setOrigin(0).setScale(1 / s);
 

@@ -1,11 +1,12 @@
 import Phaser from 'phaser';
-import { PLAY_W, PLAY_X0, RS, TEX, VIEW_H, WORLD_W, addText, setupCamera, viewW, type Quality } from '../config';
+import { PLAY_W, PLAY_X0, TEX, VIEW_H, WORLD_W, addText, bgScale, setupCamera, viewW, type Quality } from '../config';
 import { paintLevel } from '../art/terrain';
 import type { LevelDef } from '../sim/defs';
 import { TW_BASE, TW_H } from '../art/towers';
 import { Button, IconButton, dimmer, panel } from '../ui/widgets';
 import { L, T, getLang, setLang } from '../i18n';
 import { CHANGELOG } from '../data/changelog';
+import { consumeCrashNotice } from '../crashGuard';
 import { save, persist, resetProgress, exportSave, importSave } from '../save';
 import { showTextDialog } from '../ui/textDialog';
 import { sfx } from '../audio';
@@ -60,9 +61,9 @@ export class MenuScene extends Phaser.Scene {
 
   create(): void {
     setupCamera(this);
-    const bgScale = RS >= 2 ? 1.25 : 1;
-    if (!this.textures.exists('bg_menu')) this.textures.addCanvas('bg_menu', paintLevel(MENU_LEVEL, WORLD_W, PLAY_X0, bgScale));
-    this.add.image(0, 0, 'bg_menu').setOrigin(0).setScale(1 / bgScale).setName('bg');
+    const bgS = bgScale(1.25);
+    if (!this.textures.exists('bg_menu')) this.textures.addCanvas('bg_menu', paintLevel(MENU_LEVEL, WORLD_W, PLAY_X0, bgS));
+    this.add.image(0, 0, 'bg_menu').setOrigin(0).setScale(1 / bgS).setName('bg');
     // 幾座裝飾塔
     const arts = ['tw_archer_3', 'tw_mage_3', 'tw_barracks_3'];
     MENU_LEVEL.spots.forEach((s, i) => {
@@ -92,6 +93,17 @@ export class MenuScene extends Phaser.Scene {
     sfx.playBgm('peaceful');
     this.cameras.main.fadeIn(500, 0, 0, 0);
     if ((CHANGELOG[0]?.id ?? 0) > (save().newsSeen ?? 0)) this.time.delayedCall(700, () => this.showNews());
+    if (consumeCrashNotice()) this.time.delayedCall(500, () => this.crashNotice());
+  }
+
+  /** 上次當機、已自動改用省電畫質：提示一次 */
+  private crashNotice(): void {
+    const msg = addText(this, 0, 0, T('crashLowQ'), { size: 17, color: '#ffe8b0', wrap: 600, align: 'center' }).setOrigin(0.5);
+    const c = this.add.container(WORLD_W / 2, VIEW_H / 2 + 262).setDepth(6000);
+    c.add([panel(this, 0, 0, 640, msg.height + 28, 'ui_dark', 14), msg]);
+    c.setAlpha(0);
+    this.tweens.add({ targets: c, alpha: 1, duration: 250 });
+    this.tweens.add({ targets: c, alpha: 0, delay: 6500, duration: 400, onComplete: () => c.destroy() });
   }
 
   private build(): void {

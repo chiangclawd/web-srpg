@@ -10,15 +10,24 @@ export const PLAY_W = 1280;
 export const PLAY_X0 = (WORLD_W - PLAY_W) / 2;
 
 /**
- * 渲染倍率：在高 DPI 螢幕把 canvas 開成 2 倍、相機 zoom 2，
+ * 渲染倍率：在高 DPI 螢幕把 canvas 開大、相機 zoom 同倍率，
  * 所有邏輯仍在 1280×720 座標系，但畫面銳利（文字、程序繪圖都清楚）。
+ * 倍率以 0.25 為一級，不超過螢幕實體像素（再大只是浪費記憶體）。
  */
 function autoRS(): number {
   if (typeof window === 'undefined') return 1;
   const dpr = window.devicePixelRatio || 1;
-  // 橫屏時的實體像素高度；超過 ~900 就值得開 2 倍
+  // 橫屏時的實體像素高度
   const hPx = Math.min(window.innerHeight, window.innerWidth) * dpr;
-  return hPx >= 900 ? 2 : 1;
+  const fit = Math.floor((hPx / VIEW_H) * 4) / 4;
+  // 手機 / 平板記憶體吃緊（iOS Safari 超量會直接把分頁砍掉），最多 1.5 倍
+  return Phaser.Math.Clamp(fit, 1, isTouchDevice() ? 1.5 : 2);
+}
+
+/** 觸控為主的裝置（手機、平板） */
+export function isTouchDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia?.('(pointer: coarse)').matches || navigator.maxTouchPoints > 1;
 }
 
 export type Quality = 'auto' | 'high' | 'low';
@@ -29,6 +38,25 @@ export let RS: number = autoRS();
 /** 畫質設定：低 = 1 倍渲染（省電、低階手機更順）；高 = 一律 2 倍 */
 export function applyQuality(q: Quality): void {
   RS = q === 'low' ? 1 : q === 'high' ? 2 : autoRS();
+}
+
+/** 程序繪圖背景的解析度：跟著渲染倍率，但有上限（大圖最吃記憶體） */
+export function bgScale(max: number): number {
+  return Math.min(RS, max);
+}
+
+/**
+ * 移除畫布紋理並立刻釋放畫布記憶體。
+ * iOS Safari 的畫布記憶體要等 GC 才回收、而且有總量上限，大背景一定要手動清掉。
+ */
+export function freeCanvasTexture(scene: Phaser.Scene, key: string): void {
+  if (!scene.textures.exists(key)) return;
+  const src = scene.textures.get(key).getSourceImage();
+  scene.textures.remove(key);
+  if (src instanceof HTMLCanvasElement) {
+    src.width = 0;
+    src.height = 0;
+  }
 }
 
 export function computeViewW(): number {

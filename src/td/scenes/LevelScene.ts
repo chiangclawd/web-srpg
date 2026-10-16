@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PLAY_W, PLAY_X0, RS, TEX, VIEW_H, WORLD_W, setupCamera, viewW } from '../config';
+import { PLAY_W, PLAY_X0, TEX, VIEW_H, WORLD_W, bgScale, freeCanvasTexture, setupCamera, viewW } from '../config';
 import { getLevel } from '../data/levels';
 import { HEROES } from '../data/heroes';
 import { TOWERS, TOWER_ORDER } from '../data/towers';
@@ -25,7 +25,6 @@ import { L, T } from '../i18n';
 import type { LevelUIScene, InfoData } from './LevelUIScene';
 
 const STEP = 1 / 60;
-const BG_SCALE = RS >= 2 ? 1.5 : 1;
 
 type Mode = 'idle' | 'hero' | 'meteor' | 'reinforce' | 'rally' | 'keg' | 'ult';
 
@@ -120,11 +119,12 @@ export class LevelScene extends Phaser.Scene {
     cam.setBackgroundColor(THEMES[this.level.theme].groundDark);
 
     // 背景
-    if (this.textures.exists('bg_level')) this.textures.remove('bg_level');
-    const bg = paintLevel(this.level, WORLD_W, PLAY_X0, BG_SCALE);
+    freeCanvasTexture(this, 'bg_level');
+    const bgS = bgScale(1.5);
+    const bg = paintLevel(this.level, WORLD_W, PLAY_X0, bgS);
     this.textures.addCanvas('bg_level', bg);
-    this.add.image(-PLAY_X0, 0, 'bg_level').setOrigin(0).setScale(1 / BG_SCALE).setDepth(DEPTH.bg);
-    if (this.textures.exists('spot_tex')) this.textures.remove('spot_tex');
+    this.add.image(-PLAY_X0, 0, 'bg_level').setOrigin(0).setScale(1 / bgS).setDepth(DEPTH.bg);
+    freeCanvasTexture(this, 'spot_tex');
     this.textures.addCanvas('spot_tex', paintBuildSpot(TEX, THEMES[this.level.theme].snowy));
 
     this.fx = new Fx(this);
