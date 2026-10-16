@@ -9,7 +9,7 @@ import { LEVELS } from './levels';
  */
 export const DAILY_POOL = ['l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8', 'l9', 'l10', 'l13'];
 
-export type DailyModId = 'swift' | 'tough' | 'armored' | 'poor' | 'fragile' | 'noSpells' | 'limited' | 'hasty' | 'rich' | 'bounty';
+export type DailyModId = 'swift' | 'tough' | 'armored' | 'poor' | 'fragile' | 'noSpells' | 'limited' | 'pricey' | 'rich' | 'bounty';
 
 export interface DailyMod {
   id: DailyModId;
@@ -27,12 +27,12 @@ export const DAILY_MODS: Record<DailyModId, DailyMod> = {
   fragile: { id: 'fragile', name: { zh: '最後防線', en: 'Last Stand' }, desc: { zh: '只有 5 條命', en: 'Only 5 lives' } },
   noSpells: { id: 'noSpells', name: { zh: '魔力封印', en: 'Sealed Magic' }, desc: { zh: '禁用法術與道具', en: 'No spells or items' } },
   limited: { id: 'limited', name: { zh: '補給短缺', en: 'Short Supplies' }, desc: { zh: '只能建造兩種塔：{0}', en: 'Only two tower types: {0}' } },
-  hasty: { id: 'hasty', name: { zh: '連番猛攻', en: 'Relentless' }, desc: { zh: '波次間隔減半', en: 'Half the time between waves' } },
+  pricey: { id: 'pricey', name: { zh: '物價飛漲', en: 'Price Hike' }, desc: { zh: '建塔與升級費用 +15%', en: 'Towers and upgrades cost 15% more' } },
   rich: { id: 'rich', name: { zh: '戰爭基金', en: 'War Chest' }, desc: { zh: '起始金幣 +40%', en: 'Start with 40% more gold' }, good: true },
   bounty: { id: 'bounty', name: { zh: '懸賞令', en: 'Bounty Hunt' }, desc: { zh: '擊殺賞金 +30%', en: 'Kills pay 30% more gold' }, good: true },
 };
 
-const HARSH: DailyModId[] = ['swift', 'tough', 'armored', 'poor', 'fragile', 'noSpells', 'limited', 'hasty'];
+const HARSH: DailyModId[] = ['swift', 'tough', 'armored', 'poor', 'fragile', 'noSpells', 'limited', 'pricey'];
 const GOOD: DailyModId[] = ['rich', 'bounty'];
 const ANY: DailyModId[] = [...HARSH, ...GOOD, ...GOOD];
 /** 後期關卡本身就難：第二個修正一定是有利的，避免兩個嚴苛修正疊成無解 */
@@ -80,7 +80,11 @@ export function dailySpec(key: string): DailySpec {
 
 /** 套用修正後的關卡 */
 export function dailyLevel(level: LevelDef, key: string): LevelDef {
-  const spec = dailySpec(key);
+  return applyDaily(level, dailySpec(key));
+}
+
+/** 把一組修正套到關卡上（平衡工具也用它測任意組合） */
+export function applyDaily(level: LevelDef, spec: DailySpec): LevelDef {
   const rules: LevelRules = { mode: 'daily' };
   let startGold = level.startGold;
   let lives = level.lives;
@@ -107,8 +111,8 @@ export function dailyLevel(level: LevelDef, key: string): LevelDef {
       case 'limited':
         rules.allowed = spec.towers;
         break;
-      case 'hasty':
-        rules.gapMul = 0.5;
+      case 'pricey':
+        rules.towerCostMul = 1.15;
         break;
       case 'rich':
         startGold = Math.round(startGold * 1.4);

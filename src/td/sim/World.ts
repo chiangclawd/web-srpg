@@ -161,7 +161,8 @@ export class World {
 
   private costMul(type: TowerType): number {
     const m = this.mods;
-    return type === 'archer' ? m.archerCost : type === 'barracks' ? m.barracksCost : type === 'mage' ? m.mageCost : m.artCost;
+    const base = type === 'archer' ? m.archerCost : type === 'barracks' ? m.barracksCost : type === 'mage' ? m.mageCost : m.artCost;
+    return base * (this.level.rules?.towerCostMul ?? 1);
   }
 
   buildCost(type: TowerType): number {
@@ -661,7 +662,7 @@ export class World {
     if (this.waveState === 'spawning' && this.spawnQueue.length === 0) {
       if (this.waveIndex + 1 < this.waveCount) {
         this.waveState = 'gap';
-        this.gapTotal = (this.level.waves[this.waveIndex].gap ?? DEFAULT_WAVE_GAP) * (this.level.rules?.gapMul ?? 1);
+        this.gapTotal = this.level.waves[this.waveIndex].gap ?? DEFAULT_WAVE_GAP;
         this.nextWaveAt = this.time + this.gapTotal;
       } else {
         this.waveState = 'done';

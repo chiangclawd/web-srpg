@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DAILY_MODS, DAILY_POOL, dailyBaseLevel, dailyKey, dailyLevel, dailySpec } from '../../src/td/data/daily';
 import { ENEMIES } from '../../src/td/data/enemies';
+import { TOWERS } from '../../src/td/data/towers';
 import { gemReward } from '../../src/td/data/items';
 import { mkWorld, testLevel } from './helpers';
 
@@ -39,6 +40,8 @@ test('modifiers change the simulation', () => {
   const g0 = w.gold;
   w.damageEnemy(e, 99999, 'true', 'tower');
   assert.equal(w.gold - g0, Math.round(ENEMIES.raider.gold * 1.3));
+  const pricey = mkWorld(testLevel([], { rules: { mode: 'daily', towerCostMul: 1.15 } }));
+  assert.equal(pricey.buildCost('archer'), Math.round(TOWERS.archer.levels[0].cost * 1.15));
 });
 
 test('a daily level applies its own spec', () => {
