@@ -4,6 +4,7 @@ import { LEVELS } from '../data/levels';
 import { UPGRADE_COLUMNS } from '../data/upgrades';
 import { HEROES } from '../data/heroes';
 import { paintWorldMap } from '../art/worldmap';
+import { showTipBubble } from '../ui/tip';
 import { Button, IconButton, panel } from '../ui/widgets';
 import { L, T, getLang } from '../i18n';
 import { save, persist, totalStars } from '../save';
@@ -116,6 +117,7 @@ export class MapScene extends Phaser.Scene {
     });
 
     this.buildHud();
+    this.mapTip();
     this.scale.on('resize', this.buildHud, this);
     this.events.once('shutdown', () => this.scale.off('resize', this.buildHud, this));
     sfx.playBgm('peaceful');
@@ -162,6 +164,27 @@ export class MapScene extends Phaser.Scene {
     for (const o of [back, up, hb, enc, sp, si, st]) (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(500);
     this.hud.forEach((o) => (o as unknown as Phaser.GameObjects.Components.Depth).setDepth?.(500));
     void up;
+  }
+
+  /** 地圖首次提示：有星星可用 → 指向升級；寶石夠買道具 → 指向商店 */
+  private mapTip(): void {
+    const sv = save();
+    let id: 'upgrades' | 'shop' | null = null;
+    if (!sv.tipsSeen.includes('upgrades') && starsAvailable() > 0) id = 'upgrades';
+    else if (!sv.tipsSeen.includes('shop') && (sv.gems ?? 0) >= 40) id = 'shop';
+    if (!id) return;
+    const tip = id;
+    this.time.delayedCall(900, () => {
+      if (!this.sys.isActive()) return;
+      const w = viewW(this);
+      // 底部按鈕位置（與 buildHud 一致；螢幕座標）
+      const x = tip === 'upgrades' ? w - 470 : w - 790;
+      sv.tipsSeen.push(tip);
+      persist();
+      this.infoPanel?.destroy();
+      this.infoPanel = null;
+      showTipBubble(this, x, VIEW_H - 42, T(tip === 'upgrades' ? 'tipUpgrades' : 'tipShop'), () => {}, 2000);
+    });
   }
 
   private toastMsg(msg: string): void {

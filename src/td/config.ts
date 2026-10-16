@@ -13,13 +13,23 @@ export const PLAY_X0 = (WORLD_W - PLAY_W) / 2;
  * 渲染倍率：在高 DPI 螢幕把 canvas 開成 2 倍、相機 zoom 2，
  * 所有邏輯仍在 1280×720 座標系，但畫面銳利（文字、程序繪圖都清楚）。
  */
-export const RS: number = (() => {
+function autoRS(): number {
   if (typeof window === 'undefined') return 1;
   const dpr = window.devicePixelRatio || 1;
   // 橫屏時的實體像素高度；超過 ~900 就值得開 2 倍
   const hPx = Math.min(window.innerHeight, window.innerWidth) * dpr;
   return hPx >= 900 ? 2 : 1;
-})();
+}
+
+export type Quality = 'auto' | 'high' | 'low';
+
+/** 渲染倍率（live binding：遊戲建立前依畫質設定調整） */
+export let RS: number = autoRS();
+
+/** 畫質設定：低 = 1 倍渲染（省電、低階手機更順）；高 = 一律 2 倍 */
+export function applyQuality(q: Quality): void {
+  RS = q === 'low' ? 1 : q === 'high' ? 2 : autoRS();
+}
 
 export function computeViewW(): number {
   if (typeof window === 'undefined') return MAX_W;

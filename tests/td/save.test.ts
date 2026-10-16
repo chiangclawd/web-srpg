@@ -22,6 +22,8 @@ test('an old save without newer fields loads with defaults', () => {
   assert.equal(d.settings.lang, 'en');
   assert.equal(d.settings.music, 0);
   assert.equal(d.settings.shake, true);
+  assert.equal(d.settings.quality, 'auto');
+  assert.deepEqual(d.tipsSeen, []);
   assert.deepEqual(d.endless, {});
   assert.deepEqual(d.storySeen, []);
   assert.equal(d.heroes.arthur.xp, 500);

@@ -9,6 +9,7 @@ import { ITEMS, ITEM_ORDER, GOLD_SACK, POTION_LIVES, type ItemId } from '../data
 import type { EnemyDef } from '../sim/defs';
 import { IconButton, Button, panel, dimmer } from '../ui/widgets';
 import { playDialog } from '../ui/dialog';
+import { showTipBubble } from '../ui/tip';
 import { L, T } from '../i18n';
 import { save, persist } from '../save';
 import { sfx } from '../audio';
@@ -303,6 +304,38 @@ export class LevelUIScene extends Phaser.Scene {
 
   hasModal(): boolean {
     return !!this.modal;
+  }
+
+  /** 首次提示：暫停並用泡泡指向對應按鈕；有開對話框時不顯示（下次再試） */
+  showTip(id: 'spells' | 'ult' | 'items'): boolean {
+    if (this.modal) return false;
+    const bl = this.bottomLeft;
+    let x = 0;
+    let y = 0;
+    if (id === 'ult') {
+      if (!this.ult) return false;
+      x = bl.x + this.ult.btn.x;
+      y = bl.y + this.ult.btn.y;
+    } else if (id === 'spells') {
+      const m = this.spellBtns.meteor.btn;
+      const r = this.spellBtns.reinforce.btn;
+      x = bl.x + (m.x + r.x) / 2;
+      y = bl.y + m.y;
+    } else {
+      x = this.itemBar.x - 114;
+      y = this.itemBar.y - 32;
+    }
+    const sv = save();
+    if (!sv.tipsSeen.includes(id)) sv.tipsSeen.push(id);
+    persist();
+    this.lvl.togglePause(true);
+    this.closeModal();
+    const text = T(id === 'ult' ? 'tipUlt' : id === 'spells' ? 'tipSpells' : 'tipItems');
+    this.modal = showTipBubble(this, x, y, text, () => {
+      this.modal = null;
+      this.lvl.togglePause(false);
+    });
+    return true;
   }
 
   /** 更新道具數量（用掉或開場時） */

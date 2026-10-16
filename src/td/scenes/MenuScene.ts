@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PLAY_W, PLAY_X0, RS, TEX, VIEW_H, WORLD_W, addText, setupCamera, viewW } from '../config';
+import { PLAY_W, PLAY_X0, RS, TEX, VIEW_H, WORLD_W, addText, setupCamera, viewW, type Quality } from '../config';
 import { paintLevel } from '../art/terrain';
 import type { LevelDef } from '../sim/defs';
 import { TW_BASE, TW_H } from '../art/towers';
@@ -133,8 +133,8 @@ export class MenuScene extends Phaser.Scene {
     const w = viewW(this);
     const c = this.add.container(WORLD_W / 2, VIEW_H / 2).setDepth(5000);
     c.add(dimmer(this, w * 2, VIEW_H * 2, 0.55).setPosition(-w, -VIEW_H));
-    c.add(panel(this, 0, 0, 460, 440));
-    c.add(addText(this, 0, -178, T('settings'), { size: 32, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0.5));
+    c.add(panel(this, 0, 0, 460, 500));
+    c.add(addText(this, 0, -208, T('settings'), { size: 32, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0.5));
     const sv = save();
     const label = (y: number, text: string) =>
       c.add(addText(this, -170, y, text, { size: 22, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
@@ -148,19 +148,31 @@ export class MenuScene extends Phaser.Scene {
       });
       c.add(b);
     };
-    row(-114, T('music'), 'music');
-    row(-56, T('sound'), 'sfx');
-    label(2, T('shake'));
-    const shakeBtn = new IconButton(this, 140, 2, 50, sv.settings.shake ? 'ic_check' : 'ic_close', () => {
+    row(-144, T('music'), 'music');
+    row(-88, T('sound'), 'sfx');
+    label(-32, T('shake'));
+    const shakeBtn = new IconButton(this, 140, -32, 50, sv.settings.shake ? 'ic_check' : 'ic_close', () => {
       sv.settings.shake = !sv.settings.shake;
       persist();
       shakeBtn.setIcon(sv.settings.shake ? 'ic_check' : 'ic_close');
       if (sv.settings.shake) this.cameras.main.shake(160, 0.004);
     });
     c.add(shakeBtn);
+    // 畫質：自動 → 高 → 省電，改了要重新載入（渲染倍率在遊戲建立時決定）
+    label(24, T('quality'));
+    const QS: Quality[] = ['auto', 'high', 'low'];
+    const qName = (q: Quality) => T(q === 'auto' ? 'qAuto' : q === 'high' ? 'qHigh' : 'qLow');
+    const qBtn = new Button(this, 120, 24, 110, 44, qName(sv.settings.quality ?? 'auto'), () => {
+      const cur = sv.settings.quality ?? 'auto';
+      sv.settings.quality = QS[(QS.indexOf(cur) + 1) % QS.length];
+      persist();
+      qBtn.label.setText(qName(sv.settings.quality));
+      this.toastReload();
+    }, { color: 'blue', text: { size: 18 } });
+    c.add(qBtn);
     // 清除進度：按兩次才生效
     let armed = false;
-    const wipe = new Button(this, 0, 80, 240, 46, T('resetProgress'), () => {
+    const wipe = new Button(this, 0, 104, 240, 46, T('resetProgress'), () => {
       if (!armed) {
         armed = true;
         wipe.label.setText(T('confirmWipe'));
@@ -176,9 +188,19 @@ export class MenuScene extends Phaser.Scene {
       this.cameras.main.flash(250, 255, 255, 255);
     }, { color: 'red', text: { size: 18 } });
     c.add(wipe);
-    c.add(new Button(this, 0, 160, 200, 52, 'OK', () => c.destroy(), { color: 'green' }));
+    c.add(new Button(this, 0, 180, 200, 52, 'OK', () => c.destroy(), { color: 'green' }));
     c.setScale(0.8);
     this.tweens.add({ targets: c, scale: 1, duration: 200, ease: 'Back.easeOut' });
+  }
+
+  private reloadTimer: Phaser.Time.TimerEvent | null = null;
+
+  /** 畫質變更：短暫提示後重新載入（連續切換時只算最後一次） */
+  private toastReload(): void {
+    this.reloadTimer?.remove();
+    const t = addText(this, WORLD_W / 2, VIEW_H / 2 + 270, T('qReload'), { size: 18, color: '#ffe066' }).setOrigin(0.5).setDepth(6000);
+    this.tweens.add({ targets: t, alpha: 0, delay: 1300, duration: 300, onComplete: () => t.destroy() });
+    this.reloadTimer = this.time.delayedCall(1600, () => window.location.reload());
   }
 
   override update(_t: number, dms: number): void {

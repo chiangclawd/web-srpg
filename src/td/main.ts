@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import '@fontsource/luckiest-guy/400.css';
-import { RS, VIEW_H, computeViewW } from './config';
+import { RS, VIEW_H, applyQuality, computeViewW } from './config';
 import { loadSave } from './save';
 import { BootScene } from './scenes/BootScene';
 import { MenuScene } from './scenes/MenuScene';
@@ -14,7 +14,7 @@ import { AchievementScene } from './scenes/AchievementScene';
 import { EndingScene } from './scenes/EndingScene';
 import { ShopScene } from './scenes/ShopScene';
 
-loadSave();
+applyQuality(loadSave().settings.quality);
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,

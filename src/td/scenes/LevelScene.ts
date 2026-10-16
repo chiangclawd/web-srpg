@@ -387,6 +387,24 @@ export class LevelScene extends Phaser.Scene {
     this.setMode(this.mode === kind ? 'idle' : kind);
   }
 
+  /** 首次提示：每次開波最多一則，依序介紹法術 → 絕招 → 道具 */
+  private maybeTip(waveIndex: number): void {
+    const w = this.world;
+    const seen = save().tipsSeen;
+    let id: 'spells' | 'ult' | 'items' | null = null;
+    if (this.baseLevel.index === 0) {
+      if (waveIndex === 1 && w.spellsEnabled && !seen.includes('spells')) id = 'spells';
+    } else if (waveIndex === 0) {
+      if (w.hero && !seen.includes('ult')) id = 'ult';
+      else if (w.spellsEnabled && !seen.includes('items') && Object.values(save().items).some((n) => n > 0)) id = 'items';
+    }
+    if (!id) return;
+    const tip = id;
+    this.time.delayedCall(1600, () => {
+      if (!this.world.result) this.ui.showTip(tip);
+    });
+  }
+
   /** 英雄絕招按鈕：冷卻好了就進入選位模式 */
   enterHeroUlt(): void {
     if (!this.world.canHeroUlt()) {
@@ -992,6 +1010,7 @@ export class LevelScene extends Phaser.Scene {
           break;
         case 'waveStart':
           this.ui.waveBanner(ev.index + 1, this.world.waveCount, ev.boss);
+          this.maybeTip(ev.index);
           if (ev.boss) {
             sfx.play('boss');
             sfx.playBgm(this.level.id === 'l12' ? 'finale' : 'epic');

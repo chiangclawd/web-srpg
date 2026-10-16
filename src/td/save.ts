@@ -1,5 +1,6 @@
 import { setLang, type Lang } from './i18n';
 import type { Difficulty } from './sim/World';
+import type { Quality } from './config';
 
 const KEY = 'kb_td_save_v1';
 
@@ -25,6 +26,8 @@ export interface SaveData {
   items: Record<string, number>;
   /** 已看過開場劇情的關卡 */
   storySeen: string[];
+  /** 已看過的首次提示 */
+  tipsSeen: string[];
   settings: {
     music: number;
     sfx: number;
@@ -33,6 +36,8 @@ export interface SaveData {
     speed: number;
     /** 爆炸 / 首領登場時畫面震動 */
     shake: boolean;
+    /** 畫質（重新整理後生效） */
+    quality: Quality;
   };
   stats: { kills: number; plays: number; victories: number; towers: number };
 }
@@ -54,7 +59,8 @@ function defaults(): SaveData {
     // 新玩家各送一個，讓道具列一開始就看得到
     items: { keg: 1, frost: 1, potion: 1, gold: 1 },
     storySeen: [],
-    settings: { music: 0.6, sfx: 0.8, lang: nav.startsWith('zh') ? 'zh' : 'en', difficulty: 'normal', speed: 1, shake: true },
+    tipsSeen: [],
+    settings: { music: 0.6, sfx: 0.8, lang: nav.startsWith('zh') ? 'zh' : 'en', difficulty: 'normal', speed: 1, shake: true, quality: 'auto' },
     stats: { kills: 0, plays: 0, victories: 0, towers: 0 },
   };
 }
