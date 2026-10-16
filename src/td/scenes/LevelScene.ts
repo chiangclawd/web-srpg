@@ -14,7 +14,7 @@ import { evaluateAchievements } from '../data/achievements';
 import { STORY } from '../data/story';
 import { GEMS_PER_ACHIEVEMENT, ITEMS, KEG, gemReward, type ItemId } from '../data/items';
 import { RANGE_Y, inEllipse } from '../sim/math';
-import { paintLevel, paintBuildSpot } from '../art/terrain';
+import { PAINTED_LEVELS, levelArtKey, paintLevel, paintBuildSpot } from '../art/terrain';
 import { THEMES } from '../art/scenery';
 import { visualMuzzleH } from '../art/towers';
 import { DEPTH, Fx, camShake } from '../view/Fx';
@@ -110,6 +110,12 @@ export class LevelScene extends Phaser.Scene {
     this.seenIntro = new Set(save().seenEnemies);
   }
 
+  preload(): void {
+    // 手繪戰場背景按需下載（每關約 250 KB）；失敗就退回程序繪製
+    const id = this.baseLevel.id;
+    if (PAINTED_LEVELS.has(id) && !this.textures.exists(levelArtKey(id))) this.load.image(levelArtKey(id), `assets/levels/${id}.webp`);
+  }
+
   create(): void {
     const sv = save();
     const heroId = sv.selectedHero;
@@ -128,12 +134,19 @@ export class LevelScene extends Phaser.Scene {
     this.layoutCamera();
     cam.setBackgroundColor(THEMES[this.level.theme].groundDark);
 
-    // 背景
+    // 背景：有手繪圖就用（只留這一關的，其他關的釋放記憶體），沒有就程序繪製
     freeCanvasTexture(this, 'bg_level');
-    const bgS = bgScale(1.5);
-    const bg = paintLevel(this.level, WORLD_W, PLAY_X0, bgS);
-    this.textures.addCanvas('bg_level', bg);
-    this.add.image(-PLAY_X0, 0, 'bg_level').setOrigin(0).setScale(1 / bgS).setDepth(DEPTH.bg);
+    const painted = levelArtKey(this.baseLevel.id);
+    for (const k of this.textures.getTextureKeys()) if (k.startsWith('lvbg_') && k !== painted) this.textures.remove(k);
+    if (this.textures.exists(painted)) {
+      const img = this.add.image(-PLAY_X0, 0, painted).setOrigin(0).setDepth(DEPTH.bg);
+      img.setScale(WORLD_W / img.width, VIEW_H / img.height);
+    } else {
+      const bgS = bgScale(1.5);
+      const bg = paintLevel(this.level, WORLD_W, PLAY_X0, bgS);
+      this.textures.addCanvas('bg_level', bg);
+      this.add.image(-PLAY_X0, 0, 'bg_level').setOrigin(0).setScale(1 / bgS).setDepth(DEPTH.bg);
+    }
     freeCanvasTexture(this, 'spot_tex');
     this.textures.addCanvas('spot_tex', paintBuildSpot(TEX, THEMES[this.level.theme].snowy));
 
