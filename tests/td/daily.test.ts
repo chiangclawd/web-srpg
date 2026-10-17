@@ -66,3 +66,36 @@ test('daily gems: only the first clear of the day pays', () => {
   assert.equal(gemReward('daily', true, 3, false, 0), 0);
   assert.equal(gemReward('daily', false, 0, true, 0), 0);
 });
+
+test('new modifiers only appear from their start date and work in the sim', async () => {
+  const { HEROES } = await import('../../src/td/data/heroes');
+  const { LEVELS } = await import('../../src/td/data/levels');
+  const fresh = new Set(['skyraid', 'regen', 'rockfall', 'heroday']);
+  const seen = new Set<string>();
+  for (let d = 1; d <= 400; d++) {
+    const key = dailyKey(new Date(2026, 8, d));
+    const spec = dailySpec(key);
+    for (const m of spec.mods) {
+      if (key < '2026-10-18') assert.ok(!fresh.has(m), `${key} keeps the original modifier pool`);
+      else seen.add(m);
+    }
+    if (spec.mods.includes('rockfall')) assert.ok(LEVELS.find((l) => l.id === spec.levelId)!.hazards?.length, 'rockfall only on levels with traps');
+    if (spec.mods.includes('skyraid')) {
+      const lv = dailyLevel(dailyBaseLevel(key), key);
+      assert.ok(lv.waves.every((w) => w.groups.some((g) => g.enemy === 'bat')), 'every wave gets bats');
+    }
+  }
+  for (const m of fresh) assert.ok(seen.has(m), `${m} shows up`);
+  // 規則本身
+  const regen = mkWorld(testLevel([], { rules: { mode: 'daily', enemyRegen: 0.01 } }));
+  const e = regen.spawnEnemy('troll', 0, 100);
+  e.speed = 0;
+  e.hp = e.maxHp / 2;
+  for (let i = 0; i < 60; i++) regen.step(1 / 60);
+  assert.ok(e.hp > e.maxHp / 2, 'enemies regenerate');
+  const traps = mkWorld(testLevel([], { hazards: [{ kind: 'boulder', x: 600, y: 250, path: 0, d0: 900, d1: 300 }], rules: { mode: 'daily', hazardCdMul: 0.5 } }));
+  traps.triggerHazard(0);
+  assert.equal(traps.hazards[0].cd, 20);
+  const hero = mkWorld(testLevel([], { rules: { mode: 'daily', heroUltCdMul: 0.6 } }), { hero: { def: HEROES.arthur, xp: 0 } });
+  assert.ok(Math.abs(hero.heroUltCdMax - HEROES.arthur.ult.cd * 0.6) < 1e-9);
+});

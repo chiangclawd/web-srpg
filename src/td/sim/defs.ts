@@ -263,4 +263,9 @@ export interface LevelRules {
   enemyArmorAdd?: number;
   bountyMul?: number;
   towerCostMul?: number;
+  /** 每日挑戰修正：敵人每秒回復最大生命的比例、地圖機關冷卻與傷害倍率、英雄絕招冷卻倍率 */
+  enemyRegen?: number;
+  hazardCdMul?: number;
+  hazardDmgMul?: number;
+  heroUltCdMul?: number;
 }

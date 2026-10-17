@@ -9,7 +9,7 @@ import { LEVELS } from './levels';
  */
 export const DAILY_POOL = ['l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8', 'l9', 'l10', 'l13'];
 
-export type DailyModId = 'swift' | 'tough' | 'armored' | 'poor' | 'fragile' | 'noSpells' | 'limited' | 'pricey' | 'rich' | 'bounty';
+export type DailyModId = 'swift' | 'tough' | 'armored' | 'poor' | 'fragile' | 'noSpells' | 'limited' | 'pricey' | 'rich' | 'bounty' | 'skyraid' | 'regen' | 'rockfall' | 'heroday';
 
 export interface DailyMod {
   id: DailyModId;
@@ -30,12 +30,21 @@ export const DAILY_MODS: Record<DailyModId, DailyMod> = {
   pricey: { id: 'pricey', name: { zh: '物價飛漲', en: 'Price Hike' }, desc: { zh: '建塔與升級費用 +15%', en: 'Towers and upgrades cost 15% more' } },
   rich: { id: 'rich', name: { zh: '戰爭基金', en: 'War Chest' }, desc: { zh: '起始金幣 +40%', en: 'Start with 40% more gold' }, good: true },
   bounty: { id: 'bounty', name: { zh: '懸賞令', en: 'Bounty Hunt' }, desc: { zh: '擊殺賞金 +30%', en: 'Kills pay 30% more gold' }, good: true },
+  skyraid: { id: 'skyraid', name: { zh: '蝠群夜襲', en: 'Bat Swarm' }, desc: { zh: '每一波都多一群吸血蝙蝠', en: 'Every wave brings an extra swarm of bats' } },
+  regen: { id: 'regen', name: { zh: '巨魔之血', en: 'Troll Blood' }, desc: { zh: '敵人每秒回復 1% 生命', en: 'Enemies regenerate 1% health per second' } },
+  rockfall: { id: 'rockfall', name: { zh: '山崩季節', en: 'Rockslide Season' }, desc: { zh: '地圖機關冷卻減半、傷害 +50%', en: 'Map traps recharge twice as fast and hit 50% harder' }, good: true },
+  heroday: { id: 'heroday', name: { zh: '英雄之日', en: 'Hero’s Day' }, desc: { zh: '英雄絕招冷卻 -40%', en: 'Hero ultimate recharges 40% faster' }, good: true },
 };
 
 const HARSH: DailyModId[] = ['swift', 'tough', 'armored', 'poor', 'fragile', 'noSpells', 'limited', 'pricey'];
 const GOOD: DailyModId[] = ['rich', 'bounty'];
 // 第二個修正：一半機率是有利的
 const ANY: DailyModId[] = [...HARSH, ...GOOD, ...GOOD, ...GOOD, ...GOOD];
+/** 新修正從這天起才加入抽選（已經公布的日子不變） */
+const NEW_MODS_FROM = '2026-10-18';
+const HARSH2: DailyModId[] = [...HARSH, 'skyraid', 'regen'];
+const GOOD2: DailyModId[] = [...GOOD, 'rockfall', 'heroday'];
+const ANY2: DailyModId[] = [...HARSH2, ...GOOD2, ...GOOD2, ...GOOD2];
 /** 後期關卡本身就難：第二個修正一定是有利的，避免兩個嚴苛修正疊成無解 */
 const LATE = new Set(['l7', 'l8', 'l9', 'l10', 'l13']);
 const TOWER_PAIRS: TowerType[][] = [
@@ -71,11 +80,14 @@ export interface DailySpec {
 export function dailySpec(key: string): DailySpec {
   const rng = new Rng(hash('kb-daily-' + key));
   const levelId = DAILY_POOL[Math.floor(rng.next() * DAILY_POOL.length)];
-  const a = HARSH[Math.floor(rng.next() * HARSH.length)];
-  const pool = LATE.has(levelId) ? GOOD : ANY;
+  const fresh = key >= NEW_MODS_FROM;
+  const harsh = fresh ? HARSH2 : HARSH;
+  const a = harsh[Math.floor(rng.next() * harsh.length)];
+  const pool = LATE.has(levelId) ? (fresh ? GOOD2 : GOOD) : fresh ? ANY2 : ANY;
+  const hasTraps = !!LEVELS.find((l) => l.id === levelId)?.hazards?.length;
   let b = pool[Math.floor(rng.next() * pool.length)];
-  // 不重複，也不配出互相抵銷的組合（國庫空虛＋戰爭基金）
-  while (b === a || (a === 'poor' && b === 'rich')) b = pool[Math.floor(rng.next() * pool.length)];
+  // 不重複、不配出互相抵銷的組合（國庫空虛＋戰爭基金），沒有地圖機關的關卡不抽山崩季節
+  while (b === a || (a === 'poor' && b === 'rich') || (b === 'rockfall' && !hasTraps)) b = pool[Math.floor(rng.next() * pool.length)];
   const towers = TOWER_PAIRS[Math.floor(rng.next() * TOWER_PAIRS.length)];
   return { key, levelId, mods: [a, b], towers };
 }
@@ -122,9 +134,25 @@ export function applyDaily(level: LevelDef, spec: DailySpec): LevelDef {
       case 'bounty':
         rules.bountyMul = 1.3;
         break;
+      case 'regen':
+        rules.enemyRegen = 0.01;
+        break;
+      case 'rockfall':
+        rules.hazardCdMul = 0.5;
+        rules.hazardDmgMul = 1.5;
+        break;
+      case 'heroday':
+        rules.heroUltCdMul = 0.6;
+        break;
+      case 'skyraid':
+        break;
     }
   }
-  return { ...level, startGold, lives, intro: [], tutorial: false, rules };
+  // 蝠群夜襲：每波多一群蝙蝠（數量隨波次增加），輪流走各條路
+  const waves = spec.mods.includes('skyraid')
+    ? level.waves.map((w, k) => ({ ...w, groups: [...w.groups, { path: k % level.paths.length, enemy: 'bat', count: 3 + Math.floor(k / 3), interval: 0.6, delay: 4 }] }))
+    : level.waves;
+  return { ...level, startGold, lives, waves, intro: [], tutorial: false, rules };
 }
 
 export function dailyBaseLevel(key: string): LevelDef {
