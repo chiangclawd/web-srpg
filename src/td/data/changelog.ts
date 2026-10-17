@@ -11,6 +11,16 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 17,
+    date: '2026-10-17',
+    title: { zh: '更省記憶體、慶功場景換新', en: 'Lighter on memory, new celebration scene' },
+    items: [
+      { zh: '戰鬥中先釋放世界地圖與標題圖，手機記憶體用量約減少四分之一', en: 'The world map and title art are released during battles, cutting memory use on phones by about a quarter' },
+      { zh: '通關尾聲的慶功場景改用手繪的邊境村莊', en: 'The ending celebration now takes place in the painted border village' },
+      { zh: '成就提示移到結算面板上方，不再蓋住「勝利」', en: 'Achievement pop-ups sit above the result panel instead of covering “Victory”' },
+    ],
+  },
+  {
     id: 16,
     date: '2026-10-17',
     title: { zh: '第七位英雄：維克托', en: 'Seventh hero: Viktor' },

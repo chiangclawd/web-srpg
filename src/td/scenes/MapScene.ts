@@ -47,8 +47,15 @@ export class MapScene extends Phaser.Scene {
     this.hud = [];
   }
 
+  preload(): void {
+    // 戰鬥時會釋放世界地圖，回來時重新載入（瀏覽器快取，很快）
+    if (!this.textures.exists('worldmap')) this.load.image('worldmap', 'assets/worldmap.webp');
+  }
+
   create(): void {
     setupCamera(this);
+    // 離開戰鬥後釋放戰場背景（重玩時從快取重新載入）
+    for (const k of this.textures.getTextureKeys()) if (k.startsWith('lvbg_')) this.textures.remove(k);
     const nodes = LEVELS.map((l) => ({ x: l.mapPos.x * PLAY_W, y: l.mapPos.y * VIEW_H, theme: l.theme, bonus: l.bonus }));
     if (this.textures.exists('worldmap')) this.paintedMap(nodes);
     else {

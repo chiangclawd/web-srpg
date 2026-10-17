@@ -138,6 +138,8 @@ export class LevelScene extends Phaser.Scene {
     freeCanvasTexture(this, 'bg_level');
     const painted = levelArtKey(this.baseLevel.id);
     for (const k of this.textures.getTextureKeys()) if (k.startsWith('lvbg_') && k !== painted) this.textures.remove(k);
+    // 戰鬥中用不到世界地圖與標題主視覺（約 12 MB），先釋放；回地圖/主選單時再載入
+    for (const k of ['worldmap', 'keyart']) if (this.textures.exists(k)) this.textures.remove(k);
     if (this.textures.exists(painted)) {
       const img = this.add.image(-PLAY_X0, 0, painted).setOrigin(0).setDepth(DEPTH.bg);
       img.setScale(WORLD_W / img.width, VIEW_H / img.height);
