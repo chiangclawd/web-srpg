@@ -67,13 +67,14 @@ export class BootScene extends Phaser.Scene {
     this.load.on('progress', (p: number) => {
       this.bar.width = 400 * p * 0.85;
     });
-    for (const s of SPRITES) this.load.image(`raw_${s}`, `assets/sprites/${s}.png`);
+    // WebP 版（scripts/art/td_webp.py 產生；PNG 原檔留給 SRPG 用）
+    for (const s of SPRITES) this.load.image(`raw_${s}`, `assets/sprites/${s}.webp`);
     for (const m of PAINTED_MONSTERS) this.load.image(`rawmon_${m}`, `assets/sprites/mon/${m}.webp`);
     for (const k of [...Object.keys(PAINTED_TOWER_ART), ...Object.keys(PAINTED_BARRELS)]) this.load.image(`rawtw_${k}`, `assets/sprites/tw/${k}.webp`);
     if (!this.textures.exists('keyart')) this.load.image('keyart', 'assets/keyart.webp');
     this.load.image('worldmap', 'assets/worldmap.webp');
-    for (const h of Object.values(HEROES)) this.load.image(`rawpt_${h.id}`, `assets/portraits/${h.id}.png`);
-    for (const id of STORY_PORTRAITS) this.load.image(`rawpt_${id}`, `assets/portraits/${id}.png`);
+    for (const h of Object.values(HEROES)) this.load.image(`rawpt_${h.id}`, `assets/portraits/${h.id}.webp`);
+    for (const id of STORY_PORTRAITS) this.load.image(`rawpt_${id}`, `assets/portraits/${id}.webp`);
   }
 
   create(): void {
