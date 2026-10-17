@@ -1003,7 +1003,8 @@ export class LevelScene extends Phaser.Scene {
       stats.push(['', def.hitsAir ? T('hitsAir') : T('groundOnly')]);
     }
     void prev;
-    void tower;
+    // 已蓋好的塔：本場戰績（傷害與擊殺）
+    if (tower && def === tower.def && tower.dmgDealt > 0) stats.push([T('dealt'), T('dealtVal', Math.round(tower.dmgDealt).toLocaleString(), tower.kills)]);
     return { title: L(def.name), desc: L(def.desc), stats, cost: cost ?? undefined };
   }
 
