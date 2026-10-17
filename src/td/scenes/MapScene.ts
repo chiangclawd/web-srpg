@@ -35,6 +35,8 @@ export function starsAvailable(): number {
 
 export class MapScene extends Phaser.Scene {
   private infoPanel: Phaser.GameObjects.Container | null = null;
+  private heroPick: Phaser.GameObjects.Container | null = null;
+  private heroHud: Button | null = null;
   private hud: Phaser.GameObjects.GameObject[] = [];
   private focus?: string;
 
@@ -319,6 +321,7 @@ export class MapScene extends Phaser.Scene {
     const ach = new Button(this, -630, -42, 140, 56, T('achievements'), () => this.leave('Achievements'), { color: 'wood', icon: 'ic_crown', iconSize: 34, text: { size: 20 } });
     const shop = new Button(this, -790, -42, 140, 56, T('shop'), () => this.leave('Shop'), { color: 'red', icon: 'ic_gem', iconSize: 32, text: { size: 20 } });
     bottomRight.add([up, hb, enc, ach, shop]);
+    this.heroHud = hb;
     if (avail > 0) {
       const badge = this.add.circle(-410, -68, 14, 0xc0392b).setStrokeStyle(2, 0xffffff);
       const bt = addText(this, -410, -68, String(avail), { size: 14, display: true }).setOrigin(0.5);
@@ -436,6 +439,7 @@ export class MapScene extends Phaser.Scene {
 
   private showLevel(i: number, mode: LevelMode = 'campaign'): void {
     this.infoPanel?.destroy();
+    this.heroPick = null;
     const lv = LEVELS[i];
     const sv = save();
     const w = viewW(this);
@@ -534,6 +538,10 @@ export class MapScene extends Phaser.Scene {
       c.add(b);
     });
     refresh();
+    // 出戰英雄：點頭像就地換人，不必跑去英雄室
+    const cur = HEROES[sv.selectedHero] ? sv.selectedHero : 'arthur';
+    const heroBtn = new IconButton(this, -pw / 2 + 50, ph / 2 - 50, 64, `ptc_${cur}`, () => this.toggleHeroPick(c, heroBtn), 'ui_badge_blue', 0.82);
+    c.add(heroBtn);
     const go = new Button(this, 0, ph / 2 - 50, 220, 64, T('battle'), () => {
       sfx.play('horn', 0.7);
       this.cameras.main.fadeOut(300, 0, 0, 0);
@@ -547,6 +555,51 @@ export class MapScene extends Phaser.Scene {
     this.tweens.add({ targets: go, scale: 1.05, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     popIn(this, c, 0, { w: pw, h: ph }, 0.85, 220);
     this.infoPanel = c;
+  }
+
+  /** 關卡面板裡的英雄快選：兩排頭像蓋在難度列上，點了就換出戰英雄並喊一聲 */
+  private toggleHeroPick(c: Phaser.GameObjects.Container, btn: IconButton): void {
+    if (this.heroPick) {
+      this.heroPick.destroy();
+      this.heroPick = null;
+      return;
+    }
+    const box = this.add.container(0, 56);
+    // 實心底，免得下面的說明文字透出來
+    const solid = this.add.graphics();
+    solid.fillStyle(0x24160c, 1);
+    solid.fillRoundedRect(-176, -80, 352, 160, 16);
+    const bg = panel(this, 0, 0, 364, 172, 'ui_dark', 18).setInteractive();
+    box.add([solid, bg]);
+    HERO_ORDER.forEach((id, k) => {
+      const ok = heroUnlocked(id);
+      if (ok) sfx.preloadVoice(id);
+      const b = new IconButton(this, ((k % 4) - 1.5) * 84, Math.floor(k / 4) * 80 - 40, 66, `ptc_${id}`, () => {
+        if (!ok) {
+          sfx.play('error');
+          const after = LEVELS.find((l) => l.id === HEROES[id].unlockAfter);
+          this.toastMsg(T('unlockAfter', L(after?.name)));
+          return;
+        }
+        save().selectedHero = id;
+        persist();
+        btn.setIcon(`ptc_${id}`);
+        btn.icon.setDisplaySize(64 * 0.82, 64 * 0.82);
+        this.heroHud?.setIcon(`ptc_${id}`);
+        sfx.voice(id, 'select');
+        box.destroy();
+        this.heroPick = null;
+      }, save().selectedHero === id ? 'ui_badge_blue' : 'ui_badge', 0.82);
+      if (!ok) {
+        b.icon.setTint(0x333333);
+        b.add(this.add.image(0, 0, 'ic_lock').setDisplaySize(26, 26));
+      }
+      box.add(b);
+    });
+    c.add(box);
+    box.setScale(0.6).setAlpha(0);
+    this.tweens.add({ targets: box, scale: 1, alpha: 1, duration: 160, ease: 'Back.easeOut' });
+    this.heroPick = box;
   }
 
   /**
