@@ -62,7 +62,9 @@ export type Sfx =
   | 'rumble'
   | 'roar'
   | 'splash'
-  | 'baa';
+  | 'baa'
+  | 'howl'
+  | 'ghost';
 
 const FILES: Partial<Record<Sfx, string>> = {
   arrow: 'assets/audio/sfx_arrow.m4a',
@@ -414,6 +416,19 @@ class TdAudio {
         // 羊叫：帶顫音的鼻音鋸齒波，尾音下滑
         for (let i = 0; i < 6; i++) this.tone(i % 2 ? 470 : 500, 'sawtooth', t + i * 0.07, 0.09, 0.07 * v, i === 5 ? 380 : undefined);
         this.noise(t, 0.4, 0.04 * v, 'bandpass', 1400);
+        break;
+      case 'howl':
+        // 狼嚎：兩個略微走音的鋸齒波由低滑高再拖長下滑，加一點喉音噪聲
+        for (const d of [0, 7]) {
+          this.tone(260 + d, 'sawtooth', t, 0.32, 0.06 * v, 520 + d);
+          this.tone(520 + d, 'sawtooth', t + 0.3, 0.9, 0.06 * v, 300 + d);
+        }
+        this.noise(t, 0.5, 0.05 * v, 'bandpass', 700, 1200);
+        break;
+      case 'ghost':
+        // 怨靈現形：高音正弦和弦慢慢滑下，像玻璃風鈴的嗚咽
+        [880, 1109, 1320].forEach((f, i) => this.tone(f, 'sine', t + i * 0.04, 0.6, 0.035 * v, f * 0.7));
+        this.noise(t, 0.5, 0.03 * v, 'highpass', 3000, 1500);
         break;
       case 'splash':
         // 巨浪拍岸：寬頻噪聲由亮轉暗＋低頻轟聲＋零星水花
