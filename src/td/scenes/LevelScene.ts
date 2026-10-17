@@ -1840,11 +1840,11 @@ export class LevelScene extends Phaser.Scene {
   }
 
   /** 最終關通關 → 尾聲與製作群 */
-  exitToEnding(): void {
+  exitToEnding(story: 'main' | 'side' = 'main'): void {
     this.cameras.main.fadeOut(400, 0, 0, 0);
     this.time.delayedCall(420, () => {
       this.scene.stop('LevelUI');
-      this.scene.start('Ending', { epilogue: true, back: 'Map' });
+      this.scene.start('Ending', { epilogue: true, story, back: 'Map' });
     });
   }
 
