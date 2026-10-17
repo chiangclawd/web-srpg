@@ -135,7 +135,7 @@ export class MapScene extends Phaser.Scene {
     this.mapTip();
     this.scale.on('resize', this.buildHud, this);
     this.events.once('shutdown', () => this.scale.off('resize', this.buildHud, this));
-    sfx.playBgm('peaceful');
+    sfx.playBgm('map');
     this.cameras.main.fadeIn(400, 0, 0, 0);
     const focusIdx = this.focus ? LEVELS.findIndex((l) => l.id === this.focus) : -1;
     const auto = focusIdx >= 0 && isUnlocked(focusIdx + 1) && focusIdx + 1 < LEVELS.length ? focusIdx + 1 : lastUnlocked;

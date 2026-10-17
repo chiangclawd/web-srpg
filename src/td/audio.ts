@@ -1,13 +1,30 @@
 import { save } from './save';
+import type { ThemeId } from './sim/defs';
 
 /**
  * 塔防音效系統：
- *   - BGM：沿用 SRPG 的 mp3（HTMLAudio loop，淡入淡出切換）
+ *   - BGM：Gemini Lyria 產生的整首配樂（HTMLAudio，淡入淡出切換；曲子有完整收尾，播完停頓一下再從頭淡入）
  *   - SFX：既有 m4a 解碼成 AudioBuffer（可大量重疊播放）＋ Web Audio 即時合成
  *   - 同一音效 40ms 內只播一次，避免 20 座箭塔齊射時爆音
  */
 
-export type Bgm = 'peaceful' | 'tense' | 'dark' | 'epic' | 'finale';
+export type Bgm = 'title' | 'map' | 'grass' | 'forest' | 'snow' | 'waste' | 'desert' | 'volcano' | 'boss' | 'finale';
+
+/** 各地形的戰鬥配樂 */
+export const THEME_BGM: Record<ThemeId, Bgm> = {
+  grass: 'grass',
+  autumn: 'grass',
+  forest: 'forest',
+  snow: 'snow',
+  waste: 'waste',
+  desert: 'desert',
+  volcano: 'volcano',
+};
+
+/** 配樂統一做過響度標準化（-16 LUFS），比音效檔小聲一些，這裡補回來 */
+const BGM_GAIN = 0.8;
+/** 曲子播完到重新開始之間的停頓 */
+const BGM_GAP_MS = 2000;
 
 export type Sfx =
   | 'arrow'
@@ -72,6 +89,7 @@ class TdAudio {
   private bgmName: Bgm | null = null;
   private wantBgm: Bgm | null = null;
   private fadeTimer: ReturnType<typeof setInterval> | null = null;
+  private replayTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     if (typeof window === 'undefined') return;
@@ -323,9 +341,9 @@ class TdAudio {
     const vol = save().settings.music;
     if (this.bgmName === name && this.bgmEl && !this.bgmEl.paused) return;
     const old = this.bgmEl;
-    const el = new Audio(`assets/audio/bgm_${name}.mp3`);
-    el.loop = true;
+    const el = new Audio(`assets/audio/td/bgm_${name}.mp3`);
     el.volume = 0;
+    el.addEventListener('ended', () => this.replay(el));
     this.bgmEl = el;
     this.bgmName = name;
     if (vol > 0) {
@@ -334,7 +352,21 @@ class TdAudio {
         this.bgmName = null;
       });
     }
-    this.fadeTo(el, old, vol * 0.55);
+    this.fadeTo(el, old, vol * BGM_GAIN);
+  }
+
+  /** 播完停頓一下，再從頭淡入（不硬切循環點，整首歌的收尾才聽得完整） */
+  private replay(el: HTMLAudioElement): void {
+    if (this.replayTimer) clearTimeout(this.replayTimer);
+    this.replayTimer = setTimeout(() => {
+      this.replayTimer = null;
+      const vol = save().settings.music;
+      if (this.bgmEl !== el || !this.wantBgm || vol <= 0 || document.hidden) return;
+      el.currentTime = 0;
+      el.volume = 0;
+      el.play().catch(() => {});
+      this.fadeTo(el, null, vol * BGM_GAIN);
+    }, BGM_GAP_MS);
   }
 
   private fadeTo(el: HTMLAudioElement, old: HTMLAudioElement | null, target: number): void {
@@ -360,7 +392,7 @@ class TdAudio {
   refreshVolumes(): void {
     const vol = save().settings.music;
     if (this.bgmEl) {
-      this.bgmEl.volume = vol * 0.55;
+      this.bgmEl.volume = vol * BGM_GAIN;
       if (vol <= 0) this.bgmEl.pause();
       else if (this.bgmEl.paused && this.wantBgm) this.bgmEl.play().catch(() => {});
     }

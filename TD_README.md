@@ -82,6 +82,21 @@ python3 scripts/art/slice_towers.py raw/archer.png orig_frames/ out/ tw_archer_1
 
 標題主視覺（`public/assets/keyart.webp`，21:9）以塔、魔物和英雄 sprite 當風格參考生成，再用兩次「只改局部」的編輯把左邊守軍裡誤畫的哥布林換成士兵（提示詞：`scripts/art/prompts/keyart*.txt`，共 4 張約 US$0.16）。MenuScene 有這張圖就用它（緩慢呼吸縮放＋落葉），沒有就退回程序繪製的地圖；分享預覽圖 `public/td-og.jpg` 是同一畫面只留標題、1200×630 截圖。
 
+## 🎵 配樂流程（Gemini Lyria）
+
+十首配樂（`public/assets/audio/td/bgm_*.mp3`）由 Lyria 3.5 生成：標題、世界地圖、六種地形各一首戰鬥曲、首領戰、最終決戰。
+
+```bash
+NODE_USE_ENV_PROXY=1 node scripts/art/gemini-music.mjs raw/boss.mp3 scripts/art/prompts/music/boss.txt
+python3 scripts/art/prep_music.py raw/boss.mp3 public/assets/audio/td/bgm_boss.mp3
+NODE_USE_ENV_PROXY=1 node scripts/art/gemini-listen.mjs raw/boss.mp3   # 請 Gemini 試聽：人聲、曲風、瑕疵
+```
+
+- 模型：`lyria-3.5`（約 3 分鐘、約 US$0.08／首）。生成要 40 秒以上，所以走 Interactions API 背景模式再輪詢，一般請求等太久會被中途切斷
+- 每首約 3 分鐘、有完整收尾；整首歌的結尾接不回開頭，硬切循環點聽得出斷點，所以遊戲端播完停頓 2 秒再從頭淡入
+- `prep_music.py`：去尾端靜音、統一響度（-16 LUFS）、112 kbps MP3
+- Lyria 每次至少產生約 30 秒的完整音樂，不適合做短音效；音效仍用原本的檔案與 Web Audio 合成
+
 ## 🧱 架構
 
 ```
@@ -97,7 +112,7 @@ src/td/
 ├── art/                 # 程序化美術（Canvas 2D）：地形、塔、魔物、特效、UI、世界地圖
 ├── view/                # 模擬 → 畫面：單位精靈、塔、環形選單、粒子特效
 ├── scenes/              # Boot / Menu / Map / Level / LevelUI / Upgrade / Hero / Encyclopedia
-├── audio.ts             # BGM（沿用 SRPG mp3）+ SFX（解碼 m4a + Web Audio 合成）
+├── audio.ts             # BGM（Lyria 配樂，依地形切換）+ SFX（解碼 m4a + Web Audio 合成）
 ├── save.ts / i18n.ts
 ```
 
