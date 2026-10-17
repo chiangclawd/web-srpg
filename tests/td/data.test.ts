@@ -130,3 +130,12 @@ test('every tower type, specialization and hero has speech-bubble lines', () => 
     for (const l of lines) assert.ok(l.zh.length <= 10 && l.en.length <= 26, `short enough: ${l.zh} / ${l.en}`);
   }
 });
+
+test('every level has its painted battlefield registered and on disk', async () => {
+  const { PAINTED_LEVELS } = await import('../../src/td/art/terrain');
+  const fs = await import('node:fs');
+  for (const lv of LEVELS) {
+    assert.ok(PAINTED_LEVELS.has(lv.id), `${lv.id} registered in PAINTED_LEVELS`);
+    assert.ok(fs.existsSync(`public/assets/levels/${lv.id}.webp`), `${lv.id}.webp exists`);
+  }
+});

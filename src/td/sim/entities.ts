@@ -171,6 +171,8 @@ export class Tower {
   aimY = 0;
   lastShotAt = -10;
   stunUntil = 0;
+  /** 停擺是被熔岩燒的（畫面染紅）；否則是冰封（染藍） */
+  stunFire = false;
   /** 夏儂的智慧加護：此時間前攻速提高 */
   hasteUntil = 0;
   golem: Soldier | null = null;

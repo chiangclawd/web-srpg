@@ -19,7 +19,8 @@ export type EnemyAbility =
   | { kind: 'summon'; enemy: string; count: number; cd: number }
   | { kind: 'spawnOnDeath'; enemy: string; count: number }
   | { kind: 'enrage'; belowHp: number; speedMul: number }
-  | { kind: 'stunTowers'; radius: number; duration: number; cd: number }
+  /** 讓附近的塔暫時停擺（fx: 'fire' 為熔岩噴發，預設為冰封） */
+  | { kind: 'stunTowers'; radius: number; duration: number; cd: number; fx?: 'fire' }
   | { kind: 'aoeMelee'; radius: number }
   | { kind: 'blink'; distance: number; cd: number }
   /** 鑽入地下：期間無法被攻擊、阻擋，移動加速 */
@@ -182,7 +183,7 @@ export interface WaveDef {
   hpMul?: number;
 }
 
-export type ThemeId = 'grass' | 'forest' | 'snow' | 'waste' | 'autumn' | 'desert';
+export type ThemeId = 'grass' | 'forest' | 'snow' | 'waste' | 'autumn' | 'desert' | 'volcano';
 
 export type DecorItem =
   | { kind: 'house'; x: number; y: number; scale?: number }

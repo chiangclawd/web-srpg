@@ -1,0 +1,8 @@
+The attached images are character sprites from my 2D fantasy tower-defense game. Use them as a strict STYLE reference: same chibi proportions (big head, compact body), same clean dark-brown outlines, same soft cel shading and painted detail level, same warm color treatment and rendering quality.
+
+Draw ONE NEW boss enemy sprite in exactly that style: Ignis the Fire Lord, a towering demonic fire elemental lord — a horned obsidian helmet over a face of living flame, a body of black volcanic armor plates with molten lava glowing between them, a cape of fire, wielding a huge burning obsidian greatsword. Imposing and powerful but still chibi proportions.
+
+Requirements:
+- Full body, single creature, 3/4 side view facing RIGHT, mid-stride walking pose.
+- Centered with generous empty margin around it; nothing cropped.
+- Background: perfectly flat, uniform solid magenta (#FF00FF) everywhere around the creature. No gradient, no ground, no cast shadow, no scenery, no text, no frame. Avoid magenta or pink on the creature itself.

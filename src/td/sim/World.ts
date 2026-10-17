@@ -1003,8 +1003,11 @@ export class World {
           const hit = this.towers.filter((t) => dist(t.x, t.y, e.x, e.y) <= a.radius);
           if (!hit.length) break;
           e.abilityCd[i] = a.cd;
-          for (const t of hit) t.stunUntil = this.time + a.duration;
-          this.emit({ type: 'explosion', x: e.x, y: e.y, r: a.radius, kind: 'shock' });
+          for (const t of hit) {
+            t.stunUntil = this.time + a.duration;
+            t.stunFire = a.fx === 'fire';
+          }
+          this.emit({ type: 'explosion', x: e.x, y: e.y, r: a.radius, kind: a.fx === 'fire' ? 'meteor' : 'shock' });
           break;
         }
         default:

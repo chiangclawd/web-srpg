@@ -78,7 +78,7 @@ export function paintWorldMap(
     ctx.fill();
   };
   // 依各關主題在節點周圍鋪地區色
-  const REGION: Record<string, string> = { grass: '#a8c870', forest: '#4f8a3a', snow: '#eef4f8', autumn: '#c8a24a', waste: '#6a5a5e', desert: '#ecd28c' };
+  const REGION: Record<string, string> = { grass: '#a8c870', forest: '#4f8a3a', snow: '#eef4f8', autumn: '#c8a24a', waste: '#6a5a5e', desert: '#ecd28c', volcano: '#5a3a30' };
   for (const n of nodes) {
     // 沙漠要蓋過周圍的草原色，加深一些
     if (n.theme === 'desert') region(n.x, n.y, 230, REGION.desert, 0.95);
@@ -146,6 +146,7 @@ export function paintWorldMap(
           if (rnd() < 0.2) items.push({ y, draw: () => mountain(x, y, 0.5 + rnd() * 0.4, false) });
           else items.push({ y, draw: () => drawTree(ctx, x, y, 10, ['#d9822b', '#c4512a', '#e3a93a'], rnd, false) });
           break;
+        case 'volcano':
         case 'waste':
           if (rnd() < 0.3) items.push({ y, draw: () => mountain(x, y, 0.5 + rnd() * 0.4, false) });
           else items.push({ y, draw: () => drawDeadTree(ctx, x, y, 12, rnd) });

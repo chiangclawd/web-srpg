@@ -25,7 +25,7 @@ import {
 export const PATH_W = 58;
 
 /** 有 AI 手繪背景的關卡（public/assets/levels/<id>.webp，以程序背景為構圖重繪，道路位置相同） */
-export const PAINTED_LEVELS = new Set(['l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8', 'l9', 'l10', 'l11', 'l12', 'l13', 'l14', 'l15']);
+export const PAINTED_LEVELS = new Set(['l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8', 'l9', 'l10', 'l11', 'l12', 'l13', 'l14', 'l15', 'l16']);
 
 export function levelArtKey(id: string): string {
   return `lvbg_${id}`;
@@ -142,7 +142,7 @@ export function paintLevel(level: LevelDef, worldW: number, offX: number, s: num
   }
 
   // 程序散佈：邊緣森林帶 + 零星灌木/石頭/花
-  const density = level.theme === 'forest' ? 1.6 : level.theme === 'snow' ? 0.8 : level.theme === 'desert' ? 0.55 : 1;
+  const density = level.theme === 'forest' ? 1.6 : level.theme === 'snow' ? 0.8 : level.theme === 'desert' ? 0.55 : level.theme === 'volcano' ? 0.5 : 1;
   const edgeTrees = Math.round(120 * density);
   for (let i = 0; i < edgeTrees; i++) {
     // 偏向畫面邊緣
@@ -188,14 +188,15 @@ export function paintLevel(level: LevelDef, worldW: number, offX: number, s: num
   items.sort((a, b) => a.y - b.y);
   for (const it of items) it.draw();
 
-  // 8) 荒地：裂痕與紫色微光；秋天：落葉
-  if (level.theme === 'waste') {
+  // 8) 荒地：裂痕與紫色微光（火山：發光的熔岩裂縫）；秋天：落葉
+  if (level.theme === 'waste' || level.theme === 'volcano') {
+    const lava = level.theme === 'volcano';
     for (let i = 0; i < 70; i++) {
       const x = x0 + rnd() * worldW;
       const y = rnd() * H;
       if (near(x, y, 6)) continue;
-      ctx.strokeStyle = 'rgba(30,18,12,0.45)';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = lava ? 'rgba(255,120,30,0.7)' : 'rgba(30,18,12,0.45)';
+      ctx.lineWidth = lava ? 2.5 : 2;
       ctx.beginPath();
       ctx.moveTo(x, y);
       let cx = x;
@@ -210,7 +211,7 @@ export function paintLevel(level: LevelDef, worldW: number, offX: number, s: num
     for (let i = 0; i < 26; i++) {
       const x = x0 + rnd() * worldW;
       const y = rnd() * H;
-      ctx.fillStyle = rgrad(ctx, x, y, 0, 26, 'rgba(180,90,255,0.22)', 'rgba(180,90,255,0)');
+      ctx.fillStyle = lava ? rgrad(ctx, x, y, 0, 26, 'rgba(255,110,30,0.25)', 'rgba(255,110,30,0)') : rgrad(ctx, x, y, 0, 26, 'rgba(180,90,255,0.22)', 'rgba(180,90,255,0)');
       circle(ctx, x, y, 26);
       ctx.fill();
     }
@@ -247,8 +248,8 @@ function tree(ctx: Ctx, x: number, y: number, r: number, th: ThemePalette, theme
     else drawCactus(ctx, x, y, r * 0.75, rnd);
     return;
   }
-  if (theme === 'waste') {
-    if (rnd() < 0.6) drawDeadTree(ctx, x, y, r * 1.2, rnd);
+  if (theme === 'waste' || theme === 'volcano') {
+    if (theme === 'volcano' || rnd() < 0.6) drawDeadTree(ctx, x, y, r * 1.2, rnd);
     else drawPine(ctx, x, y, r * 0.9, th.pine, false);
     return;
   }

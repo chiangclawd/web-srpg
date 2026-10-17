@@ -8,6 +8,7 @@ export interface StoryLine {
 
 export const SPEAKERS: Record<string, { name: L10n; enemy?: boolean }> = {
   arthur: { name: { zh: '亞瑟', en: 'Arthur' } },
+  sharon: { name: { zh: '夏儂', en: 'Sharon' } },
   elena: { name: { zh: '艾蓮娜', en: 'Elena' } },
   lila: { name: { zh: '莉拉', en: 'Lila' } },
   rain: { name: { zh: '雷恩', en: 'Rain' } },
@@ -87,6 +88,10 @@ export const STORY: Record<string, StoryLine[]> = {
   l15: [
     { who: 'rain', text: { zh: '教派最後的殘黨逃進了北方冰河……他們在冰層底下喚醒了某個龐然大物。', en: 'The last cultists fled into the northern glacier, and woke something enormous beneath the ice.' } },
     { who: 'elena', text: { zh: '是冰霜巨人！牠一踏地，附近的塔就會被凍住，塔別全擠在一起。冰精靈不怕魔法，交給弓箭手！', en: 'A frost giant! Its stomp freezes nearby towers, so spread them out. Frost sprites shrug off magic. Leave them to the archers!' } },
+  ],
+  l16: [
+    { who: 'sharon', text: { zh: '古籍記載，冰河旁沉睡著一座火山，裡面封著炎魔伊格尼斯……巨人倒下時，封印也跟著碎了。', en: 'The old texts speak of a volcano asleep beside the glacier, with Ignis the Fire Lord sealed inside. When the giant fell, the seal broke with it.' } },
+    { who: 'viktor', text: { zh: '熔岩魔像碎了會迸出小魔，塔要多打幾下；炎魔的熔岩噴發會燒停附近的塔，別把塔全蓋在一處！', en: 'Lava golems burst into imps when they break, so keep firing. The Fire Lord’s eruptions scorch nearby towers. Don’t build them all in one spot!' } },
   ],
 };
 
