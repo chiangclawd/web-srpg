@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 28,
+    date: '2026-10-17',
+    title: { zh: '首領擊破的瞬間', en: 'Boss takedown moment' },
+    items: [
+      { zh: '擊倒首領時畫面閃光、短暫慢動作，並跳出「首領擊破！」與首領名字', en: 'Felling a boss now flashes the screen, slows time for a moment and shows “Boss defeated!” with the boss’s name' },
+    ],
+  },
+  {
     id: 27,
     date: '2026-10-17',
     title: { zh: '第八位英雄：影', en: 'Eighth hero: Shade' },

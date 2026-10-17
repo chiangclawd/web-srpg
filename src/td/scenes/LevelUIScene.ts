@@ -541,6 +541,19 @@ export class LevelUIScene extends Phaser.Scene {
     this.tweens.add({ targets: t, alpha: 0, y: t.y - 20, delay: 1300, duration: 400, onComplete: () => t.destroy() });
   }
 
+  /** 首領倒下：金色大字＋首領名 */
+  bossDefeated(name: string): void {
+    const w = viewW(this);
+    const c = this.add.container(w / 2, VIEW_H * 0.24).setDepth(70);
+    const glow = this.add.image(0, 10, 'fx_soft').setTint(0xffd86a).setBlendMode('ADD').setAlpha(0.55).setScale(5, 1.6);
+    const t = addText(this, 0, 0, T('bossDefeated'), { size: 46, display: true, color: '#ffe066', strokeW: 8 }).setOrigin(0.5);
+    const n = addText(this, 0, 44, name, { size: 22, display: true, color: '#fff2d0', strokeW: 5 }).setOrigin(0.5);
+    c.add([glow, t, n]);
+    c.setScale(1.8).setAlpha(0);
+    this.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 320, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: c, alpha: 0, y: c.y - 24, delay: 1500, duration: 400, onComplete: () => c.destroy() });
+  }
+
   // ───────── 新敵人介紹卡 ─────────
   showEnemyIntro(ids: string[], done: () => void): void {
     if (!ids.length) {

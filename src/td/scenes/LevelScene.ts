@@ -77,6 +77,8 @@ export class LevelScene extends Phaser.Scene {
   private projPool: Phaser.GameObjects.Image[] = [];
   private ambient: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
   private hazardLayer: HazardLayer | null = null;
+  /** 首領倒下的慢動作（場景時間，毫秒） */
+  private slowMoUntil = 0;
   private bubbles!: Bubbles;
 
   constructor() {
@@ -113,6 +115,7 @@ export class LevelScene extends Phaser.Scene {
     this.projPool = [];
     this.skullArmedUntil = 0;
     this.hazardLayer = null;
+    this.slowMoUntil = 0;
     this.seenIntro = new Set(save().seenEnemies);
   }
 
@@ -1178,7 +1181,9 @@ export class LevelScene extends Phaser.Scene {
   override update(time: number, deltaMs: number): void {
     const w = this.world;
     if (!this.paused && !w.result) {
-      this.acc += Math.min(deltaMs, 100) / 1000 * this.speed;
+      // 首領倒下時短暫慢動作
+      const slow = time < this.slowMoUntil ? 0.3 : 1;
+      this.acc += (Math.min(deltaMs, 100) / 1000) * this.speed * slow;
       let n = 0;
       while (this.acc >= STEP && n < 16) {
         w.step(STEP);
@@ -1222,7 +1227,12 @@ export class LevelScene extends Phaser.Scene {
           this.fx.smokePuff(ev.e.x, ev.e.y - 10 + fy, ev.e.def.boss ? 16 : 4);
           if (ev.e.def.boss) {
             this.fx.explosion(ev.e.x, ev.e.y, 90, 'meteor');
+            this.fx.stars(ev.e.x, ev.e.y - 40, 14);
             sfx.play('explosion');
+            sfx.play('star', 0.8);
+            this.slowMoUntil = this.time.now + 1400;
+            this.cameras.main.flash(260, 255, 240, 200);
+            this.ui.bossDefeated(L(ev.e.def.name));
           }
           sfx.play('death', 0.5);
           break;

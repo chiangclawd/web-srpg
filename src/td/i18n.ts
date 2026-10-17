@@ -84,6 +84,7 @@ const STR = {
   heroMove: { zh: '點選位置讓英雄移動', en: 'Tap a location to move your hero' },
   newEnemy: { zh: '新敵人', en: 'New Enemy' },
   bossIncoming: { zh: '首領來襲！', en: 'Boss incoming!' },
+  bossDefeated: { zh: '首領擊破！', en: 'Boss defeated!' },
   stars: { zh: '星', en: 'Stars' },
   locked: { zh: '尚未解鎖', en: 'Locked' },
   reset: { zh: '重置', en: 'Reset' },
