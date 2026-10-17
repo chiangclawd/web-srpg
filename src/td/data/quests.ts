@@ -17,6 +17,8 @@ export interface QuestTally {
   bosses: number;
   hazardKills: number;
   daily: number;
+  gold: number;
+  challenges: number;
 }
 
 export type QuestId = keyof QuestTally;
@@ -42,6 +44,8 @@ export const QUESTS: QuestDef[] = [
   { id: 'bosses', text: { zh: '擊敗 {n} 名首領', en: 'Defeat {n} bosses' }, targets: [1, 2], rewards: [8, 12], minCleared: 4 },
   { id: 'hazardKills', text: { zh: '用地圖機關擊倒 {n} 名敵人', en: 'Take down {n} enemies with map traps' }, targets: [5, 10], rewards: [6, 9], minCleared: 3 },
   { id: 'daily', text: { zh: '通關今天的每日挑戰', en: "Clear today's Daily Challenge" }, targets: [1], rewards: [8], minCleared: 3 },
+  { id: 'gold', text: { zh: '在戰鬥中賺取 {n} 金幣', en: 'Earn {n} gold in battle' }, targets: [1200, 2500], rewards: [5, 8] },
+  { id: 'challenges', text: { zh: '通關一次英雄挑戰或鋼鐵挑戰', en: 'Clear a Heroic or Iron Challenge' }, targets: [1], rewards: [10], minCleared: 4 },
 ];
 
 export interface QuestState {

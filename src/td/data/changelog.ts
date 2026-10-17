@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 61,
+    date: '2026-10-17',
+    title: { zh: '新的每日任務', en: 'New Daily Quests' },
+    items: [
+      { zh: '每日任務新增「在戰鬥中賺取金幣」與「通關一次英雄挑戰或鋼鐵挑戰」（通關 4 關後開放）', en: 'New daily quests: “Earn gold in battle” and “Clear a Heroic or Iron Challenge” (after clearing 4 levels)' },
+    ],
+  },
+  {
     id: 60,
     date: '2026-10-17',
     title: { zh: '夜戰小幫手', en: 'Night Battle Helpers' },

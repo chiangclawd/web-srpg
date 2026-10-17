@@ -2012,6 +2012,8 @@ export class LevelScene extends Phaser.Scene {
       bosses: w.stats.bossesKilled.length,
       hazardKills: w.stats.hazardKills,
       daily: this.mode0 === 'daily' && victory ? 1 : 0,
+      gold: w.stats.goldEarned,
+      challenges: (this.mode0 === 'heroic' || this.mode0 === 'iron') && victory ? 1 : 0,
     });
     // 寶石：本場獎勵＋新成就
     const firstClear = this.mode0 === 'campaign' ? victory && prevCampaignStars === 0 : this.mode0 === 'daily' || this.mode0 === 'bossrush' ? dailyFirst : newStars > 0;

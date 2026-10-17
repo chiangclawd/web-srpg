@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { QUESTS, QUESTS_PER_DAY, addQuestProgress, claimable, ensureQuests, questText, questsFor, type QuestTally } from '../../src/td/data/quests';
 
-const none: QuestTally = { kills: 0, wins: 0, threeStars: 0, towers: 0, meteorKills: 0, earlyCalls: 0, bosses: 0, hazardKills: 0, daily: 0 };
+const none: QuestTally = { kills: 0, wins: 0, threeStars: 0, towers: 0, meteorKills: 0, earlyCalls: 0, bosses: 0, hazardKills: 0, daily: 0, gold: 0, challenges: 0 };
 
 test('each day draws the same three distinct quests', () => {
   const a = questsFor('2026-10-17', 10);
