@@ -35,15 +35,16 @@ export class NightLayer {
     for (const d of decor) {
       const flicker = d.kind === 'camp' ? 1 : d.kind === 'altar' ? 0.6 : 0.3;
       let f: { x: number; y: number; r: number } | null = null;
-      if (d.kind === 'camp') f = { x: d.x, y: d.y + 20, r: 120 };
-      else if (d.kind === 'house') f = { x: d.x, y: d.y - 10, r: 60 };
-      else if (d.kind === 'castle') f = { x: d.x, y: d.y - 20, r: 110 };
-      else if (d.kind === 'altar') f = { x: d.x, y: d.y - 10, r: 90 };
+      // 光圈大小和「燈火照到、塔射程不打折」的範圍一致（World.litAt）
+      if (d.kind === 'camp') f = { x: d.x, y: d.y, r: 175 };
+      else if (d.kind === 'house') f = { x: d.x, y: d.y, r: 120 };
+      else if (d.kind === 'castle') f = { x: d.x, y: d.y, r: 165 };
+      else if (d.kind === 'altar') f = { x: d.x, y: d.y, r: 140 };
       if (!f) continue;
       this.fixed.push(f);
       // 營火、窗戶的暖色光暈（ADD 疊在夜幕上，搖曳用 tween，不必重畫夜幕）
       const g = scene.add.image(f.x, f.y, 'fx_soft').setTint(0xffb050).setBlendMode('ADD').setDepth(DEPTH.proj + 501);
-      g.setDisplaySize(f.r * 1.3, f.r).setAlpha(0.22 + flicker * 0.12);
+      g.setDisplaySize(f.r * 1.1, f.r * 0.85).setAlpha(0.2 + flicker * 0.12);
       if (flicker > 0.5) scene.tweens.add({ targets: g, alpha: 0.18, duration: 180, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
   }

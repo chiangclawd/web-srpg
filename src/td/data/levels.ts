@@ -1457,6 +1457,7 @@ export const LEVELS: LevelDef[] = [
       { kind: 'trees', x: 1180, y: 90, n: 5, r: 60 },
       { kind: 'rocks', x: 700, y: 140, n: 4 },
       { kind: 'camp', x: 520, y: 625 },
+      { kind: 'camp', x: 760, y: 330 },
     ],
     waves: [
       w(g(0, 'wolf', 15, 0.7), g(0, 'bat', 12, 0.5, 5)),

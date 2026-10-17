@@ -102,7 +102,7 @@ export const STORY: Record<string, StoryLine[]> = {
   l18: [
     { who: 'gary', text: { zh: '慶典辦得正熱鬧……等等，月亮怎麼變紅了？森林裡有好多發光的眼睛！', en: 'The festival was in full swing… wait, why has the moon turned red? There are glowing eyes all over the woods!' } },
     { who: 'sub_priest', text: { zh: '血月之夜，正是我們的時刻。燈火熄滅之時，就是這座村莊的末日！', en: 'The night of the blood moon is our hour. When the lights go out, this village falls!' } },
-    { who: 'shadow', text: { zh: '夜裡塔的視線會變短，靠營火和燈籠照亮的地方才看得清楚。夜行的魔物交給我。', en: 'Towers see less far at night. Only the places lit by fires and lanterns are clear. Leave the night creatures to me.' } },
+    { who: 'shadow', text: { zh: '夜裡塔的視線會變短，只有營火和民房照得到的塔能看得遠。夜行的魔物交給我。', en: 'Towers see less far at night. Only towers lit by campfires and houses keep their full range. Leave the night creatures to me.' } },
   ],
 };
 

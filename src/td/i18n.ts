@@ -166,6 +166,8 @@ const STR = {
   eliteDesc_tough: { zh: '精英・堅韌：生命 +80%、護甲提升，賞金加倍。', en: 'Elite – Tough: +80% health and extra armor. Double bounty.' },
   eliteDesc_regen: { zh: '精英・再生：每秒回復 3% 生命，要集中火力，賞金加倍。', en: 'Elite – Regenerating: heals 3% health per second. Focus fire! Double bounty.' },
   eliteDesc_shielded: { zh: '精英・護盾：帶著一半生命值的護盾，賞金加倍。', en: 'Elite – Shielded: carries a shield worth half its health. Double bounty.' },
+  nightLit: { zh: '☀ 燈火照耀：射程不減', en: '☀ In the light: full range' },
+  nightDark: { zh: '☾ 黑暗中：射程 -15%', en: '☾ In the dark: -15% range' },
   tipElite: { zh: '腳下發光的是精英敵人：更快、更硬或會回血，但賞金加倍！點一下可以看詞綴', en: 'Glowing enemies are elites: faster, tougher or regenerating, but they pay double! Tap one to see its trait' },
   uiSize: { zh: '介面大小', en: 'UI size' },
   uiNormal: { zh: '標準', en: 'Normal' },
