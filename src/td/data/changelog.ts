@@ -11,6 +11,16 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 23,
+    date: '2026-10-17',
+    title: { zh: '外傳終章：熔岩火山口', en: 'Side-story finale: Ember Crater' },
+    items: [
+      { zh: '新外傳關卡「熔岩火山口」（通關冰封隘口後解鎖）：全新火山地形，熔岩池、火星與灰燼，崖邊還有玄武岩落石', en: 'New side-story level “Ember Crater” (unlocks after Frozen Pass): a brand-new volcanic land with lava pools, embers and ash, plus a basalt boulder trap' },
+      { zh: '新敵人：熔岩小魔（快速、魔抗、會閃避）、熔岩魔像（重甲、範圍攻擊，被打碎時迸出兩隻小魔）', en: 'New enemies: the Magma Imp (fast, magic-resistant, dodges) and the Lava Golem (armored, hits an area, bursts into two imps when shattered)' },
+      { zh: '新首領「炎魔・伊格尼斯」：熔岩噴發會燒停附近的塔（塔會發紅）、召喚熔岩魔像、重傷時狂暴；新成就「撲滅烈焰」，「外傳完結」改為通關本關', en: 'New boss “Ignis the Fire Lord”: lava bursts scorch nearby towers (they glow red), it summons lava golems and enrages when hurt. New achievement “Fire Fighter”; “Side Story Complete” now asks for this level' },
+    ],
+  },
+  {
     id: 22,
     date: '2026-10-17',
     title: { zh: '世界地圖動起來了', en: 'A livelier world map' },

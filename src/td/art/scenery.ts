@@ -123,6 +123,22 @@ export const THEMES: Record<ThemeId, ThemePalette> = {
     water: '#3ab0c0',
     tuft: '#b49a50',
   },
+  volcano: {
+    ground: '#4e403a',
+    groundLight: '#62514a',
+    groundDark: '#382c28',
+    path: '#8a6a52',
+    pathEdge: '#4a3426',
+    canopy: ['#4a4a30', '#3c3c28'],
+    pine: '#36382a',
+    trunk: '#2e221a',
+    rock: '#46403e',
+    flower: ['#ff9a3a', '#ffcf5c'],
+    snowy: false,
+    // 湖泊畫成熔岩池
+    water: '#ff6a1a',
+    tuft: '#3a302a',
+  },
 };
 
 /** 圓頂闊葉樹 */

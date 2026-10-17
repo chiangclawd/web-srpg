@@ -358,14 +358,16 @@ export class LevelScene extends Phaser.Scene {
 
   /** 讓手繪戰場動起來：營火、祭壇、水面閃光，以及各主題的小生物（純裝飾，量少，手機也輕） */
   private makeLife(): void {
+    const lavaTheme = this.level.theme === 'volcano';
     const twinkle = (zone: { getRandomPoint: (p: Phaser.Types.Math.Vector2Like) => Phaser.Types.Math.Vector2Like }, every: number) =>
       this.add
-        .particles(0, 0, 'fx_star', {
+        .particles(0, 0, lavaTheme ? 'fx_spark' : 'fx_star', {
           emitZone: { type: 'random', source: zone },
-          lifespan: 800,
+          lifespan: lavaTheme ? 1100 : 800,
           scale: { start: 0.22, end: 0 },
           alpha: { start: 0.9, end: 0 },
-          tint: 0xf4fbff,
+          speedY: lavaTheme ? { min: -30, max: -10 } : 0,
+          tint: lavaTheme ? 0xffa040 : 0xf4fbff,
           blendMode: 'ADD',
           frequency: every,
         })
@@ -416,6 +418,11 @@ export class LevelScene extends Phaser.Scene {
           .setDepth(DEPTH.float - 21);
       } else if (d.kind === 'lake') {
         const { x, y, rx, ry } = d;
+        if (lavaTheme) {
+          // 熔岩池：一層橘紅光暈緩緩脈動
+          const glow = this.add.image(x, y, 'fx_soft').setTint(0xff6a20).setBlendMode('ADD').setAlpha(0.35).setScale((rx * 2.6) / 128, (ry * 2.6) / 128).setDepth(DEPTH.decal + 5);
+          this.tweens.add({ targets: glow, alpha: 0.6, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        }
         twinkle(
           {
             getRandomPoint: (p) => {
@@ -474,6 +481,35 @@ export class LevelScene extends Phaser.Scene {
           tint: 0xb070ff,
           blendMode: 'ADD',
           frequency: 240,
+        })
+        .setDepth(DEPTH.float - 25);
+    } else if (theme === 'volcano') {
+      // 火山：火星從地面緩緩升起，灰燼從天上飄落
+      this.add
+        .particles(0, 0, 'fx_spark', {
+          x: { min: -PLAY_X0, max: PLAY_W + PLAY_X0 },
+          y: { min: 200, max: 740 },
+          lifespan: 3600,
+          speedY: { min: -40, max: -16 },
+          speedX: { min: -10, max: 10 },
+          scale: { start: 0.26, end: 0 },
+          alpha: { start: 0.9, end: 0 },
+          tint: [0xff8a30, 0xffc050, 0xff5a20],
+          blendMode: 'ADD',
+          frequency: 160,
+        })
+        .setDepth(DEPTH.float - 25);
+      this.add
+        .particles(0, 0, 'fx_soft', {
+          x: { min: -PLAY_X0, max: PLAY_W + PLAY_X0 },
+          y: -10,
+          lifespan: 9000,
+          speedY: { min: 18, max: 34 },
+          speedX: { min: -12, max: 6 },
+          scale: { min: 0.05, max: 0.09 },
+          alpha: { start: 0.7, end: 0.2 },
+          tint: 0x8a8480,
+          frequency: 220,
         })
         .setDepth(DEPTH.float - 25);
     } else if (theme === 'desert') {

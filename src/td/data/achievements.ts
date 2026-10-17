@@ -46,7 +46,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'boss_rin', name: { zh: '血月終結', en: 'Blood Moon Set' }, desc: { zh: '擊敗副教主凜', en: 'Defeat Rin, the Vice Hierarch' }, icon: 'ic_skull' },
   { id: 'boss_wyrm', name: { zh: '沙海平定', en: 'Sands Stilled' }, desc: { zh: '擊敗沙暴巨蟲', en: 'Defeat the Sandstorm Wyrm' }, icon: 'ic_skull' },
   { id: 'boss_giant', name: { zh: '冰河崩塌', en: 'Glacier Breaker' }, desc: { zh: '擊敗冰霜巨人・約頓', en: 'Defeat Jotun the Frost Giant' }, icon: 'ic_skull' },
-  { id: 'side_clear', name: { zh: '外傳完結', en: 'Side Story Complete' }, desc: { zh: '通關外傳終章「冰封隘口」', en: 'Clear the side-story finale, Frozen Pass' }, icon: 'ic_crown' },
+  { id: 'boss_ignis', name: { zh: '撲滅烈焰', en: 'Fire Fighter' }, desc: { zh: '擊敗炎魔・伊格尼斯', en: 'Defeat Ignis the Fire Lord' }, icon: 'ic_skull' },
+  { id: 'side_clear', name: { zh: '外傳完結', en: 'Side Story Complete' }, desc: { zh: '通關外傳終章「熔岩火山口」', en: 'Clear the side-story finale, Ember Crater' }, icon: 'ic_crown' },
   { id: 'heroic_first', name: { zh: '英雄本色', en: 'True Hero' }, desc: { zh: '完成任一英雄挑戰', en: 'Complete any Heroic challenge' }, icon: 'ic_crown' },
   { id: 'iron_first', name: { zh: '鋼鐵意志', en: 'Iron Will' }, desc: { zh: '完成任一鋼鐵挑戰', en: 'Complete any Iron challenge' }, icon: 'ic_shield' },
   { id: 'heroic_all', name: { zh: '傳奇英雄', en: 'Legend' }, desc: { zh: '完成所有英雄挑戰', en: 'Complete every Heroic challenge' }, icon: 'ic_crown' },
@@ -76,6 +77,7 @@ const BOSS_ACH: Record<string, string> = {
   sub_priest: 'boss_rin',
   wyrm: 'boss_wyrm',
   frost_giant: 'boss_giant',
+  fire_lord: 'boss_ignis',
 };
 
 /** 依本場結果與累計存檔判定新解鎖的成就（會寫入 save.achievements） */
@@ -92,7 +94,7 @@ export function evaluateAchievements(o: LevelOutcome, sv: SaveData): string[] {
     unlock('first_win');
     if (o.mode === 'campaign' && o.stars >= 3) unlock('three_stars');
     if (o.levelId === 'l12' && o.mode === 'campaign') unlock('campaign_clear');
-    if (o.levelId === 'l15' && o.mode === 'campaign') unlock('side_clear');
+    if (o.levelId === 'l16' && o.mode === 'campaign') unlock('side_clear');
     if (o.difficulty === 'veteran' && o.lives >= o.maxLives) unlock('perfect_veteran');
     if (o.mode === 'heroic') unlock('heroic_first');
     if (o.mode === 'iron') unlock('iron_first');
