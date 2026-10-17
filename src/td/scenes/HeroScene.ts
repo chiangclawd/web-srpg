@@ -8,6 +8,7 @@ import { L, T } from '../i18n';
 import { save, persist } from '../save';
 import { sfx } from '../audio';
 import { armorWord } from './LevelScene';
+import { showTipBubble } from '../ui/tip';
 
 export function heroUnlocked(id: string): boolean {
   const h = HEROES[id];
@@ -30,6 +31,21 @@ export class HeroScene extends Phaser.Scene {
     this.scale.on('resize', this.build, this);
     this.events.once('shutdown', () => this.scale.off('resize', this.build, this));
     this.cameras.main.fadeIn(250, 0, 0, 0);
+    this.trainTip();
+  }
+
+  /** 第一次有足夠寶石進英雄室：指向「訓練」鈕 */
+  private trainTip(): void {
+    const sv = save();
+    const xp = sv.heroes[this.viewing]?.xp ?? 0;
+    if (sv.tipsSeen.includes('train') || sv.gems < TRAIN_PRICE || !heroUnlocked(this.viewing) || trainXp(xp) <= 0) return;
+    sv.tipsSeen.push('train');
+    persist();
+    this.time.delayedCall(700, () => {
+      if (!this.sys.isActive()) return;
+      const px = Math.max(620, viewW(this) / 2 + 80);
+      showTipBubble(this, px - 110 + 522, 356, T('tipTrain'), () => {}, 2000);
+    });
   }
 
   private build(): void {
