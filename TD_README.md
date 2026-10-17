@@ -108,6 +108,8 @@ NODE_USE_ENV_PROXY=1 npx tsx scripts/art/gen-voices.ts [英雄...]   # 已存在
 - 內建聲線的性別不一定看名字猜得到（例如 Gacrux 偏低沉男聲），產出後確認
 - 中文短句用喊的容易咬字不清，台詞寫長一點、加「字正腔圓」的語氣說明比較穩；產出後請 Gemini 逐句聽寫比對
 - 遊戲端每關只下載目前英雄的語音，新的一句會打斷前一句
+- 防禦塔台詞配音在 `TOWER_VOICES`（檔名 `tower_<塔種或特化>_<第幾句>_<語言>.mp3`，與對話泡泡同一句），目前只有英文（`TOWER_VOICE_LANGS`）；中文版要用 2.5 pro TTS 重做（`VOICE_LANGS=zh GEMINI_TTS_MODEL=gemini-2.5-pro-preview-tts npx tsx scripts/art/gen-voices.ts towers`），3.x 版中文短句咬字不清
+- 內容過濾偶爾會擋下帶語氣標籤的短句（`PROHIBITED_CONTENT`），`gemini-tts.mjs` 會自動改用純台詞重試
 
 ## 🧱 架構
 

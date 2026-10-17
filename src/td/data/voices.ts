@@ -1,5 +1,5 @@
 import type { L10n } from '../sim/defs';
-import { HERO_BARKS } from './barks';
+import { BRANCH_BARKS, HERO_BARKS, TOWER_BARKS } from './barks';
 
 /**
  * 英雄語音（Gemini TTS 預先產生，檔案在 assets/audio/voice/<英雄>_<台詞>_<語言>.mp3）：
@@ -82,6 +82,38 @@ export const BOSS_VOICES: Record<string, { voice: string; style: string; line: L
   sub_priest: { voice: 'Erinome', style: 'Say it like a cold, calm and eerie young woman', line: { zh: '你們的塔，我收下了。', en: 'Your towers are mine now.' } },
   cult_leader: { voice: 'Charon', style: 'Say it calmly and menacingly, like a dark lord', line: { zh: '黑暗終將吞噬一切。', en: 'Darkness will swallow everything.' } },
 };
+
+/**
+ * 防禦塔台詞配音（與對話泡泡同一句）：鍵值是塔種或第 4 級特化的塔圖，
+ * 檔案 tower_<鍵值>_<第幾句>_<語言>.mp3
+ */
+/** 已配音的語言（中文版咬字要用 2.5 pro TTS 重做，額度用完了，之後補上） */
+export const TOWER_VOICE_LANGS: readonly string[] = ['en'];
+
+export const TOWER_VOICES: Record<string, { voice: string; style: string }> = {
+  archer: { voice: 'Puck', style: 'eager young archer, upbeat' },
+  barracks: { voice: 'Sadachbia', style: 'lively, loyal foot soldier' },
+  mage: { voice: 'Sadaltager', style: 'wise, slightly smug wizard' },
+  artillery: { voice: 'Zubenelgenubi', style: 'cheerful, gruff cannoneer' },
+  tw_archer_ranger: { voice: 'Achird', style: 'calm, friendly forest ranger' },
+  tw_archer_marksman: { voice: 'Iapetus', style: 'cool, focused sharpshooter' },
+  tw_barracks_paladin: { voice: 'Alnilam', style: 'noble, devout holy knight' },
+  tw_barracks_barbarian: { voice: 'Algenib', style: 'wild, roaring barbarian warrior' },
+  tw_mage_arcane: { voice: 'Vindemiatrix', style: 'serene, mysterious sorceress' },
+  tw_mage_elemental: { voice: 'Laomedeia', style: 'energetic elementalist calling on nature' },
+  tw_art_bertha: { voice: 'Umbriel', style: 'deep, gleeful heavy gunner' },
+  tw_art_tesla: { voice: 'Fenrir', style: 'excited, slightly mad inventor' },
+};
+
+/** 全部防禦塔配音：鍵值、第幾句、台詞 */
+export function towerVoiceLines(): { key: string; i: number; text: L10n }[] {
+  const out: { key: string; i: number; text: L10n }[] = [];
+  for (const key of Object.keys(TOWER_VOICES)) {
+    const lines = (TOWER_BARKS as Record<string, L10n[]>)[key] ?? BRANCH_BARKS[key] ?? [];
+    lines.forEach((text, i) => out.push({ key, i, text }));
+  }
+  return out;
+}
 
 /** 某句台詞的文字（move 取自對話泡泡，確保聲音與泡泡一致） */
 export function voiceText(hero: string, line: VoiceLine): L10n | undefined {

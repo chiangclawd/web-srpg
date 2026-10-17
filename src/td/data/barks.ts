@@ -42,7 +42,7 @@ export const BRANCH_BARKS: Record<string, L10n[]> = {
   ],
   tw_barracks_barbarian: [
     { zh: '斧頭餓了！', en: 'My axe is thirsty!' },
-    { zh: '吼——！', en: 'RAAAH!' },
+    { zh: '殺啊！', en: 'Crush them all!' },
   ],
   tw_mage_arcane: [
     { zh: '時空皆在掌中。', en: 'Time and space obey.' },
@@ -58,7 +58,7 @@ export const BRANCH_BARKS: Record<string, L10n[]> = {
   ],
   tw_art_tesla: [
     { zh: '電力全開！', en: 'Full power!' },
-    { zh: '滋滋滋……', en: 'Bzzzt…' },
+    { zh: '嚐嚐電流的滋味！', en: 'Feel the current!' },
   ],
 };
 
