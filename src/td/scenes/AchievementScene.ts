@@ -48,7 +48,15 @@ export class AchievementScene extends Phaser.Scene {
       const x = x0 + (i % cols) * cw;
       const y = 112 + Math.floor(i / cols) * pitch;
       const ok = got.has(a.id);
-      add(panel(this, x, y, cw - 10, ch, ok ? 'ui_panel' : 'ui_dark', 18));
+      // 已解鎖：同樣的深色底＋暖金色光框（羊皮紙面板邊框太厚，卡片矮的時候會把說明壓到框外）
+      add(panel(this, x, y, cw - 10, ch, 'ui_dark', 18));
+      if (ok) {
+        const glow = add(this.add.graphics());
+        glow.fillStyle(0xffc84a, 0.16);
+        glow.fillRoundedRect(x - (cw - 10) / 2 + 5, y - ch / 2 + 5, cw - 20, ch - 10, 10);
+        glow.lineStyle(2, 0xffd36b, 0.95);
+        glow.strokeRoundedRect(x - (cw - 10) / 2 + 4, y - ch / 2 + 4, cw - 18, ch - 8, 11);
+      }
       const badge = add(this.add.image(x - cw / 2 + 42, y, ok ? 'ui_badge_green' : 'ui_badge_grey').setDisplaySize(52, 52));
       const icon = add(this.add.image(x - cw / 2 + 42, y, a.icon).setDisplaySize(30, 30));
       if (!ok) {
@@ -60,16 +68,16 @@ export class AchievementScene extends Phaser.Scene {
         addText(this, tx, 0, L(a.name), {
           size: 16,
           display: true,
-          color: ok ? '#4a2a10' : '#9a8a70',
-          stroke: ok ? '#f4e2b8' : '#1a1008',
-          strokeW: ok ? 2 : 3,
+          color: ok ? '#ffe08a' : '#9a8a70',
+          stroke: '#1a1008',
+          strokeW: 3,
           shadow: false,
         }),
       );
       const desc = add(
         addText(this, tx, 0, L(a.desc), {
           size: 12,
-          color: ok ? '#3a2412' : '#8a7a62',
+          color: ok ? '#f4e2b8' : '#8a7a62',
           stroke: '#000000',
           strokeW: 0,
           shadow: false,
