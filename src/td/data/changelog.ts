@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 40,
+    date: '2026-10-17',
+    title: { zh: '沙暴巨蟲的咆哮', en: 'The wyrm roars' },
+    items: [
+      { zh: '沙暴巨蟲登場時會發出震耳的咆哮', en: 'The Sandstorm Wyrm now lets out a ground-shaking roar when it arrives' },
+    ],
+  },
+  {
     id: 39,
     date: '2026-10-17',
     title: { zh: '音樂室', en: 'Music room' },
