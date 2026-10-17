@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 31,
+    date: '2026-10-17',
+    title: { zh: '成就進度條', en: 'Achievement progress' },
+    items: [
+      { zh: '累積型成就（擊殺數、建塔數、全三星、挑戰全通、每日挑戰天數、無盡波數、英雄等級）會顯示目前進度與進度條', en: 'Cumulative achievements (kills, towers built, all stars, all challenges, daily streak, endless wave, hero level) now show your current progress with a bar' },
+    ],
+  },
+  {
     id: 30,
     date: '2026-10-17',
     title: { zh: '戰鬥存檔點', en: 'Battle checkpoints' },

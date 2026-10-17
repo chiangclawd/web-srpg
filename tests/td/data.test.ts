@@ -162,3 +162,20 @@ test('boss rush sends every boss once, in order, each with an escort', async () 
   assert.ok(gemReward('bossrush', true, 3, true, 0) > gemReward('bossrush', true, 3, false, 0));
   assert.equal(gemReward('bossrush', false, 0, false, 0), 0);
 });
+
+test('cumulative achievements report progress toward their goal', async () => {
+  const { achievementProgress } = await import('../../src/td/data/achievements');
+  const { loadSave } = await import('../../src/td/save');
+  const sv = loadSave();
+  sv.stats.kills = 4523;
+  sv.endless = { l3: 12 };
+  sv.stars = { l1: 3, l2: 3, l3: 2 };
+  assert.deepEqual(achievementProgress('kills_10000', sv), { cur: 4523, max: 10000 });
+  assert.deepEqual(achievementProgress('endless_15', sv), { cur: 12, max: 15 });
+  assert.equal(achievementProgress('all_stars', sv)?.cur, 2);
+  assert.equal(achievementProgress('first_win', sv), null, 'one-off achievements have no progress bar');
+  for (const a of ACHIEVEMENTS) {
+    const p = achievementProgress(a.id, sv);
+    if (p) assert.ok(p.max > 0 && p.cur >= 0, a.id);
+  }
+});
