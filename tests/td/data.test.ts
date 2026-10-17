@@ -214,3 +214,21 @@ test('cumulative achievements report progress toward their goal', async () => {
     if (p) assert.ok(p.max > 0 && p.cur >= 0, a.id);
   }
 });
+
+test('battlefield easter eggs come from decor, have unique ids and stay clear of build spots', async () => {
+  const { levelEggs, totalEggs, EGG_GOAL, EGG_LINES } = await import('../../src/td/data/eggs');
+  const ids = new Set<string>();
+  for (const lv of LEVELS) {
+    const eggs = levelEggs(lv);
+    assert.ok(eggs.length >= 2, `${lv.id} has at least two eggs`);
+    for (const e of eggs) {
+      assert.ok(!ids.has(e.id), `${e.id} is unique`);
+      ids.add(e.id);
+      const near = Math.min(...lv.spots.map((s) => Math.hypot(s.x - e.x, s.y - e.y)));
+      for (const h of lv.hazards ?? []) assert.ok(Math.hypot(h.x - e.x, h.y - e.y) > 60, `${e.id} does not sit on a hazard`);
+      assert.ok(near > 24, `${e.id} (${e.kind}) is not hidden under a build spot (${near.toFixed(0)}px)`);
+      if (['knock', 'castle', 'camp', 'peek', 'troll', 'altar', 'sheep'].includes(e.kind)) assert.ok(EGG_LINES[e.kind]?.length, `${e.kind} has lines`);
+    }
+  }
+  assert.ok(totalEggs(LEVELS) >= EGG_GOAL + 10, 'plenty of eggs to find for the achievement');
+});

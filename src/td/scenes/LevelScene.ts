@@ -20,6 +20,7 @@ import { visualMuzzleH } from '../art/towers';
 import { DEPTH, Fx, camShake } from '../view/Fx';
 import { TowerView, UnitView } from '../view/Units';
 import { HazardLayer, hazardTextures } from '../view/Hazards';
+import { EggLayer } from '../view/Eggs';
 import { Bubbles } from '../view/Bubbles';
 import { clearCheckpoint, loadCheckpoint, restore, saveCheckpoint, snapshot, type Checkpoint } from '../sim/checkpoint';
 import { BRANCH_BARKS, HERO_BARKS, towerBark } from '../data/barks';
@@ -79,6 +80,7 @@ export class LevelScene extends Phaser.Scene {
   private projPool: Phaser.GameObjects.Image[] = [];
   private ambient: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
   private hazardLayer: HazardLayer | null = null;
+  private eggs: EggLayer | null = null;
   /** 首領倒下的慢動作（場景時間，毫秒） */
   private slowMoUntil = 0;
   /** 從存檔點繼續（手機被重新整理後） */
@@ -121,6 +123,7 @@ export class LevelScene extends Phaser.Scene {
     this.projPool = [];
     this.skullArmedUntil = 0;
     this.hazardLayer = null;
+    this.eggs = null;
     this.slowMoUntil = 0;
     this.seenIntro = new Set(save().seenEnemies);
   }
@@ -198,6 +201,7 @@ export class LevelScene extends Phaser.Scene {
     // 環境粒子
     this.makeAmbient();
     this.makeLife();
+    this.eggs = new EggLayer(this, this.level, this.fx, this.bubbles);
 
     // 全域點擊
     this.setupGestures();
@@ -709,7 +713,10 @@ export class LevelScene extends Phaser.Scene {
     }
     this.closeMenu();
     if (best) this.ui.showEnemyInfo(best.def);
-    else this.ui.hideInfo();
+    else {
+      this.ui.hideInfo();
+      this.eggs?.tap(x, y);
+    }
   }
 
   setMode(m: Mode): void {

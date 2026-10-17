@@ -138,6 +138,36 @@ const FX: Record<string, { w: number; h: number; paint: Fn }> = {
       c.fill();
     },
   },
+  fx_bird: {
+    w: 20,
+    h: 12,
+    paint: (c) => {
+      // 遠處的小鳥：深色 V 字
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+      c.beginPath();
+      c.moveTo(2, 4);
+      c.quadraticCurveTo(6, 2, 10, 9);
+      c.quadraticCurveTo(14, 2, 18, 4);
+      c.strokeStyle = '#2a2018';
+      c.lineWidth = 2.6;
+      c.stroke();
+    },
+  },
+  fx_fish: {
+    w: 26,
+    h: 14,
+    paint: (c) => {
+      // 小魚：橘色身體＋尾鰭＋眼睛
+      poly(c, [20, 7, 26, 1, 26, 13]);
+      fillStroke(c, '#e8742a', 1.4, '#5a2a10');
+      ellipse(c, 11, 7, 10, 5.5);
+      fillStroke(c, '#ff9a3a', 1.4, '#5a2a10');
+      circle(c, 5.5, 6, 1.4);
+      c.fillStyle = '#1a1008';
+      c.fill();
+    },
+  },
   fx_gull: {
     w: 28,
     h: 14,

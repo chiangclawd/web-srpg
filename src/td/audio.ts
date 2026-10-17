@@ -59,7 +59,8 @@ export type Sfx =
   | 'thud'
   | 'rumble'
   | 'roar'
-  | 'splash';
+  | 'splash'
+  | 'baa';
 
 const FILES: Partial<Record<Sfx, string>> = {
   arrow: 'assets/audio/sfx_arrow.m4a',
@@ -404,6 +405,11 @@ class TdAudio {
         this.tone(142, 'sawtooth', t + 0.05, 1.2, 0.12 * v, 60);
         for (let i = 0; i < 9; i++) this.noise(t + i * 0.12, 0.14, 0.16 * v, 'bandpass', 380 + (i % 3) * 120, 200);
         this.noise(t, 1.5, 0.3 * v, 'lowpass', 900, 150);
+        break;
+      case 'baa':
+        // 羊叫：帶顫音的鼻音鋸齒波，尾音下滑
+        for (let i = 0; i < 6; i++) this.tone(i % 2 ? 470 : 500, 'sawtooth', t + i * 0.07, 0.09, 0.07 * v, i === 5 ? 380 : undefined);
+        this.noise(t, 0.4, 0.04 * v, 'bandpass', 1400);
         break;
       case 'splash':
         // 巨浪拍岸：寬頻噪聲由亮轉暗＋低頻轟聲＋零星水花
