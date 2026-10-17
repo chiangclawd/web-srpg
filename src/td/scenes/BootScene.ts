@@ -22,9 +22,9 @@ const UNIT_TEX_H = 168;
  * 手繪魔物（AI 生成後去背，見 scripts/art/）：載入成功就取代同名的程序繪圖紋理 mon_*，
  * 失敗則保留程序繪圖。圖都朝右，與原本的 facesRight 一致。
  */
-const PAINTED_MONSTERS = ['goblin', 'wolf', 'troll', 'bat', 'skeleton', 'scorpion', 'demon', 'wyrm', 'sheep', 'golem', 'yeti', 'frost_sprite', 'frost_giant', 'magma_imp', 'lava_golem', 'fire_lord', 'reef_crab', 'drowned', 'leviathan'];
+const PAINTED_MONSTERS = ['goblin', 'wolf', 'troll', 'bat', 'skeleton', 'scorpion', 'demon', 'wyrm', 'sheep', 'golem', 'yeti', 'frost_sprite', 'frost_giant', 'magma_imp', 'lava_golem', 'fire_lord', 'reef_crab', 'drowned', 'leviathan', 'wraith', 'werewolf'];
 /** 只有手繪圖、沒有程序版本的魔物：載入失敗時借用相近的程序圖 */
-const MONSTER_FALLBACK: Record<string, string> = { yeti: 'troll', frost_sprite: 'bat', frost_giant: 'troll', magma_imp: 'goblin', lava_golem: 'troll', fire_lord: 'demon', reef_crab: 'scorpion', drowned: 'skeleton', leviathan: 'wyrm' };
+const MONSTER_FALLBACK: Record<string, string> = { yeti: 'troll', frost_sprite: 'bat', frost_giant: 'troll', magma_imp: 'goblin', lava_golem: 'troll', fire_lord: 'demon', reef_crab: 'scorpion', drowned: 'skeleton', leviathan: 'wyrm', wraith: 'bat', werewolf: 'wolf' };
 const MONSTER_TEX_H = 200;
 
 export class BootScene extends Phaser.Scene {

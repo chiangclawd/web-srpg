@@ -55,6 +55,8 @@ export class Enemy {
   /** 鑽地中：無法被選為目標、免疫傷害與控制 */
   burrowed = false;
   burrowUntil = 0;
+  /** 受到傷害的倍率（怨靈躲在黑暗裡時小於 1） */
+  shroudMul = 1;
   /** 精英詞綴（挑戰／無盡模式隨機出現；賞金加倍） */
   elite: EliteAffix | null = null;
 

@@ -80,3 +80,21 @@ test('towers lit by campfires and houses keep full range at night', async () => 
   assert.ok(Math.abs(w.towerRange(lit) - base) < 1e-9, 'full range in the light');
   assert.ok(Math.abs(w.towerRange(dark) - base * NIGHT_RANGE) < 1e-9, 'shorter range in the dark');
 });
+
+test('wraiths shrug off damage in the dark until a light reveals them', () => {
+  const night = mkWorld(testLevel([], { night: true }));
+  night.gold = 1e6;
+  const hold = (e: { stunUntil: number }) => (e.stunUntil = 1e9);
+  const dark = night.spawnEnemy('wraith', 0, 340); // (300, 360): under spot 0, nothing built yet
+  hold(dark);
+  run(night, 0.1);
+  assert.equal(night.damageEnemy(dark, 100, 'true', 'tower'), 50, 'half damage in the dark');
+  night.build(0, 'archer');
+  run(night, 0.1);
+  assert.equal(night.damageEnemy(dark, 100, 'true', 'tower'), 100, 'a tower’s light reveals it');
+  const day = mkWorld();
+  const e = day.spawnEnemy('wraith', 0, 340);
+  hold(e);
+  run(day, 0.1);
+  assert.equal(day.damageEnemy(e, 100, 'true', 'tower'), 100, 'no shroud in daylight');
+});

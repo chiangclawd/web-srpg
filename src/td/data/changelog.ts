@@ -11,6 +11,16 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 56,
+    date: '2026-10-17',
+    title: { zh: '夜行魔物', en: 'Creatures of the Night' },
+    items: [
+      { zh: '新敵人「提燈怨靈」：躲在黑暗裡時只受一半傷害，飄進營火、塔或英雄的光裡才會現形 — 夜戰時塔的位置更重要了', en: 'New enemy: the Lantern Wraith takes only half damage while hidden in the dark and shows itself in the light of campfires, towers or your hero. Where you build matters even more at night' },
+      { zh: '新敵人「血月狼人」：傷口會快速癒合，重傷時狂暴衝刺', en: 'New enemy: the Blood-Moon Werewolf heals fast and charges in a rage when badly hurt' },
+      { zh: '「月夜突襲」的波次換上兩種新魔物並重新調整難度', en: 'Moonlit Raid waves now feature both new creatures, with difficulty retuned' },
+    ],
+  },
+  {
     id: 55,
     date: '2026-10-17',
     title: { zh: '我的戰績', en: 'My Record' },

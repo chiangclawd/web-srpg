@@ -41,6 +41,8 @@ export const HAZARD: Record<HazardKind, { dmg: number; r: number; stun: number; 
 export const ELITE = { swiftSpeed: 1.4, toughHp: 1.8, toughArmor: 0.15, regen: 0.03, shield: 0.5, bounty: 2 };
 export const ELITE_AFFIXES: EliteAffix[] = ['swift', 'tough', 'regen', 'shielded'];
 /** 夜戰時防禦塔的射程倍率 */
+/** 照亮怨靈的半徑：塔、英雄 */
+export const SHADE_REVEAL = { tower: 115, hero: 85 };
 export const NIGHT_RANGE = 0.85;
 
 /** 從崖邊落到路上的時間（秒），落地後才開始判定 */
@@ -1007,6 +1009,9 @@ export class World {
         case 'regen':
           if (e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + a.perSec * dt);
           break;
+        case 'shade':
+          e.shroudMul = this.isNight && !this.revealedAt(e.x, e.y) ? a.dmgMul : 1;
+          break;
         case 'enrage':
           if (!e.enraged && e.hp < e.maxHp * a.belowHp) {
             e.enraged = true;
@@ -1117,6 +1122,7 @@ export class World {
     if (kind === 'physical') a *= 1 - clamp(e.armor - e.armorShred - pierce, 0, 0.95);
     else if (kind === 'magic') a *= 1 - clamp(e.magicResist, 0, 0.95);
     if (this.time < e.vulnUntil) a *= VULN_MUL;
+    if (!e.sheep) a *= e.shroudMul;
     if (e.shield > 0) {
       const absorb = Math.min(e.shield, a);
       e.shield -= absorb;
@@ -1805,6 +1811,14 @@ export class World {
       const r = d.kind === 'camp' ? 150 : d.kind === 'castle' ? 140 : d.kind === 'altar' ? 120 : d.kind === 'house' ? 100 : 0;
       return r > 0 && 'x' in d && Math.hypot(d.x - x, (d.y - y) * 1.15) <= r;
     });
+  }
+
+  /** 夜裡看得見的地方：燈火、塔身邊的光（和夜幕上擦出的光圈一樣大）、英雄身上的光 */
+  revealedAt(x: number, y: number): boolean {
+    if (this.litAt(x, y)) return true;
+    for (const s of this.spots) if (s.tower && dist2(s.tower.x, s.tower.y - 20, x, y) <= SHADE_REVEAL.tower ** 2) return true;
+    const h = this.hero;
+    return !!h && h.alive && dist2(h.x, h.y, x, y) <= SHADE_REVEAL.hero ** 2;
   }
 
   /** 某個位置的射程倍率：夜戰 -15%（燈火照到的地方除外）、每日修正 */
