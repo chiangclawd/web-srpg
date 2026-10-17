@@ -7,6 +7,8 @@ import { paintUi, towerBadge } from '../art/ui';
 import { mkCanvas } from '../art/paint';
 import { HEROES } from '../data/heroes';
 import { STORY_PORTRAITS } from '../data/story';
+import { LOADING_TIPS } from '../data/tips';
+import { L, getLang } from '../i18n';
 
 const SPRITES = [
   'aria', 'arthur', 'baron', 'carl', 'cult_leader', 'elena', 'enemy_archer', 'enemy_cavalry', 'enemy_flier', 'enemy_lance',
@@ -35,18 +37,38 @@ export class BootScene extends Phaser.Scene {
     setupCamera(this);
     const w = viewW(this);
     this.cameras.main.setBackgroundColor('#120d08');
-    addText(this, w / 2, VIEW_H / 2 - 60, '王國防線', { size: 54, display: true, color: '#ffd36b', strokeW: 8 }).setOrigin(0.5);
-    addText(this, w / 2, VIEW_H / 2 - 14, 'KINGDOM BASTION', { size: 20, display: true, color: '#c8a868', strokeW: 4 }).setOrigin(0.5);
-    this.add.rectangle(w / 2, VIEW_H / 2 + 40, 404, 20, 0x2a1a0c).setStrokeStyle(2, 0xc89a50);
-    this.bar = this.add.rectangle(w / 2 - 200, VIEW_H / 2 + 40, 2, 14, 0xffc84a).setOrigin(0, 0.5);
-    this.label = addText(this, w / 2, VIEW_H / 2 + 76, 'Loading…', { size: 16, color: '#c8a868' }).setOrigin(0.5);
+    // 有主視覺就當背景（PreloadScene 先載好），壓暗讓字清楚
+    const art = this.textures.exists('keyart');
+    if (art) {
+      const img = this.add.image(w / 2, VIEW_H / 2, 'keyart');
+      img.setScale(Math.max(w / img.width, VIEW_H / img.height) * 1.01);
+      this.add.rectangle(w / 2, VIEW_H / 2, w, VIEW_H, 0x120804, 0.3);
+      // 下方漸層壓暗：小技巧與進度條要清楚
+      const g = this.add.graphics();
+      g.fillGradientStyle(0x120804, 0x120804, 0x120804, 0x120804, 0, 0, 0.78, 0.78);
+      g.fillRect(0, VIEW_H - 360, w, 140);
+      g.fillStyle(0x120804, 0.78);
+      g.fillRect(0, VIEW_H - 220, w, 220);
+    }
+    const ty = art ? 150 : VIEW_H / 2 - 60;
+    const zh = getLang() === 'zh';
+    addText(this, w / 2, ty, zh ? '王國防線' : 'KINGDOM BASTION', { size: zh ? 72 : 64, display: true, color: '#ffd36b', strokeW: 10, stroke: '#3a1a04' }).setOrigin(0.5);
+    addText(this, w / 2, ty + 58, zh ? 'KINGDOM BASTION' : '王國防線', { size: 24, display: true, color: '#f4e2b8', strokeW: 5 }).setOrigin(0.5);
+    const by = art ? VIEW_H - 120 : VIEW_H / 2 + 40;
+    this.add.rectangle(w / 2, by, 404, 20, 0x2a1a0c, 0.9).setStrokeStyle(2, 0xc89a50);
+    this.bar = this.add.rectangle(w / 2 - 200, by, 2, 14, 0xffc84a).setOrigin(0, 0.5);
+    this.label = addText(this, w / 2, by + 34, 'Loading…', { size: 16, color: '#f4e2b8' }).setOrigin(0.5);
+    // 載入小技巧
+    const tip = LOADING_TIPS[Math.floor(Math.random() * LOADING_TIPS.length)];
+    const tipText = addText(this, w / 2, by - 52, zh ? `小技巧：${L(tip)}` : `Tip: ${L(tip)}`, { size: 18, color: '#fff2d0', wrap: Math.min(860, w - 80), align: 'center' }).setOrigin(0.5, 1);
+    tipText.setAlpha(art ? 1 : 0.85);
     this.load.on('progress', (p: number) => {
       this.bar.width = 400 * p * 0.85;
     });
     for (const s of SPRITES) this.load.image(`raw_${s}`, `assets/sprites/${s}.png`);
     for (const m of PAINTED_MONSTERS) this.load.image(`rawmon_${m}`, `assets/sprites/mon/${m}.webp`);
     for (const k of [...Object.keys(PAINTED_TOWER_ART), ...Object.keys(PAINTED_BARRELS)]) this.load.image(`rawtw_${k}`, `assets/sprites/tw/${k}.webp`);
-    this.load.image('keyart', 'assets/keyart.webp');
+    if (!this.textures.exists('keyart')) this.load.image('keyart', 'assets/keyart.webp');
     this.load.image('worldmap', 'assets/worldmap.webp');
     for (const h of Object.values(HEROES)) this.load.image(`rawpt_${h.id}`, `assets/portraits/${h.id}.png`);
     for (const id of STORY_PORTRAITS) this.load.image(`rawpt_${id}`, `assets/portraits/${id}.png`);
