@@ -8,6 +8,7 @@ import { challengeLevel, endlessLevel, endlessHpMul, ENDLESS_WAVES } from '../..
 import { STORY, SPEAKERS, STORY_PORTRAITS, EPILOGUE } from '../../src/td/data/story';
 import { ACHIEVEMENTS, evaluateAchievements, type LevelOutcome } from '../../src/td/data/achievements';
 import type { SaveData } from '../../src/td/save';
+import { BRANCH_BARKS, HERO_BARKS, TOWER_BARKS } from '../../src/td/data/barks';
 
 test('every level wave references a known enemy and a valid path', () => {
   for (const l of LEVELS) {
@@ -114,5 +115,18 @@ test('changelog entries are newest first, uniquely numbered and bilingual', asyn
     assert.ok(e.title.zh && e.title.en);
     assert.ok(e.items.length > 0 && e.items.length <= 8, 'fits in the news panel');
     for (const it of e.items) assert.ok(it.zh && it.en);
+  }
+});
+
+test('every tower type, specialization and hero has speech-bubble lines', () => {
+  const arts = new Set(Object.values(TOWERS).flatMap((t) => [...t.levels, ...t.branches].map((l) => l.art)));
+  for (const k of Object.keys(BRANCH_BARKS)) assert.ok(arts.has(k), `bark key ${k} matches a tower art`);
+  for (const t of Object.values(TOWERS)) {
+    assert.ok(TOWER_BARKS[t.type].length >= 2, t.type);
+    for (const b of t.branches) assert.ok(BRANCH_BARKS[b.art]?.length >= 2, b.art);
+  }
+  for (const id of HERO_ORDER) assert.ok((HERO_BARKS[id] ?? []).length >= 2, id);
+  for (const lines of [...Object.values(TOWER_BARKS), ...Object.values(BRANCH_BARKS), ...Object.values(HERO_BARKS)]) {
+    for (const l of lines) assert.ok(l.zh.length <= 10 && l.en.length <= 26, `short enough: ${l.zh} / ${l.en}`);
   }
 });

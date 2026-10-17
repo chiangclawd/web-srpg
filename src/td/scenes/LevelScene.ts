@@ -20,6 +20,8 @@ import { visualMuzzleH } from '../art/towers';
 import { DEPTH, Fx, camShake } from '../view/Fx';
 import { TowerView, UnitView } from '../view/Units';
 import { HazardLayer, hazardTextures } from '../view/Hazards';
+import { Bubbles } from '../view/Bubbles';
+import { HERO_BARKS, towerBark } from '../data/barks';
 import { RadialMenu, type RadialOption } from '../view/RadialMenu';
 import { IconButton } from '../ui/widgets';
 import { sfx } from '../audio';
@@ -75,6 +77,7 @@ export class LevelScene extends Phaser.Scene {
   private projPool: Phaser.GameObjects.Image[] = [];
   private ambient: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
   private hazardLayer: HazardLayer | null = null;
+  private bubbles!: Bubbles;
 
   constructor() {
     super('Level');
@@ -157,6 +160,7 @@ export class LevelScene extends Phaser.Scene {
     this.textures.addCanvas('spot_tex', paintBuildSpot(TEX, THEMES[this.level.theme].snowy));
 
     this.fx = new Fx(this);
+    this.bubbles = new Bubbles(this);
     this.rangeG = this.add.graphics().setDepth(DEPTH.rangeRing);
 
     // 建造點
@@ -589,6 +593,8 @@ export class LevelScene extends Phaser.Scene {
           sfx.play('click');
           this.fx.ring(x, y, 22, 0xffd84a, 300);
           this.setMode('idle');
+          const hh = w.hero;
+          if (hh?.hero) this.bubbles.say('hero', hh.x, hh.y - hh.height - 12, HERO_BARKS[hh.hero.def.id], 0.6);
         }
         return;
       default:
@@ -805,6 +811,7 @@ export class LevelScene extends Phaser.Scene {
   private openTowerMenu(t: Tower): void {
     this.closeMenu();
     this.setMode('idle');
+    this.bubbles.say(`t${t.id}`, t.x, t.y - 96, towerBark(t.type, t.def.art), 0.3);
     const w = this.world;
     const opts: RadialOption[] = [];
     const range = w.towerRange(t);
@@ -1352,6 +1359,10 @@ export class LevelScene extends Phaser.Scene {
           this.spotImgs[ev.t.spot].setVisible(false);
           this.spotHits[ev.t.spot].disableInteractive();
           this.fx.smokePuff(ev.t.x, ev.t.y - 10, 10);
+          const bt = ev.t;
+          this.time.delayedCall(650, () => {
+            if (this.world.towers.includes(bt)) this.bubbles.say(`t${bt.id}`, bt.x, bt.y - 96, towerBark(bt.type, bt.def.art), 0.8);
+          });
           const hit = this.add.rectangle(ev.t.x, ev.t.y - 30, 76, 84, 0xffffff, 0.001).setInteractive({ useHandCursor: true }).setDepth(ev.t.y);
           hit.on('pointerup', (p2: Phaser.Input.Pointer, _x: number, _y: number, e2: Phaser.Types.Input.EventData) => {
             e2?.stopPropagation?.();
@@ -1371,6 +1382,7 @@ export class LevelScene extends Phaser.Scene {
           v?.setArt(ev.t.def.art);
           v?.pop();
           this.fx.stars(ev.t.x, ev.t.y - 50, 8);
+          this.bubbles.say(`t${ev.t.id}`, ev.t.x, ev.t.y - 100, towerBark(ev.t.type, ev.t.def.art), ev.t.level >= 4 ? 1 : 0.5);
           this.fx.smokePuff(ev.t.x, ev.t.y - 10, 6);
           break;
         }
