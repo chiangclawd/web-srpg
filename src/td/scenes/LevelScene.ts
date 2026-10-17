@@ -87,6 +87,7 @@ export class LevelScene extends Phaser.Scene {
   private hazardLayer: HazardLayer | null = null;
   private eggs: EggLayer | null = null;
   private night: NightLayer | null = null;
+  private lastRevealSfx = 0;
   /** 白天的環境生物（蝴蝶、海鷗）：無盡模式入夜時淡出 */
   private dayLife: Phaser.GameObjects.Image[] = [];
   /** 本場遊戲時間（毫秒，結算時加進存檔） */
@@ -1686,7 +1687,16 @@ export class LevelScene extends Phaser.Scene {
         break;
       case 'enrage':
         this.fx.floatText(e.x, y - 20, '!!', '#ff5a4a', 26);
-        sfx.play('boss', 0.7);
+        // 狼人狂暴時仰天長嚎
+        sfx.play(e.def.id === 'werewolf' ? 'howl' : 'boss', 0.7);
+        break;
+      case 'reveal':
+        // 怨靈飄進光裡：閃一下、輕輕一聲（同時很多隻時不重複播）
+        this.fx.ring(e.x, y, 28, 0x9affe8, 420);
+        if (this.time.now - this.lastRevealSfx > 900) {
+          this.lastRevealSfx = this.time.now;
+          sfx.play('ghost', 0.6);
+        }
         break;
       default:
         break;

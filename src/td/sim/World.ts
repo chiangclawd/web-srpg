@@ -81,7 +81,7 @@ export type SimEvent =
   /** 日夜交替（無盡模式）：on = 入夜 */
   | { type: 'nightfall'; on: boolean }
   | { type: 'waveBonus'; gold: number; x: number; y: number }
-  | { type: 'status'; e: Enemy; kind: 'stun' | 'root' | 'poison' | 'sheep' | 'teleport' | 'dodge' | 'enrage' | 'slow' | 'burrow' | 'surface' }
+  | { type: 'status'; e: Enemy; kind: 'stun' | 'root' | 'poison' | 'sheep' | 'teleport' | 'dodge' | 'enrage' | 'slow' | 'burrow' | 'surface' | 'reveal' }
   | { type: 'summon'; x: number; y: number }
   | { type: 'enemyHeal'; x: number; y: number }
   | { type: 'build'; t: Tower }
@@ -1013,9 +1013,12 @@ export class World {
         case 'regen':
           if (e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + a.perSec * dt);
           break;
-        case 'shade':
+        case 'shade': {
+          const was = e.shroudMul;
           e.shroudMul = this.isNight && !this.revealedAt(e.x, e.y) ? a.dmgMul : 1;
+          if (was < 1 && e.shroudMul === 1) this.emit({ type: 'status', e, kind: 'reveal' });
           break;
+        }
         case 'enrage':
           if (!e.enraged && e.hp < e.maxHp * a.belowHp) {
             e.enraged = true;

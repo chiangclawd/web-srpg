@@ -167,7 +167,7 @@ export class MapScene extends Phaser.Scene {
       const root = this.add.container(0, 0).setDepth(9000);
       root.add(dimmer(this, w, VIEW_H, 0.6).setPosition(left, 0));
       const pw = 660;
-      const ph = 340;
+      const ph = 300;
       const c = this.add.container(PLAY_W / 2, VIEW_H / 2);
       root.add(c);
       c.add(panel(this, 0, 0, pw, ph));
@@ -176,7 +176,7 @@ export class MapScene extends Phaser.Scene {
       LOGIN_GEMS.forEach((g, k) => {
         const day = k + 1;
         const x = (k - 3) * 84;
-        const y = -18;
+        const y = -26;
         const isToday = day === reward.day;
         const slot = this.add.container(x, y);
         slot.add(this.add.image(0, 0, isToday ? 'ui_badge_blue' : 'ui_badge').setDisplaySize(day === 7 ? 80 : 70, day === 7 ? 80 : 70));
@@ -190,7 +190,7 @@ export class MapScene extends Phaser.Scene {
         if (isToday) this.tweens.add({ targets: slot, scale: 1.1, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         c.add(slot);
       });
-      c.add(fitText(addText(this, 0, 68, T('loginHint'), { size: 15, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0.5), pw - 60));
+      c.add(fitText(addText(this, 0, 58, T('loginHint'), { size: 15, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0.5), pw - 60));
       c.add(new Button(this, 0, ph / 2 - 42, 220, 56, `${T('claim')}  ${T('gemsEarned', reward.gems)}`, () => {
         sv.gems += reward.gems;
         sv.login = { last: today, streak: reward.day };
