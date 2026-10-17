@@ -84,6 +84,9 @@ export function challengeLevel(level: LevelDef, mode: LevelMode): LevelDef {
 const BOSS_CHAIN = ['morden', 'selene', 'carl', 'high_priest', 'sub_priest', 'cult_leader'];
 /** 產生的波數（實際上打不完） */
 export const ENDLESS_WAVES = 150;
+/** 無盡模式的日夜循環：每 ENDLESS_DAY 波裡最後 ENDLESS_NIGHT 波是夜晚 */
+export const ENDLESS_DAY = 20;
+export const ENDLESS_NIGHT = 5;
 
 function levelPool(l: LevelDef): string[] {
   const s = new Set<string>();
@@ -103,7 +106,8 @@ function endlessBudget(k: number): number {
 
 /**
  * 無盡模式：20 條命、無限波次。每 5 波加入下一關的敵人種類，
- * 第 10 波後血量逐波提升，每 10 波出現首領（漏失最多扣 5 條命）。
+ * 第 10 波後血量逐波提升，每 10 波出現首領（漏失最多扣 5 條命）；
+ * 第 16–20、36–40…波入夜。
  */
 export function endlessLevel(level: LevelDef): LevelDef {
   const rng = new Rng(level.seed * 7919 + 17);
@@ -116,8 +120,15 @@ export function endlessLevel(level: LevelDef): LevelDef {
     for (let i = idx; i <= reach; i++) levelPool(LEVELS[i]).forEach((e) => pool.add(e));
     const list = [...pool].sort((a, b) => ENEMIES[a].hp - ENEMIES[b].hp);
     const boss = k % 10 === 0;
+    // 日夜循環：每 20 波的最後 5 波是夜晚（首領波在夜裡），提燈怨靈趁黑出沒
+    const night = (k - 1) % ENDLESS_DAY >= ENDLESS_DAY - ENDLESS_NIGHT;
     let budget = endlessBudget(k) * (boss ? 0.6 : 1);
     const groups: GroupDef[] = [];
+    if (night) {
+      const count = Math.min(12, 3 + Math.floor(k / 10));
+      budget -= count * ENEMIES.wraith.hp;
+      groups.push({ path: k % P, enemy: 'wraith', count, interval: 1.2, delay: 5 });
+    }
     const G = Math.min(4, 1 + Math.floor(k / 3));
     for (let gi = 0; gi < G; gi++) {
       // 只挑預算付得起至少 2 隻的種類；第一組偏弱（雜兵），其餘偏強
@@ -142,7 +153,7 @@ export function endlessLevel(level: LevelDef): LevelDef {
       const b = BOSS_CHAIN[Math.min(BOSS_CHAIN.length - 1, k / 10 - 1 + Math.floor(idx / 4))];
       groups.push({ path: k % P, enemy: b, count: 1, interval: 1, delay: 6 });
     }
-    waves.push({ groups, gap: 20, hpMul: endlessHpMul(k) });
+    waves.push({ groups, gap: 20, hpMul: endlessHpMul(k), night: night || undefined });
   }
   return {
     ...level,
