@@ -156,6 +156,7 @@ const STR = {
   loginDay: { zh: '第 {0} 天', en: 'Day {0}' },
   loginHint: { zh: '每天回來領寶石，連續 7 天獎勵最多！', en: 'Come back every day: the 7th day in a row pays the most!' },
   claim: { zh: '領取', en: 'Claim' },
+  nextPage: { zh: '下一頁', en: 'Next' },
   shopHint: { zh: '寶石來自通關、挑戰、無盡模式與成就', en: 'Earn gems from victories, challenges, endless runs and achievements' },
   epilogue: { zh: '尾聲', en: 'Epilogue' },
   shake: { zh: '畫面震動', en: 'Screen shake' },
