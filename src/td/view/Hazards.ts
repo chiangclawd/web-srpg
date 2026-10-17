@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TEX } from '../config';
+import { TEX, isTouchDevice } from '../config';
 import { HAZARD, HAZARD_DROP, type World } from '../sim/World';
 import type { HazardDef, HazardKind } from '../sim/defs';
 import { DEPTH, Fx, camShake } from './Fx';
@@ -57,7 +57,8 @@ export class HazardLayer {
       const art = artOf(h.def);
       const base = scene.add.image(h.def.x, h.def.y, this.tex(art.ready)).setOrigin(0.5, 0.9).setScale(SCALE).setDepth(h.def.y);
       const dial = scene.add.graphics().setDepth(DEPTH.hp);
-      const hit = scene.add.ellipse(h.def.x, h.def.y - 22, 84, 76, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
+      const touch = isTouchDevice();
+      const hit = scene.add.ellipse(h.def.x, h.def.y - 22, touch ? 96 : 84, touch ? 88 : 76, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
       hit.on('pointerup', (p: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
         ev?.stopPropagation?.();
         if (isTap(p)) this.tap(i);

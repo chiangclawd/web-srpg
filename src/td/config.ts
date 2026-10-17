@@ -98,11 +98,11 @@ export interface TextOpts {
 
 /**
  * 手機字體放大：整個 1280×720 畫面在手機上會縮到約一半，14px 的字實際只剩 7px。
- * 依畫面縮放比例把小字放大，讓實際顯示至少約 11 CSS px（最多放大 1.35 倍，避免撐爆版面）。
+ * 依畫面縮放比例把小字放大，讓實際顯示至少約 12.5 CSS px（最多放大 1.5 倍，避免撐爆版面）。
  * 桌機縮放比例 ≥ 1，不受影響。以橫向尺寸計算（直向開啟時也一樣）。
  */
-const MIN_CSS_PX = 11;
-const MAX_BOOST = 1.35;
+const MIN_CSS_PX = 12.5;
+const MAX_BOOST = 1.5;
 
 function screenScale(): number {
   if (typeof window === 'undefined') return 1;
@@ -120,11 +120,20 @@ export function fontPx(size: number): number {
 }
 
 /**
- * 手機上彈出面板整體放大的倍率（字與版面一起放大，不會擠爆版面）。
- * 讓面板裡的 1 邏輯像素至少約 0.7 CSS px；桌機、平板為 1。
+ * 手機上彈出面板、環狀選單、地圖按鈕整體放大的倍率（字與版面一起放大，面板會夾在畫面內）。
+ * 讓 1 邏輯像素至少約 0.84 CSS px：52px 的按鈕在手機上約 44 CSS px，符合手指點擊大小；桌機、平板為 1。
  */
 export function uiZoom(): number {
-  return Phaser.Math.Clamp(0.7 / screenScale(), 1, 1.35);
+  return Phaser.Math.Clamp(0.84 / screenScale(), 1, 1.55);
+}
+
+/**
+ * 戰鬥 HUD 四個角的放大倍率：寬螢幕手機（19.5:9，左右有邊距）HUD 多半落在邊距上，可以放到 1.55；
+ * 16:9 手機整個畫面都是玩法區，最多 1.35，避免蓋到建造點（關卡檢查工具兩種情況都會檢查）。
+ */
+export function hudZoom(): number {
+  const wide = Phaser.Math.Clamp((computeViewW() - MIN_W) / (MAX_W - MIN_W), 0, 1);
+  return Phaser.Math.Clamp(0.84 / screenScale(), 1, 1.35 + 0.2 * wide);
 }
 
 /** 視窗大小改變時重新計算（之後建立的文字才會套用） */

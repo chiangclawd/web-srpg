@@ -65,7 +65,7 @@ export class HeroScene extends Phaser.Scene {
       }
       if (sv.selectedHero === id) add(this.add.image(hx + 36, y - 30, 'ic_check').setDisplaySize(28, 28));
       const lv = heroLevelForXp(sv.heroes[id]?.xp ?? 0);
-      add(addText(this, hx, y + 46, unlocked ? `${L(h.name)} LV${lv}` : '???', { size: 14, display: true }).setOrigin(0.5));
+      add(fitText(addText(this, hx, y + 46, unlocked ? `${L(h.name)} LV${lv}` : '???', { size: 14, display: true }).setOrigin(0.5), twoCols ? 98 : 160));
     });
     // 右側詳細
     const h = HEROES[this.viewing];

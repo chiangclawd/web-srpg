@@ -9,18 +9,22 @@ import { inEllipse } from '../src/td/sim/math';
 
 const W = 1280;
 const H = 720;
-// HUD 範圍：以 16:9 手機（邏輯寬 1280、HUD 壓在玩法區上、放大 1.35 倍）為最壞情況
-const HUD_Z = 1.35;
-const HUD_ZONES = [
-  // 左上：生命 / 金幣 / 波次
-  { x0: 0, y0: 0, x1: 12 + 336 * HUD_Z, y1: 10 + 50 * HUD_Z },
-  // 右上：暫停 / 速度
-  { x0: W - 8 - 120 * HUD_Z, y0: 0, x1: W, y1: 8 + 66 * HUD_Z },
-  // 左下：英雄 + 法術
-  { x0: 0, y0: H - 14 - 92 * HUD_Z, x1: 8 + 303 * HUD_Z, y1: H },
-  // 右下道具列
-  { x0: W - 8 - 223 * HUD_Z, y0: H - 8 - 57 * HUD_Z, x1: W, y1: H },
-];
+// HUD 範圍（遊戲座標）。兩種手機都要檢查：
+//   16:9 手機：邏輯寬 1280，HUD 壓在玩法區上，放大 1.35 倍
+//   19.5:9 手機：邏輯寬 1560，HUD 貼著螢幕邊（玩法區外各 140px 邊距），放大 1.55 倍
+function hudZones(z: number, margin: number) {
+  return [
+    // 左上：生命 / 金幣 / 波次
+    { x0: -margin, y0: 0, x1: -margin + 12 + 336 * z, y1: 10 + 50 * z },
+    // 右上：暫停 / 速度
+    { x0: W + margin - 8 - 120 * z, y0: 0, x1: W + margin, y1: 8 + 66 * z },
+    // 左下：英雄 + 法術
+    { x0: -margin, y0: H - 14 - 92 * z, x1: -margin + 8 + 303 * z, y1: H },
+    // 右下道具列
+    { x0: W + margin - 8 - 223 * z, y0: H - 8 - 57 * z, x1: W + margin, y1: H },
+  ];
+}
+const HUD_ZONES = [...hudZones(1.35, 0), ...hudZones(1.55, 140)];
 const MIN_PATH_DIST = 58;
 const MIN_SPACING = 92;
 

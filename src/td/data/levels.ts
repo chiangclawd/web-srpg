@@ -714,7 +714,7 @@ export const LEVELS: LevelDef[] = [
       ],
     ],
     spots: [
-      { x: 380, y: 90 },
+      { x: 386, y: 102 },
       { x: 430, y: 290 },
       { x: 650, y: 380 },
       { x: 750, y: 690 },
@@ -1157,7 +1157,7 @@ export const LEVELS: LevelDef[] = [
       { x: 545, y: 455 },
       { x: 420, y: 370 },
       { x: 250, y: 390 },
-      { x: 300, y: 560 },
+      { x: 306, y: 548 },
       { x: 150, y: 440 },
     ],
     startGold: 1600,
