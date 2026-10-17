@@ -170,6 +170,9 @@ export function textStyle(o: TextOpts = {}): Phaser.Types.GameObjects.Text.TextS
 }
 
 export function addText(scene: Phaser.Scene, x: number, y: number, s: string, o: TextOpts = {}): Phaser.GameObjects.Text {
+  // 中文段落裡的空白（數字前後）換成不換行空白：Phaser 只會在空白處折行，
+  // 遇到「冰凍全場敵人 4 秒」會在 4 前後斷開，留下很短的一行；改成整段逐字折行
+  if (o.wrap && CJK.test(s)) s = s.replace(/ /g, '\u00a0');
   const t = scene.add.text(x, y, s, textStyle(o));
   if (o.wrap && CJK.test(s)) {
     const r = cjkWrap(t, s);
@@ -198,6 +201,7 @@ const NO_LINE_START = '。，、．！？：；」』）】》〉〕…～,.!?:;
  * 回傳含手動換行的字串；改過的話，呼叫端要把換行寬度放寬一個字，避免又被重新折行。
  */
 export function cjkWrap(t: Phaser.GameObjects.Text, s: string): { text: string; changed: boolean } {
+  if (CJK.test(s)) s = s.replace(/ /g, '\u00a0');
   let changed = false;
   const out: string[] = [];
   for (const para of s.split('\n')) {

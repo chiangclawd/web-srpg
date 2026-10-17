@@ -17,7 +17,8 @@ export const CHANGELOG: ChangeEntry[] = [
     items: [
       { zh: '設定新增「介面大小」：選「大」可讓手機上的彈出面板、建塔選單與地圖按鈕再放大一些（重新整理後生效）', en: 'New UI size setting: Large makes pop-up panels, the build menu and map buttons a bit bigger on phones (applies after a reload)' },
       { zh: '修正 16:9 手機上地圖左下的商店鈕被關閉鈕蓋住', en: 'Fixed the Shop button hiding under the close button on 16:9 phones' },
-      { zh: '修正手機上英雄室技能名稱與說明疊在一起', en: 'Fixed skill names overlapping their descriptions in the hero room on phones' },
+      { zh: '修正手機上英雄室技能名稱與說明、每日挑戰的修正名稱與說明疊在一起', en: 'Fixed names overlapping descriptions in the hero room and the Daily Challenge panel on phones' },
+      { zh: '中文說明不再在數字前後提早換行（例如「恢復 5 / 條生命」）', en: 'Chinese descriptions no longer break early around numbers' },
       { zh: '首次載入更快：角色圖改用較小的圖檔', en: 'Faster first load: character art now uses smaller files' },
     ],
   },
