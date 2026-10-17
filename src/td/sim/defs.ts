@@ -239,13 +239,17 @@ export interface LevelDef {
   /** 此關新出現的敵人（開場介紹卡） */
   intro?: string[];
   /** 指定配樂；沒寫就依地形（THEME_BGM） */
-  bgm?: 'finale';
+  bgm?: 'finale' | 'night';
   /** 挑戰模式規則 */
   rules?: LevelRules;
   /** 外傳關卡（戰役完結後解鎖，不在主線路線上） */
   bonus?: boolean;
-  /** 外傳終章：通關後播放外傳尾聲（之後的番外篇不算） */
-  sideFinale?: boolean;
+  /** 通關後播放的尾聲（外傳終章 side、番外篇 extra；主線最終關自動是 main） */
+  epilogue?: 'side' | 'extra';
+  /** 沿用另一關的手繪戰場圖（同一張地圖的變奏關卡） */
+  art?: string;
+  /** 夜戰：畫面變暗、塔與英雄周圍有光；防禦塔射程 -15% */
+  night?: boolean;
   /** 地圖上的路線改從這一關的旗子連過來（不接在外傳路線後面） */
   mapLink?: string;
   /** 可點擊的地圖機關（落石、雪崩） */
@@ -273,6 +277,10 @@ export interface LevelRules {
   hazardCdMul?: number;
   hazardDmgMul?: number;
   heroUltCdMul?: number;
+  /** 防禦塔射程倍率（每日挑戰「月黑風高」） */
+  towerRangeMul?: number;
+  /** 夜戰畫面（每日挑戰「月黑風高」） */
+  night?: boolean;
   /** 精英敵人：第 i 波（0 起算）出現機率 = min(max, base + perWave × i)；首領與召喚物不會是精英 */
   elite?: { base: number; perWave: number; max: number };
 }

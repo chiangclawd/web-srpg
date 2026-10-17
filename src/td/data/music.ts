@@ -19,6 +19,7 @@ export const MUSIC_TRACKS: { id: Bgm; name: L10n; where: L10n; reach?: string }[
   { id: 'desert', name: { zh: '沙海烈陽', en: 'Sun over the Dunes' }, where: { zh: '沙漠', en: 'Desert' }, reach: 'l13' },
   { id: 'volcano', name: { zh: '熔岩火口', en: 'Ember Crater' }, where: { zh: '火山', en: 'Volcano' }, reach: 'l16' },
   { id: 'coast', name: { zh: '黑潮海灣', en: 'Blacktide Cove' }, where: { zh: '海灣', en: 'Coast' }, reach: 'l17' },
+  { id: 'night', name: { zh: '月夜突襲', en: 'Moonlit Raid' }, where: { zh: '夜戰', en: 'Night battle' }, reach: 'l18' },
   { id: 'boss', name: { zh: '首領來襲', en: 'The Boss Arrives' }, where: { zh: '首領登場', en: 'Boss battles' }, reach: FIRST_BOSS_LEVEL },
   { id: 'finale', name: { zh: '最終決戰', en: 'The Last Stand' }, where: { zh: '最終關', en: 'The final battle' }, reach: 'l12' },
 ];

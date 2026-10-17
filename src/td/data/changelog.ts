@@ -11,6 +11,16 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 54,
+    date: '2026-10-17',
+    title: { zh: '番外篇：月夜突襲', en: 'Extra chapter: Moonlit Raid' },
+    items: [
+      { zh: '新關卡「月夜突襲」（通關黑潮海灣後解鎖）：血月之夜，副教主凜帶著蝙蝠、狼群與刺客突襲邊境村莊', en: 'New level “Moonlit Raid” (unlocks after Blacktide Cove): under a blood moon, Rin leads bats, wolves and assassins against the border village' },
+      { zh: '全新夜戰：畫面變暗，只有塔、英雄、營火與燈籠周圍看得清楚，防禦塔射程 -15%；夜裡還有螢火蟲和蟋蟀聲', en: 'Night battles: the field goes dark except around towers, heroes, campfires and lanterns, and towers lose 15% range. Watch for fireflies and listen for crickets' },
+      { zh: '新增夜戰配樂、成就「守夜人」；每日挑戰新增修正「月黑風高」（10/18 起加入抽選）', en: 'New night battle theme, the “Night Watch” achievement, and a new Daily Challenge modifier “Dark Night” (in the draw from Oct 18)' },
+    ],
+  },
+  {
     id: 53,
     date: '2026-10-17',
     title: { zh: '小改進', en: 'Small improvements' },
