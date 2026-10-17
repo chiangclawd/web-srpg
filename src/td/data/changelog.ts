@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 48,
+    date: '2026-10-17',
+    title: { zh: '每日任務', en: 'Daily quests' },
+    items: [
+      { zh: '地圖右上角新增「任務」：每天三個小任務（擊敗敵人、建塔、三星通關、擊敗首領……），完成後領寶石，午夜換新', en: 'New Quests button on the map: three small tasks every day (defeat enemies, build towers, win with 3 stars, slay a boss…) that pay out gems, refreshed at midnight' },
+      { zh: '戰鬥結算時會提示完成了哪些任務，地圖按鈕的紅點表示有獎勵可領', en: 'The result screen tells you when a quest is complete, and a red dot on the map button means a reward is waiting' },
+    ],
+  },
+  {
     id: 47,
     date: '2026-10-17',
     title: { zh: '戰場彩蛋', en: 'Battlefield easter eggs' },

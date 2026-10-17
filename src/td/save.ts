@@ -1,6 +1,7 @@
 import { setLang, type Lang } from './i18n';
 import type { Difficulty } from './sim/World';
 import type { Quality } from './config';
+import type { QuestDay } from './data/quests';
 
 const KEY = 'kb_td_save_v1';
 
@@ -40,6 +41,8 @@ export interface SaveData {
   login?: { last: string; streak: number };
   /** 已發現的戰場彩蛋（關卡:序號；舊存檔沒有這欄） */
   eggs?: string[];
+  /** 今天的每日任務與進度（舊存檔沒有這欄） */
+  quests?: QuestDay;
   settings: {
     music: number;
     sfx: number;
