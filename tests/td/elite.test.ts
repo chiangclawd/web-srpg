@@ -53,3 +53,16 @@ test('campaign waves never roll elites; heroic waves do', () => {
   assert.ok(h.elites > 0 && h.elites < h.spawned * 0.4, `heroic has some elites (${h.elites}/${h.spawned})`);
   void testLevel;
 });
+
+test('night battles shorten tower range by 15%, by level flag or daily rule', async () => {
+  const { NIGHT_RANGE } = await import('../../src/td/sim/World');
+  const day = mkWorld();
+  const night = mkWorld(testLevel([], { night: true }));
+  const dailyNight = mkWorld(testLevel([], { rules: { mode: 'daily', night: true } }));
+  day.gold = night.gold = dailyNight.gold = 1e6;
+  const a = day.build(0, 'archer')!;
+  const b = night.build(0, 'archer')!;
+  const c = dailyNight.build(0, 'archer')!;
+  assert.ok(Math.abs(night.towerRange(b) - day.towerRange(a) * NIGHT_RANGE) < 1e-9);
+  assert.ok(Math.abs(dailyNight.towerRange(c) - day.towerRange(a) * NIGHT_RANGE) < 1e-9);
+});

@@ -27,6 +27,11 @@ export const PATH_W = 58;
 /** 有 AI 手繪背景的關卡（public/assets/levels/<id>.webp，以程序背景為構圖重繪，道路位置相同） */
 export const PAINTED_LEVELS = new Set(['l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8', 'l9', 'l10', 'l11', 'l12', 'l13', 'l14', 'l15', 'l16', 'l17']);
 
+/** 這一關用哪張手繪圖（變奏關卡沿用原關卡的圖） */
+export function levelArtId(lv: { id: string; art?: string }): string {
+  return lv.art ?? lv.id;
+}
+
 export function levelArtKey(id: string): string {
   return `lvbg_${id}`;
 }

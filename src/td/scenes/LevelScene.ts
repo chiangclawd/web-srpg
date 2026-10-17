@@ -15,13 +15,14 @@ import { evaluateAchievements } from '../data/achievements';
 import { STORY, type EpilogueId } from '../data/story';
 import { GEMS_PER_ACHIEVEMENT, ITEMS, KEG, gemReward, type ItemId } from '../data/items';
 import { RANGE_Y, inEllipse } from '../sim/math';
-import { PAINTED_LEVELS, levelArtKey, paintLevel, paintBuildSpot } from '../art/terrain';
+import { PAINTED_LEVELS, levelArtId, levelArtKey, paintLevel, paintBuildSpot } from '../art/terrain';
 import { THEMES } from '../art/scenery';
 import { visualMuzzleH } from '../art/towers';
 import { DEPTH, Fx, camShake } from '../view/Fx';
 import { TowerView, UnitView } from '../view/Units';
 import { HazardLayer, hazardTextures } from '../view/Hazards';
 import { EggLayer } from '../view/Eggs';
+import { NightLayer } from '../view/Night';
 import { Bubbles } from '../view/Bubbles';
 import { clearCheckpoint, loadCheckpoint, restore, saveCheckpoint, snapshot, type Checkpoint } from '../sim/checkpoint';
 import { BRANCH_BARKS, HERO_BARKS, towerBark } from '../data/barks';
@@ -85,6 +86,7 @@ export class LevelScene extends Phaser.Scene {
   private ambient: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
   private hazardLayer: HazardLayer | null = null;
   private eggs: EggLayer | null = null;
+  private night: NightLayer | null = null;
   /** 首領倒下的慢動作（場景時間，毫秒） */
   private slowMoUntil = 0;
   /** 從存檔點繼續（手機被重新整理後） */
@@ -128,13 +130,14 @@ export class LevelScene extends Phaser.Scene {
     this.skullArmedUntil = 0;
     this.hazardLayer = null;
     this.eggs = null;
+    this.night = null;
     this.slowMoUntil = 0;
     this.seenIntro = new Set(save().seenEnemies);
   }
 
   preload(): void {
     // 手繪戰場背景按需下載（每關約 250 KB）；失敗就退回程序繪製
-    const id = this.baseLevel.id;
+    const id = levelArtId(this.baseLevel);
     if (PAINTED_LEVELS.has(id) && !this.textures.exists(levelArtKey(id))) this.load.image(levelArtKey(id), `assets/levels/${id}.webp`);
     for (const k of hazardTextures(this.level.hazards ?? [])) if (!this.textures.exists(k)) this.load.image(k, `assets/sprites/hz/${k}.webp`);
   }
@@ -163,7 +166,7 @@ export class LevelScene extends Phaser.Scene {
 
     // 背景：有手繪圖就用（只留這一關的，其他關的釋放記憶體），沒有就程序繪製
     freeCanvasTexture(this, 'bg_level');
-    const painted = levelArtKey(this.baseLevel.id);
+    const painted = levelArtKey(levelArtId(this.baseLevel));
     for (const k of this.textures.getTextureKeys()) if (k.startsWith('lvbg_') && k !== painted) this.textures.remove(k);
     // 戰鬥中用不到世界地圖與標題主視覺（約 12 MB），先釋放；回地圖/主選單時再載入
     for (const k of ['worldmap', 'keyart']) if (this.textures.exists(k)) this.textures.remove(k);
@@ -206,6 +209,8 @@ export class LevelScene extends Phaser.Scene {
     this.makeAmbient();
     this.makeLife();
     this.eggs = new EggLayer(this, this.level, this.fx, this.bubbles);
+    // 夜戰：夜幕＋光圈
+    if (this.isNight) this.night = new NightLayer(this, this.world, this.level.decor ?? []);
 
     // 全域點擊
     this.setupGestures();
@@ -242,7 +247,7 @@ export class LevelScene extends Phaser.Scene {
     this.ui = this.scene.get('LevelUI') as LevelUIScene;
 
     sfx.playBgm(this.level.bgm ?? THEME_BGM[this.level.theme]);
-    sfx.startAmbience(this.level.theme);
+    sfx.startAmbience(this.level.theme, this.isNight);
     if (this.world.hero?.hero) sfx.preloadVoice(this.world.hero.hero.def.id);
     for (const b of this.bossIds()) if (BOSS_VOICES[b]) sfx.preloadBossVoice(b);
     // 塔的配音等關卡畫面載完再下載（用真實時間：開場時場景可能是暫停的）
@@ -485,7 +490,20 @@ export class LevelScene extends Phaser.Scene {
       }
     }
     const theme = this.level.theme;
-    if (theme === 'grass' || theme === 'forest') {
+    if (this.isNight) {
+      // 夜晚：螢火蟲在草叢間忽明忽滅（疊在夜幕上面才看得到）
+      for (let i = 0; i < 14; i++) {
+        const f = this.add.image(Phaser.Math.Between(40, PLAY_W - 40), Phaser.Math.Between(80, 680), 'fx_soft').setTint(0xd8ff7a).setBlendMode('ADD').setDepth(DEPTH.proj + 502);
+        f.setDisplaySize(10, 10).setAlpha(0);
+        const drift = () => {
+          const tx = Phaser.Math.Clamp(f.x + Phaser.Math.Between(-120, 120), 20, PLAY_W - 20);
+          const ty = Phaser.Math.Clamp(f.y + Phaser.Math.Between(-80, 80), 60, 700);
+          this.tweens.add({ targets: f, x: tx, y: ty, duration: Phaser.Math.Between(3000, 6000), ease: 'Sine.easeInOut', onComplete: drift });
+        };
+        drift();
+        this.tweens.add({ targets: f, alpha: 0.9, duration: Phaser.Math.Between(500, 900), yoyo: true, repeat: -1, repeatDelay: Phaser.Math.Between(400, 2600), delay: i * 300 });
+      }
+    } else if (theme === 'grass' || theme === 'forest') {
       // 蝴蝶：在場上隨意飛（拍翅＝左右縮放）
       const tints = [0xffe070, 0xff9ad0, 0x9ad0ff, 0xffffff, 0xffb060];
       for (let i = 0; i < 5; i++) {
@@ -908,7 +926,12 @@ export class LevelScene extends Phaser.Scene {
   private effRange(type: TowerType, def: TowerLevelDef): number {
     const m = this.world.mods;
     const mul = type === 'archer' ? m.archerRange : type === 'mage' ? m.mageRange : type === 'artillery' ? m.artRange : 1;
-    return def.range * mul;
+    return def.range * mul * this.world.rangeMul;
+  }
+
+  /** 夜戰關卡或「月黑風高」每日修正 */
+  get isNight(): boolean {
+    return !!(this.level.night || this.level.rules?.night);
   }
 
   private openTowerMenu(t: Tower): void {
@@ -1378,6 +1401,7 @@ export class LevelScene extends Phaser.Scene {
         }
         case 'explosion':
           this.fx.explosion(ev.x, ev.y, ev.r, ev.kind);
+          this.night?.flash(ev.x, ev.y, ev.r * 1.8);
           if (ev.kind === 'bomb' || ev.kind === 'bomblet' || ev.kind === 'missile') sfx.play('explosion', ev.kind === 'bomblet' ? 0.5 : 0.8);
           else if (ev.kind === 'meteor') sfx.play('explosion', 1);
           else if (ev.kind === 'nova') sfx.play('freeze');
@@ -1768,6 +1792,7 @@ export class LevelScene extends Phaser.Scene {
     }
     for (const tw of w.towers) this.towerViews.get(tw.id)?.update(time, t);
     this.hazardLayer?.update();
+    this.night?.update();
     for (const p of w.projectiles) {
       const img = this.projViews.get(p.id);
       if (!img) continue;

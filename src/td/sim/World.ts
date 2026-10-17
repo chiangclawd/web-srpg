@@ -40,6 +40,8 @@ export const HAZARD: Record<HazardKind, { dmg: number; r: number; stun: number; 
 /** 精英詞綴的數值：迅捷加速、堅韌加血加甲、再生每秒回血比例、護盾佔最大生命比例、賞金倍率 */
 export const ELITE = { swiftSpeed: 1.4, toughHp: 1.8, toughArmor: 0.15, regen: 0.03, shield: 0.5, bounty: 2 };
 export const ELITE_AFFIXES: EliteAffix[] = ['swift', 'tough', 'regen', 'shielded'];
+/** 夜戰時防禦塔的射程倍率 */
+export const NIGHT_RANGE = 0.85;
 
 /** 從崖邊落到路上的時間（秒），落地後才開始判定 */
 export const HAZARD_DROP = 0.45;
@@ -1790,7 +1792,12 @@ export class World {
   towerRange(t: Tower): number {
     const m = this.mods;
     const mul = t.type === 'archer' ? m.archerRange : t.type === 'mage' ? m.mageRange : t.type === 'artillery' ? m.artRange : 1;
-    return t.def.range * mul;
+    return t.def.range * mul * this.rangeMul;
+  }
+
+  /** 全域射程倍率：夜戰 -15%、每日修正 */
+  get rangeMul(): number {
+    return (this.level.night || this.level.rules?.night ? NIGHT_RANGE : 1) * (this.level.rules?.towerRangeMul ?? 1);
   }
 
   private towerDmgMul(t: Tower): number {

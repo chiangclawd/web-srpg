@@ -18,7 +18,7 @@ import type { Difficulty } from '../sim/World';
 import type { LevelMode } from '../sim/defs';
 import { ironTowers } from '../data/challenges';
 import { TOWERS } from '../data/towers';
-import { PAINTED_LEVELS, levelArtKey } from '../art/terrain';
+import { PAINTED_LEVELS, levelArtId, levelArtKey } from '../art/terrain';
 
 export function isUnlocked(i: number): boolean {
   if (i === 0) return true;
@@ -643,8 +643,8 @@ export class MapScene extends Phaser.Scene {
     });
     if (mode === 'campaign') {
       const stars = sv.stars[lv.id] ?? 0;
-      const thumb = PAINTED_LEVELS.has(lv.id);
-      if (thumb) this.levelThumb(c, lv.id, 0, -80, pw - 56, 84);
+      const thumb = PAINTED_LEVELS.has(levelArtId(lv));
+      if (thumb) this.levelThumb(c, levelArtId(lv), 0, -80, pw - 56, 84);
       const sy = thumb ? -40 : -ph / 2 + 130;
       for (let k = 0; k < 3; k++) {
         c.add(this.add.image((k - 1) * 46, sy, k < stars ? 'ic_star' : 'ic_star_empty').setDisplaySize(40, 40));

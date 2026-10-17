@@ -9,7 +9,7 @@ import { LEVELS } from './levels';
  */
 export const DAILY_POOL = ['l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8', 'l9', 'l10', 'l13'];
 
-export type DailyModId = 'swift' | 'tough' | 'armored' | 'poor' | 'fragile' | 'noSpells' | 'limited' | 'pricey' | 'rich' | 'bounty' | 'skyraid' | 'regen' | 'rockfall' | 'heroday' | 'elites';
+export type DailyModId = 'swift' | 'tough' | 'armored' | 'poor' | 'fragile' | 'noSpells' | 'limited' | 'pricey' | 'rich' | 'bounty' | 'skyraid' | 'regen' | 'rockfall' | 'heroday' | 'elites' | 'night';
 
 export interface DailyMod {
   id: DailyModId;
@@ -34,6 +34,7 @@ export const DAILY_MODS: Record<DailyModId, DailyMod> = {
   regen: { id: 'regen', name: { zh: '巨魔之血', en: 'Troll Blood' }, desc: { zh: '敵人每秒回復 1% 生命', en: 'Enemies regenerate 1% health per second' } },
   rockfall: { id: 'rockfall', name: { zh: '山崩季節', en: 'Rockslide Season' }, desc: { zh: '地圖機關冷卻減半、傷害 +50%', en: 'Map traps recharge twice as fast and hit 50% harder' }, good: true },
   elites: { id: 'elites', name: { zh: '精英橫行', en: 'Elite Rampage' }, desc: { zh: '精英敵人頻繁出現（約一成五），賞金加倍', en: 'Elite enemies show up often (about 15%) and pay double' } },
+  night: { id: 'night', name: { zh: '月黑風高', en: 'Dark Night' }, desc: { zh: '夜戰：防禦塔射程 -15%，只看得清燈火照到的地方', en: 'Night battle: towers have 15% less range and only lit areas are clear' } },
   heroday: { id: 'heroday', name: { zh: '英雄之日', en: 'Hero’s Day' }, desc: { zh: '英雄絕招冷卻 -40%', en: 'Hero ultimate recharges 40% faster' }, good: true },
 };
 
@@ -43,7 +44,7 @@ const GOOD: DailyModId[] = ['rich', 'bounty'];
 const ANY: DailyModId[] = [...HARSH, ...GOOD, ...GOOD, ...GOOD, ...GOOD];
 /** 新修正從這天起才加入抽選（已經公布的日子不變） */
 const NEW_MODS_FROM = '2026-10-18';
-const HARSH2: DailyModId[] = [...HARSH, 'skyraid', 'regen', 'elites'];
+const HARSH2: DailyModId[] = [...HARSH, 'skyraid', 'regen', 'elites', 'night'];
 const GOOD2: DailyModId[] = [...GOOD, 'rockfall', 'heroday'];
 const ANY2: DailyModId[] = [...HARSH2, ...GOOD2, ...GOOD2, ...GOOD2];
 /** 後期關卡本身就難：第二個修正一定是有利的，避免兩個嚴苛修正疊成無解 */
@@ -144,6 +145,9 @@ export function applyDaily(level: LevelDef, spec: DailySpec): LevelDef {
         break;
       case 'heroday':
         rules.heroUltCdMul = 0.6;
+        break;
+      case 'night':
+        rules.night = true;
         break;
       case 'elites':
         rules.elite = { base: 0.12, perWave: 0.01, max: 0.25 };

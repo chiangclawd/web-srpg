@@ -10,7 +10,7 @@ import { TOWER_VOICE_LANGS, VOICE_LINES, type VoiceLine } from './data/voices';
  *   - 同一音效 40ms 內只播一次，避免 20 座箭塔齊射時爆音
  */
 
-export type Bgm = 'title' | 'map' | 'grass' | 'forest' | 'snow' | 'waste' | 'desert' | 'volcano' | 'coast' | 'boss' | 'finale';
+export type Bgm = 'title' | 'map' | 'grass' | 'forest' | 'snow' | 'waste' | 'desert' | 'volcano' | 'coast' | 'night' | 'boss' | 'finale';
 
 /** 各地形的戰鬥配樂 */
 export const THEME_BGM: Record<ThemeId, Bgm> = {
@@ -113,7 +113,7 @@ class TdAudio {
         this.playBgm(w);
       }
       // 環境音在聲音解鎖前開不起來：解鎖後補開
-      if (this.wantAmb && !this.amb) this.startAmbience(this.wantAmb);
+      if (this.wantAmb && !this.amb) this.startAmbience(this.wantAmb, this.wantNight);
     };
     window.addEventListener('pointerdown', unlock);
     window.addEventListener('keydown', unlock);
@@ -534,14 +534,16 @@ class TdAudio {
   // ───────── 環境音 ─────────
   private amb: { out: GainNode; srcs: AudioScheduledSourceNode[]; timer: ReturnType<typeof setTimeout> | null } | null = null;
   private wantAmb: ThemeId | null = null;
+  private wantNight = false;
 
   /**
    * 戰場環境音（全部即時合成，不用額外下載）：海浪、風聲、鳥叫、熔岩低鳴……
    * 跟著音效音量；聲音還沒解鎖（玩家還沒點畫面）時會在解鎖後補開。
    */
-  startAmbience(theme: ThemeId): void {
+  startAmbience(theme: ThemeId, night = false): void {
     this.stopAmbience();
     this.wantAmb = theme;
+    this.wantNight = night;
     const ctx = this.ensureCtx();
     if (!ctx || !this.master || !this.noiseBuf) return;
     const out = ctx.createGain();
@@ -598,6 +600,21 @@ class TdAudio {
       const n = 3 + Math.floor(Math.random() * 3);
       for (let i = 0; i < n; i++) this.tone(base * (0.8 + Math.random() * 0.15), 'sine', t + i * 0.075, 0.035, 0.06 * v, base * 1.7);
     };
+    if (night) {
+      // 夜晚：低低的晚風＋此起彼落的蟋蟀聲，偶爾一聲貓頭鷹
+      bed('lowpass', 500, 0.5, 0.12, 0.05, 0.08, 120);
+      sprinkle(250, 900, () => {
+        const t = ctx.currentTime;
+        const f = 4200 + Math.random() * 900;
+        for (let i = 0; i < 3; i++) this.tone(f, 'square', t + i * 0.045, 0.025, 0.012 * v);
+      });
+      sprinkle(9000, 18000, () => {
+        const t = ctx.currentTime;
+        this.tone(420, 'sine', t, 0.32, 0.05 * v, 380);
+        this.tone(400, 'sine', t + 0.45, 0.5, 0.05 * v, 340);
+      });
+      return;
+    }
     switch (theme) {
       case 'coast':
         // 海浪：低通噪聲隨 8 秒的週期湧上退下
