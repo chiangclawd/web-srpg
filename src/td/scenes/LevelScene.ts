@@ -1399,6 +1399,13 @@ export class LevelScene extends Phaser.Scene {
       case 'hail':
         sfx.play('whoosh', 0.6);
         break;
+      case 'thrust':
+        sfx.play('lance', 0.7);
+        break;
+      case 'phalanx':
+        this.fx.ring(x, y, 110, 0xc8d8ff, 600);
+        sfx.play('horn', 0.4);
+        break;
       default:
         break;
     }
@@ -1685,7 +1692,7 @@ export class LevelScene extends Phaser.Scene {
   }
 
   private heroUltFx(hero: string, x: number, y: number, r: number): void {
-    const COLORS: Record<string, number> = { arthur: 0xffe08a, elena: 0x9aff7a, lila: 0x9ae4ff, rain: 0xff9a5a, aria: 0xc8b0ff, sharon: 0xd8a0ff };
+    const COLORS: Record<string, number> = { arthur: 0xffe08a, elena: 0x9aff7a, lila: 0x9ae4ff, rain: 0xff9a5a, aria: 0xc8b0ff, sharon: 0xd8a0ff, viktor: 0xc8d8ff };
     const col = COLORS[hero] ?? 0xffffff;
     this.fx.ring(x, y, r, col, 500);
     this.fx.ring(x, y, r * 0.6, col, 380);
@@ -1712,6 +1719,12 @@ export class LevelScene extends Phaser.Scene {
       case 'sharon':
         sfx.play('heal');
         this.cameras.main.flash(220, 240, 220, 255);
+        break;
+      case 'viktor':
+        sfx.play('horn', 0.6);
+        sfx.play('lance', 0.8);
+        camShake(this, 260, 0.006);
+        this.fx.smokePuff(x, y, 12);
         break;
     }
     this.ui.ultPop();

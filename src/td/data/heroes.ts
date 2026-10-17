@@ -277,6 +277,54 @@ export const HEROES: Record<string, HeroDef> = {
       },
     ],
   },
+  viktor: {
+    id: 'viktor',
+    name: { zh: '維克托', en: 'Viktor' },
+    title: { zh: '鐵壁元帥', en: 'Iron Marshal' },
+    desc: { zh: '身經百戰的長槍元帥：重甲、長槍貫穿敵陣，擅長擋住最硬的敵人。', en: 'A battle-scarred marshal in heavy plate whose spear pierces whole ranks. Built to hold back the toughest foes.' },
+    sprite: 'sp_viktor',
+    portrait: 'pt_viktor',
+    facesRight: true,
+    height: 56,
+    hp: 380,
+    hpPerLevel: 38,
+    armor: 0.45,
+    dmg: [14, 20],
+    dmgPerLevel: 2.6,
+    cd: 1.1,
+    speed: 64,
+    regen: 9,
+    unlockAfter: 'l12',
+    ult: {
+      name: { zh: '長槍壁壘', en: 'Spear Wall' },
+      desc: { zh: '範圍內敵人受到傷害並暈眩，三名重甲槍兵守住道路 20 秒。', en: 'Damages and stuns enemies in the area, then three armored spearmen hold the road for 20 seconds.' },
+      icon: 'ult_viktor',
+      cd: 55,
+    },
+    skills: [
+      {
+        id: 'thrust',
+        name: { zh: '長槍貫刺', en: 'Spear Thrust' },
+        desc: { zh: '一槍刺穿目標，連同後方一排敵人一起受傷。', en: 'Skewers the target and every enemy lined up behind it.' },
+        unlockLevel: 1,
+        cd: 6,
+      },
+      {
+        id: 'phalanx',
+        name: { zh: '鐵壁方陣', en: 'Iron Phalanx' },
+        desc: { zh: '周圍敵人減速，附近友軍護甲大幅提升 8 秒。', en: 'Slows nearby enemies and greatly raises nearby allies’ armor for 8 seconds.' },
+        unlockLevel: 4,
+        cd: 20,
+      },
+      {
+        id: 'sunder',
+        name: { zh: '破甲重擊', en: 'Sunder' },
+        desc: { zh: '重擊身旁最強的敵人，使其受到的所有傷害提高 30%，持續 6 秒。', en: 'A crushing blow on the toughest foe nearby; it takes 30% more damage from everything for 6 seconds.' },
+        unlockLevel: 7,
+        cd: 14,
+      },
+    ],
+  },
 };
 
-export const HERO_ORDER = ['arthur', 'elena', 'lila', 'rain', 'aria', 'sharon'];
+export const HERO_ORDER = ['arthur', 'elena', 'lila', 'rain', 'aria', 'sharon', 'viktor'];

@@ -11,6 +11,16 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 16,
+    date: '2026-10-17',
+    title: { zh: '第七位英雄：維克托', en: 'Seventh hero: Viktor' },
+    items: [
+      { zh: '鐵壁元帥維克托：通關最終關「終焉之門」後加入，重甲長槍、專門擋住最硬的敵人', en: 'Viktor the Iron Marshal joins after you clear the finale, Gate of the End: heavy plate and a spear made for holding back the toughest foes' },
+      { zh: '技能：長槍貫刺（刺穿一排敵人）、鐵壁方陣（敵人減速、友軍加護甲）、破甲重擊（目標受到的傷害 +30%）；絕招「長槍壁壘」暈眩敵人並召喚三名重甲槍兵', en: 'Skills: Spear Thrust (pierces a line of enemies), Iron Phalanx (slows foes, armors allies), Sunder (target takes +30% damage). Ultimate “Spear Wall” stuns enemies and summons three armored spearmen' },
+      { zh: '英雄室改成兩欄，七位英雄一次看得到', en: 'The hero room now uses two columns so all seven heroes fit' },
+    ],
+  },
+  {
     id: 15,
     date: '2026-10-17',
     title: { zh: '新外傳關卡：冰封隘口', en: 'New side-story level: Frozen Pass' },

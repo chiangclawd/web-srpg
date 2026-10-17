@@ -833,6 +833,10 @@ const ICONS: Record<string, Fn> = {
   sk_smite: sunIcon,
   sk_aegis: fastIcon,
   ult_sharon: bookIcon,
+  sk_thrust: beamIcon,
+  sk_phalanx: shieldIcon,
+  sk_sunder: hammerIcon,
+  ult_viktor: swordsIcon,
 };
 
 /** 所有已註冊的圖示 key（測試用） */
