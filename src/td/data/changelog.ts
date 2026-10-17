@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 25,
+    date: '2026-10-17',
+    title: { zh: '外傳尾聲', en: 'Side-story epilogue' },
+    items: [
+      { zh: '通關外傳終章「熔岩火山口」後，可以觀看外傳尾聲：英雄們回村慶祝，接著播放製作群名單', en: 'Clearing the side-story finale, Ember Crater, now unlocks a side-story epilogue: the heroes head home to celebrate, followed by the credits' },
+    ],
+  },
+  {
     id: 24,
     date: '2026-10-17',
     title: { zh: '本場 MVP', en: 'Battle MVP' },

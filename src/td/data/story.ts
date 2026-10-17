@@ -95,6 +95,16 @@ export const STORY: Record<string, StoryLine[]> = {
   ],
 };
 
+/** 通關外傳終章（熔岩火山口）後的尾聲 */
+export const SIDE_EPILOGUE: StoryLine[] = [
+  { who: 'viktor', text: { zh: '火山的怒吼平息了。北境的冰河與火山，總算都安靜下來。', en: 'The volcano’s roar has died down. The glacier and the mountain are finally quiet.' } },
+  { who: 'sharon', text: { zh: '我用最古老的聖典文字重新刻下封印，這次誰也打不開了。', en: 'I carved the seal again in the oldest script of the scriptures. No one will open it this time.' } },
+  { who: 'elena', text: { zh: '沙海、冰河、火山……我們走了好遠的路。', en: 'The sand sea, the glacier, the volcano… we’ve come a long way.' } },
+  { who: 'rain', text: { zh: '該回家了！村子今晚有慶典，聽說蓋瑞準備了烤全羊。', en: 'Time to go home! The village is celebrating tonight, and I hear Gary is roasting a whole sheep.' } },
+  { who: 'aria', text: { zh: '下次冒險，我先飛去探路！', en: 'Next adventure, I’ll fly ahead and scout!' } },
+  { who: 'arthur', text: { zh: '辛苦了，各位。王國的每一寸土地，都留下了我們守護過的足跡。', en: 'Well done, everyone. Every corner of the kingdom bears the footprints of those who defended it.' } },
+];
+
 /** 通關最終關後的尾聲 */
 export const EPILOGUE: StoryLine[] = [
   { who: 'cult_leader', text: { zh: '不可能……深淵之門，竟然被凡人封上了……', en: 'Impossible... the Abyss Gate, sealed by mere mortals...' } },

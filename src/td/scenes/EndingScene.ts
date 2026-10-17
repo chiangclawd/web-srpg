@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { PLAY_X0, VIEW_H, WORLD_W, bgScale, addText, setupCamera, viewW } from '../config';
 import { PAINTED_LEVELS, levelArtKey, paintLevel } from '../art/terrain';
-import { EPILOGUE } from '../data/story';
+import { EPILOGUE, SIDE_EPILOGUE } from '../data/story';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { LEVELS } from '../data/levels';
 import { Button } from '../ui/widgets';
@@ -20,6 +20,8 @@ const FIREWORK_TINTS = [0xffd84a, 0xff6a5a, 0x6ad0ff, 0x9aff7a, 0xe08aff];
 /** 結局：尾聲對話 → 慶功 + 製作群名單 */
 export class EndingScene extends Phaser.Scene {
   private epilogue = false;
+  /** 播哪一段尾聲：主線（終焉之門）或外傳（熔岩火山口） */
+  private story: 'main' | 'side' = 'main';
   private back: 'Map' | 'Menu' = 'Map';
   private roll: Phaser.GameObjects.Container | null = null;
   private rollEnd = 0;
@@ -31,8 +33,9 @@ export class EndingScene extends Phaser.Scene {
     super('Ending');
   }
 
-  init(data: { epilogue?: boolean; back?: 'Map' | 'Menu' }): void {
+  init(data: { epilogue?: boolean; story?: 'main' | 'side'; back?: 'Map' | 'Menu' }): void {
     this.epilogue = !!data.epilogue;
+    this.story = data.story ?? 'main';
     this.back = data.back ?? 'Map';
     this.roll = null;
     this.held = false;
@@ -85,7 +88,7 @@ export class EndingScene extends Phaser.Scene {
     this.input.on('pointerdown', () => (this.held = true));
     this.input.on('pointerup', () => (this.held = false));
     if (this.epilogue) {
-      this.time.delayedCall(700, () => playDialog(this, EPILOGUE, () => this.credits(), { dim: 0.25, depth: 1000 }));
+      this.time.delayedCall(700, () => playDialog(this, this.story === 'side' ? SIDE_EPILOGUE : EPILOGUE, () => this.credits(), { dim: 0.25, depth: 1000 }));
     } else {
       this.time.delayedCall(400, () => this.credits());
     }

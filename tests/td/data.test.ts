@@ -5,7 +5,7 @@ import { ENEMIES } from '../../src/td/data/enemies';
 import { HEROES, HERO_ORDER } from '../../src/td/data/heroes';
 import { TOWERS } from '../../src/td/data/towers';
 import { challengeLevel, endlessLevel, endlessHpMul, ENDLESS_WAVES } from '../../src/td/data/challenges';
-import { STORY, SPEAKERS, STORY_PORTRAITS, EPILOGUE } from '../../src/td/data/story';
+import { STORY, SPEAKERS, STORY_PORTRAITS, EPILOGUE, SIDE_EPILOGUE } from '../../src/td/data/story';
 import { ACHIEVEMENTS, evaluateAchievements, type LevelOutcome } from '../../src/td/data/achievements';
 import type { SaveData } from '../../src/td/save';
 import { BRANCH_BARKS, HERO_BARKS, TOWER_BARKS } from '../../src/td/data/barks';
@@ -85,7 +85,7 @@ test('endless waves are deterministic, escalate, and bring a boss every 10 waves
 test('every campaign level has an intro story with known speakers', () => {
   const portraits = new Set([...STORY_PORTRAITS, ...HERO_ORDER]);
   for (const l of LEVELS) assert.ok(STORY[l.id]?.length, `${l.id} story`);
-  for (const lines of [...Object.values(STORY), EPILOGUE])
+  for (const lines of [...Object.values(STORY), EPILOGUE, SIDE_EPILOGUE])
     for (const ln of lines) {
       assert.ok(SPEAKERS[ln.who], `speaker ${ln.who}`);
       assert.ok(portraits.has(ln.who), `portrait for ${ln.who}`);

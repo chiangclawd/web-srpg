@@ -706,7 +706,7 @@ export class LevelUIScene extends Phaser.Scene {
       this.gemLine(c, 84);
       const idx = LEVELS.findIndex((l) => l.id === this.lvl.level.id);
       const next = LEVELS[idx + 1];
-      // 每日挑戰只有再試／回地圖；主線最終關 → 尾聲；外傳關卡之間 → 下一關；最後一關 → 回地圖
+      // 每日挑戰只有再試／回地圖；主線最終關 → 尾聲；外傳關卡之間 → 下一關；外傳最後一關 → 外傳尾聲
       if (daily) {
         c.add(new Button(this, -100, 140, 170, 52, T('retry'), () => this.lvl.restart(), { color: 'gold' }));
         c.add(new Button(this, 100, 140, 170, 52, T('toMap'), () => this.lvl.exitToMap(), { color: 'blue' }));
@@ -716,7 +716,8 @@ export class LevelUIScene extends Phaser.Scene {
         const finale = !this.lvl.level.bonus && (!next || next.bonus);
         if (finale) c.add(new Button(this, 150, 140, 140, 52, T('epilogue'), () => this.lvl.exitToEnding(), { color: 'green' }));
         else if (next) c.add(new Button(this, 150, 140, 140, 52, T('next'), () => this.lvl.exitToMap(next.id), { color: 'green' }));
-        else c.add(new Button(this, 150, 140, 140, 52, 'OK', () => this.lvl.exitToMap(), { color: 'green' }));
+        // 外傳最後一關：外傳尾聲
+        else c.add(new Button(this, 150, 140, 140, 52, T('epilogue'), () => this.lvl.exitToEnding('side'), { color: 'green' }));
       }
     } else {
       const tip = addText(this, 0, -30, TIPS[Math.floor(Math.random() * TIPS.length)][save().settings.lang], {
