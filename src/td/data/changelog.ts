@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 21,
+    date: '2026-10-17',
+    title: { zh: '更多地圖機關', en: 'More map traps' },
+    items: [
+      { zh: '第 6、10 關與灼熱沙丘、巨蟲巢穴也有可以推下的落石／雪球（沙漠是砂岩、教派荒地是帶紫晶的玄武岩），共 8 關有機關', en: 'Levels 6 and 10, Scorching Dunes and the Wyrm’s Nest now have traps too (sandstone in the desert, crystal-studded basalt in the cult wastes) — 8 levels in all' },
+    ],
+  },
+  {
     id: 20,
     date: '2026-10-17',
     title: { zh: '守軍會說話了', en: 'Your defenders speak up' },

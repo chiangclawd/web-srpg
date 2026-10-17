@@ -386,6 +386,7 @@ export const LEVELS: LevelDef[] = [
     },
     theme: 'snow',
     seed: 61,
+    hazards: [{ kind: 'snowball', x: 800, y: 138, path: 0, d0: 760, d1: 280 }],
     bgm: 'tense',
     paths: [
       [
@@ -682,6 +683,7 @@ export const LEVELS: LevelDef[] = [
     },
     theme: 'waste',
     seed: 107,
+    hazards: [{ kind: 'boulder', skin: 'dark', x: 800, y: 196, path: 1, d0: 510, d1: 920, dmg: 220 }],
     bgm: 'dark',
     paths: [
       [
@@ -933,6 +935,7 @@ export const LEVELS: LevelDef[] = [
     },
     theme: 'desert',
     seed: 131,
+    hazards: [{ kind: 'boulder', skin: 'sand', x: 700, y: 158, path: 0, d0: 620, d1: 1060, dmg: 200 }],
     bgm: 'tense',
     paths: [
       [
@@ -1017,6 +1020,7 @@ export const LEVELS: LevelDef[] = [
     },
     theme: 'desert',
     seed: 141,
+    hazards: [{ kind: 'boulder', skin: 'sand', x: 940, y: 138, path: 0, d0: 360, d1: 800, dmg: 240 }],
     bgm: 'tense',
     paths: [
       [

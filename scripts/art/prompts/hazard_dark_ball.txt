@@ -1,0 +1,5 @@
+Image 1 is a sprite from my 2D fantasy tower-defense game: a dark basalt ledge with a big round dark basalt boulder on top (with a few glowing purple crystal shards in it), held by a wooden wedge and a rope. Image 2 shows the art style of the game.
+
+Paint ONE object only, centered: ONLY the big round dark basalt boulder, alone, as a complete roughly spherical rock with nothing in front of it: charcoal stone with cracks and two or three small glowing purple crystal shards. No ledge, no wood, no rope. Keep the same art style and colours as image 1.
+- Do NOT draw anything else and no text.
+- Background: perfectly flat solid magenta (#FF00FF) everywhere, no shadows on the background, no frame.
