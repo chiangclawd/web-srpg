@@ -12,4 +12,5 @@ export const LOADING_TIPS: L10n[] = [
   { zh: '每日挑戰每天換一關、換一組規則，打完可以分享成績給朋友。', en: 'The Daily Challenge changes level and rules every day. Share your result with friends!' },
   { zh: '卡關的話，換個英雄或到商店買道具再試試。', en: 'Stuck? Try another hero, or pick up items from the shop.' },
   { zh: '雙指可以放大戰場，放大後拖曳移動。', en: 'Pinch to zoom the battlefield, then drag to look around.' },
+  { zh: '夜戰中，怨靈只在塔與英雄的光圈裡現形；選塔時黃色光圈就是照亮範圍。', en: 'In night battles wraiths only show inside tower and hero light. The yellow ring on a selected tower is its light.' },
 ];

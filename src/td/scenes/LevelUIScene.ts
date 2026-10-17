@@ -574,7 +574,8 @@ export class LevelUIScene extends Phaser.Scene {
     const c = this.add.container(w / 2, VIEW_H / 2).setDepth(100);
     const dim = dimmer(this, w * 2, VIEW_H * 2, 0.55).setPosition(-w, -VIEW_H);
     c.add(dim);
-    c.add(panel(this, 0, 0, 520, 280));
+    const bg = panel(this, 0, 0, 520, 280);
+    c.add(bg);
     const head = addText(this, 0, -112, T('newEnemy'), { size: 26, display: true, color: '#c0392b', stroke: '#fff2d0', strokeW: 4, shadow: false }).setOrigin(0.5);
     c.add(head);
     const img = this.add.image(-150, 40, e.sprite).setOrigin(0.5, 1);
@@ -582,24 +583,36 @@ export class LevelUIScene extends Phaser.Scene {
     if (!e.facesRight) img.setFlipX(true);
     if (e.tint) img.setTint(e.tint);
     c.add(img);
-    const name = addText(this, -40, -74, L(e.name), { size: 26, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false });
-    const desc = addText(this, -40, -36, L(e.desc), { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: 250 });
+    const name = fitText(addText(this, -40, -74, L(e.name), { size: 26, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }), 270);
+    const desc = addText(this, -40, -36, L(e.desc), { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: 280 });
     c.add([name, desc]);
+    // 手機字體放大後說明會變長：標籤與按鈕跟著往下排、面板一起長高，不再疊在字上
+    const tagY = Math.max(50, desc.y + desc.height + 10);
     let tagX = -40;
+    let tagH = 0;
     for (const tg of e.tags ?? []) {
-      const tag = addText(this, tagX, 50, L(tg), { size: 14, display: true, color: '#fff6dc', strokeW: 3 });
-      const tb = this.add.rectangle(tagX - 6, 47, tag.width + 12, tag.height + 2, 0x7a3a1a).setOrigin(0).setStrokeStyle(2, 0x2a1608);
+      const tag = addText(this, tagX, tagY, L(tg), { size: 14, display: true, color: '#fff6dc', strokeW: 3 });
+      const tb = this.add.rectangle(tagX - 6, tagY - 3, tag.width + 12, tag.height + 2, 0x7a3a1a).setOrigin(0).setStrokeStyle(2, 0x2a1608);
       c.add([tb, tag]);
       tagX += tag.width + 22;
+      tagH = Math.max(tagH, tag.height);
     }
-    const ok = new Button(this, 0, 104, 160, 46, 'OK', () => {
+    const okY = Math.max(104, tagY + tagH + 38);
+    const shift = (okY - 104) / 2;
+    const ph = 280 + shift * 2;
+    if (shift > 0) {
+      bg.destroy();
+      c.addAt(panel(this, 0, shift, 520, ph), 1);
+      for (const o of c.list) if (o !== dim) (o as unknown as Phaser.GameObjects.Components.Transform).y -= shift;
+    }
+    const ok = new Button(this, 0, okY - shift, 160, 46, 'OK', () => {
       this.closeModal();
       this.lvl.togglePause(false);
       this.showEnemyIntro(ids.slice(1), done);
     }, { color: 'green' });
     c.add(ok);
     this.modal = c;
-    popIn(this, c, 0, { w: 520, h: 280 }, 0.7, 260);
+    popIn(this, c, 0, { w: 520, h: ph }, 0.7, 260);
   }
 
   // ───────── 開場劇情 ─────────
@@ -742,7 +755,10 @@ export class LevelUIScene extends Phaser.Scene {
         else if (next) c.add(new Button(this, 150, 140, 140, 52, T('next'), () => this.lvl.exitToMap(next.id), { color: 'green' }));
       }
     } else {
-      const tip = addText(this, 0, -30, TIPS[Math.floor(Math.random() * TIPS.length)][save().settings.lang], {
+      // 夜戰輸了優先教「照亮怨靈」，其他時候隨機
+      const night = this.lvl.world.isNight || this.lvl.level.night;
+      const pool = night ? NIGHT_TIPS : TIPS;
+      const tip = addText(this, 0, -30, pool[Math.floor(Math.random() * pool.length)][save().settings.lang], {
         size: 18,
         color: '#4a2a10',
         stroke: '#f4e2b8',
@@ -838,4 +854,10 @@ const TIPS = [
   { zh: '提示：用星星在「升級」中強化你的防禦塔與法術。', en: 'Tip: Spend stars in Upgrades to strengthen towers and spells.' },
   { zh: '提示：提前呼叫下一波可以拿到額外金幣。', en: 'Tip: Calling waves early grants bonus gold.' },
   { zh: '提示：流星火雨對成群的敵人特別有效。', en: 'Tip: Meteor Rain is devastating against clustered enemies.' },
+];
+
+const NIGHT_TIPS = [
+  { zh: '提示：夜裡怨靈只在塔與英雄的光圈內現形，光圈外傷害減半。', en: 'Tip: At night wraiths only show inside the light of towers and heroes — outside it they take half damage.' },
+  { zh: '提示：狼人會快速回血，殘血時還會狂暴加速，用兵營擋住再集火。', en: 'Tip: Werewolves regenerate and enrage when hurt — hold them with barracks and burst them down.' },
+  { zh: '提示：把塔蓋在路邊連成一片光，怨靈就無處可躲。', en: 'Tip: Line the road with towers so their light overlaps and wraiths have nowhere to hide.' },
 ];
