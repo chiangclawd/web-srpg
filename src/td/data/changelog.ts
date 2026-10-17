@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 62,
+    date: '2026-10-17',
+    title: { zh: '番外篇：礦坑鬼火', en: 'Extra chapter: Mine Ghostfire' },
+    items: [
+      { zh: '新關卡「礦坑鬼火」（通關月夜突襲後解鎖）：夜裡的廢棄礦坑，提燈怨靈與血月狼人從兩條路一起湧出', en: 'New level “Mine Ghostfire” (unlocks after Moonlit Raid): the abandoned mines at night, with lantern wraiths and werewolves coming down two roads at once' },
+      { zh: '也可以挑戰英雄、鋼鐵與無盡模式', en: 'Heroic, Iron and Endless modes are available too' },
+    ],
+  },
+  {
     id: 61,
     date: '2026-10-17',
     title: { zh: '新的每日任務', en: 'New Daily Quests' },

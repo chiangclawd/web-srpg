@@ -105,6 +105,11 @@ export const STORY: Record<string, StoryLine[]> = {
     { who: 'shadow', text: { zh: '夜裡塔的視線會變短，只有營火和民房照得到的塔能看得遠。夜行的魔物交給我。', en: 'Towers see less far at night. Only towers lit by campfires and houses keep their full range. Leave the night creatures to me.' } },
     { who: 'sharon', text: { zh: '小心提燈的怨靈，躲在黑暗裡的牠只會受到一半傷害。塔身邊和英雄身上都有光，讓牠飛進光裡再打！', en: 'Watch out for the lantern wraiths. In the dark they take only half damage. Towers and heroes give off light, so strike when they drift into it!' } },
   ],
+  l19: [
+    { who: 'rain', text: { zh: '礦坑那邊怎麼有綠色的光？卡爾不是早就被我們打倒了嗎……', en: 'Why is there green light over at the mines? Didn’t we beat Carl long ago…?' } },
+    { who: 'sharon', text: { zh: '是鬼火。血月喚醒了埋在坑道裡的礦工亡魂，狼人也循著月光跟來了。', en: 'Ghostfire. The blood moon woke the miners buried in the tunnels, and the werewolves followed the moonlight here.' } },
+    { who: 'elena', text: { zh: '兩條路都有東西過來！把塔蓋在路邊照亮怨靈，營火旁的塔射程也不會打折。', en: 'Things are coming down both roads! Build towers by the road to light up the wraiths. Towers by the campfires keep their full range, too.' } },
+  ],
 };
 
 /** 通關外傳終章（熔岩火山口）後的尾聲 */
