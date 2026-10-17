@@ -65,6 +65,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'shepherd', name: { zh: '牧羊人', en: 'Shepherd' }, desc: { zh: '一關內把 5 名敵人變成綿羊', en: 'Polymorph 5 enemies in one level' }, icon: 'sk_polymorph' },
   { id: 'minimalist', name: { zh: '以少勝多', en: 'Minimalist' }, desc: { zh: '第 3 關以後只用 6 座以內的塔通關', en: 'Win level 3 or later with 6 towers or fewer' }, icon: 'ic_check' },
   { id: 'endless_15', name: { zh: '堅守不退', en: 'Holdout' }, desc: { zh: '無盡模式撐到第 15 波', en: 'Reach wave 15 in Endless mode' }, icon: 'ic_skull' },
+  { id: 'endless_dawn', name: { zh: '迎接黎明', en: 'See the Dawn' }, desc: { zh: '無盡模式撐過第一個夜晚', en: 'Survive the first night in Endless' }, icon: 'ic_star' },
   { id: 'endless_30', name: { zh: '無盡守望', en: 'Eternal Watch' }, desc: { zh: '無盡模式撐到第 30 波', en: 'Reach wave 30 in Endless mode' }, icon: 'ic_crown' },
   { id: 'daily_first', name: { zh: '每日一戰', en: 'Daily Duty' }, desc: { zh: '完成一次每日挑戰', en: 'Complete a daily challenge' }, icon: 'ic_star' },
   { id: 'daily_7', name: { zh: '風雨無阻', en: 'Come Rain or Shine' }, desc: { zh: '累計完成 7 天每日挑戰', en: 'Complete 7 daily challenges' }, icon: 'ic_crown' },
@@ -129,6 +130,7 @@ export function evaluateAchievements(o: LevelOutcome, sv: SaveData): string[] {
   if (o.mode === 'daily' && o.victory) unlock('daily_first');
   if (o.mode === 'bossrush' && o.victory) unlock('boss_rush');
   if (Object.values(sv.daily ?? {}).filter((n) => n > 0).length >= 7) unlock('daily_7');
+  if (o.mode === 'endless' && o.wave >= 21) unlock('endless_dawn');
   if (o.mode === 'endless' && o.wave >= 30) unlock('endless_30');
   if ((sv.eggs?.length ?? 0) >= EGG_GOAL) unlock('curious');
   if ((sv.stats.elites ?? 0) >= 50) unlock('elite_50');
@@ -156,6 +158,8 @@ export function achievementProgress(id: string, sv: SaveData): { cur: number; ma
       return { cur: Object.values(sv.daily ?? {}).filter((n) => n > 0).length, max: 7 };
     case 'endless_15':
       return { cur: bestEndless, max: 15 };
+    case 'endless_dawn':
+      return { cur: bestEndless, max: 21 };
     case 'endless_30':
       return { cur: bestEndless, max: 30 };
     case 'login_7':

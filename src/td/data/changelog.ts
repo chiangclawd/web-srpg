@@ -11,6 +11,16 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 58,
+    date: '2026-10-17',
+    title: { zh: '手機版成就頁＋夜晚音效', en: 'Phone Achievements & Night Sounds' },
+    items: [
+      { zh: '手機上的成就頁改成兩欄大卡片，可以上下滑動，說明文字清楚好讀', en: 'On phones the achievements page now shows two columns of big cards that scroll, so descriptions are easy to read' },
+      { zh: '新成就「迎接黎明」：在無盡模式撐過第一個夜晚', en: 'New achievement “See the Dawn”: survive the first night in Endless' },
+      { zh: '狼人狂暴時會仰天長嚎，怨靈飄進光裡時會發出叮的一聲並閃一下', en: 'Werewolves howl when they enrage, and wraiths chime and flash when they drift into the light' },
+    ],
+  },
+  {
     id: 57,
     date: '2026-10-17',
     title: { zh: '無盡模式：日夜交替', en: 'Endless: Day and Night' },
