@@ -7,6 +7,7 @@ import { heroUnlocked } from './HeroScene';
 import { mapRoads, paintWorldMap } from '../art/worldmap';
 import { showTipBubble } from '../ui/tip';
 import { DAILY_MODS, dailyBaseLevel, dailyKey, dailySpec } from '../data/daily';
+import { LOGIN_GEMS, loginReward, previousDay } from '../data/login';
 import { Button, IconButton, dimmer, panel, popIn } from '../ui/widgets';
 import { L, T, getLang } from '../i18n';
 import { save, persist, totalStars } from '../save';
@@ -142,7 +143,62 @@ export class MapScene extends Phaser.Scene {
     const focusIdx = this.focus ? LEVELS.findIndex((l) => l.id === this.focus) : -1;
     const auto = focusIdx >= 0 && isUnlocked(focusIdx + 1) && focusIdx + 1 < LEVELS.length ? focusIdx + 1 : lastUnlocked;
     // 有新英雄要介紹時先不自動打開關卡面板，免得兩個視窗疊在一起
-    if (!this.announceHero()) this.time.delayedCall(350, () => this.showLevel(auto));
+    // 順序：新英雄介紹 → 每日登入獎勵 → 自動打開關卡面板
+    if (!this.announceHero() && !this.loginPopup(() => this.showLevel(auto))) this.time.delayedCall(350, () => this.showLevel(auto));
+  }
+
+  /** 每日登入獎勵（通關第一關後才出現，不打擾新手教學）；有跳出來回傳 true */
+  private loginPopup(after: () => void): boolean {
+    const sv = save();
+    if (!(sv.stars.l1 > 0)) return false;
+    const now = new Date();
+    const today = dailyKey(now);
+    const reward = loginReward(sv.login, today, dailyKey(previousDay(now)));
+    if (!reward) return false;
+    this.time.delayedCall(500, () => {
+      const w = viewW(this);
+      const left = -(w - PLAY_W) / 2;
+      const root = this.add.container(0, 0).setDepth(9000);
+      root.add(dimmer(this, w, VIEW_H, 0.6).setPosition(left, 0));
+      const pw = 660;
+      const ph = 340;
+      const c = this.add.container(PLAY_W / 2, VIEW_H / 2);
+      root.add(c);
+      c.add(panel(this, 0, 0, pw, ph));
+      c.add(addText(this, 0, -ph / 2 + 40, T('loginTitle'), { size: 30, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0.5));
+      // 7 天的格子：已領過打勾、今天發亮
+      LOGIN_GEMS.forEach((g, k) => {
+        const day = k + 1;
+        const x = (k - 3) * 84;
+        const y = -18;
+        const isToday = day === reward.day;
+        const slot = this.add.container(x, y);
+        slot.add(this.add.image(0, 0, isToday ? 'ui_badge_blue' : 'ui_badge').setDisplaySize(day === 7 ? 80 : 70, day === 7 ? 80 : 70));
+        slot.add(this.add.image(0, -6, 'ic_gem').setDisplaySize(day === 7 ? 38 : 30, day === 7 ? 38 : 30));
+        slot.add(addText(this, 0, 20, String(g), { size: 15, display: true, color: '#ffe8a8', strokeW: 3 }).setOrigin(0.5));
+        slot.add(addText(this, 0, 52, T('loginDay', day), { size: 13, color: isToday ? '#c0392b' : '#5a3a1a', stroke: '#f4e2b8', strokeW: 0, shadow: false, bold: isToday }).setOrigin(0.5));
+        if (day < reward.day) {
+          slot.setAlpha(0.6);
+          slot.add(this.add.image(16, -18, 'ic_check').setDisplaySize(26, 26));
+        }
+        if (isToday) this.tweens.add({ targets: slot, scale: 1.1, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        c.add(slot);
+      });
+      c.add(addText(this, 0, 70, T('loginHint'), { size: 15, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: pw - 80, align: 'center' }).setOrigin(0.5));
+      c.add(new Button(this, 0, ph / 2 - 46, 220, 56, `${T('claim')}  ${T('gemsEarned', reward.gems)}`, () => {
+        sv.gems += reward.gems;
+        sv.login = { last: today, streak: reward.day };
+        persist();
+        sfx.play('coin');
+        sfx.play('sparkle');
+        root.destroy();
+        this.buildHud();
+        after();
+      }, { color: 'green', icon: 'ic_gem', iconSize: 30, text: { size: 20 } }));
+      sfx.play('star');
+      popIn(this, c, 0, { w: pw, h: ph }, 0.6, 320);
+    });
+    return true;
   }
 
   /** 剛解鎖的英雄：地圖上跳一次介紹卡（每位只介紹一次） */

@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 41,
+    date: '2026-10-17',
+    title: { zh: '每日登入獎勵', en: 'Daily login reward' },
+    items: [
+      { zh: '每天第一次打開地圖可以領寶石，連續登入 7 天獎勵遞增（第 7 天 30 顆）；中斷就從第 1 天重來', en: 'Claim gems the first time you open the map each day; seven days in a row pays more each day (30 on day 7), and missing a day starts over' },
+    ],
+  },
+  {
     id: 40,
     date: '2026-10-17',
     title: { zh: '沙暴巨蟲的咆哮', en: 'The wyrm roars' },

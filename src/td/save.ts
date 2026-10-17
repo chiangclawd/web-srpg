@@ -36,6 +36,8 @@ export interface SaveData {
   tipsSeen: string[];
   /** 已看過的最新更新內容編號 */
   newsSeen: number;
+  /** 每日登入獎勵（舊存檔沒有這欄） */
+  login?: { last: string; streak: number };
   settings: {
     music: number;
     sfx: number;
