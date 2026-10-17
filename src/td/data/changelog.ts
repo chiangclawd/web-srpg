@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 59,
+    date: '2026-10-17',
+    title: { zh: '手機版圖鑑', en: 'Phone Encyclopedia' },
+    items: [
+      { zh: '手機上圖鑑的防禦塔、敵人格子放大，比較好點；放不下的可以上下滑動', en: 'On phones the encyclopedia’s tower and enemy grids have bigger, easier-to-tap icons and scroll when they don’t fit' },
+      { zh: '修正中文說明在手機上偶爾超出面板邊緣（逗號、句號改成掛在行尾）', en: 'Fixed Chinese descriptions sometimes running past panel edges on phones' },
+    ],
+  },
+  {
     id: 58,
     date: '2026-10-17',
     title: { zh: '手機版成就頁＋夜晚音效', en: 'Phone Achievements & Night Sounds' },
