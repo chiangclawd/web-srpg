@@ -90,6 +90,8 @@ python3 scripts/art/slice_towers.py raw/archer.png orig_frames/ out/ tw_archer_1
 
 十一首配樂（`public/assets/audio/td/bgm_*.mp3`）由 Lyria 3.5 生成：標題、世界地圖、七種地形各一首戰鬥曲（秋林沿用草原）、首領戰、最終決戰。
 
+戰場環境音（`sfx.startAmbience(theme)`）全部用 Web Audio 即時合成、不佔下載量：循環噪聲經濾波器＋慢速 LFO 做出海浪起伏與陣風，再隨機點綴鳥叫、海鷗、火星劈啪；音量跟著音效設定，離開戰場時淡出。
+
 ```bash
 NODE_USE_ENV_PROXY=1 node scripts/art/gemini-music.mjs raw/boss.mp3 scripts/art/prompts/music/boss.txt
 python3 scripts/art/prep_music.py raw/boss.mp3 public/assets/audio/td/bgm_boss.mp3

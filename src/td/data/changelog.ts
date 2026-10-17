@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 50,
+    date: '2026-10-17',
+    title: { zh: '戰場環境音', en: 'Battlefield ambience' },
+    items: [
+      { zh: '每種地形都有自己的環境音：海灣的浪聲與海鷗、雪山的呼嘯寒風、草原的微風鳥鳴、火山的低沉轟鳴與火星劈啪、荒原的陰森低鳴（跟著音效音量）', en: 'Every land now has its own ambience: surf and gulls at the cove, howling wind in the snow, breeze and birdsong in the meadows, a deep rumble and crackling embers at the volcano, an eerie drone in the wastes (follows the sound volume)' },
+    ],
+  },
+  {
     id: 49,
     date: '2026-10-17',
     title: { zh: '黑潮海灣：火藥桶機關', en: 'Blacktide Cove: powder kegs' },

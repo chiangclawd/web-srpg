@@ -157,6 +157,7 @@ const STR = {
   loginHint: { zh: '每天回來領寶石，連續 7 天獎勵最多！', en: 'Come back daily: day 7 in a row pays the most!' },
   claim: { zh: '領取', en: 'Claim' },
   quests: { zh: '任務', en: 'Quests' },
+  tipQuests: { zh: '每天都有三個新任務，完成後到這裡領寶石！', en: 'Three new quests every day. Complete them and claim your gems here!' },
   dailyQuests: { zh: '每日任務', en: 'Daily Quests' },
   questReset: { zh: '每天午夜換新任務', en: 'New quests every midnight' },
   questDone: { zh: '每日任務完成：', en: 'Quest complete: ' },

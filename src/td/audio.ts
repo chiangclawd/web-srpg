@@ -26,6 +26,8 @@ export const THEME_BGM: Record<ThemeId, Bgm> = {
 
 /** 配樂統一做過響度標準化（-16 LUFS），比音效檔小聲一些，這裡補回來 */
 const BGM_GAIN = 0.8;
+/** 環境音整體音量（相對於音效音量） */
+const AMB_GAIN = 0.35;
 /** 曲子播完到重新開始之間的停頓 */
 const BGM_GAP_MS = 2000;
 
@@ -110,6 +112,8 @@ class TdAudio {
         this.bgmName = null;
         this.playBgm(w);
       }
+      // 環境音在聲音解鎖前開不起來：解鎖後補開
+      if (this.wantAmb && !this.amb) this.startAmbience(this.wantAmb);
     };
     window.addEventListener('pointerdown', unlock);
     window.addEventListener('keydown', unlock);
@@ -524,6 +528,146 @@ class TdAudio {
       if (vol <= 0) this.bgmEl.pause();
       else if (this.bgmEl.paused && this.wantBgm) this.bgmEl.play().catch(() => {});
     }
+    if (this.amb && this.ctx) this.amb.out.gain.setTargetAtTime(AMB_GAIN * this.sfxVol, this.ctx.currentTime, 0.2);
+  }
+
+  // ───────── 環境音 ─────────
+  private amb: { out: GainNode; srcs: AudioScheduledSourceNode[]; timer: ReturnType<typeof setTimeout> | null } | null = null;
+  private wantAmb: ThemeId | null = null;
+
+  /**
+   * 戰場環境音（全部即時合成，不用額外下載）：海浪、風聲、鳥叫、熔岩低鳴……
+   * 跟著音效音量；聲音還沒解鎖（玩家還沒點畫面）時會在解鎖後補開。
+   */
+  startAmbience(theme: ThemeId): void {
+    this.stopAmbience();
+    this.wantAmb = theme;
+    const ctx = this.ensureCtx();
+    if (!ctx || !this.master || !this.noiseBuf) return;
+    const out = ctx.createGain();
+    out.gain.value = 0;
+    out.gain.setTargetAtTime(AMB_GAIN * this.sfxVol, ctx.currentTime, 1.2);
+    out.connect(this.master);
+    const srcs: AudioScheduledSourceNode[] = [];
+    const amb = { out, srcs, timer: null as ReturnType<typeof setTimeout> | null };
+    this.amb = amb;
+    // 一層循環噪聲：濾波器＋慢速 LFO 調音量（海浪起伏、陣風）
+    const bed = (type: BiquadFilterType, freq: number, q: number, gain: number, lfoHz: number, lfoDepth: number, freqLfo = 0) => {
+      const src = ctx.createBufferSource();
+      src.buffer = this.noiseBuf;
+      src.loop = true;
+      src.playbackRate.value = 0.5 + Math.random() * 0.2;
+      const f = ctx.createBiquadFilter();
+      f.type = type;
+      f.frequency.value = freq;
+      f.Q.value = q;
+      const g = ctx.createGain();
+      g.gain.value = gain;
+      src.connect(f).connect(g).connect(out);
+      if (lfoHz > 0) {
+        const lfo = ctx.createOscillator();
+        lfo.frequency.value = lfoHz;
+        const lg = ctx.createGain();
+        lg.gain.value = lfoDepth;
+        lfo.connect(lg).connect(g.gain);
+        lfo.start();
+        srcs.push(lfo);
+        if (freqLfo) {
+          const fg = ctx.createGain();
+          fg.gain.value = freqLfo;
+          lfo.connect(fg).connect(f.frequency);
+        }
+      }
+      src.start();
+      srcs.push(src);
+    };
+    // 偶發的點綴音（鳥叫、海鷗、火星）：隨機間隔排程
+    const sprinkle = (min: number, max: number, fn: () => void) => {
+      const tick = () => {
+        if (this.amb !== amb) return;
+        if (this.sfxVol > 0 && this.ctx?.state === 'running') fn();
+        amb.timer = setTimeout(tick, min + Math.random() * (max - min));
+      };
+      amb.timer = setTimeout(tick, min * 0.5 + Math.random() * min);
+    };
+    const v = this.sfxVol * AMB_GAIN * 2.4;
+    const chirp = () => {
+      // 小鳥：幾聲又短又快、往上掃的啾啾
+      const t = ctx.currentTime;
+      const base = 3200 + Math.random() * 1800;
+      const n = 3 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < n; i++) this.tone(base * (0.8 + Math.random() * 0.15), 'sine', t + i * 0.075, 0.035, 0.06 * v, base * 1.7);
+    };
+    switch (theme) {
+      case 'coast':
+        // 海浪：低通噪聲隨 8 秒的週期湧上退下
+        bed('lowpass', 700, 0.6, 0.55, 0.12, 0.45, 300);
+        bed('bandpass', 2400, 0.8, 0.08, 0.12, 0.07);
+        sprinkle(7000, 15000, () => {
+          // 海鷗：高音下滑兩聲
+          const t = ctx.currentTime;
+          this.tone(1900, 'sine', t, 0.22, 0.05 * v, 1300);
+          this.tone(1800, 'sine', t + 0.28, 0.25, 0.045 * v, 1200);
+        });
+        break;
+      case 'snow':
+        // 呼嘯的風：較高的帶通噪聲，頻率跟音量一起忽高忽低
+        bed('bandpass', 850, 3, 0.6, 0.09, 0.45, 420);
+        bed('bandpass', 1500, 4, 0.18, 0.13, 0.15, 500);
+        bed('lowpass', 300, 0.7, 0.08, 0, 0);
+        break;
+      case 'desert':
+        bed('bandpass', 1400, 0.9, 0.22, 0.09, 0.2, 500);
+        break;
+      case 'volcano':
+        bed('lowpass', 140, 0.9, 0.9, 0.05, 0.3);
+        sprinkle(900, 2600, () => {
+          const t = ctx.currentTime;
+          for (let i = 0; i < 3; i++) this.noise(t + i * 0.05 + Math.random() * 0.03, 0.03, 0.05 * v, 'highpass', 2500);
+        });
+        break;
+      case 'waste':
+        bed('lowpass', 320, 0.8, 0.35, 0.06, 0.25, 120);
+        {
+          const t = ctx.currentTime;
+          for (const hz of [55, 55.7]) {
+            const o = ctx.createOscillator();
+            o.type = 'sine';
+            o.frequency.value = hz;
+            const g = ctx.createGain();
+            g.gain.value = 0.08;
+            o.connect(g).connect(out);
+            o.start(t);
+            srcs.push(o);
+          }
+        }
+        break;
+      default:
+        // 草原、森林、秋林：微風＋鳥叫
+        bed('lowpass', 900, 0.5, 0.16, 0.08, 0.12, 200);
+        sprinkle(2500, 7000, chirp);
+        break;
+    }
+  }
+
+  stopAmbience(): void {
+    this.wantAmb = null;
+    const a = this.amb;
+    if (!a) return;
+    this.amb = null;
+    if (a.timer) clearTimeout(a.timer);
+    const ctx = this.ctx;
+    if (ctx) a.out.gain.setTargetAtTime(0, ctx.currentTime, 0.3);
+    setTimeout(() => {
+      for (const s of a.srcs) {
+        try {
+          s.stop();
+        } catch {
+          // 已停止
+        }
+      }
+      a.out.disconnect();
+    }, 1500);
   }
 }
 
