@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 53,
+    date: '2026-10-17',
+    title: { zh: '小改進', en: 'Small improvements' },
+    items: [
+      { zh: '升級塔時的預覽會用綠字標出傷害、射程、生命增加多少', en: 'Upgrade previews now show in green how much damage, range and health you gain' },
+      { zh: '番外尾聲改在黑潮海灣的漁村慶祝', en: 'The extra epilogue now celebrates in the Blacktide Cove fishing village' },
+    ],
+  },
+  {
     id: 52,
     date: '2026-10-17',
     title: { zh: '精英敵人', en: 'Elite enemies' },
