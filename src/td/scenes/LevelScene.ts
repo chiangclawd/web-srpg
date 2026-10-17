@@ -1479,6 +1479,19 @@ export class LevelScene extends Phaser.Scene {
         this.fx.ring(x, y, 110, 0xc8d8ff, 600);
         sfx.play('horn', 0.4);
         break;
+      case 'shadowstep':
+        // 瞬身：原地留下一團煙
+        this.fx.smokePuff(x, y - 16, 8);
+        sfx.play('whoosh', 0.8);
+        break;
+      case 'smokebomb':
+        this.fx.explosion(x, y, 90, 'smoke');
+        sfx.play('whoosh');
+        break;
+      case 'execute':
+        sfx.play('sword');
+        camShake(this, 120, 0.004);
+        break;
       default:
         break;
     }
@@ -1648,7 +1661,7 @@ export class LevelScene extends Phaser.Scene {
         hpRatio: s.hp / s.maxHp,
         lastAttackAt: s.lastAttackAt,
         lastHitAt: s.lastHitAt,
-        tint: s.armorBuff > 0 ? 0xfff0b0 : undefined,
+        tint: s.armorBuff > 0 ? 0xfff0b0 : s.tint,
       });
       if (s.expireAt !== Infinity && s.expireAt - t < 3) v.body.setAlpha(0.5 + 0.5 * Math.abs(Math.sin(t * 8)));
     }
@@ -1767,7 +1780,7 @@ export class LevelScene extends Phaser.Scene {
   }
 
   private heroUltFx(hero: string, x: number, y: number, r: number): void {
-    const COLORS: Record<string, number> = { arthur: 0xffe08a, elena: 0x9aff7a, lila: 0x9ae4ff, rain: 0xff9a5a, aria: 0xc8b0ff, sharon: 0xd8a0ff, viktor: 0xc8d8ff };
+    const COLORS: Record<string, number> = { arthur: 0xffe08a, elena: 0x9aff7a, lila: 0x9ae4ff, rain: 0xff9a5a, aria: 0xc8b0ff, sharon: 0xd8a0ff, viktor: 0xc8d8ff, shadow: 0xa898c8 };
     const col = COLORS[hero] ?? 0xffffff;
     this.fx.ring(x, y, r, col, 500);
     this.fx.ring(x, y, r * 0.6, col, 380);
@@ -1800,6 +1813,11 @@ export class LevelScene extends Phaser.Scene {
         sfx.play('lance', 0.8);
         camShake(this, 260, 0.006);
         this.fx.smokePuff(x, y, 12);
+        break;
+      case 'shadow':
+        sfx.play('whoosh');
+        sfx.play('sword', 0.8);
+        this.cameras.main.flash(160, 120, 100, 160);
         break;
     }
     this.ui.ultPop();

@@ -123,6 +123,8 @@ export class Soldier {
   expireAt = Infinity;
   armorBuff = 0;
   armorBuffUntil = 0;
+  /** 畫面染色（影分身） */
+  tint?: number;
   skillCd = 0;
   retargetIn = 0;
   hero?: HeroRuntime;

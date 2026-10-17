@@ -325,6 +325,54 @@ export const HEROES: Record<string, HeroDef> = {
       },
     ],
   },
+  shadow: {
+    id: 'shadow',
+    name: { zh: '影', en: 'Shade' },
+    title: { zh: '無聲刺客', en: 'Silent Blade' },
+    desc: { zh: '來無影去無蹤的蒙面刺客：出手極快，瞬身到後排暗殺落單的敵人，還能處決殘血的對手。', en: 'A masked assassin who strikes in a blur, blinks behind enemy lines to pick off stragglers and finishes off the wounded.' },
+    sprite: 'sp_shadow',
+    portrait: 'pt_shadow',
+    facesRight: false,
+    height: 52,
+    hp: 300,
+    hpPerLevel: 30,
+    armor: 0.2,
+    dmg: [16, 24],
+    dmgPerLevel: 3,
+    cd: 0.75,
+    speed: 92,
+    regen: 8,
+    unlockAfter: 'l16',
+    ult: {
+      name: { zh: '千刃亂舞', en: 'Thousand Cuts' },
+      desc: { zh: '在範圍內來回斬擊 12 次，並留下兩個影分身作戰 15 秒。', en: 'Slashes back and forth through the area 12 times and leaves two shadow clones to fight for 15 seconds.' },
+      icon: 'ult_shadow',
+      cd: 50,
+    },
+    skills: [
+      {
+        id: 'shadowstep',
+        name: { zh: '瞬影', en: 'Shadow Step' },
+        desc: { zh: '瞬間移動到附近的術士、弓手或最虛弱的敵人身後，背刺造成真實傷害。', en: 'Blinks behind a nearby caster, archer or the weakest enemy and backstabs it for true damage.' },
+        unlockLevel: 1,
+        cd: 7,
+      },
+      {
+        id: 'smokebomb',
+        name: { zh: '煙霧彈', en: 'Smoke Bomb' },
+        desc: { zh: '被圍攻或重傷時丟出煙霧：周圍敵人暈眩並減速，自己回復 20% 生命。', en: 'When surrounded or badly hurt: nearby enemies are stunned and slowed, and Shade recovers 20% health.' },
+        unlockLevel: 4,
+        cd: 18,
+      },
+      {
+        id: 'execute',
+        name: { zh: '處決', en: 'Execute' },
+        desc: { zh: '立刻處決身旁生命低於 22% 的敵人；對首領改為一記重擊。', en: 'Instantly finishes off a nearby enemy below 22% health. Against bosses it lands a heavy strike instead.' },
+        unlockLevel: 7,
+        cd: 10,
+      },
+    ],
+  },
 };
 
-export const HERO_ORDER = ['arthur', 'elena', 'lila', 'rain', 'aria', 'sharon', 'viktor'];
+export const HERO_ORDER = ['arthur', 'elena', 'lila', 'rain', 'aria', 'sharon', 'viktor', 'shadow'];

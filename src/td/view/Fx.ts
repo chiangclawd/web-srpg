@@ -126,6 +126,12 @@ export class Fx {
       this.snow.explode(26, x, y - 8);
       return;
     }
+    if (kind === 'smoke') {
+      // 煙霧彈／影分身：一大團灰紫煙＋外圈
+      this.ring(x, y, r, 0x9a8ab0, 420);
+      this.smoke.explode(18, x, y - 8);
+      return;
+    }
     if (kind === 'shock') {
       this.ring(x, y, r, 0x7ac8ff, 300);
       this.spark.explode(14, x, y - 6);

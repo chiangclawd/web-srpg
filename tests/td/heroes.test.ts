@@ -101,3 +101,34 @@ test('Viktor skewers a line of enemies and sunders the toughest one', () => {
   assert.ok(behind.some((e, i) => e.hp < hp0[i] || !e.alive), 'the thrust reaches enemies behind the target');
   assert.ok(h.alive);
 });
+
+test('Shade blinks behind a caster and executes a badly wounded enemy', () => {
+  // 7 級：三個技能都解鎖
+  const w = mkWorld(undefined, { hero: { def: HEROES.shadow, xp: 6000 } });
+  const h = w.hero!;
+  const x0 = h.x;
+  const adept = w.spawnEnemy('adept', 0, 520);
+  adept.speed = 0;
+  const hp0 = adept.hp;
+  const skills = new Set<string>();
+  for (let i = 0; i < 4 * 60 && !skills.has('shadowstep'); i++) {
+    w.step(1 / 60);
+    for (const ev of w.drainEvents()) if (ev.type === 'heroSkill') skills.add(ev.skill);
+  }
+  assert.ok(skills.has('shadowstep'), 'shadow step used on the caster');
+  assert.notEqual(Math.round(h.x), Math.round(x0), 'Shade teleported');
+  assert.ok(Math.hypot(h.x - adept.x, h.y - adept.y) < 40, 'Shade lands right behind the target');
+  assert.ok(adept.hp < hp0 || !adept.alive, 'the backstab hurts');
+  if (adept.alive) w.damageEnemy(adept, 9999, 'true', 'spell');
+  skills.delete('execute');
+  h.hero!.skillCd.execute = 0;
+  const lancer = w.spawnEnemy('lancer', 0, adept.d + 10);
+  lancer.speed = 0;
+  lancer.hp = lancer.maxHp * 0.2;
+  for (let i = 0; i < 3 * 60 && lancer.alive; i++) {
+    w.step(1 / 60);
+    for (const ev of w.drainEvents()) if (ev.type === 'heroSkill') skills.add(ev.skill);
+  }
+  assert.ok(skills.has('execute'), `execute used (${[...skills].join(',')})`);
+  assert.ok(!lancer.alive, 'the wounded lancer is finished off');
+});

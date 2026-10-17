@@ -11,6 +11,16 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 27,
+    date: '2026-10-17',
+    title: { zh: '第八位英雄：影', en: 'Eighth hero: Shade' },
+    items: [
+      { zh: '無聲刺客「影」：通關外傳終章「熔岩火山口」後加入，出手極快的近戰刺客', en: 'Shade the Silent Blade joins after the side-story finale, Ember Crater: a lightning-fast melee assassin' },
+      { zh: '技能：瞬影（瞬移到術士、弓手或最虛弱的敵人身後背刺）、煙霧彈（暈眩並減速周圍敵人、自己回血）、處決（秒殺生命低於 22% 的敵人）；絕招「千刃亂舞」連斬 12 次並留下兩個影分身', en: 'Skills: Shadow Step (blinks behind a caster, archer or the weakest foe for a backstab), Smoke Bomb (stuns and slows nearby foes, heals Shade), Execute (finishes enemies below 22% health). Ultimate “Thousand Cuts” slashes 12 times and leaves two shadow clones' },
+      { zh: '外傳尾聲多了影的現身台詞', en: 'Shade makes an appearance in the side-story epilogue' },
+    ],
+  },
+  {
     id: 26,
     date: '2026-10-17',
     title: { zh: '塔的戰績與落石音效', en: 'Tower stats and rumbling traps' },
