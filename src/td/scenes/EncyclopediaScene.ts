@@ -5,10 +5,12 @@ import { TOWERS, TOWER_ORDER } from '../data/towers';
 import { Button, IconButton, panel } from '../ui/widgets';
 import { L, T } from '../i18n';
 import { save } from '../save';
+import { sfx } from '../audio';
+import { MUSIC_TRACKS } from '../data/music';
 import { armorWord } from './LevelScene';
 import type { TowerLevelDef, TowerType } from '../sim/defs';
 
-type Tab = 'towers' | 'enemies';
+type Tab = 'towers' | 'enemies' | 'music';
 
 export class EncyclopediaScene extends Phaser.Scene {
   private objs: Phaser.GameObjects.GameObject[] = [];
@@ -41,8 +43,14 @@ export class EncyclopediaScene extends Phaser.Scene {
     bg.fillGradientStyle(0x2a1a2a, 0x2a1a2a, 0x100810, 0x100810, 1);
     bg.fillRect(0, 0, w, VIEW_H);
     add(addText(this, w / 2, 40, T('encyclopedia'), { size: 38, display: true, color: '#ffd36b', strokeW: 7 }).setOrigin(0.5));
-    add(new Button(this, w / 2 - 110, 100, 190, 48, T('towers'), () => this.setTab('towers'), { color: this.tab === 'towers' ? 'gold' : 'grey' }));
-    add(new Button(this, w / 2 + 110, 100, 190, 48, T('enemies'), () => this.setTab('enemies'), { color: this.tab === 'enemies' ? 'gold' : 'grey' }));
+    add(new Button(this, w / 2 - 210, 100, 190, 48, T('towers'), () => this.setTab('towers'), { color: this.tab === 'towers' ? 'gold' : 'grey' }));
+    add(new Button(this, w / 2, 100, 190, 48, T('enemies'), () => this.setTab('enemies'), { color: this.tab === 'enemies' ? 'gold' : 'grey' }));
+    add(new Button(this, w / 2 + 210, 100, 190, 48, T('music'), () => this.setTab('music'), { color: this.tab === 'music' ? 'gold' : 'grey' }));
+    if (this.tab === 'music') {
+      this.musicRoom(w, add);
+      add(new IconButton(this, 12 + 30 * uiZoom(), VIEW_H - 10 - 30 * uiZoom(), 60, 'ic_close', () => this.back()).setBaseScale(uiZoom()));
+      return;
+    }
     const gridX = 84;
     const gridY = 222;
     const cols = 5;
@@ -154,6 +162,31 @@ export class EncyclopediaScene extends Phaser.Scene {
     this.tab = t;
     this.sel = t === 'towers' ? 'archer:0' : save().seenEnemies[0] ?? 'goblin';
     this.build();
+  }
+
+  /** 音樂室：兩欄曲目，到過那片土地才解鎖；點了就切換配樂（回地圖會換回地圖音樂） */
+  private musicRoom(w: number, add: <T extends Phaser.GameObjects.GameObject>(o: T) => T): void {
+    const sv = save();
+    const colW = Math.min(520, (w - 120) / 2);
+    add(panel(this, w / 2, 410, colW * 2 + 60, 480, 'ui_dark', 18));
+    MUSIC_TRACKS.forEach((tr, k) => {
+      const x = w / 2 + (k % 2 === 0 ? -1 : 1) * (colW / 2 + 6);
+      const y = 222 + Math.floor(k / 2) * 88;
+      const open = !tr.reach || sv.unlockedSeen.includes(tr.reach) || (sv.stars[tr.reach] ?? 0) > 0;
+      const playing = sfx.currentBgm === tr.id;
+      const b = add(
+        new Button(this, x, y, colW - 12, 72, open ? L(tr.name) : '???', () => {
+          if (!open) return;
+          sfx.playBgm(tr.id);
+          this.build();
+        }, { color: playing ? 'gold' : open ? 'wood' : 'grey', icon: open ? (playing ? 'ic_sound_on' : 'ic_music') : 'ic_lock', iconSize: 36, text: { size: 20 }, sound: open }),
+      );
+      if (open) {
+        b.label.setY(b.label.y - 10);
+        const sub = addText(this, b.label.x, 14, L(tr.where), { size: 13, color: '#f4e2b8', strokeW: 2 }).setOrigin(b.label.originX, 0.5);
+        b.add(sub);
+      }
+    });
   }
 
   private select(id: string): void {
