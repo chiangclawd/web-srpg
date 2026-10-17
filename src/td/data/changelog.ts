@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 34,
+    date: '2026-10-17',
+    title: { zh: '全新原創配樂', en: 'All-new soundtrack' },
+    items: [
+      { zh: '十首新配樂：標題、世界地圖、草原／森林／雪山／荒原／沙漠／火山各有專屬戰鬥曲', en: 'Ten new tracks: title, world map and a battle theme for each land: meadow, forest, snow, wasteland, desert and volcano' },
+      { zh: '首領登場時換成首領戰配樂，最終關有專屬決戰曲', en: 'Bosses bring their own battle music, and the final level has its own showdown theme' },
+    ],
+  },
+  {
     id: 33,
     date: '2026-10-17',
     title: { zh: '手機更好點、更好讀', en: 'Bigger on phones' },

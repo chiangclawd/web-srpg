@@ -238,7 +238,8 @@ export interface LevelDef {
   tutorial?: boolean;
   /** 此關新出現的敵人（開場介紹卡） */
   intro?: string[];
-  bgm?: 'peaceful' | 'tense' | 'dark' | 'epic' | 'finale';
+  /** 指定配樂；沒寫就依地形（THEME_BGM） */
+  bgm?: 'finale';
   /** 挑戰模式規則 */
   rules?: LevelRules;
   /** 外傳關卡（戰役完結後解鎖，不在主線路線上） */

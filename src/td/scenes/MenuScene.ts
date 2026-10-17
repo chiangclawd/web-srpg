@@ -82,7 +82,7 @@ export class MenuScene extends Phaser.Scene {
     this.build();
     this.scale.on('resize', this.build, this);
     this.events.once('shutdown', () => this.scale.off('resize', this.build, this));
-    sfx.playBgm('peaceful');
+    sfx.playBgm('title');
     this.cameras.main.fadeIn(500, 0, 0, 0);
     // 上次的戰鬥沒打完（手機切出去被重新整理）：優先問要不要繼續，更新內容下次再看
     const cp = loadCheckpoint();

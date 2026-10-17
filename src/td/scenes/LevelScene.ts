@@ -25,7 +25,7 @@ import { clearCheckpoint, loadCheckpoint, restore, saveCheckpoint, snapshot, typ
 import { HERO_BARKS, towerBark } from '../data/barks';
 import { RadialMenu, type RadialOption } from '../view/RadialMenu';
 import { IconButton } from '../ui/widgets';
-import { sfx } from '../audio';
+import { THEME_BGM, sfx } from '../audio';
 import { save, persist } from '../save';
 import { L, T } from '../i18n';
 import type { LevelUIScene, InfoData } from './LevelUIScene';
@@ -231,7 +231,7 @@ export class LevelScene extends Phaser.Scene {
     this.scene.launch('LevelUI', { level: this });
     this.ui = this.scene.get('LevelUI') as LevelUIScene;
 
-    sfx.playBgm(this.level.bgm ?? 'tense');
+    sfx.playBgm(this.level.bgm ?? THEME_BGM[this.level.theme]);
     this.cameras.main.fadeIn(400, 0, 0, 0);
 
     // 觸控裝置第一次進關：提示可以雙指縮放
@@ -1390,7 +1390,7 @@ export class LevelScene extends Phaser.Scene {
           }
           if (ev.boss) {
             sfx.play('boss');
-            sfx.playBgm(this.level.id === 'l12' ? 'finale' : 'epic');
+            sfx.playBgm(this.level.bgm ?? 'boss');
             camShake(this, 400, 0.004);
           }
           break;

@@ -83,7 +83,7 @@ export class EndingScene extends Phaser.Scene {
     );
     this.time.addEvent({ delay: 900, loop: true, callback: () => this.firework(w) });
 
-    sfx.playBgm('peaceful');
+    sfx.playBgm('title');
     this.cameras.main.fadeIn(800, 0, 0, 0);
     this.input.on('pointerdown', () => (this.held = true));
     this.input.on('pointerup', () => (this.held = false));
