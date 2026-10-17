@@ -5,7 +5,7 @@ import { HEROES } from '../data/heroes';
 import { TOWERS, TOWER_ORDER } from '../data/towers';
 import { ENEMIES } from '../data/enemies';
 import { computeMods } from '../data/upgrades';
-import { World, type Difficulty, type SimEvent } from '../sim/World';
+import { SHADE_REVEAL, World, type Difficulty, type SimEvent } from '../sim/World';
 import { Enemy, Soldier, Tower, type Projectile } from '../sim/entities';
 import type { EliteAffix, LevelDef, LevelMode, TowerLevelDef, TowerType } from '../sim/defs';
 import { challengeLevel } from '../data/challenges';
@@ -88,6 +88,7 @@ export class LevelScene extends Phaser.Scene {
   private eggs: EggLayer | null = null;
   private night: NightLayer | null = null;
   private lastRevealSfx = 0;
+  private shadeCache: boolean | null = null;
   /** 白天的環境生物（蝴蝶、海鷗）：無盡模式入夜時淡出 */
   private dayLife: Phaser.GameObjects.Image[] = [];
   /** 本場遊戲時間（毫秒，結算時加進存檔） */
@@ -137,6 +138,7 @@ export class LevelScene extends Phaser.Scene {
     this.eggs = null;
     this.night = null;
     this.dayLife = [];
+    this.shadeCache = null;
     this.playMs = 0;
     this.slowMoUntil = 0;
     this.seenIntro = new Set(save().seenEnemies);
@@ -901,6 +903,19 @@ export class LevelScene extends Phaser.Scene {
     g.fillEllipse(x, y, r * 2, r * 2 * RANGE_Y);
     g.lineStyle(2.5, color, 0.7);
     g.strokeEllipse(x, y, r * 2, r * 2 * RANGE_Y);
+    // 有怨靈的夜晚：塔身邊的光（飄進來的怨靈會現形）畫成一圈暖色光暈
+    if (this.world.isNight && this.hasShade) {
+      g.fillStyle(0xffc860, 0.1);
+      g.fillCircle(x, y - 20, SHADE_REVEAL.tower);
+      g.lineStyle(1.5, 0xffc860, 0.55);
+      g.strokeCircle(x, y - 20, SHADE_REVEAL.tower);
+    }
+  }
+
+  /** 這一關會出現隱身黑暗的敵人（怨靈） */
+  private get hasShade(): boolean {
+    this.shadeCache ??= this.level.waves.some((w) => w.groups.some((gr) => ENEMIES[gr.enemy]?.abilities?.some((a) => a.kind === 'shade')));
+    return this.shadeCache;
   }
 
   private openBuildMenu(spot: number): void {
@@ -1118,6 +1133,7 @@ export class LevelScene extends Phaser.Scene {
       stats.push(['', def.hitsAir ? T('hitsAir') : T('groundOnly')]);
       // 夜戰：燈火照到的地方射程不打折
       if (this.world.isNight) stats.push(['', this.world.litAt(pos.x, pos.y) ? T('nightLit') : T('nightDark')]);
+      if (this.world.isNight && this.hasShade) stats.push(['', T('nightReveal')]);
     }
     // 已蓋好的塔：本場戰績（傷害與擊殺）
     if (tower && def === tower.def && tower.dmgDealt > 0) stats.push([T('dealt'), T('dealtVal', Math.round(tower.dmgDealt).toLocaleString(), tower.kills)]);

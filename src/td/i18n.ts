@@ -181,6 +181,7 @@ const STR = {
   stHm: { zh: '{0} 小時 {1} 分', en: '{0}h {1}m' },
   nightLit: { zh: '☀ 燈火照耀：射程不減', en: '☀ In the light: full range' },
   nightDark: { zh: '☾ 黑暗中：射程 -15%', en: '☾ In the dark: -15% range' },
+  nightReveal: { zh: '黃圈內怨靈會現形', en: 'Wraiths show in the yellow ring' },
   nightFalls: { zh: '☾ 夜幕降臨：塔的射程 -15%，提燈怨靈出沒！', en: '☾ Night falls: towers lose 15% range and lantern wraiths come out!' },
   dawnBreaks: { zh: '☀ 天亮了：射程恢復', en: '☀ Dawn breaks: full range again' },
   tipElite: { zh: '腳下發光的是精英敵人：更快、更硬或會回血，但賞金加倍！點一下可以看詞綴', en: 'Glowing enemies are elites: faster, tougher or regenerating, but they pay double! Tap one to see its trait' },
