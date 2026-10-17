@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 26,
+    date: '2026-10-17',
+    title: { zh: '塔的戰績與落石音效', en: 'Tower stats and rumbling traps' },
+    items: [
+      { zh: '點選防禦塔時會顯示它本場造成的傷害與擊殺數', en: 'Selecting a tower now shows how much damage it has dealt and how many enemies it has felled this battle' },
+      { zh: '落石與雪球滾動時有低沉的隆隆聲和碎石聲', en: 'Rolling boulders and snowballs now rumble and scatter pebbles' },
+    ],
+  },
+  {
     id: 25,
     date: '2026-10-17',
     title: { zh: '外傳尾聲', en: 'Side-story epilogue' },

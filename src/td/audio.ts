@@ -36,7 +36,8 @@ export type Sfx =
   | 'sparkle'
   | 'freeze'
   | 'star'
-  | 'thud';
+  | 'thud'
+  | 'rumble';
 
 const FILES: Partial<Record<Sfx, string>> = {
   arrow: 'assets/audio/sfx_arrow.m4a',
@@ -294,6 +295,12 @@ class TdAudio {
         break;
       case 'thud':
         this.tone(120, 'sine', t, 0.2, 0.3 * v, 60);
+        break;
+      case 'rumble':
+        // 巨石滾動：低沉的隆隆聲＋一路蹦起的碎石
+        this.noise(t, 1.9, 0.5 * v, 'lowpass', 240, 110);
+        this.tone(54, 'sine', t, 1.7, 0.22 * v, 38);
+        for (let i = 0; i < 7; i++) this.noise(t + i * 0.24 + Math.random() * 0.1, 0.05, 0.1 * v, 'bandpass', 800 + Math.random() * 700);
         break;
       case 'levelup':
         [523, 659, 784, 1046, 1318].forEach((f, i) => this.tone(f, 'square', t + i * 0.06, 0.2, 0.06 * v));

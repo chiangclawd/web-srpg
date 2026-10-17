@@ -97,6 +97,7 @@ export class HazardLayer {
 
   private land(kind: HazardKind, x: number, y: number): void {
     sfx.play('thud');
+    sfx.play('rumble', kind === 'snowball' ? 0.6 : 1);
     camShake(this.scene, 160, 0.005);
     if (kind === 'snowball') this.fx.snowBurst(x, y - 6, 10);
     else this.fx.rubble(x, y, 6);
