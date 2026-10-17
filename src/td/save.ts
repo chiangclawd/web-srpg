@@ -38,6 +38,8 @@ export interface SaveData {
   newsSeen: number;
   /** 每日登入獎勵（舊存檔沒有這欄） */
   login?: { last: string; streak: number };
+  /** 已發現的戰場彩蛋（關卡:序號；舊存檔沒有這欄） */
+  eggs?: string[];
   settings: {
     music: number;
     sfx: number;

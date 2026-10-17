@@ -11,6 +11,16 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 47,
+    date: '2026-10-17',
+    title: { zh: '戰場彩蛋', en: 'Battlefield easter eggs' },
+    items: [
+      { zh: '戰場上藏了一百多個彩蛋：敲敲房門、驚起樹上的鳥、看看石頭後面躲著誰、湖裡會跳出魚……每找到一個新的送 1 顆寶石', en: 'Over a hundred easter eggs hide on the battlefields: knock on doors, startle birds from the trees, find out who lurks behind the rocks, catch a fish leaping from the lake… each new one is worth a gem' },
+      { zh: '草原上有隻綿羊，連點五下會發生什麼事呢？', en: 'There is a sheep in the meadow. What happens if you tap it five times?' },
+      { zh: '新成就「好奇寶寶」：發現 15 個彩蛋', en: 'New achievement “Curious Mind”: find 15 easter eggs' },
+    ],
+  },
+  {
     id: 46,
     date: '2026-10-17',
     title: { zh: '番外篇：黑潮海灣', en: 'Extra chapter: Blacktide Cove' },
