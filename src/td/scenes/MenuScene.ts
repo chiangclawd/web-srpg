@@ -214,6 +214,10 @@ export class MenuScene extends Phaser.Scene {
 
   private showNews(): void {
     const sv = save();
+    // 沒看過的更新一頁兩則往下翻（最多 10 則）；都看過了就只顯示最新兩則
+    const unseen = CHANGELOG.filter((e) => e.id > (sv.newsSeen ?? 0)).slice(0, 10);
+    const list = unseen.length ? unseen : CHANGELOG.slice(0, 2);
+    const pages = Math.ceil(list.length / 2);
     sv.newsSeen = Math.max(sv.newsSeen ?? 0, CHANGELOG[0]?.id ?? 0);
     persist();
     const w = viewW(this);
@@ -221,24 +225,36 @@ export class MenuScene extends Phaser.Scene {
     c.add(dimmer(this, w * 2, VIEW_H * 2, 0.55).setPosition(-w, -VIEW_H));
     c.add(panel(this, 0, 0, 640, 560));
     c.add(addText(this, 0, -242, T('news'), { size: 32, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0.5));
-    // 內文放在子容器：英文或手機放大字體後太長就整塊縮小，不壓到 OK 鈕
-    const top = -200;
-    const body = this.add.container(-276, top);
-    let y = 0;
-    for (const e of CHANGELOG.slice(0, 2)) {
-      body.add(addText(this, 0, y, `${L(e.title)}　${e.date}`, { size: 20, display: true, color: '#7a4a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0));
-      y += 30;
-      for (const it of e.items) {
-        const t = addText(this, 14, y, `•\u00a0${L(it)}`, { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: 540, lineSpacing: 3 }).setOrigin(0, 0);
-        body.add(t);
-        y += t.height + 8;
+    let page: Phaser.GameObjects.Container | null = null;
+    const show = (p: number) => {
+      page?.destroy();
+      page = this.add.container(0, 0);
+      c.add(page);
+      // 內文放在子容器：英文或手機放大字體後太長就整塊縮小，不壓到按鈕
+      const top = -200;
+      const body = this.add.container(-276, top);
+      let y = 0;
+      for (const e of list.slice(p * 2, p * 2 + 2)) {
+        body.add(addText(this, 0, y, `${L(e.title)}　${e.date}`, { size: 20, display: true, color: '#7a4a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0));
+        y += 30;
+        for (const it of e.items) {
+          const t = addText(this, 14, y, `•\u00a0${L(it)}`, { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: 540, lineSpacing: 3 }).setOrigin(0, 0);
+          body.add(t);
+          y += t.height + 8;
+        }
+        y += 12;
       }
-      y += 12;
-    }
-    const room = 236 - 26 - 14 - top;
-    if (y > room) body.setScale(room / y);
-    c.add(body);
-    c.add(new Button(this, 0, 236, 200, 52, 'OK', () => c.destroy(), { color: 'green' }));
+      const room = 236 - 26 - 14 - top;
+      if (y > room) body.setScale(room / y);
+      page.add(body);
+      const last = p >= pages - 1;
+      page.add(
+        new Button(this, 0, 236, 220, 52, last ? 'OK' : `${T('nextPage')}  ${p + 1}/${pages}`, () => (last ? c.destroy() : show(p + 1)), {
+          color: last ? 'green' : 'blue',
+        }),
+      );
+    };
+    show(0);
     popIn(this, c, 0, { w: 640, h: 560 }, 0.8, 200);
   }
 
