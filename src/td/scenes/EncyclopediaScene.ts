@@ -45,8 +45,9 @@ export class EncyclopediaScene extends Phaser.Scene {
     add(new Button(this, w / 2 + 110, 100, 190, 48, T('enemies'), () => this.setTab('enemies'), { color: this.tab === 'enemies' ? 'gold' : 'grey' }));
     const gridX = 84;
     const gridY = 222;
-    const cell = 82;
     const cols = 5;
+    // 敵人超過 5 排時縮小格距，最後一排才不會壓到左下的關閉鈕（兩個分頁用同一格距，版面才不會跳）
+    const cell = Math.ceil(Object.keys(ENEMIES).length / cols) > 5 ? 72 : 82;
     add(panel(this, gridX + (cols * cell) / 2 - 41, 414, cols * cell + 40, 480, 'ui_dark', 18));
     const detailX = gridX + cols * cell + 60;
     const detailW = w - detailX - 30;

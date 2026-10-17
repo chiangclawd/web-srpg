@@ -1,0 +1,8 @@
+The attached images are character sprites from my 2D fantasy tower-defense game. Use them as a strict STYLE reference: same chibi proportions (big head, compact body), same clean dark-brown outlines, same soft cel shading and painted detail level, same warm color treatment and rendering quality.
+
+Draw ONE NEW enemy sprite in exactly that style: a small mischievous frost sprite — a flying ice fairy with a pale cyan crystalline body, jagged ice-shard wings, glowing white eyes and a trail of snowflakes, hovering in the air. Cute chibi proportions.
+
+Requirements:
+- Full body, single creature, 3/4 side view facing RIGHT, hovering flying pose.
+- Centered with generous empty margin around it; nothing cropped.
+- Background: perfectly flat, uniform solid magenta (#FF00FF) everywhere around the creature. No gradient, no ground, no cast shadow, no scenery, no text, no frame.

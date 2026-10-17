@@ -22,7 +22,9 @@ const UNIT_TEX_H = 168;
  * 手繪魔物（AI 生成後去背，見 scripts/art/）：載入成功就取代同名的程序繪圖紋理 mon_*，
  * 失敗則保留程序繪圖。圖都朝右，與原本的 facesRight 一致。
  */
-const PAINTED_MONSTERS = ['goblin', 'wolf', 'troll', 'bat', 'skeleton', 'scorpion', 'demon', 'wyrm', 'sheep', 'golem'];
+const PAINTED_MONSTERS = ['goblin', 'wolf', 'troll', 'bat', 'skeleton', 'scorpion', 'demon', 'wyrm', 'sheep', 'golem', 'yeti', 'frost_sprite', 'frost_giant'];
+/** 只有手繪圖、沒有程序版本的魔物：載入失敗時借用相近的程序圖 */
+const MONSTER_FALLBACK: Record<string, string> = { yeti: 'troll', frost_sprite: 'bat', frost_giant: 'troll' };
 const MONSTER_TEX_H = 200;
 
 export class BootScene extends Phaser.Scene {
@@ -114,7 +116,16 @@ export class BootScene extends Phaser.Scene {
       this.textures.remove(key);
     }
     this.addCanvases(towers);
-    this.addCanvases(paintMonsters(TEX));
+    const procMonsters = paintMonsters(TEX);
+    this.addCanvases(procMonsters);
+    for (const [m, from] of Object.entries(MONSTER_FALLBACK)) {
+      const srcCv = procMonsters[`mon_${from}`];
+      if (this.textures.exists(`mon_${m}`) || !srcCv) continue;
+      // 複製一份畫布（同一個畫布不能同時給兩個紋理用）
+      const [cv, ctx] = mkCanvas(srcCv.width, srcCv.height);
+      ctx.drawImage(srcCv, 0, 0);
+      this.addCanvases({ [`mon_${m}`]: cv });
+    }
     for (const m of PAINTED_MONSTERS) {
       const key = `rawmon_${m}`;
       if (!this.textures.exists(key)) continue;
