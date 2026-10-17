@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 38,
+    date: '2026-10-17',
+    title: { zh: '防禦塔開口說話（英文版）', en: 'Towers talk' },
+    items: [
+      { zh: '英文模式下，蓋塔、升級、點塔時防禦塔會說出對話泡泡上的台詞；中文配音之後補上', en: 'Towers now speak their speech-bubble lines when built, upgraded or tapped (English for now)' },
+      { zh: '英雄室點英雄頭像時，英雄會打聲招呼', en: 'Tapping a hero in the hero room makes them say hello' },
+    ],
+  },
+  {
     id: 37,
     date: '2026-10-17',
     title: { zh: '出征前換英雄', en: 'Swap heroes before battle' },

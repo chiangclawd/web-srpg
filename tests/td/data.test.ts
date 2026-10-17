@@ -154,6 +154,16 @@ test('every hero has a voice and every voice line is on disk in both languages',
   }
 });
 
+test('every tower bark has a voice clip on disk in each voiced language', async () => {
+  const { TOWER_VOICES, TOWER_VOICE_LANGS, towerVoiceLines } = await import('../../src/td/data/voices');
+  const fs = await import('node:fs');
+  for (const type of Object.keys(TOWER_BARKS)) assert.ok(TOWER_VOICES[type], `${type} has a voice`);
+  for (const art of Object.keys(BRANCH_BARKS)) assert.ok(TOWER_VOICES[art], `${art} has a voice`);
+  for (const { key, i } of towerVoiceLines()) {
+    for (const lang of TOWER_VOICE_LANGS) assert.ok(fs.existsSync(`public/assets/audio/voice/tower_${key}_${i}_${lang}.mp3`), `tower_${key}_${i}_${lang}.mp3 exists`);
+  }
+});
+
 test('every boss except the wyrm has a taunt on disk in both languages', async () => {
   const { BOSS_VOICES } = await import('../../src/td/data/voices');
   const fs = await import('node:fs');

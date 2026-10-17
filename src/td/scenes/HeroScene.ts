@@ -55,6 +55,8 @@ export class HeroScene extends Phaser.Scene {
       const y = twoCols ? 126 + Math.floor(i / 2) * 124 : 126 + i * 98;
       const b = add(
         new IconButton(this, hx, y, 88, `ptc_${id}`, () => {
+          // 點頭像換人時英雄打聲招呼
+          if (unlocked && this.viewing !== id) sfx.voice(id, 'select');
           this.viewing = id;
           this.build();
         }, this.viewing === id ? 'ui_badge_blue' : 'ui_badge', 0.82),
@@ -70,7 +72,8 @@ export class HeroScene extends Phaser.Scene {
     // 右側詳細
     const h = HEROES[this.viewing];
     const unlocked = heroUnlocked(h.id);
-    if (unlocked) sfx.preloadVoice(h.id);
+    // 已解鎖英雄的語音都先載好（每句約 10KB），點頭像時才有聲音
+    for (const id of HERO_ORDER) if (heroUnlocked(id)) sfx.preloadVoice(id);
     const px = Math.max(620, w / 2 + 80);
     add(panel(this, px, 370, Math.min(w - 220, 1000), 560));
     const portrait = add(this.add.image(px - 300, 610, `pt_${h.id}`).setOrigin(0.5, 1));

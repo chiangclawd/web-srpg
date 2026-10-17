@@ -18,22 +18,26 @@ const model = process.env.GEMINI_TTS_MODEL ?? 'gemini-2.5-flash-preview-tts';
 // 2.5 版把「語氣: 台詞」的語氣當說明；3.x 版會照念出來，要改用方括號標籤
 const prompt = !style ? text : /gemini-3/.test(model) ? `[${style}] ${text}` : `${style}: ${text}`;
 
-const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-  method: 'POST',
-  headers: { 'content-type': 'application/json' },
-  body: JSON.stringify({
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } },
-  }),
-});
-const raw = await res.text();
-let body;
-try {
-  body = JSON.parse(raw);
-} catch {
-  console.error('HTTP', res.status, raw.slice(0, 300));
-  process.exit(1);
+async function tts(text) {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text }] }],
+      generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } },
+    }),
+  });
+  const raw = await res.text();
+  try {
+    return { res, body: JSON.parse(raw) };
+  } catch {
+    console.error('HTTP', res.status, raw.slice(0, 300));
+    process.exit(1);
+  }
 }
+let { res, body } = await tts(prompt);
+// 內容過濾偶爾誤擋短句（尤其加了語氣標籤時），改用純台詞再試一次
+if (res.ok && body.promptFeedback?.blockReason && prompt !== text) ({ res, body } = await tts(text));
 if (!res.ok) {
   console.error('HTTP', res.status, JSON.stringify(body.error ?? body).slice(0, 600));
   process.exit(1);

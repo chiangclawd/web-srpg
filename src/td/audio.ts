@@ -1,7 +1,7 @@
 import { save } from './save';
 import type { ThemeId } from './sim/defs';
 import { getLang } from './i18n';
-import { VOICE_LINES, type VoiceLine } from './data/voices';
+import { TOWER_VOICE_LANGS, VOICE_LINES, type VoiceLine } from './data/voices';
 
 /**
  * 塔防音效系統：
@@ -205,6 +205,17 @@ class TdAudio {
   /** 預先下載首領登場台詞 */
   preloadBossVoice(boss: string): void {
     if (this.ensureCtx()) this.loadVoice(`boss_${boss}_${getLang()}`);
+  }
+
+  /** 預先下載防禦塔台詞（keys：塔種或特化塔圖） */
+  preloadTowerVoices(lines: { key: string; i: number }[]): void {
+    if (!TOWER_VOICE_LANGS.includes(getLang()) || !this.ensureCtx()) return;
+    for (const { key, i } of lines) this.loadVoice(`tower_${key}_${i}_${getLang()}`);
+  }
+
+  /** 防禦塔說一句台詞（和對話泡泡同一句） */
+  towerVoice(key: string, i: number): void {
+    if (TOWER_VOICE_LANGS.includes(getLang())) this.speak(`tower_${key}_${i}_${getLang()}`);
   }
 
   /** 英雄說一句台詞 */

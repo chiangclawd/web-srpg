@@ -22,7 +22,8 @@ import { TowerView, UnitView } from '../view/Units';
 import { HazardLayer, hazardTextures } from '../view/Hazards';
 import { Bubbles } from '../view/Bubbles';
 import { clearCheckpoint, loadCheckpoint, restore, saveCheckpoint, snapshot, type Checkpoint } from '../sim/checkpoint';
-import { HERO_BARKS, towerBark } from '../data/barks';
+import { BRANCH_BARKS, HERO_BARKS, towerBark } from '../data/barks';
+import { towerVoiceLines } from '../data/voices';
 import { RadialMenu, type RadialOption } from '../view/RadialMenu';
 import { IconButton } from '../ui/widgets';
 import { THEME_BGM, sfx } from '../audio';
@@ -234,6 +235,8 @@ export class LevelScene extends Phaser.Scene {
     sfx.playBgm(this.level.bgm ?? THEME_BGM[this.level.theme]);
     if (this.world.hero?.hero) sfx.preloadVoice(this.world.hero.hero.def.id);
     for (const b of this.bossIds()) sfx.preloadBossVoice(b);
+    // 塔的配音等關卡畫面載完再下載（用真實時間：開場時場景可能是暫停的）
+    window.setTimeout(() => sfx.preloadTowerVoices(towerVoiceLines()), 2500);
     this.cameras.main.fadeIn(400, 0, 0, 0);
 
     // 觸控裝置第一次進關：提示可以雙指縮放
@@ -873,7 +876,7 @@ export class LevelScene extends Phaser.Scene {
   private openTowerMenu(t: Tower): void {
     this.closeMenu();
     this.setMode('idle');
-    this.bubbles.say(`t${t.id}`, t.x, t.y - 96, towerBark(t.type, t.def.art), 0.3);
+    this.towerSay(t, 0.3);
     const w = this.world;
     const opts: RadialOption[] = [];
     const range = w.towerRange(t);
@@ -1438,7 +1441,7 @@ export class LevelScene extends Phaser.Scene {
           this.fx.smokePuff(ev.t.x, ev.t.y - 10, 10);
           const bt = ev.t;
           this.time.delayedCall(650, () => {
-            if (this.world.towers.includes(bt)) this.bubbles.say(`t${bt.id}`, bt.x, bt.y - 96, towerBark(bt.type, bt.def.art), 0.8);
+            if (this.world.towers.includes(bt)) this.towerSay(bt, 0.8);
           });
           const tw = isTouchDevice() ? 88 : 76;
           const hit = this.add.rectangle(ev.t.x, ev.t.y - 30, tw, tw + 8, 0xffffff, 0.001).setInteractive({ useHandCursor: true }).setDepth(ev.t.y);
@@ -1460,7 +1463,7 @@ export class LevelScene extends Phaser.Scene {
           v?.setArt(ev.t.def.art);
           v?.pop();
           this.fx.stars(ev.t.x, ev.t.y - 50, 8);
-          this.bubbles.say(`t${ev.t.id}`, ev.t.x, ev.t.y - 100, towerBark(ev.t.type, ev.t.def.art), ev.t.level >= 4 ? 1 : 0.5);
+          this.towerSay(ev.t, ev.t.level >= 4 ? 1 : 0.5, 100);
           this.fx.smokePuff(ev.t.x, ev.t.y - 10, 6);
           break;
         }
@@ -1732,6 +1735,13 @@ export class LevelScene extends Phaser.Scene {
     this.ui.showEnemyIntro(fresh, () => {
       if (this.level.tutorial && this.world.towers.length === 0) this.ui.toast(T('tutBuild'), 4000);
     });
+  }
+
+  /** 塔冒出一句台詞，有配音就一起說（第 4 級特化用自己的台詞） */
+  private towerSay(t: Tower, chance: number, lift = 96): void {
+    const key = BRANCH_BARKS[t.def.art] ? t.def.art : t.type;
+    const i = this.bubbles.say(`t${t.id}`, t.x, t.y - lift, towerBark(t.type, t.def.art), chance);
+    if (i >= 0) sfx.towerVoice(key, i);
   }
 
   /** 這關（或某一波）出場的首領 */
