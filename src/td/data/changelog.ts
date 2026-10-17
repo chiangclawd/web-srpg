@@ -11,6 +11,16 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 64,
+    date: '2026-10-17',
+    title: { zh: '夜戰小幫手', en: 'Night Battle Help' },
+    items: [
+      { zh: '在夜戰中落敗時，結算畫面會教你怎麼對付怨靈與狼人', en: 'Lose a night battle and the result screen now gives tips on wraiths and werewolves' },
+      { zh: '夜裡派遣英雄時，英雄偶爾會說出夜晚專屬台詞', en: 'Heroes sometimes say night-only lines when you send them out after dark' },
+      { zh: '修正手機上「新敵人」介紹卡的說明文字太長時，會蓋住標籤和 OK 按鈕的問題', en: 'Fixed long descriptions on the “New Enemy” card covering the tags and OK button on phones' },
+    ],
+  },
+  {
     id: 63,
     date: '2026-10-17',
     title: { zh: '夜戰關卡標示', en: 'Night Level Markers' },
