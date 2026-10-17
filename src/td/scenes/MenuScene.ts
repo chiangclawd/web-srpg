@@ -87,7 +87,14 @@ export class MenuScene extends Phaser.Scene {
     // 上次的戰鬥沒打完（手機切出去被重新整理）：優先問要不要繼續，更新內容下次再看
     const cp = loadCheckpoint();
     if (cp && getLevel(cp.levelId)) this.time.delayedCall(500, () => this.showResume(cp));
-    else if ((CHANGELOG[0]?.id ?? 0) > (save().newsSeen ?? 0)) this.time.delayedCall(700, () => this.showNews());
+    else if ((CHANGELOG[0]?.id ?? 0) > (save().newsSeen ?? 0)) {
+      const sv = save();
+      // 第一次玩的新玩家不用看更新紀錄：直接標成已讀，之後的更新才會跳出來
+      if (sv.stats.plays === 0 && Object.keys(sv.stars).length === 0) {
+        sv.newsSeen = CHANGELOG[0]?.id ?? 0;
+        persist();
+      } else this.time.delayedCall(700, () => this.showNews());
+    }
     if (consumeCrashNotice()) this.time.delayedCall(500, () => this.crashNotice());
   }
 
