@@ -1727,6 +1727,15 @@ export class LevelScene extends Phaser.Scene {
         sv.endless[this.level.id] = reached;
         newRecord = true;
       }
+    } else if (this.mode0 === 'bossrush') {
+      if (victory) {
+        const prev = sv.bossrush[this.level.id] ?? 0;
+        dailyFirst = prev === 0;
+        if (stars > prev) {
+          sv.bossrush[this.level.id] = stars;
+          newStars = stars - prev;
+        }
+      }
     } else if (this.mode0 === 'daily') {
       if (victory) {
         const prev = sv.daily[this.dailyKey] ?? 0;
@@ -1778,7 +1787,7 @@ export class LevelScene extends Phaser.Scene {
       sv,
     );
     // 寶石：本場獎勵＋新成就
-    const firstClear = this.mode0 === 'campaign' ? victory && prevCampaignStars === 0 : this.mode0 === 'daily' ? dailyFirst : newStars > 0;
+    const firstClear = this.mode0 === 'campaign' ? victory && prevCampaignStars === 0 : this.mode0 === 'daily' || this.mode0 === 'bossrush' ? dailyFirst : newStars > 0;
     const gems = gemReward(this.mode0, victory, stars, firstClear, reached) + fresh.length * GEMS_PER_ACHIEVEMENT;
     sv.gems = (sv.gems ?? 0) + gems;
     this.gemsEarned = gems;

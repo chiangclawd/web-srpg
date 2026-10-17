@@ -139,3 +139,26 @@ test('every level has its painted battlefield registered and on disk', async () 
     assert.ok(fs.existsSync(`public/assets/levels/${lv.id}.webp`), `${lv.id}.webp exists`);
   }
 });
+
+test('boss rush sends every boss once, in order, each with an escort', async () => {
+  const { bossRushLevel, BOSS_RUSH } = await import('../../src/td/data/challenges');
+  const { gemReward } = await import('../../src/td/data/items');
+  for (const id of ['l1', 'l12', 'l16']) {
+    const base = LEVELS.find((l) => l.id === id)!;
+    const lv = bossRushLevel(base);
+    assert.equal(lv.waves.length, BOSS_RUSH.length);
+    assert.equal(lv.rules?.mode, 'bossrush');
+    assert.equal(lv.rules?.leakCap, 5);
+    lv.waves.forEach((w, k) => {
+      const bosses = w.groups.filter((g) => ENEMIES[g.enemy].boss);
+      assert.equal(bosses.length, 1, `${id} wave ${k + 1} has one boss`);
+      assert.equal(bosses[0].enemy, BOSS_RUSH[k].boss);
+      assert.ok(w.groups.some((g) => !ENEMIES[g.enemy].boss), 'escort present');
+      for (const g of w.groups) assert.ok(g.path < base.paths.length, 'valid path');
+    });
+  }
+  assert.deepEqual(new Set(BOSS_RUSH.map((b) => b.boss)).size, BOSS_RUSH.length, 'no repeated boss');
+  assert.ok(Object.values(ENEMIES).filter((e) => e.boss).every((e) => BOSS_RUSH.some((b) => b.boss === e.id)), 'every boss is in the rush');
+  assert.ok(gemReward('bossrush', true, 3, true, 0) > gemReward('bossrush', true, 3, false, 0));
+  assert.equal(gemReward('bossrush', false, 0, false, 0), 0);
+});

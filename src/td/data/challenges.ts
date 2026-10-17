@@ -41,6 +41,7 @@ function scale(g: GroupDef, k: number, delay: number): GroupDef {
 export function challengeLevel(level: LevelDef, mode: LevelMode): LevelDef {
   if (mode === 'campaign') return level;
   if (mode === 'endless') return endlessLevel(level);
+  if (mode === 'bossrush') return bossRushLevel(level);
   const src = level.waves;
   const n = src.length;
   if (mode === 'heroic') {
@@ -149,5 +150,45 @@ export function endlessLevel(level: LevelDef): LevelDef {
     intro: [],
     tutorial: false,
     rules: { mode: 'endless', leakCap: 5 },
+  };
+}
+
+/** 首領連戰的出場順序與隨行部隊（依戰役順序，最後是教主） */
+export const BOSS_RUSH: { boss: string; escort: string; count: number }[] = [
+  { boss: 'morden', escort: 'wolf', count: 8 },
+  { boss: 'selene', escort: 'frost_sprite', count: 8 },
+  { boss: 'carl', escort: 'rider', count: 5 },
+  { boss: 'high_priest', escort: 'cultist', count: 8 },
+  { boss: 'sub_priest', escort: 'assassin', count: 6 },
+  { boss: 'wyrm', escort: 'scorpion', count: 5 },
+  { boss: 'frost_giant', escort: 'yeti', count: 3 },
+  { boss: 'fire_lord', escort: 'magma_imp', count: 10 },
+  { boss: 'cult_leader', escort: 'demon', count: 6 },
+];
+
+/**
+ * 首領連戰：在任一張地圖上依序迎戰九名首領（各帶一支隨行部隊）。
+ * 起始金幣多、20 條命，首領漏失最多扣 5 條命；依剩餘生命給 1~3 星。
+ */
+export function bossRushLevel(level: LevelDef): LevelDef {
+  const P = level.paths.length;
+  const waves: WaveDef[] = BOSS_RUSH.map((b, k) => ({
+    groups: [
+      { path: k % P, enemy: b.escort, count: b.count, interval: ENEMIES[b.escort].flying ? 0.9 : 0.8 },
+      { path: k % P, enemy: b.boss, count: 1, interval: 1, delay: 5 },
+    ],
+    // 首領走得慢：間隔拉長，避免三四隻首領同時在場
+    gap: 40,
+    hpMul: 0.9,
+  }));
+  return {
+    ...level,
+    lives: 20,
+    startGold: 3200,
+    waves,
+    intro: [],
+    tutorial: false,
+    hazards: level.hazards,
+    rules: { mode: 'bossrush', leakCap: 5 },
   };
 }

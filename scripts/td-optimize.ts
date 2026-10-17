@@ -41,6 +41,12 @@ interface Genome {
   nTowers: number;
 }
 
+/** 玩家打到這關時的進度（決定升級與英雄等級）；首領連戰在通關最終關後才開放 */
+function progressIdx(levelId: string): number {
+  const idx = LEVELS.findIndex((l) => l.id === levelId);
+  return MODE === 'bossrush' ? Math.max(idx, LEVELS.findIndex((l) => l.id === 'l12')) : idx;
+}
+
 function upgradesFor(idx: number): Record<string, number> {
   const stars = Math.floor(idx * 2.5);
   const ups: Record<string, number> = {};
@@ -60,7 +66,7 @@ function upgradesFor(idx: number): Record<string, number> {
 
 export function play(levelId: string, g: Genome, heroId: string, heroXp: number, diff: Difficulty, seed: number) {
   const level = modeLevel(levelId);
-  const idx = LEVELS.findIndex((l) => l.id === levelId);
+  const idx = progressIdx(levelId);
   const w = new World({ level, difficulty: diff, hero: { def: HEROES[heroId], xp: heroXp }, mods: computeMods(upgradesFor(idx)), seed });
   const dt = 1 / 30;
   let think = 0;
@@ -201,7 +207,7 @@ const ITERS = Number(process.env.ITERS ?? 60);
 const levels = MODE === 'daily' && process.env.LEVEL ? [process.env.LEVEL] : MODE === 'daily' ? [dailySpec(DAILY_KEY).levelId] : lv && lv !== 'all' ? [lv] : LEVELS.map((l) => l.id);
 const heroId = process.env.HERO ?? 'elena';
 for (const id of levels) {
-  const idx = LEVELS.findIndex((l) => l.id === id);
+  const idx = progressIdx(id);
   // 假設英雄等級隨關卡推進（約每關 +0.8 級）
   const xpByIdx = [0, 300, 700, 1200, 1900, 2800, 3800, 5000, 6500, 8200, 10000, 12000, 13500, 13500];
   const t0 = Date.now();

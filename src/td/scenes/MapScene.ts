@@ -451,22 +451,25 @@ export class MapScene extends Phaser.Scene {
     // 模式分頁：戰役 / 英雄挑戰 / 鋼鐵挑戰（通關戰役後解鎖，各給 1 星）
     const beaten = (sv.stars[lv.id] ?? 0) > 0;
     const ch = sv.challenges[lv.id] ?? {};
-    const modes = ['campaign', 'heroic', 'iron', 'endless'] as const;
-    const TAB_COLOR = { campaign: 'gold', heroic: 'red', iron: 'blue', endless: 'green' } as const;
+    const modes = ['campaign', 'heroic', 'iron', 'endless', 'bossrush'] as const;
+    const TAB_COLOR = { campaign: 'gold', heroic: 'red', iron: 'blue', endless: 'green', bossrush: 'wood' } as const;
+    // 首領連戰：通關最終關後才開放（每張地圖都能打）
+    const rushOpen = (sv.stars.l12 ?? 0) > 0;
     modes.forEach((m, k) => {
-      const locked = m !== 'campaign' && !beaten;
+      const locked = m === 'bossrush' ? !rushOpen : m !== 'campaign' && !beaten;
       const label = T(m);
-      const done = m === 'heroic' ? ch.heroic : m === 'iron' ? ch.iron : false;
-      const b = new Button(this, (k - 1.5) * 92, -ph / 2 + 78, 88, 38, label, () => {
+      const done = m === 'heroic' ? ch.heroic : m === 'iron' ? ch.iron : m === 'bossrush' ? (sv.bossrush[lv.id] ?? 0) > 0 : false;
+      const b = new Button(this, (k - 2) * 75, -ph / 2 + 78, 72, 38, label, () => {
         if (locked) {
           sfx.play('error');
-          this.toastMsg(T('unlockChallenge'));
+          this.toastMsg(T(m === 'bossrush' ? 'bossRushLocked' : 'unlockChallenge'));
           return;
         }
         this.showLevel(i, m);
-      }, { color: mode === m ? TAB_COLOR[m] : 'grey', text: { size: getLang() === 'zh' ? (label.length >= 4 ? 14 : 16) : 13 }, sound: !locked });
-      if (locked) b.add(this.add.image(34, -10, 'ic_lock').setDisplaySize(20, 20));
-      if (done) b.add(this.add.image(36, -12, 'ic_star').setDisplaySize(22, 22));
+      }, { color: mode === m ? TAB_COLOR[m] : 'grey', text: { size: getLang() === 'zh' ? (label.length >= 4 ? 13 : 15) : 12 }, sound: !locked });
+      fitText(b.label, 64);
+      if (locked) b.add(this.add.image(28, -10, 'ic_lock').setDisplaySize(18, 18));
+      if (done) b.add(this.add.image(30, -12, 'ic_star').setDisplaySize(20, 20));
       c.add(b);
     });
     if (mode === 'campaign') {
@@ -488,6 +491,20 @@ export class MapScene extends Phaser.Scene {
         desc = addText(this, -pw / 2 + 28, dy, L(lv.desc), { size, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: pw - 56, lineSpacing: size >= 15 ? 4 : 2 });
       }
       c.add(desc);
+    } else if (mode === 'bossrush') {
+      const best = sv.bossrush[lv.id] ?? 0;
+      c.add(addText(this, 0, -ph / 2 + 118, T('bestStars'), { size: 15, color: '#5a3a1a', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0.5));
+      for (let k = 0; k < 3; k++) c.add(this.add.image((k - 1) * 46, -ph / 2 + 146, k < best ? 'ic_star' : 'ic_star_empty').setDisplaySize(38, 38));
+      // 規則文字：放不下就逐級縮小，不壓到難度列
+      let size = 16;
+      const rules = () => addText(this, 0, -ph / 2 + 176, T('bossRushRules'), { size, color: '#5a2a10', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: pw - 56, align: 'center', lineSpacing: 4 }).setOrigin(0.5, 0);
+      let rt = rules();
+      while (rt.height > 66 - (-ph / 2 + 176) && size > 12) {
+        rt.destroy();
+        size--;
+        rt = rules();
+      }
+      c.add(rt);
     } else if (mode === 'endless') {
       const best = sv.endless[lv.id] ?? 0;
       c.add(this.add.image(-96, -ph / 2 + 130, 'ic_skull').setDisplaySize(40, 40));

@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 29,
+    date: '2026-10-17',
+    title: { zh: '新模式：首領連戰', en: 'New mode: Boss Rush' },
+    items: [
+      { zh: '通關最終關後，每張地圖的關卡面板多了「首領連戰」：九名首領依序登場、各帶隨行部隊，依剩餘生命給 1~3 星，每張地圖各自記錄', en: 'After beating the finale, every map’s level panel gets a “Boss Rush” tab: all nine bosses one after another, each with an escort. Earn 1–3 stars by lives left, recorded per map' },
+      { zh: '每張地圖第一次通關給大量寶石；新成就「首領獵人」', en: 'Big gem reward for the first clear on each map; new achievement “Boss Hunter”' },
+    ],
+  },
+  {
     id: 28,
     date: '2026-10-17',
     title: { zh: '首領擊破的瞬間', en: 'Boss takedown moment' },
