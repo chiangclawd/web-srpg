@@ -23,7 +23,7 @@ import { HazardLayer, hazardTextures } from '../view/Hazards';
 import { Bubbles } from '../view/Bubbles';
 import { clearCheckpoint, loadCheckpoint, restore, saveCheckpoint, snapshot, type Checkpoint } from '../sim/checkpoint';
 import { BRANCH_BARKS, HERO_BARKS, towerBark } from '../data/barks';
-import { BOSS_VOICES, towerVoiceLines } from '../data/voices';
+import { BOSS_VOICES, towerVoiceLines, voiceText } from '../data/voices';
 import { RadialMenu, type RadialOption } from '../view/RadialMenu';
 import { IconButton } from '../ui/widgets';
 import { THEME_BGM, sfx } from '../audio';
@@ -633,7 +633,7 @@ export class LevelScene extends Phaser.Scene {
       case 'ult':
         if (w.castHeroUlt(x, y)) {
           this.setMode('idle');
-          if (w.hero?.hero) sfx.voice(w.hero.hero.def.id, 'ult');
+          this.heroShout('ult');
         }
         else sfx.play('error');
         return;
@@ -1390,7 +1390,7 @@ export class LevelScene extends Phaser.Scene {
           saveCheckpoint(snapshot(this.world, { levelId: this.baseLevel.id, mode: this.mode0, difficulty: this.difficulty, dailyKey: this.mode0 === 'daily' ? this.dailyKey : undefined }, ev.index - 1));
           this.ui.waveBanner(ev.index + 1, this.world.waveCount, ev.boss);
           // 開戰時英雄喊一聲
-          if (ev.index === 0 && this.world.hero?.alive && this.world.hero.hero) sfx.voice(this.world.hero.hero.def.id, 'select');
+          if (ev.index === 0 && this.world.hero?.alive && this.world.hero.hero) this.heroShout('select');
           this.maybeTip(ev.index);
           if (this.hazardLayer && !save().tipsSeen.includes('hazard')) {
             this.time.delayedCall(4000, () => {
@@ -1743,6 +1743,16 @@ export class LevelScene extends Phaser.Scene {
     const key = BRANCH_BARKS[t.def.art] ? t.def.art : t.type;
     const i = this.bubbles.say(`t${t.id}`, t.x, t.y - lift, towerBark(t.type, t.def.art), chance);
     if (i >= 0) sfx.towerVoice(key, i);
+  }
+
+  /** 英雄喊話（開戰、絕招）：配音＋頭上的對話泡泡 */
+  private heroShout(line: 'select' | 'ult'): void {
+    const h = this.world.hero;
+    const id = h?.hero?.def.id;
+    if (!h || !id) return;
+    sfx.voice(id, line);
+    const text = voiceText(id, line);
+    if (text && h.alive) this.bubbles.say('hero', h.x, h.y - h.height - 12, [text], 1, true);
   }
 
   /** 首領喊話：配音＋對話泡泡（首領還沒走進畫面就改用提示字） */
