@@ -65,7 +65,7 @@ export const BRANCH_BARKS: Record<string, L10n[]> = {
 /** 移動英雄時的台詞 */
 export const HERO_BARKS: Record<string, L10n[]> = {
   arthur: [
-    { zh: '跟我上！', en: 'Follow me!' },
+    { zh: '大家跟我上！', en: 'Follow me!' },
     { zh: '守住防線！', en: 'Hold the line!' },
   ],
   elena: [
@@ -81,16 +81,16 @@ export const HERO_BARKS: Record<string, L10n[]> = {
     { zh: '馬蹄就是號角！', en: 'Hooves are my war horn!' },
   ],
   aria: [
-    { zh: '天空是我的！', en: 'The sky is mine!' },
-    { zh: '雷霆將至。', en: "Thunder's coming." },
+    { zh: '這片天空是我的！', en: 'The sky is mine!' },
+    { zh: '雷霆就要來了！', en: "Thunder's coming." },
   ],
   sharon: [
     { zh: '聖典指引我。', en: 'The scripture guides me.' },
     { zh: '我會撐住大家。', en: "I'll keep you standing." },
   ],
   viktor: [
-    { zh: '寸步不讓！', en: 'Not one step back!' },
-    { zh: '方陣，前進！', en: 'Phalanx, advance!' },
+    { zh: '一步也不准退！', en: 'Not one step back!' },
+    { zh: '方陣，向前推進！', en: 'Phalanx, advance!' },
   ],
   shadow: [
     { zh: '影子不會說話。', en: "Shadows don't talk." },

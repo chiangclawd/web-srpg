@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 35,
+    date: '2026-10-17',
+    title: { zh: '英雄開口說話了', en: 'Heroes speak' },
+    items: [
+      { zh: '八位英雄都有自己的聲音（中文／英文依語言切換）：選定英雄、開戰、移動和施放絕招時會喊話', en: 'All eight heroes have their own voice in Chinese and English: they speak when chosen, when the battle starts, when moved and when casting their ultimate' },
+    ],
+  },
+  {
     id: 34,
     date: '2026-10-17',
     title: { zh: '全新原創配樂', en: 'All-new soundtrack' },

@@ -140,6 +140,20 @@ test('every level has its painted battlefield registered and on disk', async () 
   }
 });
 
+test('every hero has a voice and every voice line is on disk in both languages', async () => {
+  const { HERO_VOICES, VOICE_LINES, voiceText } = await import('../../src/td/data/voices');
+  const fs = await import('node:fs');
+  for (const id of HERO_ORDER) {
+    assert.ok(HERO_VOICES[id], `${id} has a voice`);
+    for (const line of VOICE_LINES) {
+      for (const lang of ['zh', 'en'] as const) {
+        assert.ok(voiceText(id, line)?.[lang], `${id} ${line} ${lang} text`);
+        assert.ok(fs.existsSync(`public/assets/audio/voice/${id}_${line}_${lang}.mp3`), `${id}_${line}_${lang}.mp3 exists`);
+      }
+    }
+  }
+});
+
 test('boss rush sends every boss once, in order, each with an escort', async () => {
   const { bossRushLevel, BOSS_RUSH } = await import('../../src/td/data/challenges');
   const { gemReward } = await import('../../src/td/data/items');

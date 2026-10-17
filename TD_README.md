@@ -97,6 +97,16 @@ NODE_USE_ENV_PROXY=1 node scripts/art/gemini-listen.mjs raw/boss.mp3   # 請 Gem
 - `prep_music.py`：去尾端靜音、統一響度（-16 LUFS）、112 kbps MP3
 - Lyria 每次至少產生約 30 秒的完整音樂，不適合做短音效；音效仍用原本的檔案與 Web Audio 合成
 
+英雄語音（`public/assets/audio/voice/<英雄>_<台詞>_<語言>.mp3`，8 位 × 4 句 × 中英 = 64 個、共約 1MB）由 Gemini TTS 產生，台詞與聲線設定在 `src/td/data/voices.ts`（移動台詞沿用對話泡泡 `HERO_BARKS`）：
+
+```bash
+NODE_USE_ENV_PROXY=1 npx tsx scripts/art/gen-voices.ts [英雄...]   # 已存在的檔案會略過
+```
+
+- 模型：`gemini-2.5-flash-preview-tts`（每天限 100 次）／`gemini-2.5-pro-preview-tts`（中文咬字較穩）；新版 TTS 會把語氣說明一起念出來，不要用
+- 中文短句用喊的容易咬字不清，台詞寫長一點、加「字正腔圓」的語氣說明比較穩；產出後請 Gemini 逐句聽寫比對
+- 遊戲端每關只下載目前英雄的語音，新的一句會打斷前一句
+
 ## 🧱 架構
 
 ```
