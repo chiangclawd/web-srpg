@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 22,
+    date: '2026-10-17',
+    title: { zh: '世界地圖動起來了', en: 'A livelier world map' },
+    items: [
+      { zh: '世界地圖上有雲影與薄雲緩緩飄過、偶爾一群鳥飛過，關卡旗幟會隨風飄動', en: 'Cloud shadows and wisps drift across the world map, flocks of birds fly by now and then, and the level flags flutter in the wind' },
+    ],
+  },
+  {
     id: 21,
     date: '2026-10-17',
     title: { zh: '更多地圖機關', en: 'More map traps' },
