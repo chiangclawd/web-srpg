@@ -75,15 +75,16 @@ export class HeroScene extends Phaser.Scene {
           if (unlocked && this.viewing !== id) sfx.voice(id, 'select');
           this.viewing = id;
           this.build();
-        }, this.viewing === id ? 'ui_badge_blue' : 'ui_badge', 0.82),
+        }, this.viewing === id ? 'ui_badge_blue' : 'ui_badge', 0.82).setDepth(5),
       );
       if (!unlocked) {
         b.icon.setTint(0x333333);
-        add(this.add.image(hx, y, 'ic_lock').setDisplaySize(34, 34));
+        add(this.add.image(hx, y, 'ic_lock').setDisplaySize(34, 34).setDepth(5));
       }
-      if (sv.selectedHero === id) add(this.add.image(hx + 36, y - 30, 'ic_check').setDisplaySize(28, 28));
+      if (sv.selectedHero === id) add(this.add.image(hx + 36, y - 30, 'ic_check').setDisplaySize(28, 28).setDepth(5));
       const lv = heroLevelForXp(sv.heroes[id]?.xp ?? 0);
-      add(fitText(addText(this, hx, y + 46, unlocked ? `${L(h.name)} LV${lv}` : '???', { size: 14, display: true }).setOrigin(0.5), twoCols ? 98 : 160));
+      // 名字畫在右側立繪之上（立繪很大，左緣會蓋到第二欄）
+      add(fitText(addText(this, hx, y + 46, unlocked ? `${L(h.name)} LV${lv}` : '???', { size: 14, display: true }).setOrigin(0.5).setDepth(5), twoCols ? 98 : 160));
     });
     // 右側詳細
     const h = HEROES[this.viewing];
