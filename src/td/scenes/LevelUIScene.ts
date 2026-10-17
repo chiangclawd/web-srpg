@@ -6,7 +6,8 @@ import type { StoryLine } from '../data/story';
 import { LEVELS } from '../data/levels';
 import { HERO_XP_TABLE, HERO_MAX_LEVEL } from '../data/heroes';
 import { ITEMS, ITEM_ORDER, GOLD_SACK, POTION_LIVES, type ItemId } from '../data/items';
-import type { EnemyDef } from '../sim/defs';
+import type { EliteAffix, EnemyDef } from '../sim/defs';
+import { ELITE } from '../sim/World';
 import { IconButton, Button, panel, dimmer, popIn } from '../ui/widgets';
 import { playDialog } from '../ui/dialog';
 import { showTipBubble } from '../ui/tip';
@@ -490,16 +491,18 @@ export class LevelUIScene extends Phaser.Scene {
     this.infoBox = c;
   }
 
-  showEnemyInfo(e: EnemyDef): void {
+  showEnemyInfo(e: EnemyDef, elite: EliteAffix | null = null): void {
+    const hpMul = (this.lvl.difficulty === 'veteran' ? 1.25 : this.lvl.difficulty === 'casual' ? 0.7 : 1) * (elite === 'tough' ? ELITE.toughHp : 1);
     const stats: [string, string][] = [
-      [T('hp'), String(Math.round(e.hp * (this.lvl.difficulty === 'veteran' ? 1.25 : this.lvl.difficulty === 'casual' ? 0.7 : 1)))],
+      [T('hp'), String(Math.round(e.hp * hpMul))],
       [T('armor'), armorWord(e.armor)],
       [T('magicRes'), armorWord(e.magicResist)],
       [T('speed'), e.speed >= 60 ? T('veryFast') : e.speed >= 45 ? T('fast') : e.speed >= 28 ? T('medium') : T('slow')],
       [T('livesCost'), String(e.lives)],
-      [T('bounty'), String(e.gold)],
+      [T('bounty'), String(e.gold * (elite ? ELITE.bounty : 1))],
     ];
-    this.showInfo({ title: L(e.name), desc: L(e.desc), stats });
+    if (elite) this.showInfo({ title: `${T('elite')}・${T(`elite_${elite}`)} ${L(e.name)}`, desc: `${T(`eliteDesc_${elite}`)}\n${L(e.desc)}`, stats });
+    else this.showInfo({ title: L(e.name), desc: L(e.desc), stats });
   }
 
   showWavePreview(list: { enemy: string; count: number }[]): void {

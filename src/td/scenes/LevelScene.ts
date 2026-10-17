@@ -7,7 +7,7 @@ import { ENEMIES } from '../data/enemies';
 import { computeMods } from '../data/upgrades';
 import { World, type Difficulty, type SimEvent } from '../sim/World';
 import { Enemy, Soldier, Tower, type Projectile } from '../sim/entities';
-import type { LevelDef, LevelMode, TowerLevelDef, TowerType } from '../sim/defs';
+import type { EliteAffix, LevelDef, LevelMode, TowerLevelDef, TowerType } from '../sim/defs';
 import { challengeLevel } from '../data/challenges';
 import { dailyKey, dailyLevel } from '../data/daily';
 import { addQuestProgress, ensureQuests, questText } from '../data/quests';
@@ -36,6 +36,9 @@ import type { LevelUIScene, InfoData } from './LevelUIScene';
 const STEP = 1 / 60;
 
 type Mode = 'idle' | 'hero' | 'meteor' | 'reinforce' | 'rally' | 'keg' | 'ult';
+
+/** 精英光環顏色（依詞綴） */
+const ELITE_COLORS: Record<EliteAffix, number> = { swift: 0x5ad0ff, tough: 0xffb040, regen: 0x6ae06a, shielded: 0xc08aff };
 
 export class LevelScene extends Phaser.Scene {
   world!: World;
@@ -715,7 +718,7 @@ export class LevelScene extends Phaser.Scene {
       }
     }
     this.closeMenu();
-    if (best) this.ui.showEnemyInfo(best.def);
+    if (best) this.ui.showEnemyInfo(best.def, best.elite);
     else {
       this.ui.hideInfo();
       this.eggs?.tap(x, y);
@@ -1275,6 +1278,17 @@ export class LevelScene extends Phaser.Scene {
               sv.seenEnemies.push(e.def.id);
               persist();
             }
+          }
+          break;
+        }
+        case 'elite': {
+          const v = this.enemyViews.get(ev.e.id);
+          v?.setElite(ELITE_COLORS[ev.e.elite!]);
+          // 第一次看到精英：提示一次
+          if (!save().tipsSeen.includes('elite')) {
+            save().tipsSeen.push('elite');
+            persist();
+            this.time.delayedCall(800, () => this.ui.toast(T('tipElite'), 5500));
           }
           break;
         }
@@ -1874,6 +1888,7 @@ export class LevelScene extends Phaser.Scene {
     if (victory) sv.stats.victories++;
     sv.stats.kills += w.stats.kills;
     sv.stats.towers = (sv.stats.towers ?? 0) + w.stats.towersBuilt;
+    sv.stats.elites = (sv.stats.elites ?? 0) + w.stats.eliteKills;
     const fresh = evaluateAchievements(
       {
         levelId: this.level.id,

@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 52,
+    date: '2026-10-17',
+    title: { zh: '精英敵人', en: 'Elite enemies' },
+    items: [
+      { zh: '英雄挑戰與無盡模式會出現腳下發光的精英敵人：迅捷（更快）、堅韌（更硬）、再生（會回血）、護盾（帶護盾），賞金加倍', en: 'Elite enemies with a glowing ring now appear in Heroic and Endless: Swift, Tough, Regenerating or Shielded. They pay double bounty' },
+      { zh: '點精英可以看到牠的詞綴；新成就「精英獵手」：累計擊敗 50 名精英', en: 'Tap an elite to see its trait; new achievement “Elite Hunter”: defeat 50 elites' },
+    ],
+  },
+  {
     id: 51,
     date: '2026-10-17',
     title: { zh: '手機介面調整', en: 'Phone layout fixes' },

@@ -1,7 +1,7 @@
 import { FROST_SEC, GOLD_SACK, KEG, POTION_LIVES, type ItemId } from '../data/items';
 import { Path } from './Path';
 import { Rng, clamp, dist, dist2, ellipseDist, inEllipse, type Vec } from './math';
-import type { DamageKind, EnemyDef, HazardDef, HazardKind, HeroDef, LevelDef, Range2, TowerLevelDef, TowerType } from './defs';
+import type { DamageKind, EliteAffix, EnemyDef, HazardDef, HazardKind, HeroDef, LevelDef, Range2, TowerLevelDef, TowerType } from './defs';
 import {
   Enemy,
   Projectile,
@@ -37,6 +37,10 @@ export const HAZARD: Record<HazardKind, { dmg: number; r: number; stun: number; 
   // 火藥桶：滾動時撞得較輕，滾到底炸開（範圍傷害＋暈眩）
   keg: { dmg: 80, r: 26, stun: 0, slow: 0, cd: 45, speed: 200, boom: { dmg: 300, r: 80, stun: 1 } },
 };
+/** 精英詞綴的數值：迅捷加速、堅韌加血加甲、再生每秒回血比例、護盾佔最大生命比例、賞金倍率 */
+export const ELITE = { swiftSpeed: 1.4, toughHp: 1.8, toughArmor: 0.15, regen: 0.03, shield: 0.5, bounty: 2 };
+export const ELITE_AFFIXES: EliteAffix[] = ['swift', 'tough', 'regen', 'shielded'];
+
 /** 從崖邊落到路上的時間（秒），落地後才開始判定 */
 export const HAZARD_DROP = 0.45;
 
@@ -86,6 +90,7 @@ export type SimEvent =
   | { type: 'victory' }
   | { type: 'hazard'; i: number; kind: HazardKind; x: number; y: number; tx: number; ty: number }
   | { type: 'hazardEnd'; i: number; kind: HazardKind; x: number; y: number; kills: number }
+  | { type: 'elite'; e: Enemy }
   | { type: 'defeat' };
 
 export interface BuildSpot {
@@ -149,7 +154,7 @@ export class World {
   private dmgBy: Tower | null = null;
 
   result: 'victory' | 'defeat' | null = null;
-  stats = { kills: 0, leaks: 0, goldEarned: 0, towersBuilt: 0, meteorKills: 0, earlyCalls: 0, sheep: 0, bossesKilled: [] as string[], hazardKills: 0, bestHazard: 0 };
+  stats = { kills: 0, leaks: 0, goldEarned: 0, towersBuilt: 0, meteorKills: 0, earlyCalls: 0, sheep: 0, bossesKilled: [] as string[], hazardKills: 0, bestHazard: 0, eliteKills: 0 };
 
   constructor(opts: WorldOptions) {
     this.level = opts.level;
@@ -787,7 +792,12 @@ export class World {
   private updateWaves(): void {
     while (this.spawnQueue.length && this.spawnQueue[0].at <= this.time) {
       const s = this.spawnQueue.shift()!;
-      this.spawnEnemy(s.enemy, s.path, 0, undefined, s.hpMul);
+      const e = this.spawnEnemy(s.enemy, s.path, 0, undefined, s.hpMul);
+      // 精英：只有挑戰／無盡模式有（沒有規則時不擲骰，戰役的隨機序列不受影響）
+      const el = this.level.rules?.elite;
+      if (el && !e.def.boss && this.rng.next() < Math.min(el.max, el.base + el.perWave * this.waveIndex)) {
+        this.makeElite(e, ELITE_AFFIXES[Math.floor(this.rng.next() * ELITE_AFFIXES.length)]);
+      }
     }
     if (this.waveState === 'spawning' && this.spawnQueue.length === 0) {
       if (this.waveIndex + 1 < this.waveCount) {
@@ -799,6 +809,18 @@ export class World {
       }
     }
     if (this.waveState === 'gap' && this.time >= this.nextWaveAt) this.startWave();
+  }
+
+  /** 把敵人變成精英：依詞綴強化，賞金加倍（killEnemy） */
+  makeElite(e: Enemy, affix: EliteAffix): void {
+    e.elite = affix;
+    if (affix === 'swift') e.speed *= ELITE.swiftSpeed;
+    else if (affix === 'tough') {
+      e.maxHp = Math.round(e.maxHp * ELITE.toughHp);
+      e.hp = e.maxHp;
+      e.armor = Math.min(0.9, e.armor + ELITE.toughArmor);
+    } else if (affix === 'shielded') e.shield = Math.max(e.shield, e.maxHp * ELITE.shield);
+    this.emit({ type: 'elite', e });
   }
 
   spawnEnemy(id: string, pathIndex: number, d: number, lane?: number, hpMul = 1): Enemy {
@@ -870,7 +892,7 @@ export class World {
   private updateEnemy(e: Enemy, dt: number): void {
     if (!e.alive) return;
     const now = this.time;
-    const regenRule = this.level.rules?.enemyRegen;
+    const regenRule = (this.level.rules?.enemyRegen ?? 0) + (e.elite === 'regen' ? ELITE.regen : 0);
     if (regenRule && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * regenRule * dt);
     // 持續傷害
     if (e.dots.length) {
@@ -1111,10 +1133,11 @@ export class World {
     e.alive = false;
     e.hp = 0;
     this.releaseEngagers(e);
-    const g = Math.round(e.def.gold * (this.level.rules?.bountyMul ?? 1));
+    const g = Math.round(e.def.gold * (this.level.rules?.bountyMul ?? 1) * (e.elite ? ELITE.bounty : 1));
     this.gold += g;
     this.stats.goldEarned += g;
     this.stats.kills++;
+    if (e.elite) this.stats.eliteKills++;
     if (this.dmgBy) this.dmgBy.kills++;
     if (e.def.boss) this.stats.bossesKilled.push(e.def.id);
     if (src === 'hero') this.gainHeroXp(g * 1.2);
