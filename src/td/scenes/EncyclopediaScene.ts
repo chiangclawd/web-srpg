@@ -12,10 +12,19 @@ import type { TowerLevelDef, TowerType } from '../sim/defs';
 
 type Tab = 'towers' | 'enemies' | 'music';
 
+/** 手指移動超過這麼多（螢幕像素）就算拖曳，不算點選 */
+const DRAG_PX = 8;
+
 export class EncyclopediaScene extends Phaser.Scene {
   private objs: Phaser.GameObjects.GameObject[] = [];
   private tab: Tab = 'towers';
   private sel = '';
+  /** 手機版格子：捲動容器、目前捲動量與上限、可點的範圍 */
+  private grid: Phaser.GameObjects.Container | null = null;
+  private gridScroll = 0;
+  private gridMax = 0;
+  private gridTop = 0;
+  private gridBottom = VIEW_H;
 
   constructor() {
     super('Encyclopedia');
@@ -25,6 +34,13 @@ export class EncyclopediaScene extends Phaser.Scene {
     setupCamera(this);
     this.tab = 'towers';
     this.sel = 'archer:0';
+    this.gridScroll = 0;
+    // 手機版圖鑑格子可以上下拖曳（拖過就不算點選；格子按鈕會攔下 pointerdown，所以用指標自己記的按下位置）
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+      if (!p.isDown || !this.grid || this.gridMax <= 0 || Math.abs(p.y - p.downY) <= DRAG_PX) return;
+      this.scrollGrid(this.gridScroll - (p.y - p.prevPosition.y) / this.cameras.main.zoom);
+    });
+    this.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => this.scrollGrid(this.gridScroll + dy * 0.6));
     this.build();
     this.scale.on('resize', this.build, this);
     this.events.once('shutdown', () => this.scale.off('resize', this.build, this));
@@ -34,6 +50,8 @@ export class EncyclopediaScene extends Phaser.Scene {
   private build(): void {
     this.objs.forEach((o) => o.destroy());
     this.objs = [];
+    this.grid = null;
+    this.gridMax = 0;
     const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
       this.objs.push(o);
       return o;
@@ -51,13 +69,40 @@ export class EncyclopediaScene extends Phaser.Scene {
       add(new IconButton(this, 12 + 30 * uiZoom(), VIEW_H - 10 - 30 * uiZoom(), 60, 'ic_close', () => this.back()).setBaseScale(uiZoom()));
       return;
     }
-    const gridX = 84;
-    const gridY = 222;
     // 敵人超過 30 種改成 6 欄；超過 5 排時縮小格距，最後一排才不會壓到左下的關閉鈕（兩個分頁用同一格距，版面才不會跳）
+    // 手機：格子放大成好點的大小，放不下的部分在格子面板裡上下拖曳
     const nEnemies = Object.keys(ENEMIES).length;
-    const cols = nEnemies > 30 ? 6 : 5;
-    const cell = Math.ceil(nEnemies / cols) > 5 ? 72 : 82;
-    add(panel(this, gridX + (cols * cell) / 2 - 41, 414, cols * cell + 40, 480, 'ui_dark', 18));
+    const phone = uiZoom() > 1.05;
+    const cols = phone ? 5 : nEnemies > 30 ? 6 : 5;
+    // 手機格子大小也受畫面寬度限制（16:9 手機要留給右邊的說明面板）
+    const cell = phone ? Math.round(Math.min(72 * Math.min(uiZoom(), 1.4), (w * 0.42 - 84) / cols)) : Math.ceil(nEnemies / cols) > 5 ? 72 : 82;
+    const iconSize = phone ? cell - 10 : 70;
+    const gridX = phone ? 44 + cell / 2 : 84;
+    const panelTop = 174;
+    const panelBottom = 654;
+    const gridY = phone ? panelTop + 12 + cell / 2 : 222;
+    const gridPanelW = cols * cell + 40;
+    add(panel(this, gridX - cell / 2 - 20 + gridPanelW / 2 + (phone ? 0 : cell / 2 - 41), 414, gridPanelW, 480, 'ui_dark', 18));
+    const grid = add(this.add.container(0, 0));
+    this.grid = grid;
+    const cellBtn = (b: IconButton): IconButton => {
+      grid.add(b);
+      return b;
+    };
+    if (phone) {
+      // 只露出面板裡面那一塊（捲出去的格子被遮住，也不能點）
+      const m = this.make.graphics({}, false);
+      m.fillRect(0, panelTop + 6, w, panelBottom - panelTop - 12);
+      grid.setMask(m.createGeometryMask());
+      this.gridTop = panelTop + 6;
+      this.gridBottom = panelBottom - 6;
+    } else {
+      this.gridTop = 0;
+      this.gridBottom = VIEW_H;
+    }
+    const count = this.tab === 'towers' ? TOWER_ORDER.reduce((n, t) => n + TOWERS[t].levels.length + TOWERS[t].branches.length, 0) : nEnemies;
+    this.gridMax = phone ? Math.max(0, gridY + (Math.ceil(count / cols) - 1) * cell + cell / 2 + 12 - panelBottom) : 0;
+    this.scrollGrid(this.gridScroll);
     const detailX = gridX + cols * cell + 60;
     const detailW = w - detailX - 30;
     add(panel(this, detailX + detailW / 2, 410, detailW, 480));
@@ -72,8 +117,8 @@ export class EncyclopediaScene extends Phaser.Scene {
         for (const [id, def] of entries) {
           const x = gridX + (i % cols) * cell;
           const y = gridY + Math.floor(i / cols) * cell;
-          const b = add(new IconButton(this, x, y, 70, def.art, () => this.select(id), this.sel === id ? 'ui_badge_blue' : 'ui_badge', 0.9));
-          b.icon.setDisplaySize(52, 63);
+          const b = cellBtn(new IconButton(this, x, y, iconSize, def.art, () => this.select(id), this.sel === id ? 'ui_badge_blue' : 'ui_badge', 0.9));
+          b.icon.setDisplaySize((52 * iconSize) / 70, (63 * iconSize) / 70);
           i++;
         }
       }
@@ -89,10 +134,10 @@ export class EncyclopediaScene extends Phaser.Scene {
         const x = gridX + (i % cols) * cell;
         const y = gridY + Math.floor(i / cols) * cell;
         const known = seen.has(e.id);
-        const b = add(new IconButton(this, x, y, 70, e.sprite, () => this.select(e.id), this.sel === e.id ? 'ui_badge_blue' : 'ui_badge', 0.8));
+        const b = cellBtn(new IconButton(this, x, y, iconSize, e.sprite, () => this.select(e.id), this.sel === e.id ? 'ui_badge_blue' : 'ui_badge', 0.8));
         const fh = b.icon.frame.height;
         const fw = b.icon.frame.width;
-        const k = Math.min(52 / fh, 52 / fw);
+        const k = (Math.min(52 / fh, 52 / fw) * iconSize) / 70;
         b.icon.setDisplaySize(fw * k, fh * k);
         if (!known) b.icon.setTint(0x000000);
         else if (e.tint) b.icon.setTint(e.tint);
@@ -159,8 +204,14 @@ export class EncyclopediaScene extends Phaser.Scene {
     });
   }
 
+  private scrollGrid(y: number): void {
+    this.gridScroll = Phaser.Math.Clamp(y, 0, this.gridMax);
+    this.grid?.setY(-this.gridScroll);
+  }
+
   private setTab(t: Tab): void {
     this.tab = t;
+    this.gridScroll = 0;
     this.sel = t === 'towers' ? 'archer:0' : save().seenEnemies[0] ?? 'goblin';
     this.build();
   }
@@ -196,6 +247,9 @@ export class EncyclopediaScene extends Phaser.Scene {
   }
 
   private select(id: string): void {
+    // 拖曳捲動後放開不算點選；被遮住（捲到面板外）的格子也不能點
+    const p = this.input.activePointer;
+    if ((this.gridMax > 0 && Math.abs(p.upY - p.downY) > DRAG_PX) || p.worldY < this.gridTop || p.worldY > this.gridBottom) return;
     this.sel = id;
     this.build();
   }

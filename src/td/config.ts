@@ -197,7 +197,7 @@ const NO_LINE_START = '。，、．！？：；」』）】》〉〕…～,.!?:;
 
 /**
  * 依文字物件目前的換行寬度把字串排成多行，並處理中文避頭點：
- * 句號、逗號等標點不該落到行首，把上一行最後一個字一起帶下來。
+ * 句號、逗號等標點不該落到行首，改接在上一行行尾（標點懸掛）。
  * 回傳含手動換行的字串；改過的話，呼叫端要把換行寬度放寬一個字，避免又被重新折行。
  */
 export function cjkWrap(t: Phaser.GameObjects.Text, s: string): { text: string; changed: boolean } {
@@ -207,12 +207,15 @@ export function cjkWrap(t: Phaser.GameObjects.Text, s: string): { text: string; 
   for (const para of s.split('\n')) {
     const lines = t.getWrappedText(para);
     for (let i = 1; i < lines.length; i++) {
+      // 標點懸掛：行首的標點接到上一行行尾（上一行多出的只是標點的空白，
+      // 不像把上一行最後一個字拉下來那樣，會把這一行擠得比折行寬度還長）
       let guard = 0;
-      while (lines[i] && NO_LINE_START.includes(lines[i][0]) && lines[i - 1].length > 2 && guard++ < 3) {
-        lines[i] = lines[i - 1].slice(-1) + lines[i];
-        lines[i - 1] = lines[i - 1].slice(0, -1);
+      while (lines[i] && NO_LINE_START.includes(lines[i][0]) && guard++ < 3) {
+        lines[i - 1] += lines[i][0];
+        lines[i] = lines[i].slice(1);
         changed = true;
       }
+      if (!lines[i]) lines.splice(i--, 1);
     }
     out.push(...(lines.length ? lines : ['']));
   }
