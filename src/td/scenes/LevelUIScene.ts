@@ -177,7 +177,7 @@ export class LevelUIScene extends Phaser.Scene {
 
   private refreshSpeed(): void {
     this.speedTxt.setText(`${this.lvl.speed}x`);
-    this.speedBtn.badge.setTint(this.lvl.speed > 1 ? 0xffe08a : 0xffffff);
+    this.speedBtn.badge.setTint(this.lvl.speed >= 3 ? 0xffb070 : this.lvl.speed > 1 ? 0xffe08a : 0xffffff);
   }
 
   /** 每幀由 LevelScene 呼叫 */
