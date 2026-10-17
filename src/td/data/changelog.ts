@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 49,
+    date: '2026-10-17',
+    title: { zh: '黑潮海灣：火藥桶機關', en: 'Blacktide Cove: powder kegs' },
+    items: [
+      { zh: '黑潮海灣的沉船上堆著火藥桶：點一下讓它沿著海灘的路滾下去，滾到底轟然爆炸，炸傷並暈眩一整群敵人', en: 'Powder kegs are stacked on the wreck in Blacktide Cove: tap them to roll one down the beach road, where it blows up and stuns a whole crowd' },
+    ],
+  },
+  {
     id: 48,
     date: '2026-10-17',
     title: { zh: '每日任務', en: 'Daily quests' },

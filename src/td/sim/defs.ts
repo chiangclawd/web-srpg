@@ -199,7 +199,7 @@ export type DecorItem =
   | { kind: 'clear'; x: number; y: number; r: number }
   | { kind: 'altar'; x: number; y: number };
 
-export type HazardKind = 'boulder' | 'snowball';
+export type HazardKind = 'boulder' | 'snowball' | 'keg';
 
 /** 地圖機關：點擊後巨石／雪球從 (x,y) 落到路上，沿路徑 d0 → d1 滾動、砸傷沿途地面敵人 */
 export interface HazardDef {

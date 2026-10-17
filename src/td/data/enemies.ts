@@ -576,7 +576,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
     sprite: 'mon_leviathan',
     height: 108,
     facesRight: true,
-    hp: 6000,
+    hp: 6200,
     speed: 13,
     armor: 0.35,
     magicResist: 0.35,

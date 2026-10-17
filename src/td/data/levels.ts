@@ -1279,6 +1279,7 @@ export const LEVELS: LevelDef[] = [
     },
     theme: 'coast',
     seed: 171,
+    hazards: [{ kind: 'keg', x: 770, y: 630, path: 1, d0: 440, d1: 190 }],
     paths: [
       [
         { x: 1345, y: 248 },
@@ -1394,7 +1395,7 @@ export const LEVELS: LevelDef[] = [
       w(g(0, 'blackguard', 5, 2), g(1, 'reef_crab', 4, 1.4, 2), g(0, 'drowned', 6, 0.6, 10)),
       w(g(1, 'troll', 2, 5), g(0, 'reef_crab', 4, 1.2, 2), g(0, 'demon', 6, 1, 8), g(1, 'drowned', 6, 0.6, 12)),
       { ...w(g(0, 'reef_crab', 5, 1.1), g(1, 'blackguard', 4, 2, 3), g(0, 'assassin', 8, 1, 6), g(1, 'drowned', 8, 0.5, 12)), gap: 30 },
-      w(g(0, 'leviathan', 1, 1, 3), g(1, 'drowned', 7, 0.6, 0), g(1, 'reef_crab', 2, 2, 10), g(0, 'demon', 6, 1, 16), g(1, 'blackguard', 3, 2, 24)),
+      w(g(0, 'leviathan', 1, 1, 3), g(1, 'drowned', 8, 0.6, 0), g(1, 'reef_crab', 3, 2, 10), g(0, 'demon', 6, 1, 16), g(1, 'blackguard', 4, 2, 24)),
     ],
   },
 ];

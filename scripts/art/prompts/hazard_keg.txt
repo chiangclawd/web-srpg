@@ -1,0 +1,8 @@
+The reference images show the TARGET art style of my 2D fantasy tower-defense game: hand-painted chibi fantasy game sprites with clean dark-brown outlines, soft cel shading, rich painted textures and warm lighting, seen from a slightly top-down three-quarter view. Image 1 is one of the game's map traps (a boulder held on a ledge by a wedge and a rope).
+
+Paint ONE game sprite sheet in exactly that style with exactly 3 separate objects in ONE horizontal row, with wide empty gaps between them, all standing on the same ground line:
+1. LEFT: a small slanted wooden cradle made of weathered ship planks (salvaged from a shipwreck, with a few barnacles and a bit of seaweed), knee-high, holding THREE stacked black-powder kegs (sturdy wooden barrels with dark iron hoops, a short fuse sticking out of the top keg, a little black powder spilling), held in place by a frayed rope tied to a wooden stake. It should look like a trap that can be released to roll the kegs down.
+2. MIDDLE: the SAME wooden cradle after the trap was used: the kegs are gone, the rope is snapped and hanging, a few spilled grains of black powder and one loose iron hoop left on the planks.
+3. RIGHT: ONE powder keg ALONE (the same kind as in object 1), lying on its side ready to roll, round wooden barrel with dark iron hoops and a short lit fuse with a tiny spark.
+- Do NOT draw any people, monsters, roads, sand ground, water, shadows on the background or text.
+- Background: perfectly flat solid magenta (#FF00FF) everywhere. No frame, no labels.

@@ -10,6 +10,7 @@ type HazardArt = { ready: string; empty: string; ball: string };
 const ART: Record<HazardKind, HazardArt> = {
   boulder: { ready: 'hz_rock_ready', empty: 'hz_rock_empty', ball: 'hz_boulder' },
   snowball: { ready: 'hz_snow_ready', empty: 'hz_snow_empty', ball: 'hz_snowball' },
+  keg: { ready: 'hz_keg_ready', empty: 'hz_keg_empty', ball: 'hz_keg' },
 };
 const SKIN_ART: Record<NonNullable<HazardDef['skin']>, HazardArt> = {
   sand: { ready: 'hz_sand_ready', empty: 'hz_sand_empty', ball: 'hz_sandball' },
@@ -126,6 +127,9 @@ export class HazardLayer {
       this.fx.snowBurst(x, y - 10, 26);
       this.fx.ring(x, y, 50, 0xc8e8ff, 360);
       sfx.play('freeze', 0.7);
+    } else if (kind === 'keg') {
+      // 火藥桶的爆炸特效與音效由模擬的 explosion 事件負責，這裡只補碎木
+      this.fx.rubble(x, y, 10);
     } else {
       this.fx.rubble(x, y, 12);
       this.fx.smokePuff(x, y - 8, 10);
@@ -167,6 +171,7 @@ export class HazardLayer {
           if (v.dust > 18) {
             v.dust = 0;
             if (h.def.kind === 'snowball') this.fx.snowBurst(r.x, r.y - 4, 2);
+            else if (h.def.kind === 'keg') this.fx.fireBurst(r.x, r.y - 12, 1);
             else this.fx.smokePuff(r.x, r.y - 2, 1);
           }
         }
