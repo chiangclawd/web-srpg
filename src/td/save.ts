@@ -55,6 +55,8 @@ export interface SaveData {
     quality: Quality;
     /** 英雄／首領語音 */
     voice: boolean;
+    /** 介面大小（字與彈出面板的倍率，重新整理後生效；舊存檔沒有這欄） */
+    uiScale?: number;
   };
   stats: { kills: number; plays: number; victories: number; towers: number };
 }

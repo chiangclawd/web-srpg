@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PLAY_W, PLAY_X0, VIEW_H, WORLD_W, bgScale, addText, fitText, setupCamera, uiZoom, viewW } from '../config';
+import { PLAY_W, PLAY_X0, VIEW_H, WORLD_W, bgScale, addText, fitText, fontPx, setupCamera, uiZoom, viewW } from '../config';
 import { LEVELS } from '../data/levels';
 import { UPGRADE_COLUMNS } from '../data/upgrades';
 import { HEROES, HERO_ORDER } from '../data/heroes';
@@ -371,7 +371,9 @@ export class MapScene extends Phaser.Scene {
     const z = uiZoom();
     const topLeft = this.add.container(left, 0).setScale(z);
     const topRight = this.add.container(right, 0).setScale(z);
-    const bottomRight = this.add.container(right, VIEW_H).setScale(z);
+    // 底部按鈕列（寬 870）放不下時縮小，免得最左邊的商店鈕被左下角的關閉鈕蓋住
+    const zb = this.barZoom();
+    const bottomRight = this.add.container(right, VIEW_H).setScale(zb);
     this.hud.push(topLeft, topRight, bottomRight);
     // 總星數
     const sp = panel(this, 100, 34, 170, 46, 'ui_dark', 18);
@@ -430,6 +432,12 @@ export class MapScene extends Phaser.Scene {
     }
     this.hud.push(back);
     this.hud.forEach((o) => (o as unknown as Phaser.GameObjects.Components.Depth).setDepth?.(500));
+  }
+
+  /** 底部按鈕列的放大倍率：手機放大，但整列要塞進關閉鈕右邊 */
+  private barZoom(): number {
+    const z = uiZoom();
+    return Math.min(z, (viewW(this) - (12 + 64 * z + 14)) / 870);
   }
 
   /** 今天的任務（換日自動重抽並存檔） */
@@ -517,22 +525,27 @@ export class MapScene extends Phaser.Scene {
     // 手機字體放大後提示可能變兩行：下面的內容跟著往下排
     const nameY = hint.y + hint.height + 26;
     c.add(addText(this, 0, nameY, `${idx + 1}. ${L(lv.name)}`, { size: 24, display: true, color: '#7a4a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0.5));
+    // 修正列：名稱貼在圖示中線上方、說明貼在下方（手機字放大後兩行才不會疊在一起）
+    const rowH = Math.max(58, fontPx(18) + fontPx(14) + 18);
     let y = nameY + 44;
     for (const id of spec.mods) {
       const m = DAILY_MODS[id];
       const col = m.good ? '#2a6a1a' : '#9a2a1a';
       c.add(this.add.image(-pw / 2 + 46, y + 10, m.good ? 'ui_badge_green' : 'ui_badge_red').setDisplaySize(40, 40));
       c.add(this.add.image(-pw / 2 + 46, y + 10, m.good ? 'ic_coin' : 'ic_skull').setDisplaySize(24, 24));
-      c.add(addText(this, -pw / 2 + 76, y, L(m.name), { size: 18, display: true, color: col, stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
+      c.add(addText(this, -pw / 2 + 76, y + 11, L(m.name), { size: 18, display: true, color: col, stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 1));
       const desc = id === 'limited' ? T('dailyLimited', spec.towers.map((t) => L(TOWERS[t].name)).join('、')) : L(m.desc);
-      c.add(addText(this, -pw / 2 + 76, y + 22, desc, { size: 14, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0, 0.5));
-      y += 58;
+      c.add(fitText(addText(this, -pw / 2 + 76, y + 11, desc, { size: 14, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0, 0), pw - 100));
+      y += rowH;
     }
-    const best = sv.daily[key] ?? 0;
-    c.add(addText(this, -60, ph / 2 - 120, T('todayBest'), { size: 18, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(1, 0.5));
-    for (let k = 0; k < 3; k++) c.add(this.add.image(-30 + k * 36, ph / 2 - 120, k < best ? 'ic_star' : 'ic_star_empty').setDisplaySize(32, 32));
-    // 要先通過當天這一關（戰役進度不夠時提示要打哪一關）
+    // 由下往上排：出征鈕 → 提示（戰役進度不夠時）→ 今日最佳
     const cleared = (sv.stars[lv.id] ?? 0) > 0;
+    const warnY = ph / 2 - 80 - fontPx(15) / 2 - 6;
+    const bestY = (cleared ? ph / 2 - 80 : warnY - fontPx(15) / 2) - 26;
+    const best = sv.daily[key] ?? 0;
+    c.add(addText(this, -60, bestY, T('todayBest'), { size: 18, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(1, 0.5));
+    for (let k = 0; k < 3; k++) c.add(this.add.image(-30 + k * 36, bestY, k < best ? 'ic_star' : 'ic_star_empty').setDisplaySize(32, 32));
+    // 要先通過當天這一關（戰役進度不夠時提示要打哪一關）
     const go = new Button(this, 0, ph / 2 - 50, 220, 60, T('battle'), () => {
       sfx.play('horn', 0.7);
       this.cameras.main.fadeOut(300, 0, 0, 0);
@@ -540,7 +553,7 @@ export class MapScene extends Phaser.Scene {
     }, { color: 'green', icon: 'ic_reinforce', iconSize: 34, text: { size: 26 }, disabled: !cleared });
     c.add(go);
     if (!cleared) {
-      c.add(fitText(addText(this, 0, ph / 2 - 92, T('dailyNeedLevel', `${idx + 1}. ${L(lv.name)}`), { size: 15, color: '#9a2a1a', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0.5), pw - 40));
+      c.add(fitText(addText(this, 0, warnY, T('dailyNeedLevel', `${idx + 1}. ${L(lv.name)}`), { size: 15, color: '#9a2a1a', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0.5), pw - 40));
     }
     c.add(new IconButton(this, pw / 2 - 18, -ph / 2 + 18, 40, 'ic_close', () => {
       this.infoPanel?.destroy();
@@ -570,7 +583,10 @@ export class MapScene extends Phaser.Scene {
       this.infoPanel = null;
       // 任務鈕在右上（每日挑戰下方），升級／商店在底部
       if (tip === 'quests') showTipBubble(this, w - 104 * z, 92 * z, T('tipQuests'), () => {}, 2000);
-      else showTipBubble(this, w - (tip === 'upgrades' ? 470 : 790) * z, VIEW_H - 42 * z, T(tip === 'upgrades' ? 'tipUpgrades' : 'tipShop'), () => {}, 2000);
+      else {
+        const zb = this.barZoom();
+        showTipBubble(this, w - (tip === 'upgrades' ? 470 : 790) * zb, VIEW_H - 42 * zb, T(tip === 'upgrades' ? 'tipUpgrades' : 'tipShop'), () => {}, 2000);
+      }
     });
   }
 

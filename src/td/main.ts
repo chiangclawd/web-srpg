@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import '@fontsource/luckiest-guy/400.css';
-import { RS, VIEW_H, applyQuality, computeViewW, isTouchDevice, refreshTextScale } from './config';
+import { RS, VIEW_H, applyQuality, computeViewW, isTouchDevice, refreshTextScale, setUiBoost } from './config';
 import { loadSave, persist } from './save';
 import { crashGuard } from './crashGuard';
 import { PreloadScene } from './scenes/PreloadScene';
@@ -18,6 +18,7 @@ import { ShopScene } from './scenes/ShopScene';
 
 {
   const sv = loadSave();
+  setUiBoost(sv.settings.uiScale ?? 1);
   applyQuality(
     crashGuard(sv.settings.quality ?? 'auto', () => {
       sv.settings.quality = 'low';

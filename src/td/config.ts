@@ -111,6 +111,13 @@ function screenScale(): number {
   return Math.min(w / computeViewW(), h / VIEW_H);
 }
 
+/** 玩家選的介面大小（設定裡的 標準／大）：彈出面板、環狀選單、地圖按鈕再放大一些 */
+let UI_BOOST = 1;
+
+export function setUiBoost(k: number): void {
+  UI_BOOST = Phaser.Math.Clamp(k || 1, 1, 1.15);
+}
+
 let textMin = MIN_CSS_PX / screenScale();
 
 /** 邏輯字級 → 實際使用的字級（小螢幕放大） */
@@ -124,7 +131,7 @@ export function fontPx(size: number): number {
  * 讓 1 邏輯像素至少約 0.84 CSS px：52px 的按鈕在手機上約 44 CSS px，符合手指點擊大小；桌機、平板為 1。
  */
 export function uiZoom(): number {
-  return Phaser.Math.Clamp(0.84 / screenScale(), 1, 1.55);
+  return Phaser.Math.Clamp((0.84 / screenScale()) * UI_BOOST, 1, 1.55 * UI_BOOST);
 }
 
 /**
@@ -163,6 +170,9 @@ export function textStyle(o: TextOpts = {}): Phaser.Types.GameObjects.Text.TextS
 }
 
 export function addText(scene: Phaser.Scene, x: number, y: number, s: string, o: TextOpts = {}): Phaser.GameObjects.Text {
+  // 中文段落裡的空白（數字前後）換成不換行空白：Phaser 只會在空白處折行，
+  // 遇到「冰凍全場敵人 4 秒」會在 4 前後斷開，留下很短的一行；改成整段逐字折行
+  if (o.wrap && CJK.test(s)) s = s.replace(/ /g, '\u00a0');
   const t = scene.add.text(x, y, s, textStyle(o));
   if (o.wrap && CJK.test(s)) {
     const r = cjkWrap(t, s);
@@ -191,6 +201,7 @@ const NO_LINE_START = '。，、．！？：；」』）】》〉〕…～,.!?:;
  * 回傳含手動換行的字串；改過的話，呼叫端要把換行寬度放寬一個字，避免又被重新折行。
  */
 export function cjkWrap(t: Phaser.GameObjects.Text, s: string): { text: string; changed: boolean } {
+  if (CJK.test(s)) s = s.replace(/ /g, '\u00a0');
   let changed = false;
   const out: string[] = [];
   for (const para of s.split('\n')) {
