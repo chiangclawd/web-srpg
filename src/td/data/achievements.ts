@@ -69,6 +69,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'boss_rush', name: { zh: '首領獵人', en: 'Boss Hunter' }, desc: { zh: '在任一張地圖通關首領連戰', en: 'Clear Boss Rush on any map' }, icon: 'ic_skull' },
   { id: 'landslide', name: { zh: '山崩地裂', en: 'Landslide' }, desc: { zh: '一次落石或雪球擊倒 5 名敵人', en: 'Crush 5 enemies with one boulder or snowball' }, icon: 'ic_meteor' },
   { id: 'hero_max', name: { zh: '傳奇之路', en: 'Legendary' }, desc: { zh: '任一英雄達到 10 級', en: 'Raise any hero to level 10' }, icon: 'ic_crown' },
+  { id: 'login_7', name: { zh: '忠誠守衛', en: 'Loyal Guardian' }, desc: { zh: '連續 7 天領取每日登入獎勵', en: 'Claim the daily reward 7 days in a row' }, icon: 'ic_gem' },
 ];
 
 const BOSS_ACH: Record<string, string> = {
@@ -148,6 +149,8 @@ export function achievementProgress(id: string, sv: SaveData): { cur: number; ma
       return { cur: bestEndless, max: 15 };
     case 'endless_30':
       return { cur: bestEndless, max: 30 };
+    case 'login_7':
+      return { cur: sv.login?.streak ?? 0, max: 7 };
     case 'hero_max':
       return { cur: Math.max(1, ...Object.values(sv.heroes).map((h) => heroLevelForXp(h.xp))), max: HERO_MAX_LEVEL };
     default:
