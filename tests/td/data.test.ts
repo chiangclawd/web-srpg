@@ -107,6 +107,17 @@ test('achievement ids are unique and endless milestones unlock', () => {
   assert.deepEqual(evaluateAchievements(o, sv), [], 'no duplicates on a second evaluation');
 });
 
+test('clearing either night extra chapter earns Night Watch', () => {
+  for (const levelId of ['l18', 'l19']) {
+    const sv = { achievements: [], stars: {}, challenges: {}, stats: { kills: 0, plays: 0, victories: 0, towers: 0 } } as unknown as SaveData;
+    const o: LevelOutcome = {
+      levelId, mode: 'campaign', difficulty: 'normal', victory: true, stars: 2, lives: 12, maxLives: 20,
+      towersAtEnd: 10, maxTowerLevel: 3, skillMaxed: false, earlyCalls: 0, meteorKills: 0, sheep: 0, heroLevel: 3, bossesKilled: [], wave: 13,
+    };
+    assert.ok(evaluateAchievements(o, sv).includes('night_clear'), levelId);
+  }
+});
+
 test('changelog entries are newest first, uniquely numbered and bilingual', async () => {
   const { CHANGELOG } = await import('../../src/td/data/changelog');
   assert.ok(CHANGELOG.length > 0);
