@@ -159,6 +159,7 @@ const STR = {
   nextPage: { zh: '下一頁', en: 'Next' },
   off: { zh: '關', en: 'Off' },
   train: { zh: '訓練', en: 'Train' },
+  tipTrain: { zh: '寶石也能用來訓練英雄：每次給這一級 40% 的經驗！', en: 'Gems can train your hero too: each session gives 40% of a level!' },
   notEnoughGems: { zh: '寶石不足（目前 {0}）', en: 'Not enough gems (you have {0})' },
   shopHint: { zh: '寶石來自通關、挑戰、無盡模式與成就', en: 'Earn gems from victories, challenges, endless runs and achievements' },
   epilogue: { zh: '尾聲', en: 'Epilogue' },
