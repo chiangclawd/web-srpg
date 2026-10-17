@@ -222,6 +222,7 @@ export class LevelScene extends Phaser.Scene {
     };
     document.addEventListener('visibilitychange', onHide);
     this.events.once('shutdown', () => {
+      sfx.stopAmbience();
       document.removeEventListener('visibilitychange', onHide);
       this.scale.off('resize', this.onResize, this);
       this.scene.stop('LevelUI');
@@ -238,6 +239,7 @@ export class LevelScene extends Phaser.Scene {
     this.ui = this.scene.get('LevelUI') as LevelUIScene;
 
     sfx.playBgm(this.level.bgm ?? THEME_BGM[this.level.theme]);
+    sfx.startAmbience(this.level.theme);
     if (this.world.hero?.hero) sfx.preloadVoice(this.world.hero.hero.def.id);
     for (const b of this.bossIds()) if (BOSS_VOICES[b]) sfx.preloadBossVoice(b);
     // 塔的配音等關卡畫面載完再下載（用真實時間：開場時場景可能是暫停的）
