@@ -733,7 +733,7 @@ export class LevelScene extends Phaser.Scene {
   }
 
   toggleSpeed(): number {
-    this.speed = this.speed === 1 ? 2 : 1;
+    this.speed = this.speed >= 3 ? 1 : this.speed + 1;
     save().settings.speed = this.speed;
     persist();
     return this.speed;

@@ -15,6 +15,7 @@ import type { Difficulty } from '../sim/World';
 import type { LevelMode } from '../sim/defs';
 import { ironTowers } from '../data/challenges';
 import { TOWERS } from '../data/towers';
+import { PAINTED_LEVELS, levelArtKey } from '../art/terrain';
 
 export function isUnlocked(i: number): boolean {
   if (i === 0) return true;
@@ -407,10 +408,23 @@ export class MapScene extends Phaser.Scene {
     });
     if (mode === 'campaign') {
       const stars = sv.stars[lv.id] ?? 0;
+      const thumb = PAINTED_LEVELS.has(lv.id);
+      if (thumb) this.levelThumb(c, lv.id, 0, -80, pw - 56, 84);
+      const sy = thumb ? -40 : -ph / 2 + 130;
       for (let k = 0; k < 3; k++) {
-        c.add(this.add.image((k - 1) * 46, -ph / 2 + 130, k < stars ? 'ic_star' : 'ic_star_empty').setDisplaySize(40, 40));
+        c.add(this.add.image((k - 1) * 46, sy, k < stars ? 'ic_star' : 'ic_star_empty').setDisplaySize(40, 40));
       }
-      c.add(addText(this, -pw / 2 + 28, -ph / 2 + 158, L(lv.desc), { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: pw - 56, lineSpacing: 4 }));
+      // 說明文字放不下（英文較長、手機放大字體）就逐級縮小字級，不壓到下面的難度列
+      const dy = thumb ? -14 : -ph / 2 + 158;
+      const maxH = 66 - dy;
+      let size = 16;
+      let desc = addText(this, -pw / 2 + 28, dy, L(lv.desc), { size, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: pw - 56, lineSpacing: 4 });
+      while (desc.height > maxH && size > 12) {
+        desc.destroy();
+        size--;
+        desc = addText(this, -pw / 2 + 28, dy, L(lv.desc), { size, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: pw - 56, lineSpacing: size >= 15 ? 4 : 2 });
+      }
+      c.add(desc);
     } else if (mode === 'endless') {
       const best = sv.endless[lv.id] ?? 0;
       c.add(this.add.image(-96, -ph / 2 + 130, 'ic_skull').setDisplaySize(40, 40));
@@ -426,12 +440,12 @@ export class MapScene extends Phaser.Scene {
       c.add(addText(this, 0, -ph / 2 + 176, rules, { size: 17, display: true, color: mode === 'heroic' ? '#8a2a1a' : '#2a4a7a', stroke: '#f4e2b8', strokeW: 2, shadow: false, wrap: pw - 56, align: 'center', lineSpacing: 6 }).setOrigin(0.5, 0));
     }
     // 難度
-    c.add(addText(this, 0, 74, T('difficulty'), { size: 18, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0.5));
+    c.add(addText(this, 0, 80, T('difficulty'), { size: 18, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0.5));
     const diffs: Difficulty[] = ['casual', 'normal', 'veteran'];
     const btns: Button[] = [];
     const refresh = () => btns.forEach((b, k) => b.bg.setTint(sv.settings.difficulty === diffs[k] ? 0xffffff : 0x8a8a8a));
     diffs.forEach((d, k) => {
-      const b = new Button(this, (k - 1) * 112, 112, 104, 42, T(d), () => {
+      const b = new Button(this, (k - 1) * 112, 116, 104, 42, T(d), () => {
         sv.settings.difficulty = d;
         persist();
         refresh();
@@ -453,5 +467,45 @@ export class MapScene extends Phaser.Scene {
     this.tweens.add({ targets: go, scale: 1.05, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     popIn(this, c, 0, { w: pw, h: ph }, 0.85, 220);
     this.infoPanel = c;
+  }
+
+  /**
+   * 關卡面板上的戰場縮圖：按需下載該關的手繪背景（只留這一張），裁出中段。
+   * 進關時 LevelScene 直接沿用同一張紋理，不必再下載。
+   */
+  private levelThumb(c: Phaser.GameObjects.Container, id: string, x: number, y: number, w: number, h: number): void {
+    const frame = this.add.graphics();
+    frame.fillStyle(0x3a2412, 1);
+    frame.fillRoundedRect(x - w / 2 - 5, y - h / 2 - 5, w + 10, h + 10, 10);
+    frame.fillStyle(0xc8b088, 1);
+    frame.fillRect(x - w / 2, y - h / 2, w, h);
+    c.add(frame);
+    const key = levelArtKey(id);
+    const edge = this.add.graphics();
+    const place = () => {
+      if (!c.active || !this.textures.exists(key)) return;
+      const src = this.textures.get(key).getSourceImage() as HTMLImageElement;
+      const cw = (src.width * PLAY_W) / WORLD_W;
+      const k = w / cw;
+      const ch = h / k;
+      const img = this.add.image(x, y, key).setScale(k).setAlpha(0);
+      img.setCrop((src.width - cw) / 2, (src.height - ch) / 2, cw, ch);
+      c.addAt(img, c.getIndex(frame) + 1);
+      this.tweens.add({ targets: img, alpha: 1, duration: 200 });
+    };
+    // 內框：金邊＋下緣陰影，讓壓在上面的星星看得清楚
+    edge.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0.45, 0.45);
+    edge.fillRect(x - w / 2, y + h / 2 - 34, w, 34);
+    edge.lineStyle(2, 0xe8c070, 1);
+    edge.strokeRect(x - w / 2, y - h / 2, w, h);
+    c.add(edge);
+    if (this.textures.exists(key)) {
+      place();
+      return;
+    }
+    for (const k of this.textures.getTextureKeys()) if (k.startsWith('lvbg_')) this.textures.remove(k);
+    this.load.image(key, `assets/levels/${id}.webp`);
+    this.load.once(`filecomplete-image-${key}`, place);
+    this.load.start();
   }
 }

@@ -11,6 +11,16 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 19,
+    date: '2026-10-17',
+    title: { zh: '關卡縮圖與 3 倍速', en: 'Level previews and 3× speed' },
+    items: [
+      { zh: '世界地圖的關卡面板會顯示該關的手繪戰場縮圖，進關時直接沿用，載入更快', en: 'The level panel on the world map shows a painted preview of the battlefield, which is reused when the battle starts so it loads faster' },
+      { zh: '戰鬥速度可切換 1x → 2x → 3x', en: 'Battle speed now cycles 1x → 2x → 3x' },
+      { zh: '關卡說明太長時自動縮小字級，不再壓到難度按鈕', en: 'Long level descriptions shrink to fit instead of overlapping the difficulty buttons' },
+    ],
+  },
+  {
     id: 18,
     date: '2026-10-17',
     title: { zh: '地圖機關：落石與雪崩', en: 'Map traps: boulders and avalanches' },
