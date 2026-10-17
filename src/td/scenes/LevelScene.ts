@@ -87,6 +87,8 @@ export class LevelScene extends Phaser.Scene {
   private hazardLayer: HazardLayer | null = null;
   private eggs: EggLayer | null = null;
   private night: NightLayer | null = null;
+  /** 本場遊戲時間（毫秒，結算時加進存檔） */
+  private playMs = 0;
   /** 首領倒下的慢動作（場景時間，毫秒） */
   private slowMoUntil = 0;
   /** 從存檔點繼續（手機被重新整理後） */
@@ -131,6 +133,7 @@ export class LevelScene extends Phaser.Scene {
     this.hazardLayer = null;
     this.eggs = null;
     this.night = null;
+    this.playMs = 0;
     this.slowMoUntil = 0;
     this.seenIntro = new Set(save().seenEnemies);
   }
@@ -158,6 +161,8 @@ export class LevelScene extends Phaser.Scene {
     if (cp) restore(this.world, cp);
     else clearCheckpoint();
     sv.stats.plays++;
+    sv.stats.heroUse ??= {};
+    sv.stats.heroUse[heroDef.id] = (sv.stats.heroUse[heroDef.id] ?? 0) + 1;
     persist();
 
     const cam = setupCamera(this);
@@ -1275,6 +1280,8 @@ export class LevelScene extends Phaser.Scene {
   override update(time: number, deltaMs: number): void {
     const w = this.world;
     if (!this.paused && !w.result) {
+      // 遊戲時間（真實時間，暫停不算；結算時存檔）
+      this.playMs += Math.min(deltaMs, 250);
       // 首領倒下時短暫慢動作
       const slow = time < this.slowMoUntil ? 0.3 : 1;
       this.acc += (Math.min(deltaMs, 100) / 1000) * this.speed * slow;
@@ -1921,6 +1928,9 @@ export class LevelScene extends Phaser.Scene {
     sv.stats.kills += w.stats.kills;
     sv.stats.towers = (sv.stats.towers ?? 0) + w.stats.towersBuilt;
     sv.stats.elites = (sv.stats.elites ?? 0) + w.stats.eliteKills;
+    sv.stats.bosses = (sv.stats.bosses ?? 0) + w.stats.bossesKilled.length;
+    sv.stats.playSec = (sv.stats.playSec ?? 0) + Math.round(this.playMs / 1000);
+    this.playMs = 0;
     const fresh = evaluateAchievements(
       {
         levelId: this.level.id,

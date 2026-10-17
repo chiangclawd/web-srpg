@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 55,
+    date: '2026-10-17',
+    title: { zh: '我的戰績', en: 'My Record' },
+    items: [
+      { zh: '成就頁右上角新增「統計」：遊戲時間、出戰與勝利次數、擊敗的敵人／首領／精英、建塔數、彩蛋與最常出戰的英雄', en: 'New Stats button on the achievements page: time played, battles and victories, enemies, bosses and elites defeated, towers built, easter eggs and your favourite hero' },
+    ],
+  },
+  {
     id: 54,
     date: '2026-10-17',
     title: { zh: '番外篇：月夜突襲', en: 'Extra chapter: Moonlit Raid' },
