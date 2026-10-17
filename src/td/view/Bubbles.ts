@@ -19,10 +19,10 @@ export class Bubbles {
 
   /** chance：這次要講的機率（被節流擋下時不講） */
   /** 冒出一句台詞；回傳選中的台詞索引（沒冒出來回傳 -1），讓語音能對上同一句 */
-  say(key: string, x: number, y: number, lines: L10n[] | undefined, chance = 1): number {
+  say(key: string, x: number, y: number, lines: L10n[] | undefined, chance = 1, force = false): number {
     if (!lines?.length) return -1;
     const now = this.scene.time.now;
-    if (now - this.last < GAP_MS || Math.random() > chance) return -1;
+    if (!force && (now - this.last < GAP_MS || Math.random() > chance)) return -1;
     this.last = now;
     this.live.get(key)?.destroy();
     const idx = Math.floor(Math.random() * lines.length);

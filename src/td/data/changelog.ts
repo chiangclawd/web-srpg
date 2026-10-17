@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 42,
+    date: '2026-10-17',
+    title: { zh: '首領台詞字幕', en: 'Boss lines on screen' },
+    items: [
+      { zh: '首領放話時頭上會冒出對話泡泡；還沒走進畫面時改在上方顯示字幕，關掉聲音也看得到', en: 'Boss taunts now appear as a speech bubble over the boss, or as a caption at the top while it is still off-screen, so you can read them with the sound off' },
+    ],
+  },
+  {
     id: 41,
     date: '2026-10-17',
     title: { zh: '每日登入獎勵', en: 'Daily login reward' },
