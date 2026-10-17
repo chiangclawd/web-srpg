@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { VIEW_H, addText, fitText, setupCamera, viewW, uiZoom } from '../config';
-import { HEROES, HERO_ORDER, HERO_XP_TABLE, HERO_MAX_LEVEL, heroLevelForXp } from '../data/heroes';
+import { HEROES, HERO_ORDER, HERO_XP_TABLE, HERO_MAX_LEVEL, TRAIN_PRICE, heroLevelForXp, trainXp } from '../data/heroes';
 import { LEVELS } from '../data/levels';
 import { heroStats } from '../sim/World';
 import { Button, IconButton, panel } from '../ui/widgets';
@@ -99,13 +99,38 @@ export class HeroScene extends Phaser.Scene {
       const sy = 262 + Math.floor(i / 2) * 30;
       add(addText(this, sx, sy, `${k}: ${v}`, { size: 17, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }));
     });
-    // 經驗條
+    // 經驗條（可訓練時縮短，右邊放訓練鈕）
+    const gain = trainXp(xp);
+    const canTrain = unlocked && gain > 0;
+    const barW = canTrain ? 330 : 460;
     const cur = HERO_XP_TABLE[lv - 1];
     const nxt = lv >= HERO_MAX_LEVEL ? cur : HERO_XP_TABLE[lv];
     const k = lv >= HERO_MAX_LEVEL ? 1 : (xp - cur) / (nxt - cur);
-    add(this.add.rectangle(tx, 360, 460, 14, 0x2a1608).setOrigin(0, 0.5).setStrokeStyle(2, 0x1a0a04));
-    add(this.add.rectangle(tx + 2, 360, 456 * k, 10, 0xffd84a).setOrigin(0, 0.5));
-    add(addText(this, tx + 466, 360, lv >= HERO_MAX_LEVEL ? 'MAX' : `${Math.round(xp)} / ${nxt}`, { size: 13, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
+    add(this.add.rectangle(tx, 360, barW, 14, 0x2a1608).setOrigin(0, 0.5).setStrokeStyle(2, 0x1a0a04));
+    add(this.add.rectangle(tx + 2, 360, (barW - 4) * k, 10, 0xffd84a).setOrigin(0, 0.5));
+    add(fitText(addText(this, tx + barW + 6, 360, lv >= HERO_MAX_LEVEL ? 'MAX' : `${Math.round(xp)} / ${nxt}`, { size: 13, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5), 108));
+    // 訓練：寶石換經驗（滿級或未解鎖不顯示）
+    if (canTrain) {
+      const bx = tx + 522;
+      add(
+        new Button(this, bx, 356, 128, 46, `${T('train')} ${TRAIN_PRICE}`, () => {
+          if (sv.gems < TRAIN_PRICE) {
+            sfx.play('error');
+            this.flashText(bx, 318, T('notEnoughGems', sv.gems), '#c0392b');
+            return;
+          }
+          sv.gems -= TRAIN_PRICE;
+          sv.heroes[h.id] = { xp: xp + gain };
+          persist();
+          const up = heroLevelForXp(xp + gain) > lv;
+          sfx.play(up ? 'levelup' : 'coin');
+          if (up) sfx.voice(h.id, 'select');
+          this.build();
+          this.flashText(bx, 318, up ? T('heroLevelUp') : `+${gain} XP`, up ? '#ffe066' : '#3a8a1a');
+        }, { color: 'gold', icon: 'ic_gem', iconSize: 24, text: { size: 16 } }),
+      );
+      add(fitText(addText(this, bx, 390, `+${gain} XP · ${T('gems')} ${sv.gems}`, { size: 12, color: '#5a3a1a', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0.5), 140));
+    }
     // 技能
     add(addText(this, tx, 380, T('skills'), { size: 20, display: true, color: '#7a4a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }));
     h.skills.forEach((sk, i) => {
@@ -147,6 +172,12 @@ export class HeroScene extends Phaser.Scene {
     }
     // 手機上關閉鈕放大（以左上角為錨點）
     add(new IconButton(this, 12 + 30 * uiZoom(), 10 + 30 * uiZoom(), 60, 'ic_close', () => this.back()).setBaseScale(uiZoom()));
+  }
+
+  /** 按鈕上方飄出一行字（訓練結果、寶石不足） */
+  private flashText(x: number, y: number, msg: string, color: string): void {
+    const t = addText(this, x, y, msg, { size: 18, display: true, color, strokeW: 4 }).setOrigin(0.5).setDepth(50);
+    this.tweens.add({ targets: t, y: y - 30, alpha: 0, delay: 700, duration: 500, onComplete: () => t.destroy() });
   }
 
   private back(): void {

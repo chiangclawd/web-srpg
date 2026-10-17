@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 43,
+    date: '2026-10-17',
+    title: { zh: '英雄訓練', en: 'Hero training' },
+    items: [
+      { zh: '英雄室經驗條旁新增「訓練」：花 40 寶石獲得該英雄這一級所需經驗的 40%（約 3 次升一級），滿級後不再顯示', en: 'New Train button by the XP bar in the hero room: 40 gems buy 40% of the XP the hero needs for the next level (about 3 per level); hidden at max level' },
+    ],
+  },
+  {
     id: 42,
     date: '2026-10-17',
     title: { zh: '首領台詞字幕', en: 'Boss lines on screen' },
