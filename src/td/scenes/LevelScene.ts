@@ -1406,7 +1406,7 @@ export class LevelScene extends Phaser.Scene {
             // 首領登場喊話（號角聲之後）
             const boss = this.bossIds(ev.index)[0];
             // 沙暴巨蟲是野獸，不說話只會吼
-            if (boss) this.time.delayedCall(900, () => (boss === 'wyrm' ? sfx.play('roar') : sfx.bossVoice(boss)));
+            if (boss) this.time.delayedCall(900, () => (boss === 'wyrm' ? sfx.play('roar') : this.bossTaunt(boss)));
             sfx.playBgm(this.level.bgm ?? 'boss');
             camShake(this, 400, 0.004);
           }
@@ -1743,6 +1743,16 @@ export class LevelScene extends Phaser.Scene {
     const key = BRANCH_BARKS[t.def.art] ? t.def.art : t.type;
     const i = this.bubbles.say(`t${t.id}`, t.x, t.y - lift, towerBark(t.type, t.def.art), chance);
     if (i >= 0) sfx.towerVoice(key, i);
+  }
+
+  /** 首領喊話：配音＋對話泡泡（首領還沒走進畫面就改用提示字） */
+  private bossTaunt(boss: string): void {
+    const v = BOSS_VOICES[boss];
+    if (!v) return;
+    sfx.bossVoice(boss);
+    const e = this.world.enemies.find((x) => x.alive && x.def.id === boss && x.x > 0 && x.x < WORLD_W && x.y > 0 && x.y < VIEW_H);
+    if (e) this.bubbles.say(`boss_${boss}`, e.x, e.y - e.def.radius * 2.6 - 24, [v.line], 1, true);
+    else this.ui.toast(`${L(ENEMIES[boss].name)}：「${L(v.line)}」`, 3000);
   }
 
   /** 這關（或某一波）出場的首領 */
