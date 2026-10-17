@@ -8,6 +8,7 @@ import { mapRoads, paintWorldMap } from '../art/worldmap';
 import { showTipBubble } from '../ui/tip';
 import { DAILY_MODS, dailyBaseLevel, dailyKey, dailySpec } from '../data/daily';
 import { LOGIN_GEMS, loginReward, previousDay } from '../data/login';
+import { ACHIEVEMENTS } from '../data/achievements';
 import { Button, IconButton, dimmer, panel, popIn } from '../ui/widgets';
 import { L, T, getLang } from '../i18n';
 import { save, persist, totalStars } from '../save';
@@ -188,6 +189,12 @@ export class MapScene extends Phaser.Scene {
       c.add(new Button(this, 0, ph / 2 - 46, 220, 56, `${T('claim')}  ${T('gemsEarned', reward.gems)}`, () => {
         sv.gems += reward.gems;
         sv.login = { last: today, streak: reward.day };
+        // 連續 7 天：成就
+        const ach = ACHIEVEMENTS.find((a) => a.id === 'login_7');
+        if (reward.day === 7 && ach && !sv.achievements.includes(ach.id)) {
+          sv.achievements.push(ach.id);
+          this.time.delayedCall(500, () => this.toastMsg(`${T('achUnlocked')}  ${L(ach.name)}`));
+        }
         persist();
         sfx.play('coin');
         sfx.play('sparkle');

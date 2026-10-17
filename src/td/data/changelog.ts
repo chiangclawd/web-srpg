@@ -16,6 +16,7 @@ export const CHANGELOG: ChangeEntry[] = [
     title: { zh: '每日登入獎勵', en: 'Daily login reward' },
     items: [
       { zh: '每天第一次打開地圖可以領寶石，連續登入 7 天獎勵遞增（第 7 天 30 顆）；中斷就從第 1 天重來', en: 'Claim gems the first time you open the map each day; seven days in a row pays more each day (30 on day 7), and missing a day starts over' },
+      { zh: '新成就「忠誠守衛」：連續 7 天領取登入獎勵', en: 'New achievement Loyal Guardian: claim the daily reward 7 days in a row' },
     ],
   },
   {
