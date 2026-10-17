@@ -98,3 +98,21 @@ test('wraiths shrug off damage in the dark until a light reveals them', () => {
   run(day, 0.1);
   assert.equal(day.damageEnemy(e, 100, 'true', 'tower'), 100, 'no shroud in daylight');
 });
+
+test('endless mode turns to night for waves 16-20 and back to day at 21', () => {
+  const lv = challengeLevel(LEVELS[0], 'endless');
+  const nights = lv.waves.slice(0, 40).flatMap((wv, i) => (wv.night ? [i + 1] : []));
+  assert.deepEqual(nights, [16, 17, 18, 19, 20, 36, 37, 38, 39, 40]);
+  assert.ok(lv.waves[15].groups.some((g) => g.enemy === 'wraith'), 'wraiths come out at night');
+  const w = mkWorld(lv);
+  w.waveIndex = 14; // wave 15 is on
+  assert.equal(w.isNight, false);
+  (w as unknown as { startWave(): void }).startWave();
+  assert.equal(w.isNight, true);
+  w.waveIndex = 18;
+  (w as unknown as { startWave(): void }).startWave(); // wave 20: still night
+  (w as unknown as { startWave(): void }).startWave(); // wave 21: dawn
+  assert.equal(w.isNight, false);
+  const flips = w.drainEvents().flatMap((ev) => (ev.type === 'nightfall' ? [ev.on] : []));
+  assert.deepEqual(flips, [true, false]);
+});

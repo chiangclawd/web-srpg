@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 57,
+    date: '2026-10-17',
+    title: { zh: '無盡模式：日夜交替', en: 'Endless: Day and Night' },
+    items: [
+      { zh: '無盡模式每 20 波會入夜一次（第 16–20、36–40…波），夜幕緩緩降臨，首領波在黑暗中登場', en: 'Endless now has nights: waves 16–20, 36–40 and so on. Darkness falls slowly, and the boss wave arrives in the dark' },
+      { zh: '夜裡塔的射程 -15%（燈火照到的塔除外），還有提燈怨靈趁黑出沒；天亮後一切恢復', en: 'At night towers lose 15% range (unless lit), and lantern wraiths come out. Everything returns to normal at dawn' },
+    ],
+  },
+  {
     id: 56,
     date: '2026-10-17',
     title: { zh: '夜行魔物', en: 'Creatures of the Night' },

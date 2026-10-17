@@ -243,7 +243,16 @@ export class MapScene extends Phaser.Scene {
       c.add(addText(this, tx, -ph / 2 + 40, T('heroJoined'), { size: 22, display: true, color: '#c0392b', stroke: '#fff2d0', strokeW: 4, shadow: false }).setOrigin(0, 0.5));
       c.add(addText(this, tx, -ph / 2 + 86, L(h.name), { size: 36, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0, 0.5));
       c.add(addText(this, tx, -ph / 2 + 126, L(h.title), { size: 18, display: true, color: '#7a4a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
-      c.add(addText(this, tx, -ph / 2 + 152, L(h.desc), { size: 15, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: pw - 280 }));
+      // 介紹放不下（手機上英文字變大）就逐級縮小，不壓到按鈕
+      let size = 15;
+      const descText = () => addText(this, tx, -ph / 2 + 152, L(h.desc), { size, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: pw - 280 });
+      let desc = descText();
+      while (desc.height > ph - 230 && size > 11) {
+        desc.destroy();
+        size--;
+        desc = descText();
+      }
+      c.add(desc);
       const close = () => {
         sfx.play('click');
         root.destroy();
@@ -678,7 +687,16 @@ export class MapScene extends Phaser.Scene {
       const best = sv.endless[lv.id] ?? 0;
       c.add(this.add.image(-96, -ph / 2 + 130, 'ic_skull').setDisplaySize(40, 40));
       c.add(addText(this, -68, -ph / 2 + 130, best ? T('bestWave', best) : T('noRecord'), { size: 22, display: true, color: '#2a5a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
-      c.add(addText(this, 0, -ph / 2 + 176, T('endlessRules'), { size: 17, display: true, color: '#2a5a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false, wrap: pw - 56, align: 'center', lineSpacing: 6 }).setOrigin(0.5, 0));
+      // 規則文字：放不下就逐級縮小，不壓到難度列
+      let size = 17;
+      const rules = () => addText(this, 0, -ph / 2 + 176, T('endlessRules'), { size, display: true, color: '#2a5a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false, wrap: pw - 56, align: 'center', lineSpacing: 6 }).setOrigin(0.5, 0);
+      let rt = rules();
+      while (rt.height > 66 - (-ph / 2 + 176) && size > 12) {
+        rt.destroy();
+        size--;
+        rt = rules();
+      }
+      c.add(rt);
     } else {
       const done = mode === 'heroic' ? ch.heroic : ch.iron;
       c.add(this.add.image(0, -ph / 2 + 130, done ? 'ic_star' : 'ic_star_empty').setDisplaySize(44, 44));

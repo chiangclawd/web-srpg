@@ -78,6 +78,8 @@ export type SimEvent =
   | { type: 'heroLevel'; level: number }
   | { type: 'heroSkill'; skill: string; x: number; y: number }
   | { type: 'waveStart'; index: number; boss: boolean }
+  /** 日夜交替（無盡模式）：on = 入夜 */
+  | { type: 'nightfall'; on: boolean }
   | { type: 'waveBonus'; gold: number; x: number; y: number }
   | { type: 'status'; e: Enemy; kind: 'stun' | 'root' | 'poison' | 'sheep' | 'teleport' | 'dodge' | 'enrage' | 'slow' | 'burrow' | 'surface' }
   | { type: 'summon'; x: number; y: number }
@@ -779,6 +781,7 @@ export class World {
   }
 
   private startWave(): void {
+    const wasNight = this.isNight;
     this.waveIndex++;
     const w = this.level.waves[this.waveIndex];
     let boss = false;
@@ -791,6 +794,7 @@ export class World {
     this.spawnQueue.sort((a, b) => a.at - b.at);
     this.waveState = 'spawning';
     this.emit({ type: 'waveStart', index: this.waveIndex, boss });
+    if (this.isNight !== wasNight) this.emit({ type: 'nightfall', on: this.isNight });
   }
 
   private updateWaves(): void {
@@ -1802,7 +1806,7 @@ export class World {
   }
 
   get isNight(): boolean {
-    return !!(this.level.night || this.level.rules?.night);
+    return !!(this.level.night || this.level.rules?.night || this.level.waves[this.waveIndex]?.night);
   }
 
   /** 夜裡被營火、民房、城堡、祭壇照亮的地方（蓋在這裡的塔不受夜戰射程懲罰） */

@@ -183,6 +183,8 @@ export interface WaveDef {
   gap?: number;
   /** 本波敵人血量倍率（無盡模式逐波提升） */
   hpMul?: number;
+  /** 夜戰波次（無盡模式的日夜循環：這一波開始時入夜，到下一個白天波次才天亮） */
+  night?: boolean;
 }
 
 export type ThemeId = 'grass' | 'forest' | 'snow' | 'waste' | 'autumn' | 'desert' | 'volcano' | 'coast';

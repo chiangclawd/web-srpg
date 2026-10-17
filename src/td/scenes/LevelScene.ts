@@ -87,6 +87,8 @@ export class LevelScene extends Phaser.Scene {
   private hazardLayer: HazardLayer | null = null;
   private eggs: EggLayer | null = null;
   private night: NightLayer | null = null;
+  /** 白天的環境生物（蝴蝶、海鷗）：無盡模式入夜時淡出 */
+  private dayLife: Phaser.GameObjects.Image[] = [];
   /** 本場遊戲時間（毫秒，結算時加進存檔） */
   private playMs = 0;
   /** 首領倒下的慢動作（場景時間，毫秒） */
@@ -133,6 +135,7 @@ export class LevelScene extends Phaser.Scene {
     this.hazardLayer = null;
     this.eggs = null;
     this.night = null;
+    this.dayLife = [];
     this.playMs = 0;
     this.slowMoUntil = 0;
     this.seenIntro = new Set(save().seenEnemies);
@@ -215,7 +218,8 @@ export class LevelScene extends Phaser.Scene {
     this.makeLife();
     this.eggs = new EggLayer(this, this.level, this.fx, this.bubbles);
     // 夜戰：夜幕＋光圈
-    if (this.isNight) this.night = new NightLayer(this, this.world, this.level.decor ?? []);
+    // 夜戰關卡，或無盡模式裡有夜晚波次（日夜交替時夜幕淡入淡出）
+    if (this.isNight || this.level.waves.some((w) => w.night)) this.night = new NightLayer(this, this.world, this.level.decor ?? []);
 
     // 全域點擊
     this.setupGestures();
@@ -495,10 +499,11 @@ export class LevelScene extends Phaser.Scene {
       }
     }
     const theme = this.level.theme;
-    if (this.isNight) {
-      // 夜晚：螢火蟲在草叢間忽明忽滅（疊在夜幕上面才看得到）
+    if (this.night) {
+      // 夜晚：螢火蟲在草叢間忽明忽滅（放在夜幕圖層裡，天亮時跟著淡出）
+      const night = this.night;
       for (let i = 0; i < 14; i++) {
-        const f = this.add.image(Phaser.Math.Between(40, PLAY_W - 40), Phaser.Math.Between(80, 680), 'fx_soft').setTint(0xd8ff7a).setBlendMode('ADD').setDepth(DEPTH.proj + 502);
+        const f = night.adopt(this.add.image(Phaser.Math.Between(40, PLAY_W - 40), Phaser.Math.Between(80, 680), 'fx_soft').setTint(0xd8ff7a).setBlendMode('ADD').setDepth(3));
         f.setDisplaySize(10, 10).setAlpha(0);
         const drift = () => {
           const tx = Phaser.Math.Clamp(f.x + Phaser.Math.Between(-120, 120), 20, PLAY_W - 20);
@@ -508,11 +513,14 @@ export class LevelScene extends Phaser.Scene {
         drift();
         this.tweens.add({ targets: f, alpha: 0.9, duration: Phaser.Math.Between(500, 900), yoyo: true, repeat: -1, repeatDelay: Phaser.Math.Between(400, 2600), delay: i * 300 });
       }
+    }
+    if (this.isNight) {
+      // 夜戰關卡沒有白天的環境生物
     } else if (theme === 'grass' || theme === 'forest') {
       // 蝴蝶：在場上隨意飛（拍翅＝左右縮放）
       const tints = [0xffe070, 0xff9ad0, 0x9ad0ff, 0xffffff, 0xffb060];
       for (let i = 0; i < 5; i++) {
-        const b = this.add.image(Phaser.Math.Between(80, PLAY_W - 80), Phaser.Math.Between(80, 640), 'fx_butterfly').setTint(tints[i]).setDepth(DEPTH.float - 30);
+        const b = this.dayCritter(this.add.image(Phaser.Math.Between(80, PLAY_W - 80), Phaser.Math.Between(80, 640), 'fx_butterfly').setTint(tints[i]).setDepth(DEPTH.float - 30));
         const k = (0.75 + Math.random() * 0.3) / TEX;
         b.setScale(k);
         this.tweens.add({ targets: b, scaleX: k * 0.25, duration: 110 + i * 9, yoyo: true, repeat: -1 });
@@ -571,8 +579,8 @@ export class LevelScene extends Phaser.Scene {
     } else if (theme === 'coast') {
       // 海鷗在海灣上空盤旋滑翔（偶爾拍翅），地上跟著淡淡的影子
       for (let i = 0; i < 4; i++) {
-        const gull = this.add.image(0, 0, 'fx_gull').setDepth(DEPTH.float - 20);
-        const shadow = this.add.image(0, 0, 'fx_gull').setTint(0x000000).setAlpha(0.18).setDepth(DEPTH.decal);
+        const gull = this.dayCritter(this.add.image(0, 0, 'fx_gull').setDepth(DEPTH.float - 20));
+        const shadow = this.dayCritter(this.add.image(0, 0, 'fx_gull').setTint(0x000000).setAlpha(0.18).setDepth(DEPTH.decal));
         const k = (1.2 + Math.random() * 0.4) / TEX;
         gull.setScale(k);
         shadow.setScale(k * 0.9);
@@ -938,6 +946,11 @@ export class LevelScene extends Phaser.Scene {
   /** 夜戰關卡或「月黑風高」每日修正 */
   get isNight(): boolean {
     return this.world.isNight;
+  }
+
+  private dayCritter(o: Phaser.GameObjects.Image): Phaser.GameObjects.Image {
+    this.dayLife.push(o.setData('a0', o.alpha));
+    return o;
   }
 
   private openTowerMenu(t: Tower): void {
@@ -1472,6 +1485,12 @@ export class LevelScene extends Phaser.Scene {
           break;
         case 'heroSkill':
           this.heroSkillFx(ev.skill, ev.x, ev.y);
+          break;
+        case 'nightfall':
+          // 無盡模式的日夜交替
+          this.ui.toast(T(ev.on ? 'nightFalls' : 'dawnBreaks'), 3200);
+          sfx.startAmbience(this.level.theme, ev.on);
+          for (const o of this.dayLife) this.tweens.add({ targets: o, alpha: ev.on ? 0 : o.getData('a0'), duration: 2500 });
           break;
         case 'waveStart':
           // 開波前的狀態存成存檔點（手機被重新整理後可從這一波繼續）

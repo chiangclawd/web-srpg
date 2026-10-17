@@ -12,8 +12,14 @@ const RES = 0.5;
  * 夜幕只在塔蓋好／賣掉時重畫（手機上每幀重畫太吃效能）；
  * 會移動的英雄、士兵與爆炸火光改用加亮的柔光貼圖跟著走（同一張貼圖，一次就畫完）。
  * 夜幕在單位之上、特效與血條之下，所以爆炸火光仍然亮眼。
+ * 全部放在同一個圖層裡：無盡模式日夜交替時整層淡入淡出。
  */
+/** 入夜／天亮的淡入淡出（毫秒） */
+const FADE_MS = 2500;
+
 export class NightLayer {
+  private layer: Phaser.GameObjects.Layer;
+  private on: boolean;
   private rt: Phaser.GameObjects.RenderTexture;
   private brush: Phaser.GameObjects.Image;
   private fixed: { x: number; y: number; r: number }[] = [];
@@ -25,11 +31,15 @@ export class NightLayer {
     private world: World,
     decor: DecorItem[],
   ) {
+    this.layer = scene.add.layer().setDepth(DEPTH.proj + 500);
+    this.on = world.isNight;
+    this.layer.setAlpha(this.on ? 1 : 0).setVisible(this.on);
     this.rt = scene.add
       .renderTexture(-PLAY_X0, 0, Math.ceil(WORLD_W * RES), Math.ceil(VIEW_H * RES))
       .setOrigin(0)
       .setScale(1 / RES)
-      .setDepth(DEPTH.proj + 500);
+      .setDepth(0);
+    this.layer.add(this.rt);
     this.brush = scene.make.image({ key: 'fx_soft', add: false });
     // 固定光源：營火、民房窗戶、城堡、祭壇
     for (const d of decor) {
@@ -43,21 +53,42 @@ export class NightLayer {
       if (!f) continue;
       this.fixed.push(f);
       // 營火、窗戶的暖色光暈（ADD 疊在夜幕上，搖曳用 tween，不必重畫夜幕）
-      const g = scene.add.image(f.x, f.y, 'fx_soft').setTint(0xffb050).setBlendMode('ADD').setDepth(DEPTH.proj + 501);
+      const g = this.adopt(scene.add.image(f.x, f.y, 'fx_soft').setTint(0xffb050).setBlendMode('ADD').setDepth(1));
       g.setDisplaySize(f.r * 1.1, f.r * 0.85).setAlpha(0.2 + flicker * 0.12);
       if (flicker > 0.5) scene.tweens.add({ targets: g, alpha: 0.18, duration: 180, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
   }
 
+  /** 把物件放進夜幕圖層（跟著入夜淡入、天亮淡出；depth 是圖層內的順序） */
+  adopt<T extends Phaser.GameObjects.GameObject>(o: T): T {
+    this.layer.add(o);
+    return o;
+  }
+
   /** 爆炸、流星、雷擊：短暫照亮（加亮的柔光，自己淡出） */
   flash(x: number, y: number, r: number): void {
-    const g = this.scene.add.image(x, y, 'fx_soft').setTint(0xffd89a).setBlendMode('ADD').setDepth(DEPTH.proj + 502);
+    if (!this.on) return;
+    const g = this.adopt(this.scene.add.image(x, y, 'fx_soft').setTint(0xffd89a).setBlendMode('ADD').setDepth(2));
     g.setDisplaySize(r * 2, r * 1.6).setAlpha(0.55);
     this.scene.tweens.add({ targets: g, alpha: 0, duration: 450, onComplete: () => g.destroy() });
   }
 
   update(): void {
     const w = this.world;
+    // 日夜交替：整層淡入淡出
+    if (w.isNight !== this.on) {
+      this.on = w.isNight;
+      this.scene.tweens.killTweensOf(this.layer);
+      if (this.on) this.layer.setVisible(true);
+      this.scene.tweens.add({
+        targets: this.layer,
+        alpha: this.on ? 1 : 0,
+        duration: FADE_MS,
+        ease: 'Sine.easeInOut',
+        onComplete: () => this.layer.setVisible(this.on),
+      });
+    }
+    if (!this.layer.visible) return;
     // 夜幕：塔或建造點變動時才重畫
     const sig = w.spots.map((s) => (s.tower ? s.tower.id : '-')).join(',');
     if (sig !== this.sig) {
@@ -71,7 +102,7 @@ export class NightLayer {
       const hero = s.kind === 'hero';
       let g = this.glows[n];
       if (!g) {
-        g = this.scene.add.image(0, 0, 'fx_soft').setTint(0xfff0c8).setBlendMode('ADD').setDepth(DEPTH.proj + 501);
+        g = this.adopt(this.scene.add.image(0, 0, 'fx_soft').setTint(0xfff0c8).setBlendMode('ADD').setDepth(1));
         this.glows.push(g);
       }
       g.setVisible(true).setPosition(s.x, s.y - 14);
@@ -99,8 +130,7 @@ export class NightLayer {
   }
 
   destroy(): void {
-    this.rt.destroy();
+    this.layer.destroy();
     this.brush.destroy();
-    this.glows.forEach((g) => g.destroy());
   }
 }
