@@ -8,6 +8,7 @@ import { mapRoads, paintWorldMap, type MapNode } from '../art/worldmap';
 import { showTipBubble } from '../ui/tip';
 import { DAILY_MODS, dailyBaseLevel, dailyKey, dailySpec } from '../data/daily';
 import { LOGIN_GEMS, loginReward, previousDay } from '../data/login';
+import { claimable, ensureQuests, questText, type QuestDay } from '../data/quests';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { Button, IconButton, dimmer, panel, popIn } from '../ui/widgets';
 import { L, T, getLang } from '../i18n';
@@ -417,8 +418,83 @@ export class MapScene extends Phaser.Scene {
       this.tweens.add({ targets: dot, scale: 1.25, duration: 500, yoyo: true, repeat: -1 });
       topRight.add(dot);
     }
+    // 每日任務（每日挑戰下方；有任務可領獎時亮紅點）
+    const qb = new Button(this, -104, 92, 180, 48, T('quests'), () => this.showQuests(), { color: 'wood', icon: 'ic_check', iconSize: 26, text: { size: 18 } });
+    topRight.add(qb);
+    const ready = claimable(this.todayQuests());
+    if (ready > 0) {
+      const dot = this.add.circle(-22, 74, 11, 0xc0392b).setStrokeStyle(2, 0xffffff);
+      const dt = addText(this, -22, 74, String(ready), { size: 13, display: true }).setOrigin(0.5);
+      this.tweens.add({ targets: [dot, dt], scale: 1.2, duration: 500, yoyo: true, repeat: -1 });
+      topRight.add([dot, dt]);
+    }
     this.hud.push(back);
     this.hud.forEach((o) => (o as unknown as Phaser.GameObjects.Components.Depth).setDepth?.(500));
+  }
+
+  /** 今天的任務（換日自動重抽並存檔） */
+  private todayQuests(): QuestDay {
+    const sv = save();
+    const cleared = LEVELS.filter((l) => !l.bonus && (sv.stars[l.id] ?? 0) > 0).length;
+    const q = ensureQuests(sv.quests, dailyKey(), cleared);
+    if (q !== sv.quests) {
+      sv.quests = q;
+      persist();
+    }
+    return q;
+  }
+
+  /** 每日任務面板：三個任務的進度條，完成的可以領寶石 */
+  private showQuests(): void {
+    this.infoPanel?.destroy();
+    const q = this.todayQuests();
+    const w = viewW(this);
+    const left = -(w - PLAY_W) / 2;
+    const pw = 560;
+    const ph = 400;
+    const c = this.add.container(left + w / 2, 340).setDepth(650);
+    c.add(panel(this, 0, 0, pw, ph));
+    c.add(addText(this, 0, -ph / 2 + 38, T('dailyQuests'), { size: 28, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0.5));
+    c.add(addText(this, 0, -ph / 2 + 70, T('questReset'), { size: 14, color: '#6a4a2a', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0.5));
+    q.list.forEach((s, k) => {
+      const y = -ph / 2 + 128 + k * 86;
+      const done = s.cur >= s.n;
+      c.add(panel(this, 0, y, pw - 50, 74, done && !s.claimed ? 'ui_panel' : 'ui_dark', 16));
+      const tc = done && !s.claimed ? '#4a2a10' : '#f4e2b8';
+      c.add(fitText(addText(this, -pw / 2 + 46, y - 14, L(questText(s)), { size: 18, display: true, color: tc, stroke: done && !s.claimed ? '#f4e2b8' : '#2a1608', strokeW: 2, shadow: false }).setOrigin(0, 0.5), 300));
+      // 進度條
+      const bw = 230;
+      const bar = this.add.graphics();
+      bar.fillStyle(0x1a0e06, 0.8).fillRoundedRect(-pw / 2 + 46, y + 8, bw, 14, 7);
+      bar.fillStyle(done ? 0x6ac04a : 0xe0b040, 1).fillRoundedRect(-pw / 2 + 46, y + 8, Math.max(14, (bw * s.cur) / s.n), 14, 7);
+      c.add(bar);
+      c.add(addText(this, -pw / 2 + 46 + bw + 10, y + 15, `${s.cur}/${s.n}`, { size: 14, color: tc, stroke: '#2a1608', strokeW: done && !s.claimed ? 0 : 2, shadow: false }).setOrigin(0, 0.5));
+      // 獎勵＋領取
+      const rx = pw / 2 - 96;
+      if (s.claimed) {
+        c.add(this.add.image(rx, y, 'ui_badge_green').setDisplaySize(48, 48));
+        c.add(this.add.image(rx, y, 'ic_check').setDisplaySize(28, 28));
+      } else {
+        const b = new Button(this, rx, y, 120, 50, `${s.reward}`, () => {
+          if (s.cur < s.n || s.claimed) return;
+          s.claimed = true;
+          const sv = save();
+          sv.gems = (sv.gems ?? 0) + s.reward;
+          persist();
+          sfx.play('coin');
+          sfx.play('sparkle', 0.6);
+          this.buildHud();
+          this.showQuests();
+        }, { color: done ? 'green' : 'grey', icon: 'ic_gem', iconSize: 28, text: { size: 22 }, disabled: !done });
+        c.add(b);
+      }
+    });
+    c.add(new IconButton(this, pw / 2 - 18, -ph / 2 + 18, 40, 'ic_close', () => {
+      this.infoPanel?.destroy();
+      this.infoPanel = null;
+    }));
+    popIn(this, c, 0, { w: pw, h: ph }, 0.85, 220);
+    this.infoPanel = c;
   }
 
   /** 每日挑戰面板：今天的關卡、兩個修正、今日最佳 */

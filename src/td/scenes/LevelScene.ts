@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { PLAY_W, PLAY_X0, RS, TEX, VIEW_H, WORLD_W, bgScale, freeCanvasTexture, hudZoom, isTouchDevice, setupCamera, uiZoom, viewW } from '../config';
-import { getLevel } from '../data/levels';
+import { LEVELS, getLevel } from '../data/levels';
 import { HEROES } from '../data/heroes';
 import { TOWERS, TOWER_ORDER } from '../data/towers';
 import { ENEMIES } from '../data/enemies';
@@ -10,6 +10,7 @@ import { Enemy, Soldier, Tower, type Projectile } from '../sim/entities';
 import type { LevelDef, LevelMode, TowerLevelDef, TowerType } from '../sim/defs';
 import { challengeLevel } from '../data/challenges';
 import { dailyKey, dailyLevel } from '../data/daily';
+import { addQuestProgress, ensureQuests, questText } from '../data/quests';
 import { evaluateAchievements } from '../data/achievements';
 import { STORY, type EpilogueId } from '../data/story';
 import { GEMS_PER_ACHIEVEMENT, ITEMS, KEG, gemReward, type ItemId } from '../data/items';
@@ -1890,6 +1891,20 @@ export class LevelScene extends Phaser.Scene {
       },
       sv,
     );
+    // 每日任務進度
+    const cleared = LEVELS.filter((l) => !l.bonus && (sv.stars[l.id] ?? 0) > 0).length;
+    sv.quests = ensureQuests(sv.quests, dailyKey(), cleared);
+    const questsDone = addQuestProgress(sv.quests, {
+      kills: w.stats.kills,
+      wins: victory ? 1 : 0,
+      threeStars: victory && stars >= 3 ? 1 : 0,
+      towers: w.stats.towersBuilt,
+      meteorKills: w.stats.meteorKills,
+      earlyCalls: w.stats.earlyCalls,
+      bosses: w.stats.bossesKilled.length,
+      hazardKills: w.stats.hazardKills,
+      daily: this.mode0 === 'daily' && victory ? 1 : 0,
+    });
     // 寶石：本場獎勵＋新成就
     const firstClear = this.mode0 === 'campaign' ? victory && prevCampaignStars === 0 : this.mode0 === 'daily' || this.mode0 === 'bossrush' ? dailyFirst : newStars > 0;
     const gems = gemReward(this.mode0, victory, stars, firstClear, reached) + fresh.length * GEMS_PER_ACHIEVEMENT;
@@ -1901,6 +1916,7 @@ export class LevelScene extends Phaser.Scene {
     if (this.mode0 === 'endless') this.ui.showEndlessResult(reached, sv.endless[this.level.id] ?? reached, newRecord);
     else this.ui.showResult(victory, stars, newStars);
     fresh.forEach((id, i) => this.time.delayedCall(1800 + i * 2200, () => this.ui.achievementToast(id)));
+    questsDone.forEach((q, i) => this.time.delayedCall(2400 + (fresh.length + i) * 2200, () => this.ui.toast(T('questDone') + L(questText(q)), 2600)));
   }
 
   private heroUltFx(hero: string, x: number, y: number, r: number): void {
