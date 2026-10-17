@@ -273,15 +273,25 @@ export class MenuScene extends Phaser.Scene {
     const sv = save();
     const label = (y: number, text: string) =>
       c.add(addText(this, -170, y, text, { size: 22, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
+    // 音量：點一下循環 關 → 30% → 60% → 100%
+    const LEVELS = [0, 0.3, 0.6, 1];
     const row = (y: number, text: string, key: 'music' | 'sfx') => {
       label(y, text);
+      const pct = addText(this, 104, y, '', { size: 18, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(1, 0.5);
+      const show = () => pct.setText(sv.settings[key] > 0 ? `${Math.round(sv.settings[key] * 100)}%` : T('off'));
+      show();
       const b = new IconButton(this, 140, y, 50, sv.settings[key] > 0 ? 'ic_sound_on' : 'ic_sound_off', () => {
-        sv.settings[key] = sv.settings[key] > 0 ? 0 : key === 'music' ? 0.6 : 0.8;
+        const cur = sv.settings[key];
+        // 舊存檔的 0.8 等非整格數值：跳到下一個更大的檔位
+        const next = LEVELS.find((v) => v > cur + 0.01);
+        sv.settings[key] = next ?? 0;
         persist();
         sfx.refreshVolumes();
         b.setIcon(sv.settings[key] > 0 ? 'ic_sound_on' : 'ic_sound_off');
+        show();
+        if (key === 'sfx' && sv.settings.sfx > 0) sfx.play('coin');
       });
-      c.add(b);
+      c.add([pct, b]);
     };
     row(-172, T('music'), 'music');
     row(-122, T('sound'), 'sfx');

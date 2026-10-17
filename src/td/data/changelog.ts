@@ -11,27 +11,34 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 45,
+    date: '2026-10-17',
+    title: { zh: '角色開口說話了', en: 'Heroes, bosses and towers speak' },
+    items: [
+      { zh: '八位英雄都有中英文配音：選定、開戰、移動、施放絕招時會喊話並冒出對話泡泡；英雄室點頭像也會打招呼', en: 'All eight heroes are voiced in Chinese and English: they speak with a speech bubble when chosen, at the first wave, when moved and when casting their ultimate, and greet you in the hero room' },
+      { zh: '八位首領登場時會放話（頭上泡泡或畫面字幕，關掉聲音也看得到）；沙暴巨蟲則會震耳咆哮', en: 'Eight bosses taunt you on arrival (as a bubble or caption, readable with the sound off); the Sandstorm Wyrm roars' },
+      { zh: '英文模式下防禦塔也會說出泡泡上的台詞（中文配音之後補上）', en: 'Towers speak their bubble lines in English (Chinese voices coming later)' },
+      { zh: '設定新增「角色語音」開關', en: 'New Voices switch in Settings' },
+    ],
+  },
+  {
     id: 44,
     date: '2026-10-17',
-    title: { zh: '新勝利音樂', en: 'New victory fanfare' },
+    title: { zh: '全新原創配樂', en: 'All-new soundtrack' },
     items: [
-      { zh: '勝利時改奏主題曲的收尾和弦；結算時戰鬥配樂會先淡出，不再和勝負音樂疊在一起', en: 'Victory now plays the closing chord of the main theme, and the battle music fades out on the result screen instead of clashing with it' },
+      { zh: '十首新配樂：標題、世界地圖、草原／森林／雪山／荒原／沙漠／火山各有專屬戰鬥曲，首領登場與最終關另有專屬音樂', en: 'Ten new tracks: title, world map, a battle theme for each land, plus boss and final-battle music' },
+      { zh: '勝利時奏起主題曲的收尾和弦，結算時戰鬥配樂會先淡出', en: 'Victory plays the main theme’s closing chord, and battle music fades out on the result screen' },
+      { zh: '圖鑑新增「音樂」分頁，到過的地區就能自由聆聽', en: 'New Music tab in the encyclopedia: listen to every track from lands you have reached' },
+      { zh: '設定裡的音樂、音效可切換 關／30%／60%／100%', en: 'Music and sound volume step through Off / 30% / 60% / 100% in Settings' },
     ],
   },
   {
     id: 43,
     date: '2026-10-17',
-    title: { zh: '英雄訓練', en: 'Hero training' },
+    title: { zh: '英雄更好用', en: 'Hero upgrades' },
     items: [
-      { zh: '英雄室經驗條旁新增「訓練」：花 40 寶石獲得該英雄這一級所需經驗的 40%（約 3 次升一級），滿級後不再顯示', en: 'New Train button by the XP bar in the hero room: 40 gems buy 40% of the XP the hero needs for the next level (about 3 per level); hidden at max level' },
-    ],
-  },
-  {
-    id: 42,
-    date: '2026-10-17',
-    title: { zh: '首領台詞字幕', en: 'Boss lines on screen' },
-    items: [
-      { zh: '首領放話時頭上會冒出對話泡泡；還沒走進畫面時改在上方顯示字幕，關掉聲音也看得到', en: 'Boss taunts now appear as a speech bubble over the boss, or as a caption at the top while it is still off-screen, so you can read them with the sound off' },
+      { zh: '關卡面板「出征」旁有英雄頭像，點一下就能直接換出戰英雄（附名字）', en: 'Swap heroes right from the level panel: tap the portrait next to Battle' },
+      { zh: '英雄室新增「訓練」：花 40 寶石獲得這一級所需經驗的 40%（約 3 次升一級）', en: 'New Train button in the hero room: 40 gems buy 40% of the XP needed for the next level (about 3 per level)' },
     ],
   },
   {
@@ -41,65 +48,6 @@ export const CHANGELOG: ChangeEntry[] = [
     items: [
       { zh: '每天第一次打開地圖可以領寶石，連續登入 7 天獎勵遞增（第 7 天 30 顆）；中斷就從第 1 天重來', en: 'Claim gems the first time you open the map each day; seven days in a row pays more each day (30 on day 7), and missing a day starts over' },
       { zh: '新成就「忠誠守衛」：連續 7 天領取登入獎勵', en: 'New achievement Loyal Guardian: claim the daily reward 7 days in a row' },
-    ],
-  },
-  {
-    id: 40,
-    date: '2026-10-17',
-    title: { zh: '沙暴巨蟲的咆哮', en: 'The wyrm roars' },
-    items: [
-      { zh: '沙暴巨蟲登場時會發出震耳的咆哮', en: 'The Sandstorm Wyrm now lets out a ground-shaking roar when it arrives' },
-    ],
-  },
-  {
-    id: 39,
-    date: '2026-10-17',
-    title: { zh: '音樂室', en: 'Music room' },
-    items: [
-      { zh: '圖鑑新增「音樂」分頁，可以自由聆聽十首配樂；到過那片土地就會解鎖該曲', en: 'The encyclopedia has a new Music tab: listen to all ten tracks, each unlocking once you reach its land' },
-    ],
-  },
-  {
-    id: 38,
-    date: '2026-10-17',
-    title: { zh: '防禦塔開口說話（英文版）', en: 'Towers talk' },
-    items: [
-      { zh: '英文模式下，蓋塔、升級、點塔時防禦塔會說出對話泡泡上的台詞；中文配音之後補上', en: 'Towers now speak their speech-bubble lines when built, upgraded or tapped (English for now)' },
-      { zh: '英雄室點英雄頭像時，英雄會打聲招呼', en: 'Tapping a hero in the hero room makes them say hello' },
-    ],
-  },
-  {
-    id: 37,
-    date: '2026-10-17',
-    title: { zh: '出征前換英雄', en: 'Swap heroes before battle' },
-    items: [
-      { zh: '關卡面板的「出征」旁邊多了英雄頭像，點一下就能直接換出戰英雄，不必再跑去英雄室', en: 'The level panel now has a hero portrait next to Battle: tap it to swap heroes without visiting the hero room' },
-    ],
-  },
-  {
-    id: 36,
-    date: '2026-10-17',
-    title: { zh: '首領登場喊話', en: 'Boss taunts' },
-    items: [
-      { zh: '八位首領登場時會放話（沙暴巨蟲是野獸，只會吼）', en: 'Eight bosses now taunt you when they arrive (the Sandstorm Wyrm just roars)' },
-      { zh: '設定新增「角色語音」開關', en: 'New Voices switch in Settings' },
-    ],
-  },
-  {
-    id: 35,
-    date: '2026-10-17',
-    title: { zh: '英雄開口說話了', en: 'Heroes speak' },
-    items: [
-      { zh: '八位英雄都有自己的聲音（中文／英文依語言切換）：選定英雄、開戰、移動和施放絕招時會喊話', en: 'All eight heroes have their own voice in Chinese and English: they speak when chosen, when the battle starts, when moved and when casting their ultimate' },
-    ],
-  },
-  {
-    id: 34,
-    date: '2026-10-17',
-    title: { zh: '全新原創配樂', en: 'All-new soundtrack' },
-    items: [
-      { zh: '十首新配樂：標題、世界地圖、草原／森林／雪山／荒原／沙漠／火山各有專屬戰鬥曲', en: 'Ten new tracks: title, world map and a battle theme for each land: meadow, forest, snow, wasteland, desert and volcano' },
-      { zh: '首領登場時換成首領戰配樂，最終關有專屬決戰曲', en: 'Bosses bring their own battle music, and the final level has its own showdown theme' },
     ],
   },
   {

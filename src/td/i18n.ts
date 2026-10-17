@@ -157,6 +157,7 @@ const STR = {
   loginHint: { zh: '每天回來領寶石，連續 7 天獎勵最多！', en: 'Come back daily: day 7 in a row pays the most!' },
   claim: { zh: '領取', en: 'Claim' },
   nextPage: { zh: '下一頁', en: 'Next' },
+  off: { zh: '關', en: 'Off' },
   train: { zh: '訓練', en: 'Train' },
   notEnoughGems: { zh: '寶石不足（目前 {0}）', en: 'Not enough gems (you have {0})' },
   shopHint: { zh: '寶石來自通關、挑戰、無盡模式與成就', en: 'Earn gems from victories, challenges, endless runs and achievements' },
