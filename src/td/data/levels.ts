@@ -237,6 +237,7 @@ export const LEVELS: LevelDef[] = [
     },
     theme: 'snow',
     seed: 41,
+    hazards: [{ kind: 'snowball', x: 346, y: 386, path: 0, d0: 2250, d1: 1760 }],
     bgm: 'tense',
     paths: [
       [
@@ -307,6 +308,7 @@ export const LEVELS: LevelDef[] = [
     },
     theme: 'autumn',
     seed: 53,
+    hazards: [{ kind: 'boulder', x: 289, y: 278, path: 0, d0: 1480, d1: 1060 }],
     bgm: 'epic',
     paths: [
       [
@@ -602,6 +604,7 @@ export const LEVELS: LevelDef[] = [
     },
     theme: 'autumn',
     seed: 97,
+    hazards: [{ kind: 'boulder', x: 967, y: 206, path: 0, d0: 760, d1: 380 }],
     bgm: 'tense',
     paths: [
       [
@@ -1103,6 +1106,7 @@ export const LEVELS: LevelDef[] = [
     },
     theme: 'snow',
     seed: 151,
+    hazards: [{ kind: 'snowball', x: 189, y: 244, path: 0, d0: 1170, d1: 1650, dmg: 260 }],
     bgm: 'tense',
     paths: [
       [

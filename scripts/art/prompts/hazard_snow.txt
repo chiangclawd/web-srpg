@@ -1,0 +1,8 @@
+The reference images show the TARGET art style of my 2D fantasy tower-defense game: hand-painted chibi fantasy game sprites with clean dark-brown outlines, soft cel shading, rich painted textures and warm lighting, seen from a slightly top-down three-quarter view.
+
+Paint ONE game sprite sheet in exactly that style with exactly 3 separate objects in ONE horizontal row, with wide empty gaps between them, all standing on the same ground line:
+1. LEFT: a small craggy rock outcrop (a knee-high ledge of grey stone half buried under thick snow and icicles) with ONE huge round packed snowball (with a few pebbles and twigs stuck in it) resting on top of it, held in place by a thick wooden wedge and a frayed rope tied to a wooden stake. It should look like a trap that can be pushed down.
+2. MIDDLE: the SAME rock outcrop after the trap was used: the snowball is gone, the rope is snapped and hanging, the wooden wedge is knocked over, a few lumps of snow left on top.
+3. RIGHT: the huge snowball ALONE (the same one from object 1), white with soft blue shading, a few pebbles and twigs stuck in it, about as wide as the outcrop's top.
+- Do NOT draw any people, monsters, roads, grass ground, shadows on the background or text.
+- Background: perfectly flat solid magenta (#FF00FF) everywhere. No frame, no labels.

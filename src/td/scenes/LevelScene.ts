@@ -19,6 +19,7 @@ import { THEMES } from '../art/scenery';
 import { visualMuzzleH } from '../art/towers';
 import { DEPTH, Fx, camShake } from '../view/Fx';
 import { TowerView, UnitView } from '../view/Units';
+import { HazardLayer, hazardTextures } from '../view/Hazards';
 import { RadialMenu, type RadialOption } from '../view/RadialMenu';
 import { IconButton } from '../ui/widgets';
 import { sfx } from '../audio';
@@ -73,6 +74,7 @@ export class LevelScene extends Phaser.Scene {
   private exitMarks: Phaser.GameObjects.Image[] = [];
   private projPool: Phaser.GameObjects.Image[] = [];
   private ambient: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+  private hazardLayer: HazardLayer | null = null;
 
   constructor() {
     super('Level');
@@ -107,6 +109,7 @@ export class LevelScene extends Phaser.Scene {
     this.exitMarks = [];
     this.projPool = [];
     this.skullArmedUntil = 0;
+    this.hazardLayer = null;
     this.seenIntro = new Set(save().seenEnemies);
   }
 
@@ -114,6 +117,7 @@ export class LevelScene extends Phaser.Scene {
     // 手繪戰場背景按需下載（每關約 250 KB）；失敗就退回程序繪製
     const id = this.baseLevel.id;
     if (PAINTED_LEVELS.has(id) && !this.textures.exists(levelArtKey(id))) this.load.image(levelArtKey(id), `assets/levels/${id}.webp`);
+    for (const k of hazardTextures((this.level.hazards ?? []).map((h) => h.kind))) if (!this.textures.exists(k)) this.load.image(k, `assets/sprites/hz/${k}.webp`);
   }
 
   create(): void {
@@ -168,6 +172,9 @@ export class LevelScene extends Phaser.Scene {
       hit.on('pointerout', () => img.clearTint());
       this.spotHits.push(hit);
     });
+
+    // 地圖機關（落石／雪球）
+    if (this.world.hazards.length) this.hazardLayer = new HazardLayer(this, this.world, this.fx, (p) => this.isTap(p));
 
     // 環境粒子
     this.makeAmbient();
@@ -1301,11 +1308,26 @@ export class LevelScene extends Phaser.Scene {
         case 'waveStart':
           this.ui.waveBanner(ev.index + 1, this.world.waveCount, ev.boss);
           this.maybeTip(ev.index);
+          if (this.hazardLayer && !save().tipsSeen.includes('hazard')) {
+            this.time.delayedCall(4000, () => {
+              if (!this.hazardLayer || this.world.result || this.ui.hasModal() || save().tipsSeen.includes('hazard')) return;
+              save().tipsSeen.push('hazard');
+              persist();
+              this.ui.toast(T('tipHazard'), 5500);
+              this.hazardLayer.pointAt(0, 6000);
+            });
+          }
           if (ev.boss) {
             sfx.play('boss');
             sfx.playBgm(this.level.id === 'l12' ? 'finale' : 'epic');
             camShake(this, 400, 0.004);
           }
+          break;
+        case 'hazard':
+          this.hazardLayer?.onTrigger(ev.i, ev.x, ev.y, ev.tx, ev.ty);
+          break;
+        case 'hazardEnd':
+          this.hazardLayer?.onEnd(ev.i, ev.x, ev.y, ev.kills);
           break;
         case 'waveBonus':
           this.fx.floatText(ev.x, ev.y - 30, `+${ev.gold}`, '#ffe066', 22);
@@ -1582,6 +1604,7 @@ export class LevelScene extends Phaser.Scene {
       if (s.expireAt !== Infinity && s.expireAt - t < 3) v.body.setAlpha(0.5 + 0.5 * Math.abs(Math.sin(t * 8)));
     }
     for (const tw of w.towers) this.towerViews.get(tw.id)?.update(time, t);
+    this.hazardLayer?.update();
     for (const p of w.projectiles) {
       const img = this.projViews.get(p.id);
       if (!img) continue;
@@ -1675,6 +1698,7 @@ export class LevelScene extends Phaser.Scene {
         earlyCalls: w.stats.earlyCalls,
         meteorKills: w.stats.meteorKills,
         sheep: w.stats.sheep,
+        bestHazard: w.stats.bestHazard,
         heroLevel: hero?.level ?? 0,
         bossesKilled: w.stats.bossesKilled,
         wave: reached,

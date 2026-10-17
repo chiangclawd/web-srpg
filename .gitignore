@@ -50,3 +50,4 @@ public/assets/portraits_with_bg/
 # macOS
 .DS_Store
 **/.DS_Store
+__pycache__/

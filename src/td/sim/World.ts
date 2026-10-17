@@ -1,7 +1,7 @@
 import { FROST_SEC, GOLD_SACK, KEG, POTION_LIVES, type ItemId } from '../data/items';
 import { Path } from './Path';
 import { Rng, clamp, dist, dist2, ellipseDist, inEllipse, type Vec } from './math';
-import type { DamageKind, EnemyDef, HeroDef, LevelDef, Range2, TowerLevelDef, TowerType } from './defs';
+import type { DamageKind, EnemyDef, HazardDef, HazardKind, HeroDef, LevelDef, Range2, TowerLevelDef, TowerType } from './defs';
 import {
   Enemy,
   Projectile,
@@ -30,6 +30,19 @@ export const BUILD_TIME = 0.6;
 export const TOWER_HASTE = 1.35;
 /** 審判聖典：敵人承受傷害倍率 */
 export const VULN_MUL = 1.3;
+/** 地圖機關：傷害、判定半徑、控制效果、冷卻、滾動速度（px/s） */
+export const HAZARD: Record<HazardKind, { dmg: number; r: number; stun: number; slow: number; cd: number; speed: number }> = {
+  boulder: { dmg: 180, r: 28, stun: 1.2, slow: 0, cd: 40, speed: 230 },
+  snowball: { dmg: 140, r: 32, stun: 0, slow: 0.45, cd: 35, speed: 260 },
+};
+/** 從崖邊落到路上的時間（秒），落地後才開始判定 */
+export const HAZARD_DROP = 0.45;
+
+export interface HazardState {
+  def: HazardDef;
+  cd: number;
+  roll: { t: number; d: number; x: number; y: number; hit: Set<number>; kills: number } | null;
+}
 
 export type Difficulty = 'casual' | 'normal' | 'veteran';
 const DIFF_HP: Record<Difficulty, number> = { casual: 0.7, normal: 1, veteran: 1.25 };
@@ -69,6 +82,8 @@ export type SimEvent =
   | { type: 'zone'; z: Zone }
   | { type: 'lifeLost'; amount: number; x: number; y: number }
   | { type: 'victory' }
+  | { type: 'hazard'; i: number; kind: HazardKind; x: number; y: number; tx: number; ty: number }
+  | { type: 'hazardEnd'; i: number; kind: HazardKind; x: number; y: number; kills: number }
   | { type: 'defeat' };
 
 export interface BuildSpot {
@@ -127,8 +142,10 @@ export class World {
   heroUltCd = 0;
   heroUltCdMax = 0;
 
+  hazards: HazardState[];
+
   result: 'victory' | 'defeat' | null = null;
-  stats = { kills: 0, leaks: 0, goldEarned: 0, towersBuilt: 0, meteorKills: 0, earlyCalls: 0, sheep: 0, bossesKilled: [] as string[] };
+  stats = { kills: 0, leaks: 0, goldEarned: 0, towersBuilt: 0, meteorKills: 0, earlyCalls: 0, sheep: 0, bossesKilled: [] as string[], hazardKills: 0, bestHazard: 0 };
 
   constructor(opts: WorldOptions) {
     this.level = opts.level;
@@ -140,6 +157,7 @@ export class World {
     this.lives = this.maxLives = opts.level.lives;
     this.waveCount = opts.level.waves.length;
     this.spots = opts.level.spots.map((s) => ({ x: s.x, y: s.y, tower: null }));
+    this.hazards = (opts.level.hazards ?? []).map((def) => ({ def, cd: 0, roll: null }));
     this.meteorCdMax = METEOR_BASE_CD * this.mods.meteorCd;
     this.reinfCdMax = REINF_BASE_CD * this.mods.reinfCd;
     this.meteorCd = this.meteorCdMax * 0.5;
@@ -615,6 +633,57 @@ export class World {
     return true;
   }
 
+  // ═════════════════════════ 地圖機關 ═════════════════════════
+
+  canTriggerHazard(i: number): boolean {
+    const h = this.hazards[i];
+    return !!h && h.cd <= 0 && !h.roll && !this.result;
+  }
+
+  /** 推下落石／雪球：先落到路上，再沿路徑滾動 */
+  triggerHazard(i: number): boolean {
+    if (!this.canTriggerHazard(i)) return false;
+    const h = this.hazards[i];
+    h.cd = HAZARD[h.def.kind].cd;
+    const p = this.paths[h.def.path].posAt(h.def.d0);
+    h.roll = { t: 0, d: h.def.d0, x: p.x, y: p.y, hit: new Set(), kills: 0 };
+    this.emit({ type: 'hazard', i, kind: h.def.kind, x: h.def.x, y: h.def.y, tx: p.x, ty: p.y });
+    return true;
+  }
+
+  private updateHazards(dt: number): void {
+    for (let i = 0; i < this.hazards.length; i++) {
+      const h = this.hazards[i];
+      if (h.cd > 0 && !h.roll) h.cd = Math.max(0, h.cd - dt);
+      const r = h.roll;
+      if (!r) continue;
+      r.t += dt;
+      if (r.t < HAZARD_DROP) continue;
+      const spec = HAZARD[h.def.kind];
+      const dir = h.def.d1 >= h.def.d0 ? 1 : -1;
+      r.d += dir * spec.speed * dt;
+      const done = dir > 0 ? r.d >= h.def.d1 : r.d <= h.def.d1;
+      if (done) r.d = h.def.d1;
+      this.paths[h.def.path].posAt(r.d, 0, r);
+      const dmg = h.def.dmg ?? spec.dmg;
+      for (const e of this.enemies) {
+        if (!e.alive || e.flying || e.burrowed || r.hit.has(e.id)) continue;
+        if (dist2(e.x, e.y, r.x, r.y) > spec.r * spec.r) continue;
+        r.hit.add(e.id);
+        this.damageEnemy(e, dmg, 'true', 'spell');
+        if (!e.alive) r.kills++;
+        else if (spec.stun) this.applyStun(e, spec.stun);
+        else if (spec.slow) this.applySlow(e, spec.slow, 3);
+      }
+      if (done) {
+        h.roll = null;
+        this.stats.hazardKills += r.kills;
+        this.stats.bestHazard = Math.max(this.stats.bestHazard, r.kills);
+        this.emit({ type: 'hazardEnd', i, kind: h.def.kind, x: r.x, y: r.y, kills: r.kills });
+      }
+    }
+  }
+
   // ═════════════════════════ 波次 ═════════════════════════
 
   /** 下一波會從哪些路徑出現（給 UI 放骷髏按鈕） */
@@ -714,6 +783,7 @@ export class World {
     if (this.reinfCd > 0) this.reinfCd = Math.max(0, this.reinfCd - dt);
     if (this.heroUltCd > 0) this.heroUltCd = Math.max(0, this.heroUltCd - dt);
     this.updateWaves();
+    if (this.hazards.length) this.updateHazards(dt);
     for (const e of this.enemies) this.updateEnemy(e, dt);
     for (const t of this.towers) this.updateTower(t, dt);
     for (const s of this.soldiers) this.updateSoldier(s, dt);

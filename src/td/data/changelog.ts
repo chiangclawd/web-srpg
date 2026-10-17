@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 18,
+    date: '2026-10-17',
+    title: { zh: '地圖機關：落石與雪崩', en: 'Map traps: boulders and avalanches' },
+    items: [
+      { zh: '第 4、5、9 關與冰封隘口的崖邊多了落石／大雪球：點一下推下去，沿路滾動砸傷敵人（落石暈眩、雪球減速），約 35~40 秒後恢復', en: 'Levels 4, 5, 9 and Frozen Pass now have a boulder or giant snowball on a ledge: tap it to send it rolling down the road, crushing enemies (boulders stun, snowballs slow). It comes back after 35–40 seconds' },
+      { zh: '新成就「山崩地裂」：一次擊倒 5 名敵人', en: 'New achievement “Landslide”: crush 5 enemies with one roll' },
+    ],
+  },
+  {
     id: 17,
     date: '2026-10-17',
     title: { zh: '更省記憶體、慶功場景換新', en: 'Lighter on memory, new celebration scene' },

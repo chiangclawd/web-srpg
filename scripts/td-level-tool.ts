@@ -92,6 +92,23 @@ function check(): number {
         console.log(msg + '  ⚠ poorly covered');
       } else console.log(msg);
     });
+    // 地圖機關：不能壓路、不能和建造點的點擊範圍重疊、不能在 HUD 底下，滾動區段要在路徑上
+    (lv.hazards ?? []).forEach((h, i) => {
+      const issues: string[] = [];
+      const pd = pathDist(paths, h.x, h.y);
+      if (pd < 50) issues.push(`too close to path (${pd.toFixed(0)})`);
+      const near = Math.min(...lv.spots.map((s) => Math.hypot(s.x - h.x, (s.y - h.y) * 1.2)));
+      if (near < 95) issues.push(`overlaps a build spot (${near.toFixed(0)})`);
+      if (inHud(h.x, h.y - 30, 10)) issues.push('under HUD');
+      const p = paths[h.path];
+      if (!p) issues.push(`no path ${h.path}`);
+      else if (Math.max(h.d0, h.d1) > p.length || Math.min(h.d0, h.d1) < 0) issues.push(`roll outside path (len ${Math.round(p.length)})`);
+      const line = `  hazard ${i} ${h.kind} (${h.x},${h.y}) pathDist=${pd.toFixed(0)} spotDist=${near.toFixed(0)} roll ${h.d0}→${h.d1}`;
+      if (issues.length) {
+        problems++;
+        console.log(line + '  ⚠ ' + issues.join('; '));
+      } else console.log(line);
+    });
     const hs = lv.heroStart;
     console.log(`  heroStart (${hs.x},${hs.y}) pathDist=${pathDist(paths, hs.x, hs.y).toFixed(0)}`);
   }
