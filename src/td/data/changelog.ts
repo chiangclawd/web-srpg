@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 45,
+    date: '2026-10-17',
+    title: { zh: '音量分段調整', en: 'Volume levels' },
+    items: [
+      { zh: '設定裡的音樂、音效改成點一下切換 關／30%／60%／100%，並顯示目前音量', en: 'Music and sound in Settings now step through Off / 30% / 60% / 100% and show the current level' },
+    ],
+  },
+  {
     id: 44,
     date: '2026-10-17',
     title: { zh: '新勝利音樂', en: 'New victory fanfare' },
