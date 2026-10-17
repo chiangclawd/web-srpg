@@ -23,7 +23,7 @@ import { HazardLayer, hazardTextures } from '../view/Hazards';
 import { Bubbles } from '../view/Bubbles';
 import { clearCheckpoint, loadCheckpoint, restore, saveCheckpoint, snapshot, type Checkpoint } from '../sim/checkpoint';
 import { BRANCH_BARKS, HERO_BARKS, towerBark } from '../data/barks';
-import { towerVoiceLines } from '../data/voices';
+import { BOSS_VOICES, towerVoiceLines } from '../data/voices';
 import { RadialMenu, type RadialOption } from '../view/RadialMenu';
 import { IconButton } from '../ui/widgets';
 import { THEME_BGM, sfx } from '../audio';
@@ -234,7 +234,7 @@ export class LevelScene extends Phaser.Scene {
 
     sfx.playBgm(this.level.bgm ?? THEME_BGM[this.level.theme]);
     if (this.world.hero?.hero) sfx.preloadVoice(this.world.hero.hero.def.id);
-    for (const b of this.bossIds()) sfx.preloadBossVoice(b);
+    for (const b of this.bossIds()) if (BOSS_VOICES[b]) sfx.preloadBossVoice(b);
     // 塔的配音等關卡畫面載完再下載（用真實時間：開場時場景可能是暫停的）
     window.setTimeout(() => sfx.preloadTowerVoices(towerVoiceLines()), 2500);
     this.cameras.main.fadeIn(400, 0, 0, 0);
@@ -1405,7 +1405,8 @@ export class LevelScene extends Phaser.Scene {
             sfx.play('boss');
             // 首領登場喊話（號角聲之後）
             const boss = this.bossIds(ev.index)[0];
-            if (boss) this.time.delayedCall(900, () => sfx.bossVoice(boss));
+            // 沙暴巨蟲是野獸，不說話只會吼
+            if (boss) this.time.delayedCall(900, () => (boss === 'wyrm' ? sfx.play('roar') : sfx.bossVoice(boss)));
             sfx.playBgm(this.level.bgm ?? 'boss');
             camShake(this, 400, 0.004);
           }
