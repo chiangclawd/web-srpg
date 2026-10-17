@@ -64,7 +64,8 @@ const FILES: Partial<Record<Sfx, string>> = {
   magic: 'assets/audio/sfx_magic.m4a',
   hit: 'assets/audio/sfx_hit.m4a',
   sword: 'assets/audio/sfx_sword.m4a',
-  victory: 'assets/audio/sfx_victory.m4a',
+  // 勝利短曲：主題曲最後的收尾和弦（Lyria），與配樂同一個調性
+  victory: 'assets/audio/td/sting_victory.mp3',
   defeat: 'assets/audio/sfx_defeat.m4a',
   levelup: 'assets/audio/sfx_level_up.m4a',
   lance: 'assets/audio/sfx_lance.m4a',
@@ -440,6 +441,32 @@ class TdAudio {
       });
     }
     this.fadeTo(el, old, vol * BGM_GAIN);
+  }
+
+  /** 結算時淡出戰鬥配樂，讓勝負音樂單獨響起（下一個場景會再呼叫 playBgm） */
+  fadeOutBgm(): void {
+    const el = this.bgmEl;
+    this.wantBgm = null;
+    this.bgmName = null;
+    this.bgmEl = null;
+    if (this.replayTimer) {
+      clearTimeout(this.replayTimer);
+      this.replayTimer = null;
+    }
+    if (!el) return;
+    // 用自己的計時器：之後 playBgm 的淡入不會把這段淡出中斷在半路
+    const v0 = el.volume;
+    let t = 0;
+    const timer = setInterval(() => {
+      t += 0.05;
+      const k = Math.min(1, t / 0.6);
+      el.volume = v0 * (1 - k);
+      if (k >= 1) {
+        el.pause();
+        el.src = '';
+        clearInterval(timer);
+      }
+    }, 50);
   }
 
   /** 播完停頓一下，再從頭淡入（不硬切循環點，整首歌的收尾才聽得完整） */

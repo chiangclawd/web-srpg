@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 44,
+    date: '2026-10-17',
+    title: { zh: '新勝利音樂', en: 'New victory fanfare' },
+    items: [
+      { zh: '勝利時改奏主題曲的收尾和弦；結算時戰鬥配樂會先淡出，不再和勝負音樂疊在一起', en: 'Victory now plays the closing chord of the main theme, and the battle music fades out on the result screen instead of clashing with it' },
+    ],
+  },
+  {
     id: 43,
     date: '2026-10-17',
     title: { zh: '英雄訓練', en: 'Hero training' },

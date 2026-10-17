@@ -1863,6 +1863,7 @@ export class LevelScene extends Phaser.Scene {
     sv.gems = (sv.gems ?? 0) + gems;
     this.gemsEarned = gems;
     persist();
+    sfx.fadeOutBgm();
     sfx.play(victory || newRecord ? 'victory' : 'defeat');
     if (this.mode0 === 'endless') this.ui.showEndlessResult(reached, sv.endless[this.level.id] ?? reached, newRecord);
     else this.ui.showResult(victory, stars, newStars);
