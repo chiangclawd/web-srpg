@@ -2,6 +2,7 @@ import type { L10n, LevelMode } from '../sim/defs';
 import type { Difficulty } from '../sim/World';
 import type { SaveData } from '../save';
 import { LEVELS } from './levels';
+import { HERO_MAX_LEVEL, heroLevelForXp } from './heroes';
 
 export interface AchievementDef {
   id: string;
@@ -123,4 +124,33 @@ export function evaluateAchievements(o: LevelOutcome, sv: SaveData): string[] {
   if (o.mode === 'endless' && o.wave >= 30) unlock('endless_30');
   sv.achievements = [...got];
   return fresh;
+}
+
+/** 累積型成就的目前進度（成就畫面顯示進度條；不是累積型的回傳 null） */
+export function achievementProgress(id: string, sv: SaveData): { cur: number; max: number } | null {
+  const bestEndless = Math.max(0, ...Object.values(sv.endless ?? {}));
+  switch (id) {
+    case 'kills_1000':
+      return { cur: sv.stats.kills, max: 1000 };
+    case 'kills_10000':
+      return { cur: sv.stats.kills, max: 10000 };
+    case 'builder':
+      return { cur: sv.stats.towers ?? 0, max: 100 };
+    case 'all_stars':
+      return { cur: LEVELS.filter((l) => (sv.stars[l.id] ?? 0) >= 3).length, max: LEVELS.length };
+    case 'heroic_all':
+      return { cur: LEVELS.filter((l) => sv.challenges[l.id]?.heroic).length, max: LEVELS.length };
+    case 'iron_all':
+      return { cur: LEVELS.filter((l) => sv.challenges[l.id]?.iron).length, max: LEVELS.length };
+    case 'daily_7':
+      return { cur: Object.values(sv.daily ?? {}).filter((n) => n > 0).length, max: 7 };
+    case 'endless_15':
+      return { cur: bestEndless, max: 15 };
+    case 'endless_30':
+      return { cur: bestEndless, max: 30 };
+    case 'hero_max':
+      return { cur: Math.max(1, ...Object.values(sv.heroes).map((h) => heroLevelForXp(h.xp))), max: HERO_MAX_LEVEL };
+    default:
+      return null;
+  }
 }
