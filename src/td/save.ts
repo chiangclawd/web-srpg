@@ -54,7 +54,7 @@ function defaults(): SaveData {
     version: 1,
     stars: {},
     upgrades: {},
-    heroes: { arthur: { xp: 0 }, elena: { xp: 0 }, lila: { xp: 0 }, rain: { xp: 0 }, aria: { xp: 0 }, sharon: { xp: 0 }, viktor: { xp: 0 } },
+    heroes: { arthur: { xp: 0 }, elena: { xp: 0 }, lila: { xp: 0 }, rain: { xp: 0 }, aria: { xp: 0 }, sharon: { xp: 0 }, viktor: { xp: 0 }, shadow: { xp: 0 } },
     selectedHero: 'arthur',
     seenEnemies: [],
     unlockedSeen: ['l1'],

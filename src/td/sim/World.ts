@@ -57,7 +57,7 @@ export type SimEvent =
   | { type: 'gold'; x: number; y: number; amount: number }
   | { type: 'projSpawn'; p: Projectile }
   | { type: 'projHit'; p: Projectile; hit: boolean }
-  | { type: 'explosion'; x: number; y: number; r: number; kind: 'bomb' | 'bomblet' | 'meteor' | 'missile' | 'nova' | 'holy' | 'shock' }
+  | { type: 'explosion'; x: number; y: number; r: number; kind: 'bomb' | 'bomblet' | 'meteor' | 'missile' | 'nova' | 'holy' | 'shock' | 'smoke' }
   | { type: 'towerShoot'; t: Tower; tx: number; ty: number }
   | { type: 'lightning'; pts: Vec[]; t?: Tower }
   | { type: 'beam'; x1: number; y1: number; x2: number; y2: number; kind: 'disintegrate' | 'ice' | 'charge'; t?: Tower }
@@ -597,6 +597,30 @@ export class World {
           this.emit({ type: 'soldierSpawn', s });
         }
         this.emit({ type: 'explosion', x, y, r, kind: 'bomblet' });
+        break;
+      }
+      case 'shadow': {
+        r = 100;
+        // 12 刀分給範圍內的敵人（空中也砍得到）
+        const list = near(r).filter((e) => !e.burrowed);
+        for (let k = 0; k < 12 && list.length; k++) {
+          const e = list[k % list.length];
+          if (!e.alive) continue;
+          this.damageEnemy(e, 30 + 8 * lv, 'true', 'hero');
+          if (k < list.length) this.emit({ type: 'melee', x: e.x, y: e.y - 16, heavy: false });
+        }
+        // 兩個影分身
+        for (let i = 0; i < 2; i++) {
+          const o = FORMATION[i];
+          const s = new Soldier('militia', 'sp_shadow', 50, x + o.x, y + o.y, 140 + 20 * lv, 0.2, [10 + 2 * lv, 16 + 3 * lv], 0.7, 6);
+          s.expireAt = this.time + 15;
+          s.engageR = 95;
+          s.speed = 92;
+          s.tint = 0x7a6a9a;
+          this.soldiers.push(s);
+          this.emit({ type: 'soldierSpawn', s });
+        }
+        this.emit({ type: 'explosion', x, y, r, kind: 'smoke' });
         break;
       }
       default:
@@ -1590,6 +1614,45 @@ export class World {
             this.damageEnemy(big, 60 + 14 * lv, 'physical', 'hero');
             if (big.alive) big.vulnUntil = Math.max(big.vulnUntil, this.time + 6);
             this.emit({ type: 'melee', x: big.x, y: big.y - 16, heavy: true });
+          }
+        }
+        break;
+      }
+      case 'shadow': {
+        if (ready('shadowstep')) {
+          // 優先找遠程／施法的敵人，其次是最虛弱的
+          const cands = this.enemies.filter((e) => e.alive && !e.flying && !e.burrowed && dist(e.x, e.y, h.x, h.y) < 170 && dist(e.x, e.y, h.x, h.y) > 35);
+          const pick = cands.find((e) => e.def.ranged || e.def.abilities?.some((a) => a.kind === 'heal' || a.kind === 'shield' || a.kind === 'summon')) ?? (cands.length ? cands.reduce((a, b) => (b.hp < a.hp ? b : a)) : null);
+          if (pick) {
+            use('shadowstep');
+            const back = pick.d > 20 ? this.paths[pick.pathIndex].posAt(pick.d - 18, pick.lane) : { x: pick.x - 16, y: pick.y };
+            h.x = back.x;
+            h.y = back.y;
+            this.damageEnemy(pick, 34 + 10 * lv, 'true', 'hero');
+            this.emit({ type: 'melee', x: pick.x, y: pick.y - 16, heavy: true });
+          }
+        }
+        if (ready('smokebomb')) {
+          const near = this.enemies.filter((e) => e.alive && !e.flying && !e.burrowed && dist(e.x, e.y, h.x, h.y) < 90);
+          if (near.length >= 3 || (near.length && h.hp < h.maxHp * 0.4)) {
+            use('smokebomb');
+            for (const e of near) {
+              this.applyStun(e, 0.8);
+              this.applySlow(e, 0.5, 4);
+            }
+            h.hp = Math.min(h.maxHp, h.hp + h.maxHp * 0.2);
+            this.emit({ type: 'heal', x: h.x, y: h.y });
+          }
+        }
+        if (ready('execute')) {
+          const near = this.enemies.filter((e) => e.alive && !e.burrowed && dist(e.x, e.y, h.x, h.y) < 60);
+          const weak = near.find((e) => !e.def.boss && e.hp <= e.maxHp * 0.22);
+          const boss = near.find((e) => e.def.boss);
+          if (weak || boss) {
+            use('execute');
+            const v = (weak ?? boss)!;
+            this.damageEnemy(v, weak ? v.hp + 1 : 90 + 20 * lv, 'true', 'hero');
+            this.emit({ type: 'melee', x: v.x, y: v.y - 16, heavy: true });
           }
         }
         break;

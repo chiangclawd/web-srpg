@@ -15,6 +15,7 @@ export const SPEAKERS: Record<string, { name: L10n; enemy?: boolean }> = {
   aria: { name: { zh: '艾莉雅', en: 'Aria' } },
   gary: { name: { zh: '蓋瑞', en: 'Gary' } },
   viktor: { name: { zh: '維克托', en: 'Viktor' } },
+  shadow: { name: { zh: '影', en: 'Shade' } },
   morden: { name: { zh: '莫登', en: 'Morden' }, enemy: true },
   selene: { name: { zh: '瑟琳', en: 'Selene' }, enemy: true },
   carl: { name: { zh: '卡爾', en: 'Carl' }, enemy: true },
@@ -102,6 +103,7 @@ export const SIDE_EPILOGUE: StoryLine[] = [
   { who: 'elena', text: { zh: '沙海、冰河、火山……我們走了好遠的路。', en: 'The sand sea, the glacier, the volcano… we’ve come a long way.' } },
   { who: 'rain', text: { zh: '該回家了！村子今晚有慶典，聽說蓋瑞準備了烤全羊。', en: 'Time to go home! The village is celebrating tonight, and I hear Gary is roasting a whole sheep.' } },
   { who: 'aria', text: { zh: '下次冒險，我先飛去探路！', en: 'Next adventure, I’ll fly ahead and scout!' } },
+  { who: 'shadow', text: { zh: '……一路上替你們清掉落單敵人的，是我。往後我也會在暗處守著王國。', en: '…I was the one picking off your stragglers all along. From now on I’ll guard the kingdom from the shadows.' } },
   { who: 'arthur', text: { zh: '辛苦了，各位。王國的每一寸土地，都留下了我們守護過的足跡。', en: 'Well done, everyone. Every corner of the kingdom bears the footprints of those who defended it.' } },
 ];
 

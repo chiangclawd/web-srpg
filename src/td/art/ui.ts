@@ -159,6 +159,44 @@ function swordsIcon(c: Ctx, w: number): void {
   }
 }
 
+/** 匕首（影的技能）：斜握的短刃＋紫色殘影 */
+function daggerIcon(c: Ctx, w: number): void {
+  const m = w / 2;
+  c.lineWidth = 10;
+  c.strokeStyle = 'rgba(150,110,220,0.45)';
+  c.beginPath();
+  c.moveTo(m - 20, m + 6);
+  c.lineTo(m - 4, m - 10);
+  c.stroke();
+  c.save();
+  c.translate(m + 2, m + 2);
+  c.rotate(0.78);
+  poly(c, [0, -24, 5, -8, 3, 6, -3, 6, -5, -8]);
+  fillStroke(c, vgrad(c, -24, 6, '#ffffff', '#8a96a8'), 2.5);
+  roundRect(c, -9, 6, 18, 4, 2);
+  fillStroke(c, '#4a3a6a', 2);
+  roundRect(c, -2.5, 10, 5, 10, 2);
+  fillStroke(c, '#2a2238', 2);
+  c.restore();
+}
+
+/** 雙匕首交叉（影的絕招） */
+function daggersIcon(c: Ctx, w: number): void {
+  const m = w / 2;
+  for (const s of [-1, 1]) {
+    c.save();
+    c.translate(m, m + 2);
+    c.rotate(s * 0.7);
+    poly(c, [0, -22, 4.5, -7, 3, 5, -3, 5, -4.5, -7]);
+    fillStroke(c, vgrad(c, -22, 5, '#ffffff', '#9a8ab8'), 2.5);
+    roundRect(c, -8, 5, 16, 4, 2);
+    fillStroke(c, '#6a4a9a', 2);
+    roundRect(c, -2.5, 9, 5, 9, 2);
+    fillStroke(c, '#2a2238', 2);
+    c.restore();
+  }
+}
+
 function heartIcon(c: Ctx, w: number): void {
   const m = w / 2;
   c.beginPath();
@@ -837,6 +875,10 @@ const ICONS: Record<string, Fn> = {
   sk_phalanx: shieldIcon,
   sk_sunder: hammerIcon,
   ult_viktor: swordsIcon,
+  sk_shadowstep: daggerIcon,
+  sk_smokebomb: spiralIcon,
+  sk_execute: skullIcon,
+  ult_shadow: daggersIcon,
 };
 
 /** 所有已註冊的圖示 key（測試用） */

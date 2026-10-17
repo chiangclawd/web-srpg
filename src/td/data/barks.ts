@@ -92,6 +92,10 @@ export const HERO_BARKS: Record<string, L10n[]> = {
     { zh: '寸步不讓！', en: 'Not one step back!' },
     { zh: '方陣，前進！', en: 'Phalanx, advance!' },
   ],
+  shadow: [
+    { zh: '影子不會說話。', en: "Shadows don't talk." },
+    { zh: '目標，確認。', en: 'Target marked.' },
+  ],
 };
 
 export function towerBark(type: TowerType, art: string): L10n[] {
