@@ -83,6 +83,10 @@ export const STORY: Record<string, StoryLine[]> = {
     { who: 'lila', text: { zh: '地底傳來的震動越來越強……教派用禁咒喚醒了沙海的遠古巨蟲。', en: 'The tremors are getting stronger. The cult used a forbidden rite to wake the ancient wyrm.' } },
     { who: 'arthur', text: { zh: '牠鑽進沙裡時誰都碰不到。守住每一段路，等牠冒出來就全力攻擊！', en: 'Nothing can touch it underground. Hold every stretch of road and strike hard when it surfaces!' } },
   ],
+  l15: [
+    { who: 'rain', text: { zh: '教派最後的殘黨逃進了北方冰河……他們在冰層底下喚醒了某個龐然大物。', en: 'The last cultists fled into the northern glacier, and woke something enormous beneath the ice.' } },
+    { who: 'elena', text: { zh: '是冰霜巨人！牠一踏地，附近的塔就會被凍住，塔別全擠在一起。冰精靈不怕魔法，交給弓箭手！', en: 'A frost giant! Its stomp freezes nearby towers, so spread them out. Frost sprites shrug off magic. Leave them to the archers!' } },
+  ],
 };
 
 /** 通關最終關後的尾聲 */
