@@ -87,6 +87,8 @@ export function playDialog(scene: Phaser.Scene, lines: StoryLine[], done: () => 
     });
   };
   dim.on('pointerdown', () => next());
+  // 對話框被外部關掉（換場景、其他彈窗）時停掉打字計時器，免得對已銷毀的文字 setText
+  c.once('destroy', () => typing?.remove());
   next();
   return c;
 }

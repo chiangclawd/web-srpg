@@ -11,6 +11,17 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 46,
+    date: '2026-10-17',
+    title: { zh: '番外篇：黑潮海灣', en: 'Extra chapter: Blacktide Cove' },
+    items: [
+      { zh: '新關卡「黑潮海灣」（通關熔岩火山口後解鎖）：全新海岸地形，椰林、沙灘與海浪，兩條路在漁村前匯流', en: 'New level “Blacktide Cove” (unlocks after Ember Crater): a brand-new coastal land with palms, sand and surf, where two roads meet before the fishing village' },
+      { zh: '新敵人：殼硬抗物理的礁岩巨蟹、會自我修復的溺亡者', en: 'New enemies: armored reef crabs and the self-mending drowned' },
+      { zh: '新首領「深淵利維坦」：掀起巨浪讓附近的塔停擺、潛入水中向前衝，還會喚來巨蟹', en: 'New boss, the Abyssal Leviathan: its tidal waves knock out nearby towers, it dives and surges ahead, and it calls reef crabs' },
+      { zh: '新增海灣戰鬥配樂、番外尾聲與成就「平息怒海」；首領連戰增加為十名首領', en: 'New coastal battle theme, an extra epilogue and the “Calm Waters” achievement; Boss Rush now has ten bosses' },
+    ],
+  },
+  {
     id: 45,
     date: '2026-10-17',
     title: { zh: '角色開口說話了', en: 'Heroes, bosses and towers speak' },

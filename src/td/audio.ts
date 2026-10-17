@@ -10,7 +10,7 @@ import { TOWER_VOICE_LANGS, VOICE_LINES, type VoiceLine } from './data/voices';
  *   - 同一音效 40ms 內只播一次，避免 20 座箭塔齊射時爆音
  */
 
-export type Bgm = 'title' | 'map' | 'grass' | 'forest' | 'snow' | 'waste' | 'desert' | 'volcano' | 'boss' | 'finale';
+export type Bgm = 'title' | 'map' | 'grass' | 'forest' | 'snow' | 'waste' | 'desert' | 'volcano' | 'coast' | 'boss' | 'finale';
 
 /** 各地形的戰鬥配樂 */
 export const THEME_BGM: Record<ThemeId, Bgm> = {
@@ -21,6 +21,7 @@ export const THEME_BGM: Record<ThemeId, Bgm> = {
   waste: 'waste',
   desert: 'desert',
   volcano: 'volcano',
+  coast: 'coast',
 };
 
 /** 配樂統一做過響度標準化（-16 LUFS），比音效檔小聲一些，這裡補回來 */
@@ -57,7 +58,8 @@ export type Sfx =
   | 'star'
   | 'thud'
   | 'rumble'
-  | 'roar';
+  | 'roar'
+  | 'splash';
 
 const FILES: Partial<Record<Sfx, string>> = {
   arrow: 'assets/audio/sfx_arrow.m4a',
@@ -402,6 +404,12 @@ class TdAudio {
         this.tone(142, 'sawtooth', t + 0.05, 1.2, 0.12 * v, 60);
         for (let i = 0; i < 9; i++) this.noise(t + i * 0.12, 0.14, 0.16 * v, 'bandpass', 380 + (i % 3) * 120, 200);
         this.noise(t, 1.5, 0.3 * v, 'lowpass', 900, 150);
+        break;
+      case 'splash':
+        // 巨浪拍岸：寬頻噪聲由亮轉暗＋低頻轟聲＋零星水花
+        this.noise(t, 1.1, 0.34 * v, 'lowpass', 3200, 380);
+        this.tone(70, 'sine', t, 0.6, 0.18 * v, 40);
+        for (let i = 0; i < 6; i++) this.noise(t + 0.25 + i * 0.11 + Math.random() * 0.05, 0.06, 0.08 * v, 'bandpass', 1800 + Math.random() * 1600);
         break;
       case 'levelup':
         [523, 659, 784, 1046, 1318].forEach((f, i) => this.tone(f, 'square', t + i * 0.06, 0.2, 0.06 * v));

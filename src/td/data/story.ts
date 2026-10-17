@@ -94,6 +94,11 @@ export const STORY: Record<string, StoryLine[]> = {
     { who: 'sharon', text: { zh: '古籍記載，冰河旁沉睡著一座火山，裡面封著炎魔伊格尼斯……巨人倒下時，封印也跟著碎了。', en: 'The old texts speak of a volcano asleep beside the glacier, with Ignis the Fire Lord sealed inside. When the giant fell, the seal broke with it.' } },
     { who: 'viktor', text: { zh: '熔岩魔像碎了會迸出小魔，塔要多打幾下；炎魔的熔岩噴發會燒停附近的塔，別把塔全蓋在一處！', en: 'Lava golems burst into imps when they break, so keep firing. The Fire Lord’s eruptions scorch nearby towers. Don’t build them all in one spot!' } },
   ],
+  l17: [
+    { who: 'aria', text: { zh: '深淵之門旁的漁村傳來求救！教派的殘黨在海灣舉行儀式，海面整片都黑了……', en: 'A cry for help from the fishing village by the Abyss Gate! The last cultists held a rite in the cove, and the whole sea has turned black…' } },
+    { who: 'sharon', text: { zh: '溺亡者會慢慢自我修復，要集中火力一口氣打倒。礁石巨蟹的殼很硬，交給法師塔。', en: 'The drowned slowly mend themselves, so focus fire and finish them fast. Reef crab shells are tough. Leave them to the mage towers.' } },
+    { who: 'viktor', text: { zh: '海裡那個大傢伙會潛進水裡，再冒出來震暈一整片的塔。塔分散蓋，守住兩條路！', en: 'The big one in the water dives under, then surfaces and stuns every tower nearby. Spread your towers and hold both roads!' } },
+  ],
 };
 
 /** 通關外傳終章（熔岩火山口）後的尾聲 */
@@ -107,6 +112,14 @@ export const SIDE_EPILOGUE: StoryLine[] = [
   { who: 'arthur', text: { zh: '辛苦了，各位。王國的每一寸土地，都留下了我們守護過的足跡。', en: 'Well done, everyone. Every corner of the kingdom bears the footprints of those who defended it.' } },
 ];
 
+/** 通關番外篇（黑潮海灣）後的尾聲 */
+export const EXTRA_EPILOGUE: StoryLine[] = [
+  { who: 'aria', text: { zh: '海水變回藍色了！利維坦沉回深海，再也沒有浮上來。', en: 'The sea is blue again! The Leviathan sank back into the deep and never came up.' } },
+  { who: 'gary', text: { zh: '漁夫們說要請大家吃一整船的烤魚，今晚不醉不歸！', en: 'The fishermen are treating everyone to a whole boatload of grilled fish. Tonight we feast!' } },
+  { who: 'shadow', text: { zh: '教派最後的殘黨，我已經全部送進大牢了。', en: 'I’ve put the very last of the cultists behind bars.' } },
+  { who: 'arthur', text: { zh: '從邊境村莊到海灣，王國終於全都安全了。謝謝你，指揮官。', en: 'From the border village to the cove, the whole kingdom is finally safe. Thank you, Commander.' } },
+];
+
 /** 通關最終關後的尾聲 */
 export const EPILOGUE: StoryLine[] = [
   { who: 'cult_leader', text: { zh: '不可能……深淵之門，竟然被凡人封上了……', en: 'Impossible... the Abyss Gate, sealed by mere mortals...' } },
@@ -118,3 +131,7 @@ export const EPILOGUE: StoryLine[] = [
   { who: 'gary', text: { zh: '村民說要在村口立一座紀念碑，就立在我們蓋第一座箭塔的地方！', en: 'The villagers want a monument at the gate, right where we built our first archer tower!' } },
   { who: 'arthur', text: { zh: '那就回家吧。為了守護這片土地的每一個人，乾杯！', en: 'Then let us go home. To everyone who held this land together. Cheers!' } },
 ];
+
+export type EpilogueId = 'main' | 'side' | 'extra';
+
+export const EPILOGUES: Record<EpilogueId, StoryLine[]> = { main: EPILOGUE, side: SIDE_EPILOGUE, extra: EXTRA_EPILOGUE };
