@@ -66,3 +66,17 @@ test('night battles shorten tower range by 15%, by level flag or daily rule', as
   assert.ok(Math.abs(night.towerRange(b) - day.towerRange(a) * NIGHT_RANGE) < 1e-9);
   assert.ok(Math.abs(dailyNight.towerRange(c) - day.towerRange(a) * NIGHT_RANGE) < 1e-9);
 });
+
+test('towers lit by campfires and houses keep full range at night', async () => {
+  const { NIGHT_RANGE } = await import('../../src/td/sim/World');
+  const lv = testLevel([], { night: true, decor: [{ kind: 'camp', x: 300, y: 200 }] });
+  const w = mkWorld(lv);
+  w.gold = 1e6;
+  const lit = w.build(0, 'archer')!; // (300, 280): next to the campfire
+  const dark = w.build(3, 'archer')!; // (900, 440): far away
+  const base = lit.def.range;
+  assert.equal(w.litAt(lit.x, lit.y), true);
+  assert.equal(w.litAt(dark.x, dark.y), false);
+  assert.ok(Math.abs(w.towerRange(lit) - base) < 1e-9, 'full range in the light');
+  assert.ok(Math.abs(w.towerRange(dark) - base * NIGHT_RANGE) < 1e-9, 'shorter range in the dark');
+});

@@ -1792,12 +1792,25 @@ export class World {
   towerRange(t: Tower): number {
     const m = this.mods;
     const mul = t.type === 'archer' ? m.archerRange : t.type === 'mage' ? m.mageRange : t.type === 'artillery' ? m.artRange : 1;
-    return t.def.range * mul * this.rangeMul;
+    return t.def.range * mul * this.rangeMulAt(t.x, t.y);
   }
 
-  /** 全域射程倍率：夜戰 -15%、每日修正 */
-  get rangeMul(): number {
-    return (this.level.night || this.level.rules?.night ? NIGHT_RANGE : 1) * (this.level.rules?.towerRangeMul ?? 1);
+  get isNight(): boolean {
+    return !!(this.level.night || this.level.rules?.night);
+  }
+
+  /** 夜裡被營火、民房、城堡、祭壇照亮的地方（蓋在這裡的塔不受夜戰射程懲罰） */
+  litAt(x: number, y: number): boolean {
+    return (this.level.decor ?? []).some((d) => {
+      const r = d.kind === 'camp' ? 150 : d.kind === 'castle' ? 140 : d.kind === 'altar' ? 120 : d.kind === 'house' ? 100 : 0;
+      return r > 0 && 'x' in d && Math.hypot(d.x - x, (d.y - y) * 1.15) <= r;
+    });
+  }
+
+  /** 某個位置的射程倍率：夜戰 -15%（燈火照到的地方除外）、每日修正 */
+  rangeMulAt(x: number, y: number): number {
+    const night = this.isNight && !this.litAt(x, y) ? NIGHT_RANGE : 1;
+    return night * (this.level.rules?.towerRangeMul ?? 1);
   }
 
   private towerDmgMul(t: Tower): number {

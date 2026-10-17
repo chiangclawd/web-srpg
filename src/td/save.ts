@@ -58,7 +58,7 @@ export interface SaveData {
     /** 介面大小（字與彈出面板的倍率，重新整理後生效；舊存檔沒有這欄） */
     uiScale?: number;
   };
-  stats: { kills: number; plays: number; victories: number; towers: number; elites?: number };
+  stats: { kills: number; plays: number; victories: number; towers: number; elites?: number; bosses?: number; playSec?: number; heroUse?: Record<string, number> };
 }
 
 function defaults(): SaveData {

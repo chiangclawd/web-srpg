@@ -87,6 +87,8 @@ export class LevelScene extends Phaser.Scene {
   private hazardLayer: HazardLayer | null = null;
   private eggs: EggLayer | null = null;
   private night: NightLayer | null = null;
+  /** 本場遊戲時間（毫秒，結算時加進存檔） */
+  private playMs = 0;
   /** 首領倒下的慢動作（場景時間，毫秒） */
   private slowMoUntil = 0;
   /** 從存檔點繼續（手機被重新整理後） */
@@ -131,6 +133,7 @@ export class LevelScene extends Phaser.Scene {
     this.hazardLayer = null;
     this.eggs = null;
     this.night = null;
+    this.playMs = 0;
     this.slowMoUntil = 0;
     this.seenIntro = new Set(save().seenEnemies);
   }
@@ -158,6 +161,8 @@ export class LevelScene extends Phaser.Scene {
     if (cp) restore(this.world, cp);
     else clearCheckpoint();
     sv.stats.plays++;
+    sv.stats.heroUse ??= {};
+    sv.stats.heroUse[heroDef.id] = (sv.stats.heroUse[heroDef.id] ?? 0) + 1;
     persist();
 
     const cam = setupCamera(this);
@@ -906,8 +911,8 @@ export class LevelScene extends Phaser.Scene {
         enabled: allowed && this.world.gold >= cost,
         angle: angles[i],
         onPreview: () => {
-          this.drawRange(s.x, s.y, this.effRange(type, def), 0xffffff);
-          this.ui.showInfo(this.towerInfo(type, def, cost));
+          this.drawRange(s.x, s.y, this.effRange(type, def, s.x, s.y), 0xffffff);
+          this.ui.showInfo(this.towerInfo(type, def, cost, undefined, undefined, s));
         },
         onConfirm: () => {
           const t = this.world.build(spot, type);
@@ -923,15 +928,16 @@ export class LevelScene extends Phaser.Scene {
     if (this.level.tutorial && this.world.towers.length === 0) this.ui.toast(T('tutConfirm'));
   }
 
-  private effRange(type: TowerType, def: TowerLevelDef): number {
+  /** 預覽射程（x, y：塔的位置，夜戰時燈火照到的地方不打折） */
+  private effRange(type: TowerType, def: TowerLevelDef, x: number, y: number): number {
     const m = this.world.mods;
     const mul = type === 'archer' ? m.archerRange : type === 'mage' ? m.mageRange : type === 'artillery' ? m.artRange : 1;
-    return def.range * mul * this.world.rangeMul;
+    return def.range * mul * this.world.rangeMulAt(x, y);
   }
 
   /** 夜戰關卡或「月黑風高」每日修正 */
   get isNight(): boolean {
-    return !!(this.level.night || this.level.rules?.night);
+    return this.world.isNight;
   }
 
   private openTowerMenu(t: Tower): void {
@@ -955,7 +961,7 @@ export class LevelScene extends Phaser.Scene {
         enabled: w.gold >= cost,
         angle: -90,
         onPreview: () => {
-          this.drawRange(t.x, t.y, this.effRange(t.type, next), 0x9aff7a);
+          this.drawRange(t.x, t.y, this.effRange(t.type, next, t.x, t.y), 0x9aff7a);
           this.ui.showInfo(this.towerInfo(t.type, next, cost, undefined, t.def));
         },
         onConfirm: () => {
@@ -977,7 +983,7 @@ export class LevelScene extends Phaser.Scene {
           dist: 70,
           size: 58,
           onPreview: () => {
-            this.drawRange(t.x, t.y, this.effRange(t.type, b), 0x9aff7a);
+            this.drawRange(t.x, t.y, this.effRange(t.type, b, t.x, t.y), 0x9aff7a);
             this.ui.showInfo(this.towerInfo(t.type, b, cost, undefined, t.def));
           },
           onConfirm: () => {
@@ -1076,7 +1082,8 @@ export class LevelScene extends Phaser.Scene {
     this.tweens.add({ targets: f, scale: 1 / TEX, duration: 250, ease: 'Back.easeOut' });
   }
 
-  towerInfo(type: TowerType, def: TowerLevelDef, cost: number | null, tower?: Tower, prev?: TowerLevelDef): InfoData {
+  towerInfo(type: TowerType, def: TowerLevelDef, cost: number | null, tower?: Tower, prev?: TowerLevelDef, at?: { x: number; y: number }): InfoData {
+    const pos = at ?? tower ?? (this.menuTarget?.tower ? this.menuTarget.tower : { x: -9999, y: -9999 });
     const stats: [string, string, string?][] = [];
     const m = this.world.mods;
     // 升級預覽：數值後面用綠字標出增加多少
@@ -1093,8 +1100,10 @@ export class LevelScene extends Phaser.Scene {
       const dm = type === 'archer' ? m.archerDmg : type === 'mage' ? m.mageDmg : m.artDmg;
       stats.push([T('damage'), `${Math.round(def.damage[0] * dm)}-${Math.round(def.damage[1] * dm)}`, up(avg(def.damage) * dm, prev && avg(prev.damage) * dm)]);
       stats.push([T('rate'), rateWord(def.cooldown), prev && def.cooldown < prev.cooldown - 0.01 ? '▲' : undefined]);
-      stats.push([T('range'), String(Math.round(this.effRange(type, def))), up(this.effRange(type, def), prev && this.effRange(type, prev))]);
+      stats.push([T('range'), String(Math.round(this.effRange(type, def, pos.x, pos.y))), up(this.effRange(type, def, pos.x, pos.y), prev && this.effRange(type, prev, pos.x, pos.y))]);
       stats.push(['', def.hitsAir ? T('hitsAir') : T('groundOnly')]);
+      // 夜戰：燈火照到的地方射程不打折
+      if (this.world.isNight) stats.push(['', this.world.litAt(pos.x, pos.y) ? T('nightLit') : T('nightDark')]);
     }
     // 已蓋好的塔：本場戰績（傷害與擊殺）
     if (tower && def === tower.def && tower.dmgDealt > 0) stats.push([T('dealt'), T('dealtVal', Math.round(tower.dmgDealt).toLocaleString(), tower.kills)]);
@@ -1271,6 +1280,8 @@ export class LevelScene extends Phaser.Scene {
   override update(time: number, deltaMs: number): void {
     const w = this.world;
     if (!this.paused && !w.result) {
+      // 遊戲時間（真實時間，暫停不算；結算時存檔）
+      this.playMs += Math.min(deltaMs, 250);
       // 首領倒下時短暫慢動作
       const slow = time < this.slowMoUntil ? 0.3 : 1;
       this.acc += (Math.min(deltaMs, 100) / 1000) * this.speed * slow;
@@ -1917,6 +1928,9 @@ export class LevelScene extends Phaser.Scene {
     sv.stats.kills += w.stats.kills;
     sv.stats.towers = (sv.stats.towers ?? 0) + w.stats.towersBuilt;
     sv.stats.elites = (sv.stats.elites ?? 0) + w.stats.eliteKills;
+    sv.stats.bosses = (sv.stats.bosses ?? 0) + w.stats.bossesKilled.length;
+    sv.stats.playSec = (sv.stats.playSec ?? 0) + Math.round(this.playMs / 1000);
+    this.playMs = 0;
     const fresh = evaluateAchievements(
       {
         levelId: this.level.id,
