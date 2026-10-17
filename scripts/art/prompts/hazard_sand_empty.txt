@@ -1,0 +1,5 @@
+Image 1 is a sprite from my 2D fantasy tower-defense game: a knee-high desert sandstone ledge with a big round sandstone boulder on top, held by a wooden wedge and a rope tied to a wooden stake. Image 2 shows the art style of the game.
+
+Paint ONE object only, centered: the SAME sandstone ledge after the trap was used. The boulder is gone. The rope is snapped and hangs from the wooden stake, the wooden wedge is knocked over and lies beside the ledge, a little sand and a few pebbles are left on top. Keep the same art style, colours, size and slightly top-down viewpoint as image 1. It is a natural rock ledge, NOT a building or tower.
+- Do NOT draw any people, monsters, buildings, flags, roads or text.
+- Background: perfectly flat solid magenta (#FF00FF) everywhere, no shadows on the background, no frame.

@@ -1,19 +1,28 @@
 import Phaser from 'phaser';
 import { TEX } from '../config';
 import { HAZARD, HAZARD_DROP, type World } from '../sim/World';
-import type { HazardKind } from '../sim/defs';
+import type { HazardDef, HazardKind } from '../sim/defs';
 import { DEPTH, Fx, camShake } from './Fx';
 import { sfx } from '../audio';
 import { T } from '../i18n';
 
-const ART: Record<HazardKind, { ready: string; empty: string; ball: string }> = {
+type HazardArt = { ready: string; empty: string; ball: string };
+const ART: Record<HazardKind, HazardArt> = {
   boulder: { ready: 'hz_rock_ready', empty: 'hz_rock_empty', ball: 'hz_boulder' },
   snowball: { ready: 'hz_snow_ready', empty: 'hz_snow_empty', ball: 'hz_snowball' },
 };
+const SKIN_ART: Record<NonNullable<HazardDef['skin']>, HazardArt> = {
+  sand: { ready: 'hz_sand_ready', empty: 'hz_sand_empty', ball: 'hz_sandball' },
+  dark: { ready: 'hz_dark_ready', empty: 'hz_dark_empty', ball: 'hz_darkball' },
+};
+
+function artOf(def: HazardDef): HazardArt {
+  return def.skin ? SKIN_ART[def.skin] : ART[def.kind];
+}
 
 /** 關卡用到的機關圖檔（LevelScene.preload 按需下載） */
-export function hazardTextures(kinds: HazardKind[]): string[] {
-  return [...new Set(kinds)].flatMap((k) => [ART[k].ready, ART[k].empty, ART[k].ball]);
+export function hazardTextures(defs: HazardDef[]): string[] {
+  return [...new Set(defs.flatMap((d) => Object.values(artOf(d))))];
 }
 
 /** 崖邊機關的顯示倍率（圖檔是 2 倍解析度，再放大一點比較好點） */
@@ -45,7 +54,7 @@ export class HazardLayer {
     isTap: (p: Phaser.Input.Pointer) => boolean,
   ) {
     world.hazards.forEach((h, i) => {
-      const art = ART[h.def.kind];
+      const art = artOf(h.def);
       const base = scene.add.image(h.def.x, h.def.y, this.tex(art.ready)).setOrigin(0.5, 0.9).setScale(SCALE).setDepth(h.def.y);
       const dial = scene.add.graphics().setDepth(DEPTH.hp);
       const hit = scene.add.ellipse(h.def.x, h.def.y - 22, 84, 76, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
@@ -76,7 +85,7 @@ export class HazardLayer {
   /** 開始滾：換成空崖，球從崖上拋落到路面（落下的過程在 update 依模擬時間播放，暫停／加速都同步） */
   onTrigger(i: number, x: number, y: number, tx: number, ty: number): void {
     const v = this.views[i];
-    const art = ART[this.world.hazards[i].def.kind];
+    const art = artOf(this.world.hazards[i].def);
     v.base.setTexture(this.tex(art.empty));
     v.ready = false;
     v.ball?.destroy();
@@ -166,7 +175,7 @@ export class HazardLayer {
       if (ready && !v.ready) {
         // 冷卻結束：石頭長回來
         v.ready = true;
-        v.base.setTexture(this.tex(ART[h.def.kind].ready));
+        v.base.setTexture(this.tex(artOf(h.def).ready));
         v.base.setScale(SCALE * 0.6);
         this.scene.tweens.add({ targets: v.base, scale: SCALE, duration: 300, ease: 'Back.easeOut' });
         this.fx.smokePuff(h.def.x, h.def.y - 20, 4);

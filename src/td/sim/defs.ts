@@ -210,6 +210,8 @@ export interface HazardDef {
   d1: number;
   /** 覆寫預設傷害（後期關卡敵人較硬） */
   dmg?: number;
+  /** 落石的外觀（沙漠砂岩、荒地玄武岩）；玩法同 boulder */
+  skin?: 'sand' | 'dark';
 }
 
 export interface LevelDef {

@@ -120,7 +120,7 @@ export class LevelScene extends Phaser.Scene {
     // 手繪戰場背景按需下載（每關約 250 KB）；失敗就退回程序繪製
     const id = this.baseLevel.id;
     if (PAINTED_LEVELS.has(id) && !this.textures.exists(levelArtKey(id))) this.load.image(levelArtKey(id), `assets/levels/${id}.webp`);
-    for (const k of hazardTextures((this.level.hazards ?? []).map((h) => h.kind))) if (!this.textures.exists(k)) this.load.image(k, `assets/sprites/hz/${k}.webp`);
+    for (const k of hazardTextures(this.level.hazards ?? [])) if (!this.textures.exists(k)) this.load.image(k, `assets/sprites/hz/${k}.webp`);
   }
 
   create(): void {
