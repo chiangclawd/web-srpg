@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 20,
+    date: '2026-10-17',
+    title: { zh: '守軍會說話了', en: 'Your defenders speak up' },
+    items: [
+      { zh: '蓋塔、升級、點塔和移動英雄時，守軍偶爾會冒出一句台詞；每種特化塔和每位英雄都有自己的對白', en: 'Towers and heroes now pipe up with a line now and then when you build, upgrade, select or move them. Every specialization and hero has their own lines' },
+    ],
+  },
+  {
     id: 19,
     date: '2026-10-17',
     title: { zh: '關卡縮圖與 3 倍速', en: 'Level previews and 3× speed' },
