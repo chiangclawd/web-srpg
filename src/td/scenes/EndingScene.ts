@@ -43,16 +43,21 @@ export class EndingScene extends Phaser.Scene {
     this.bursts = [];
   }
 
+  /** 慶功背景：主線與外傳回到邊境村莊（第一關的戰場圖），番外篇在黑潮海灣的漁村慶祝 */
+  private get backdrop(): string {
+    return this.story === 'extra' ? 'l17' : 'l1';
+  }
+
   preload(): void {
-    // 慶功場景用手繪的邊境村莊當背景（第一關的戰場圖）
-    if (PAINTED_LEVELS.has('l1') && !this.textures.exists(levelArtKey('l1'))) this.load.image(levelArtKey('l1'), 'assets/levels/l1.webp');
+    const id = this.backdrop;
+    if (PAINTED_LEVELS.has(id) && !this.textures.exists(levelArtKey(id))) this.load.image(levelArtKey(id), `assets/levels/${id}.webp`);
   }
 
   create(): void {
     setupCamera(this);
     const w = viewW(this);
-    if (this.textures.exists(levelArtKey('l1'))) {
-      const img = this.add.image((w - WORLD_W) / 2, 0, levelArtKey('l1')).setOrigin(0);
+    if (this.textures.exists(levelArtKey(this.backdrop))) {
+      const img = this.add.image((w - WORLD_W) / 2, 0, levelArtKey(this.backdrop)).setOrigin(0);
       img.setScale(WORLD_W / img.width, VIEW_H / img.height);
     } else {
       const bgS = bgScale(1.25);

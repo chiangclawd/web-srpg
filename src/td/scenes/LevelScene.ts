@@ -1054,22 +1054,25 @@ export class LevelScene extends Phaser.Scene {
   }
 
   towerInfo(type: TowerType, def: TowerLevelDef, cost: number | null, tower?: Tower, prev?: TowerLevelDef): InfoData {
-    const stats: [string, string][] = [];
+    const stats: [string, string, string?][] = [];
     const m = this.world.mods;
+    // 升級預覽：數值後面用綠字標出增加多少
+    const up = (a: number, b: number | undefined) => (b !== undefined && a - b >= 1 ? `+${Math.round(a - b)}` : undefined);
+    const avg = (r: [number, number]) => (r[0] + r[1]) / 2;
     if (type === 'barracks' && def.soldier) {
       const st = def.soldier;
-      stats.push([T('soldiers'), String(st.count)]);
-      stats.push([T('hp'), String(Math.round(st.hp * m.barracksHp))]);
-      stats.push([T('damage'), `${Math.round(st.dmg[0] * m.barracksDmg)}-${Math.round(st.dmg[1] * m.barracksDmg)}`]);
-      stats.push([T('armor'), armorWord(st.armor + m.barracksArmor)]);
+      const ps = prev?.soldier;
+      stats.push([T('soldiers'), String(st.count), up(st.count, ps?.count)]);
+      stats.push([T('hp'), String(Math.round(st.hp * m.barracksHp)), up(st.hp * m.barracksHp, ps && ps.hp * m.barracksHp)]);
+      stats.push([T('damage'), `${Math.round(st.dmg[0] * m.barracksDmg)}-${Math.round(st.dmg[1] * m.barracksDmg)}`, up(avg(st.dmg) * m.barracksDmg, ps && avg(ps.dmg) * m.barracksDmg)]);
+      stats.push([T('armor'), armorWord(st.armor + m.barracksArmor), ps && st.armor > ps.armor + 0.01 ? '▲' : undefined]);
     } else {
       const dm = type === 'archer' ? m.archerDmg : type === 'mage' ? m.mageDmg : m.artDmg;
-      stats.push([T('damage'), `${Math.round(def.damage[0] * dm)}-${Math.round(def.damage[1] * dm)}`]);
-      stats.push([T('rate'), rateWord(def.cooldown)]);
-      stats.push([T('range'), String(Math.round(this.effRange(type, def)))]);
+      stats.push([T('damage'), `${Math.round(def.damage[0] * dm)}-${Math.round(def.damage[1] * dm)}`, up(avg(def.damage) * dm, prev && avg(prev.damage) * dm)]);
+      stats.push([T('rate'), rateWord(def.cooldown), prev && def.cooldown < prev.cooldown - 0.01 ? '▲' : undefined]);
+      stats.push([T('range'), String(Math.round(this.effRange(type, def))), up(this.effRange(type, def), prev && this.effRange(type, prev))]);
       stats.push(['', def.hitsAir ? T('hitsAir') : T('groundOnly')]);
     }
-    void prev;
     // 已蓋好的塔：本場戰績（傷害與擊殺）
     if (tower && def === tower.def && tower.dmgDealt > 0) stats.push([T('dealt'), T('dealtVal', Math.round(tower.dmgDealt).toLocaleString(), tower.kills)]);
     return { title: L(def.name), desc: L(def.desc), stats, cost: cost ?? undefined };

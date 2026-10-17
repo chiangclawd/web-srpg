@@ -22,7 +22,8 @@ import { armorWord } from './LevelScene';
 export interface InfoData {
   title: string;
   desc: string;
-  stats: [string, string][];
+  /** 第三格：升級預覽時的增加量（綠字接在數值後面） */
+  stats: [string, string, string?][];
   cost?: number;
   icon?: string;
   icons?: { tex: string; count: number; tint?: number; boss?: boolean }[];
@@ -473,10 +474,12 @@ export class LevelUIScene extends Phaser.Scene {
       y += ds.height + 6;
     }
     const rowH = fontPx(14) + 8;
-    d.stats.forEach(([k, v], i) => {
+    d.stats.forEach(([k, v, up], i) => {
       const col = i % 2;
       const row = Math.floor(i / 2);
-      parts.push(addText(this, left + col * (bw / 2 - 8), y + row * rowH, k ? `${k}: ${v}` : v, { size: 14, color: k ? '#fff6dc' : '#9ad8ff', strokeW: 2 }));
+      const st = addText(this, left + col * (bw / 2 - 8), y + row * rowH, k ? `${k}: ${v}` : v, { size: 14, color: k ? '#fff6dc' : '#9ad8ff', strokeW: 2 });
+      parts.push(st);
+      if (up) parts.push(addText(this, st.x + st.width + 4, st.y, up, { size: 14, color: '#8aff6a', strokeW: 2 }));
     });
     y += Math.ceil(d.stats.length / 2) * rowH + 8;
     const bh = Math.max(56, y);
