@@ -550,11 +550,12 @@ export class MapScene extends Phaser.Scene {
     this.infoPanel = c;
   }
 
-  /** 地圖首次提示：有星星可用 → 指向升級；寶石夠買道具 → 指向商店 */
+  /** 地圖首次提示：有星星可用 → 指向升級；打贏過一場 → 指向每日任務；寶石夠買道具 → 指向商店 */
   private mapTip(): void {
     const sv = save();
-    let id: 'upgrades' | 'shop' | null = null;
+    let id: 'upgrades' | 'shop' | 'quests' | null = null;
     if (!sv.tipsSeen.includes('upgrades') && starsAvailable() > 0) id = 'upgrades';
+    else if (!sv.tipsSeen.includes('quests') && sv.stats.victories > 0) id = 'quests';
     else if (!sv.tipsSeen.includes('shop') && (sv.gems ?? 0) >= 40) id = 'shop';
     if (!id) return;
     const tip = id;
@@ -563,12 +564,13 @@ export class MapScene extends Phaser.Scene {
       const w = viewW(this);
       // 底部按鈕位置（與 buildHud 一致；螢幕座標，手機上整組放大）
       const z = uiZoom();
-      const x = w - (tip === 'upgrades' ? 470 : 790) * z;
       sv.tipsSeen.push(tip);
       persist();
       this.infoPanel?.destroy();
       this.infoPanel = null;
-      showTipBubble(this, x, VIEW_H - 42 * z, T(tip === 'upgrades' ? 'tipUpgrades' : 'tipShop'), () => {}, 2000);
+      // 任務鈕在右上（每日挑戰下方），升級／商店在底部
+      if (tip === 'quests') showTipBubble(this, w - 104 * z, 92 * z, T('tipQuests'), () => {}, 2000);
+      else showTipBubble(this, w - (tip === 'upgrades' ? 470 : 790) * z, VIEW_H - 42 * z, T(tip === 'upgrades' ? 'tipUpgrades' : 'tipShop'), () => {}, 2000);
     });
   }
 
