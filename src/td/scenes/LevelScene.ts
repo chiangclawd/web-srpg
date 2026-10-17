@@ -233,6 +233,7 @@ export class LevelScene extends Phaser.Scene {
 
     sfx.playBgm(this.level.bgm ?? THEME_BGM[this.level.theme]);
     if (this.world.hero?.hero) sfx.preloadVoice(this.world.hero.hero.def.id);
+    for (const b of this.bossIds()) sfx.preloadBossVoice(b);
     this.cameras.main.fadeIn(400, 0, 0, 0);
 
     // 觸控裝置第一次進關：提示可以雙指縮放
@@ -1399,6 +1400,9 @@ export class LevelScene extends Phaser.Scene {
           }
           if (ev.boss) {
             sfx.play('boss');
+            // 首領登場喊話（號角聲之後）
+            const boss = this.bossIds(ev.index)[0];
+            if (boss) this.time.delayedCall(900, () => sfx.bossVoice(boss));
             sfx.playBgm(this.level.bgm ?? 'boss');
             camShake(this, 400, 0.004);
           }
@@ -1728,6 +1732,14 @@ export class LevelScene extends Phaser.Scene {
     this.ui.showEnemyIntro(fresh, () => {
       if (this.level.tutorial && this.world.towers.length === 0) this.ui.toast(T('tutBuild'), 4000);
     });
+  }
+
+  /** 這關（或某一波）出場的首領 */
+  private bossIds(wave?: number): string[] {
+    const waves = wave === undefined ? this.level.waves : this.level.waves.slice(wave, wave + 1);
+    const ids = new Set<string>();
+    for (const w of waves) for (const g of w.groups) if (ENEMIES[g.enemy]?.boss) ids.add(g.enemy);
+    return [...ids];
   }
 
   private showResult(): void {

@@ -155,6 +155,7 @@ const STR = {
   shopHint: { zh: '寶石來自通關、挑戰、無盡模式與成就', en: 'Earn gems from victories, challenges, endless runs and achievements' },
   epilogue: { zh: '尾聲', en: 'Epilogue' },
   shake: { zh: '畫面震動', en: 'Screen shake' },
+  voices: { zh: '角色語音', en: 'Voices' },
   quality: { zh: '畫質', en: 'Graphics' },
   news: { zh: '更新內容', en: 'What’s new' },
   share: { zh: '分享成績', en: 'Share' },
