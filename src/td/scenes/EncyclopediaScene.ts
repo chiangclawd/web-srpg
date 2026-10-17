@@ -53,9 +53,10 @@ export class EncyclopediaScene extends Phaser.Scene {
     }
     const gridX = 84;
     const gridY = 222;
-    const cols = 5;
-    // 敵人超過 5 排時縮小格距，最後一排才不會壓到左下的關閉鈕（兩個分頁用同一格距，版面才不會跳）
-    const cell = Math.ceil(Object.keys(ENEMIES).length / cols) > 5 ? 72 : 82;
+    // 敵人超過 30 種改成 6 欄；超過 5 排時縮小格距，最後一排才不會壓到左下的關閉鈕（兩個分頁用同一格距，版面才不會跳）
+    const nEnemies = Object.keys(ENEMIES).length;
+    const cols = nEnemies > 30 ? 6 : 5;
+    const cell = Math.ceil(nEnemies / cols) > 5 ? 72 : 82;
     add(panel(this, gridX + (cols * cell) / 2 - 41, 414, cols * cell + 40, 480, 'ui_dark', 18));
     const detailX = gridX + cols * cell + 60;
     const detailW = w - detailX - 30;
@@ -168,14 +169,19 @@ export class EncyclopediaScene extends Phaser.Scene {
   private musicRoom(w: number, add: <T extends Phaser.GameObjects.GameObject>(o: T) => T): void {
     const sv = save();
     const colW = Math.min(520, (w - 120) / 2);
-    add(panel(this, w / 2, 410, colW * 2 + 60, 480, 'ui_dark', 18));
+    // 兩欄；曲目變多時列距縮小，整個放得進面板
+    const rows = Math.ceil(MUSIC_TRACKS.length / 2);
+    const pitch = Math.min(88, 400 / Math.max(1, rows - 1));
+    const bh = Math.min(72, pitch - 10);
+    const bottom = 212 + (rows - 1) * pitch + bh / 2 + 18;
+    add(panel(this, w / 2, (164 + bottom) / 2, colW * 2 + 60, bottom - 164, 'ui_dark', 18));
     MUSIC_TRACKS.forEach((tr, k) => {
       const x = w / 2 + (k % 2 === 0 ? -1 : 1) * (colW / 2 + 6);
-      const y = 222 + Math.floor(k / 2) * 88;
+      const y = 212 + Math.floor(k / 2) * pitch;
       const open = !tr.reach || sv.unlockedSeen.includes(tr.reach) || (sv.stars[tr.reach] ?? 0) > 0;
       const playing = sfx.currentBgm === tr.id;
       const b = add(
-        new Button(this, x, y, colW - 12, 72, open ? L(tr.name) : '???', () => {
+        new Button(this, x, y, colW - 12, bh, open ? L(tr.name) : '???', () => {
           if (!open) return;
           sfx.playBgm(tr.id);
           this.build();

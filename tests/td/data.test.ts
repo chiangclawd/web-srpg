@@ -164,12 +164,12 @@ test('every tower bark has a voice clip on disk in each voiced language', async 
   }
 });
 
-test('every boss except the wyrm has a taunt on disk in both languages', async () => {
+test('every boss except the beasts has a taunt on disk in both languages', async () => {
   const { BOSS_VOICES } = await import('../../src/td/data/voices');
   const fs = await import('node:fs');
   const bosses = Object.entries(ENEMIES).filter(([, e]) => e.boss).map(([id]) => id);
   for (const id of bosses) {
-    if (id === 'wyrm') continue;
+    if (['wyrm', 'leviathan'].includes(id)) continue;
     assert.ok(BOSS_VOICES[id], `${id} has a taunt`);
     for (const lang of ['zh', 'en'] as const) assert.ok(fs.existsSync(`public/assets/audio/voice/boss_${id}_${lang}.mp3`), `boss_${id}_${lang}.mp3 exists`);
   }

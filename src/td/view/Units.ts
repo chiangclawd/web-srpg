@@ -352,7 +352,7 @@ export class TowerView {
     }
     const stunned = simTime < t.stunUntil;
     // 冰封 → 藍；熔岩燒停 → 紅；夏儂加護 → 金
-    this.base.setTint(stunned ? (t.stunFire ? 0xff8a6a : 0x8a8aff) : simTime < t.hasteUntil ? 0xffe8a0 : 0xffffff);
+    this.base.setTint(stunned ? (t.stunFire ? 0xff8a6a : t.stunWave ? 0x7ad0e8 : 0x8a8aff) : simTime < t.hasteUntil ? 0xffe8a0 : 0xffffff);
   }
 
   /** 剛蓋好 / 升級的彈跳動畫 */

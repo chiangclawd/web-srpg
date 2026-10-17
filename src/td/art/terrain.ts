@@ -25,7 +25,7 @@ import {
 export const PATH_W = 58;
 
 /** 有 AI 手繪背景的關卡（public/assets/levels/<id>.webp，以程序背景為構圖重繪，道路位置相同） */
-export const PAINTED_LEVELS = new Set(['l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8', 'l9', 'l10', 'l11', 'l12', 'l13', 'l14', 'l15', 'l16']);
+export const PAINTED_LEVELS = new Set(['l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8', 'l9', 'l10', 'l11', 'l12', 'l13', 'l14', 'l15', 'l16', 'l17']);
 
 export function levelArtKey(id: string): string {
   return `lvbg_${id}`;
@@ -142,7 +142,7 @@ export function paintLevel(level: LevelDef, worldW: number, offX: number, s: num
   }
 
   // 程序散佈：邊緣森林帶 + 零星灌木/石頭/花
-  const density = level.theme === 'forest' ? 1.6 : level.theme === 'snow' ? 0.8 : level.theme === 'desert' ? 0.55 : level.theme === 'volcano' ? 0.5 : 1;
+  const density = level.theme === 'forest' ? 1.6 : level.theme === 'snow' ? 0.8 : level.theme === 'desert' ? 0.55 : level.theme === 'volcano' ? 0.5 : level.theme === 'coast' ? 0.55 : 1;
   const edgeTrees = Math.round(120 * density);
   for (let i = 0; i < edgeTrees; i++) {
     // 偏向畫面邊緣
@@ -246,6 +246,12 @@ function tree(ctx: Ctx, x: number, y: number, r: number, th: ThemePalette, theme
   if (theme === 'desert') {
     if (rnd() < 0.45) drawPalm(ctx, x, y, r * 0.95, rnd);
     else drawCactus(ctx, x, y, r * 0.75, rnd);
+    return;
+  }
+  if (theme === 'coast') {
+    // 海岸：棕櫚樹為主，夾雜幾棵闊葉樹
+    if (rnd() < 0.7) drawPalm(ctx, x, y, r * 0.95, rnd);
+    else drawTree(ctx, x, y, r * 0.9, th.canopy, rnd, false);
     return;
   }
   if (theme === 'waste' || theme === 'volcano') {

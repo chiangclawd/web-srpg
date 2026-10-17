@@ -139,6 +139,22 @@ export const THEMES: Record<ThemeId, ThemePalette> = {
     water: '#ff6a1a',
     tuft: '#3a302a',
   },
+  coast: {
+    ground: '#cbb88c',
+    groundLight: '#dccb9e',
+    groundDark: '#ad9a6c',
+    path: '#9c8462',
+    pathEdge: '#5e4a34',
+    canopy: ['#4f8a3a', '#5f9a44'],
+    pine: '#3f7040',
+    trunk: '#7a5a3a',
+    rock: '#6f767c',
+    flower: ['#ff9a8a', '#ffe08a', '#a0e0ff'],
+    snowy: false,
+    // 湖泊畫成海灣
+    water: '#2f7fa8',
+    tuft: '#9a9a5e',
+  },
 };
 
 /** 圓頂闊葉樹 */

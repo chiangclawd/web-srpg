@@ -57,7 +57,7 @@ export type SimEvent =
   | { type: 'gold'; x: number; y: number; amount: number }
   | { type: 'projSpawn'; p: Projectile }
   | { type: 'projHit'; p: Projectile; hit: boolean }
-  | { type: 'explosion'; x: number; y: number; r: number; kind: 'bomb' | 'bomblet' | 'meteor' | 'missile' | 'nova' | 'holy' | 'shock' | 'smoke' }
+  | { type: 'explosion'; x: number; y: number; r: number; kind: 'bomb' | 'bomblet' | 'meteor' | 'missile' | 'nova' | 'holy' | 'shock' | 'smoke' | 'wave' }
   | { type: 'towerShoot'; t: Tower; tx: number; ty: number }
   | { type: 'lightning'; pts: Vec[]; t?: Tower }
   | { type: 'beam'; x1: number; y1: number; x2: number; y2: number; kind: 'disintegrate' | 'ice' | 'charge'; t?: Tower }
@@ -1049,8 +1049,9 @@ export class World {
           for (const t of hit) {
             t.stunUntil = this.time + a.duration;
             t.stunFire = a.fx === 'fire';
+            t.stunWave = a.fx === 'wave';
           }
-          this.emit({ type: 'explosion', x: e.x, y: e.y, r: a.radius, kind: a.fx === 'fire' ? 'meteor' : 'shock' });
+          this.emit({ type: 'explosion', x: e.x, y: e.y, r: a.radius, kind: a.fx === 'fire' ? 'meteor' : a.fx === 'wave' ? 'wave' : 'shock' });
           break;
         }
         default:

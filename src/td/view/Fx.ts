@@ -132,6 +132,14 @@ export class Fx {
       this.smoke.explode(18, x, y - 8);
       return;
     }
+    if (kind === 'wave') {
+      // 巨浪：兩圈水紋向外擴散＋白色浪花
+      this.ring(x, y, r, 0x4ab8e0, 520);
+      s.time.delayedCall(140, () => this.ring(x, y, r * 0.8, 0xbfefff, 460));
+      this.snow.explode(24, x, y - 8);
+      camShake(s, 220, 0.004);
+      return;
+    }
     if (kind === 'shock') {
       this.ring(x, y, r, 0x7ac8ff, 300);
       this.spark.explode(14, x, y - 6);

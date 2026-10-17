@@ -138,6 +138,25 @@ const FX: Record<string, { w: number; h: number; paint: Fn }> = {
       c.fill();
     },
   },
+  fx_gull: {
+    w: 28,
+    h: 14,
+    paint: (c) => {
+      // 海鷗：白色 M 形翅膀，深色描邊
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+      c.beginPath();
+      c.moveTo(2, 7);
+      c.quadraticCurveTo(8, 1, 14, 9);
+      c.quadraticCurveTo(20, 1, 26, 7);
+      c.strokeStyle = '#3a3a44';
+      c.lineWidth = 4.2;
+      c.stroke();
+      c.strokeStyle = '#ffffff';
+      c.lineWidth = 2.2;
+      c.stroke();
+    },
+  },
   fx_snow: {
     w: 12,
     h: 12,

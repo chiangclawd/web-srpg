@@ -4,7 +4,7 @@ import { LEVELS } from '../data/levels';
 import { UPGRADE_COLUMNS } from '../data/upgrades';
 import { HEROES, HERO_ORDER } from '../data/heroes';
 import { heroUnlocked } from './HeroScene';
-import { mapRoads, paintWorldMap } from '../art/worldmap';
+import { mapRoads, paintWorldMap, type MapNode } from '../art/worldmap';
 import { showTipBubble } from '../ui/tip';
 import { DAILY_MODS, dailyBaseLevel, dailyKey, dailySpec } from '../data/daily';
 import { LOGIN_GEMS, loginReward, previousDay } from '../data/login';
@@ -61,7 +61,11 @@ export class MapScene extends Phaser.Scene {
     setupCamera(this);
     // 離開戰鬥後釋放戰場背景（重玩時從快取重新載入）
     for (const k of this.textures.getTextureKeys()) if (k.startsWith('lvbg_')) this.textures.remove(k);
-    const nodes = LEVELS.map((l) => ({ x: l.mapPos.x * PLAY_W, y: l.mapPos.y * VIEW_H, theme: l.theme, bonus: l.bonus }));
+    const at = (id: string) => {
+      const l = LEVELS.find((v) => v.id === id);
+      return l ? { x: l.mapPos.x * PLAY_W, y: l.mapPos.y * VIEW_H } : undefined;
+    };
+    const nodes = LEVELS.map((l) => ({ x: l.mapPos.x * PLAY_W, y: l.mapPos.y * VIEW_H, theme: l.theme, bonus: l.bonus, link: l.mapLink ? at(l.mapLink) : undefined }));
     if (this.textures.exists('worldmap')) this.paintedMap(nodes);
     else {
       const s = bgScale(1.25);
@@ -256,7 +260,7 @@ export class MapScene extends Phaser.Scene {
   }
 
   /** 手繪世界地圖（Gemini 依程序地圖構圖重繪）＋向量虛線路線 */
-  private paintedMap(nodes: { x: number; y: number; bonus?: boolean }[]): void {
+  private paintedMap(nodes: MapNode[]): void {
     const img = this.add.image(-PLAY_X0, 0, 'worldmap').setOrigin(0);
     img.setScale(WORLD_W / img.width, VIEW_H / img.height);
     const g = this.add.graphics();
@@ -287,6 +291,10 @@ export class MapScene extends Phaser.Scene {
     dashed(roads.main, 3, 0xf0d8a0, 1);
     dashed(roads.side, 6, 0x5a320a, 0.55);
     dashed(roads.side, 3, 0xffc860, 1);
+    for (const l of roads.links) {
+      dashed(l, 6, 0x5a320a, 0.55);
+      dashed(l, 3, 0xffc860, 1);
+    }
     this.mapLife();
   }
 

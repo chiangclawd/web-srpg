@@ -12,7 +12,7 @@ export function paintWorldMap(
   h: number,
   offX: number,
   s: number,
-  nodes: (Vec & { theme: string; bonus?: boolean })[],
+  nodes: (MapNode & { theme: string })[],
   /** base：只畫地形（不含路線、羅盤、暗角），給 AI 重繪當構圖參考 */
   opts: { base?: boolean } = {},
 ): HTMLCanvasElement {
@@ -78,7 +78,7 @@ export function paintWorldMap(
     ctx.fill();
   };
   // 依各關主題在節點周圍鋪地區色
-  const REGION: Record<string, string> = { grass: '#a8c870', forest: '#4f8a3a', snow: '#eef4f8', autumn: '#c8a24a', waste: '#6a5a5e', desert: '#ecd28c', volcano: '#5a3a30' };
+  const REGION: Record<string, string> = { grass: '#a8c870', forest: '#4f8a3a', snow: '#eef4f8', autumn: '#c8a24a', waste: '#6a5a5e', desert: '#ecd28c', volcano: '#5a3a30', coast: '#d8c08a' };
   for (const n of nodes) {
     // 沙漠要蓋過周圍的草原色，加深一些
     if (n.theme === 'desert') region(n.x, n.y, 230, REGION.desert, 0.95);
@@ -202,10 +202,9 @@ export function paintWorldMap(
   ctx.lineWidth = 3;
   ctx.strokeStyle = '#f0d8a0';
   ctx.stroke();
-  // 外傳路線（金色虛線，只連外傳關卡）
-  const side = nodes.filter((n) => n.bonus);
-  if (side.length >= 2) {
-    const sr = catmullRom(side, 20);
+  // 外傳路線（金色虛線，只連外傳關卡）＋番外篇支線
+  const { side: sideRoad, links } = mapRoads(nodes);
+  for (const sr of sideRoad.length ? [sideRoad, ...links] : links) {
     ctx.lineWidth = 6;
     ctx.strokeStyle = 'rgba(90,50,10,0.55)';
     ctx.beginPath();
@@ -230,11 +229,21 @@ export function paintWorldMap(
 }
 
 /** 地圖路線（主線與外傳），手繪地圖時由 MapScene 用向量線畫在圖上 */
-export function mapRoads(nodes: (Vec & { bonus?: boolean })[]): { main: Vec[]; side: Vec[] } {
+export function mapRoads(nodes: MapNode[]): { main: Vec[]; side: Vec[]; links: Vec[][] } {
   const main = nodes.filter((n) => !n.bonus);
-  const side = nodes.filter((n) => n.bonus);
-  return { main: main.length >= 2 ? catmullRom(main, 20) : [], side: side.length >= 2 ? catmullRom(side, 20) : [] };
+  const side = nodes.filter((n) => n.bonus && !n.link);
+  // 番外篇：從指定關卡拉一條微彎的支線過來
+  const links = nodes.flatMap((n) => {
+    if (!n.link) return [];
+    const a = n.link;
+    const mx = (a.x + n.x) / 2 + (n.y - a.y) * 0.25;
+    const my = (a.y + n.y) / 2 - (n.x - a.x) * 0.25;
+    return [catmullRom([a, { x: mx, y: my }, n], 20)];
+  });
+  return { main: main.length >= 2 ? catmullRom(main, 20) : [], side: side.length >= 2 ? catmullRom(side, 20) : [], links };
 }
+
+export type MapNode = Vec & { bonus?: boolean; link?: Vec };
 
 function compass(ctx: Ctx, x: number, y: number): void {
   ctx.save();

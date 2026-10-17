@@ -20,7 +20,7 @@ export type EnemyAbility =
   | { kind: 'spawnOnDeath'; enemy: string; count: number }
   | { kind: 'enrage'; belowHp: number; speedMul: number }
   /** 讓附近的塔暫時停擺（fx: 'fire' 為熔岩噴發，預設為冰封） */
-  | { kind: 'stunTowers'; radius: number; duration: number; cd: number; fx?: 'fire' }
+  | { kind: 'stunTowers'; radius: number; duration: number; cd: number; fx?: 'fire' | 'wave' }
   | { kind: 'aoeMelee'; radius: number }
   | { kind: 'blink'; distance: number; cd: number }
   /** 鑽入地下：期間無法被攻擊、阻擋，移動加速 */
@@ -183,7 +183,7 @@ export interface WaveDef {
   hpMul?: number;
 }
 
-export type ThemeId = 'grass' | 'forest' | 'snow' | 'waste' | 'autumn' | 'desert' | 'volcano';
+export type ThemeId = 'grass' | 'forest' | 'snow' | 'waste' | 'autumn' | 'desert' | 'volcano' | 'coast';
 
 export type DecorItem =
   | { kind: 'house'; x: number; y: number; scale?: number }
@@ -244,6 +244,10 @@ export interface LevelDef {
   rules?: LevelRules;
   /** 外傳關卡（戰役完結後解鎖，不在主線路線上） */
   bonus?: boolean;
+  /** 外傳終章：通關後播放外傳尾聲（之後的番外篇不算） */
+  sideFinale?: boolean;
+  /** 地圖上的路線改從這一關的旗子連過來（不接在外傳路線後面） */
+  mapLink?: string;
   /** 可點擊的地圖機關（落石、雪崩） */
   hazards?: HazardDef[];
 }

@@ -11,7 +11,7 @@ import type { LevelDef, LevelMode, TowerLevelDef, TowerType } from '../sim/defs'
 import { challengeLevel } from '../data/challenges';
 import { dailyKey, dailyLevel } from '../data/daily';
 import { evaluateAchievements } from '../data/achievements';
-import { STORY } from '../data/story';
+import { STORY, type EpilogueId } from '../data/story';
 import { GEMS_PER_ACHIEVEMENT, ITEMS, KEG, gemReward, type ItemId } from '../data/items';
 import { RANGE_Y, inEllipse } from '../sim/math';
 import { PAINTED_LEVELS, levelArtKey, paintLevel, paintBuildSpot } from '../art/terrain';
@@ -535,6 +535,31 @@ export class LevelScene extends Phaser.Scene {
           frequency: 220,
         })
         .setDepth(DEPTH.float - 25);
+    } else if (theme === 'coast') {
+      // 海鷗在海灣上空盤旋滑翔（偶爾拍翅），地上跟著淡淡的影子
+      for (let i = 0; i < 4; i++) {
+        const gull = this.add.image(0, 0, 'fx_gull').setDepth(DEPTH.float - 20);
+        const shadow = this.add.image(0, 0, 'fx_gull').setTint(0x000000).setAlpha(0.18).setDepth(DEPTH.decal);
+        const k = (1.2 + Math.random() * 0.4) / TEX;
+        gull.setScale(k);
+        shadow.setScale(k * 0.9);
+        const glide = () => {
+          const fromLeft = Math.random() < 0.5;
+          const y0 = Phaser.Math.Between(60, 560);
+          const y1 = Phaser.Math.Clamp(y0 + Phaser.Math.Between(-140, 140), 40, 600);
+          const x0 = fromLeft ? -PLAY_X0 - 40 : PLAY_W + PLAY_X0 + 40;
+          const x1 = fromLeft ? PLAY_W + PLAY_X0 + 40 : -PLAY_X0 - 40;
+          gull.setPosition(x0, y0).setFlipX(!fromLeft);
+          shadow.setPosition(x0 + 30, y0 + 90);
+          const dur = Phaser.Math.Between(14000, 22000);
+          const delay = Phaser.Math.Between(0, 6000) + i * 1500;
+          this.tweens.add({ targets: gull, x: x1, y: y1, duration: dur, ease: 'Sine.easeInOut', delay, onComplete: glide });
+          this.tweens.add({ targets: shadow, x: x1 + 30, y: y1 + 90, duration: dur, ease: 'Sine.easeInOut', delay });
+        };
+        // 拍翅：大部分時間滑翔，每隔幾秒拍幾下
+        this.tweens.add({ targets: gull, scaleY: k * 0.45, duration: 140, yoyo: true, repeat: 3, repeatDelay: 20, loop: -1, loopDelay: 2600 + i * 500 });
+        glide();
+      }
     } else if (theme === 'desert') {
       // 一陣陣風沙由左吹到右
       this.add
@@ -1331,6 +1356,7 @@ export class LevelScene extends Phaser.Scene {
           else if (ev.kind === 'nova') sfx.play('freeze');
           else if (ev.kind === 'holy') sfx.play('heal');
           else if (ev.kind === 'shock') sfx.play('zap', 0.6);
+          else if (ev.kind === 'wave') sfx.play('splash');
           break;
         case 'towerShoot': {
           const tp = ev.t.def.attack;
@@ -1405,8 +1431,8 @@ export class LevelScene extends Phaser.Scene {
             sfx.play('boss');
             // 首領登場喊話（號角聲之後）
             const boss = this.bossIds(ev.index)[0];
-            // 沙暴巨蟲是野獸，不說話只會吼
-            if (boss) this.time.delayedCall(900, () => (boss === 'wyrm' ? sfx.play('roar') : this.bossTaunt(boss)));
+            // 沙暴巨蟲、利維坦這類野獸不說話，只會吼
+            if (boss) this.time.delayedCall(900, () => (BOSS_VOICES[boss] ? this.bossTaunt(boss) : sfx.play('roar')));
             sfx.playBgm(this.level.bgm ?? 'boss');
             camShake(this, 400, 0.004);
           }
@@ -1951,7 +1977,7 @@ export class LevelScene extends Phaser.Scene {
   }
 
   /** 最終關通關 → 尾聲與製作群 */
-  exitToEnding(story: 'main' | 'side' = 'main'): void {
+  exitToEnding(story: EpilogueId = 'main'): void {
     this.cameras.main.fadeOut(400, 0, 0, 0);
     this.time.delayedCall(420, () => {
       this.scene.stop('LevelUI');
