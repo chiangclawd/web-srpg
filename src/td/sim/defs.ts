@@ -273,4 +273,9 @@ export interface LevelRules {
   hazardCdMul?: number;
   hazardDmgMul?: number;
   heroUltCdMul?: number;
+  /** 精英敵人：第 i 波（0 起算）出現機率 = min(max, base + perWave × i)；首領與召喚物不會是精英 */
+  elite?: { base: number; perWave: number; max: number };
 }
+
+/** 精英詞綴 */
+export type EliteAffix = 'swift' | 'tough' | 'regen' | 'shielded';

@@ -37,6 +37,9 @@ export class UnitView {
   private ring: Phaser.GameObjects.Ellipse | null = null;
   private ice: Phaser.GameObjects.Image | null = null;
   private mound: Phaser.GameObjects.Image | null = null;
+  /** 精英光環（腳下發光的圈） */
+  private aura: Phaser.GameObjects.Image | null = null;
+  private auraRing: Phaser.GameObjects.Image | null = null;
   dead = false;
 
   constructor(
@@ -64,6 +67,22 @@ export class UnitView {
     this.height = height;
     this.baseScale = height / this.body.frame.height;
     this.body.setScale(this.baseScale);
+  }
+
+  /** 精英：腳下一圈發光光環＋身體放大一點 */
+  setElite(color: number): void {
+    if (this.aura) return;
+    // 紋理是 2 倍解析度：用 displaySize 指定實際大小
+    const w = this.hpWidth + 26;
+    this.aura = this.scene.add.image(0, 0, 'fx_soft').setTint(color).setBlendMode('ADD').setDepth(DEPTH.shadow + 1);
+    this.aura.setDisplaySize(w, w * 0.42).setAlpha(0.8);
+    this.auraRing = this.scene.add.image(0, 0, 'fx_ring').setTint(color).setDepth(DEPTH.shadow + 2);
+    this.auraRing.setDisplaySize(w, w * 0.42).setAlpha(0.95);
+    this.scene.tweens.add({ targets: [this.aura, this.auraRing], alpha: 0.4, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.baseScale *= 1.15;
+    this.height *= 1.15;
+    this.hpFg.setStrokeStyle(1, color, 1);
+    this.hpBg.setStrokeStyle(1.5, color, 1);
   }
 
   showRing(on: boolean, color = 0xffd84a): void {
@@ -128,6 +147,8 @@ export class UnitView {
     else if (s.tint !== undefined) this.body.setTint(s.tint);
     else this.body.clearTint();
     this.shadow.setPosition(s.x, s.y + 1);
+    this.aura?.setPosition(s.x, s.y + 2).setVisible(this.body.visible);
+    this.auraRing?.setPosition(s.x, s.y + 2).setVisible(this.body.visible);
     if (this.ring) {
       this.ring.setPosition(s.x, s.y + 2);
       this.ring.setScale(1 + Math.sin(s.t * 5) * 0.06);
@@ -187,6 +208,8 @@ export class UnitView {
     this.ring?.destroy();
     this.ice?.destroy();
     this.mound?.destroy();
+    this.aura?.destroy();
+    this.auraRing?.destroy();
     const b = this.body;
     const flip = b.flipX ? -1 : 1;
     if (kind === 'death') {
@@ -213,6 +236,8 @@ export class UnitView {
     this.shadow.destroy();
     this.hpBg.destroy();
     this.hpFg.destroy();
+    this.aura?.destroy();
+    this.auraRing?.destroy();
     this.stars.forEach((s) => s.destroy());
     this.ring?.destroy();
     this.ice?.destroy();

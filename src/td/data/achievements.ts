@@ -71,6 +71,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'boss_rush', name: { zh: '首領獵人', en: 'Boss Hunter' }, desc: { zh: '在任一張地圖通關首領連戰', en: 'Clear Boss Rush on any map' }, icon: 'ic_skull' },
   { id: 'landslide', name: { zh: '山崩地裂', en: 'Landslide' }, desc: { zh: '地圖機關一次擊倒 5 名敵人', en: 'Take down 5 enemies with one map trap' }, icon: 'ic_meteor' },
   { id: 'hero_max', name: { zh: '傳奇之路', en: 'Legendary' }, desc: { zh: '任一英雄達到 10 級', en: 'Raise any hero to level 10' }, icon: 'ic_crown' },
+  { id: 'elite_50', name: { zh: '精英獵手', en: 'Elite Hunter' }, desc: { zh: '累計擊敗 50 名精英敵人', en: 'Defeat 50 elite enemies' }, icon: 'ic_skull' },
   { id: 'curious', name: { zh: '好奇寶寶', en: 'Curious Mind' }, desc: { zh: '點點戰場上的東西，找到 15 個彩蛋', en: 'Tap around the battlefields to find 15 eggs' }, icon: 'ic_star' },
   { id: 'login_7', name: { zh: '忠誠守衛', en: 'Loyal Guardian' }, desc: { zh: '連續 7 天領取每日登入獎勵', en: 'Claim the daily reward 7 days in a row' }, icon: 'ic_gem' },
 ];
@@ -128,6 +129,7 @@ export function evaluateAchievements(o: LevelOutcome, sv: SaveData): string[] {
   if (Object.values(sv.daily ?? {}).filter((n) => n > 0).length >= 7) unlock('daily_7');
   if (o.mode === 'endless' && o.wave >= 30) unlock('endless_30');
   if ((sv.eggs?.length ?? 0) >= EGG_GOAL) unlock('curious');
+  if ((sv.stats.elites ?? 0) >= 50) unlock('elite_50');
   sv.achievements = [...got];
   return fresh;
 }
@@ -158,6 +160,8 @@ export function achievementProgress(id: string, sv: SaveData): { cur: number; ma
       return { cur: sv.login?.streak ?? 0, max: 7 };
     case 'curious':
       return { cur: sv.eggs?.length ?? 0, max: EGG_GOAL };
+    case 'elite_50':
+      return { cur: sv.stats.elites ?? 0, max: 50 };
     case 'hero_max':
       return { cur: Math.max(1, ...Object.values(sv.heroes).map((h) => heroLevelForXp(h.xp))), max: HERO_MAX_LEVEL };
     default:

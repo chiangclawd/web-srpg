@@ -1,4 +1,4 @@
-import type { DamageKind, EnemyDef, HeroDef, Range2, TowerLevelDef, TowerType } from './defs';
+import type { DamageKind, EliteAffix, EnemyDef, HeroDef, Range2, TowerLevelDef, TowerType } from './defs';
 import type { Path } from './Path';
 
 let nextId = 1;
@@ -55,6 +55,8 @@ export class Enemy {
   /** 鑽地中：無法被選為目標、免疫傷害與控制 */
   burrowed = false;
   burrowUntil = 0;
+  /** 精英詞綴（挑戰／無盡模式隨機出現；賞金加倍） */
+  elite: EliteAffix | null = null;
 
   constructor(
     readonly def: EnemyDef,

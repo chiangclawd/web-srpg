@@ -59,7 +59,8 @@ export function challengeLevel(level: LevelDef, mode: LevelMode): LevelDef {
       waves,
       intro: [],
       tutorial: false,
-      rules: { mode: 'heroic' },
+      // 英雄挑戰：一開始就有精英，越後面越多
+      rules: { mode: 'heroic', elite: { base: 0.03, perWave: 0.02, max: 0.15 } },
     };
   }
   // iron
@@ -149,7 +150,8 @@ export function endlessLevel(level: LevelDef): LevelDef {
     waves,
     intro: [],
     tutorial: false,
-    rules: { mode: 'endless', leakCap: 5 },
+    // 無盡：第 8 波起出現精英，每波多 1.2%，最多三成
+    rules: { mode: 'endless', leakCap: 5, elite: { base: -0.084, perWave: 0.012, max: 0.3 } },
   };
 }
 
