@@ -154,7 +154,7 @@ const STR = {
   gemsEarned: { zh: '+{0} 寶石', en: '+{0} gems' },
   loginTitle: { zh: '每日登入獎勵', en: 'Daily Reward' },
   loginDay: { zh: '第 {0} 天', en: 'Day {0}' },
-  loginHint: { zh: '每天回來領寶石，連續 7 天獎勵最多！', en: 'Come back every day: the 7th day in a row pays the most!' },
+  loginHint: { zh: '每天回來領寶石，連續 7 天獎勵最多！', en: 'Come back daily: day 7 in a row pays the most!' },
   claim: { zh: '領取', en: 'Claim' },
   nextPage: { zh: '下一頁', en: 'Next' },
   train: { zh: '訓練', en: 'Train' },

@@ -185,8 +185,8 @@ export class MapScene extends Phaser.Scene {
         if (isToday) this.tweens.add({ targets: slot, scale: 1.1, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         c.add(slot);
       });
-      c.add(addText(this, 0, 70, T('loginHint'), { size: 15, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: pw - 80, align: 'center' }).setOrigin(0.5));
-      c.add(new Button(this, 0, ph / 2 - 46, 220, 56, `${T('claim')}  ${T('gemsEarned', reward.gems)}`, () => {
+      c.add(fitText(addText(this, 0, 68, T('loginHint'), { size: 15, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0.5), pw - 60));
+      c.add(new Button(this, 0, ph / 2 - 42, 220, 56, `${T('claim')}  ${T('gemsEarned', reward.gems)}`, () => {
         sv.gems += reward.gems;
         sv.login = { last: today, streak: reward.day };
         // 連續 7 天：成就
@@ -637,7 +637,9 @@ export class MapScene extends Phaser.Scene {
     HERO_ORDER.forEach((id, k) => {
       const ok = heroUnlocked(id);
       if (ok) sfx.preloadVoice(id);
-      const b = new IconButton(this, ((k % 4) - 1.5) * 84, Math.floor(k / 4) * 80 - 40, 66, `ptc_${id}`, () => {
+      const bx = ((k % 4) - 1.5) * 84;
+      const by = Math.floor(k / 4) * 78 - 46;
+      const b = new IconButton(this, bx, by, 58, `ptc_${id}`, () => {
         if (!ok) {
           sfx.play('error');
           const after = LEVELS.find((l) => l.id === HEROES[id].unlockAfter);
@@ -658,6 +660,8 @@ export class MapScene extends Phaser.Scene {
         b.add(this.add.image(0, 0, 'ic_lock').setDisplaySize(26, 26));
       }
       box.add(b);
+      // 頭像下方的名字（未解鎖顯示 ???）
+      box.add(fitText(addText(this, bx, by + 36, ok ? L(HEROES[id].name) : '???', { size: 13, display: true, color: ok ? '#ffe8a8' : '#8a7a62', strokeW: 3 }).setOrigin(0.5), 80));
     });
     c.add(box);
     box.setScale(0.6).setAlpha(0);
