@@ -88,6 +88,7 @@ export class MapScene extends Phaser.Scene {
       flagTex.strokePath();
       const num = addText(this, 0, 22, String(i + 1), { size: 16, display: true }).setOrigin(0.5);
       c.add([glow, base, pole, flagTex, num]);
+      this.tweens.add({ targets: flagTex, scaleX: 0.82, duration: 520 + (i % 4) * 70, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
       for (let k = 0; k < 3; k++) {
         const st = this.add.image((k - 1) * 18, 42, k < stars ? 'ic_star' : 'ic_star_empty').setDisplaySize(20, 20);
         c.add(st);
@@ -221,6 +222,68 @@ export class MapScene extends Phaser.Scene {
     dashed(roads.main, 3, 0xf0d8a0, 1);
     dashed(roads.side, 6, 0x5a320a, 0.55);
     dashed(roads.side, 3, 0xffc860, 1);
+    this.mapLife();
+  }
+
+  /** 讓手繪地圖動起來：雲影與薄雲緩緩飄過、偶爾一群鳥飛過（都在旗子底下） */
+  private mapLife(): void {
+    const x0 = -PLAY_X0 - 260;
+    const x1 = WORLD_W - PLAY_X0 + 260;
+    const drift = (img: Phaser.GameObjects.Image, speed: number) => {
+      const go = () => {
+        this.tweens.add({
+          targets: img,
+          x: x1,
+          duration: ((x1 - img.x) / speed) * 1000,
+          onComplete: () => {
+            img.x = x0;
+            img.y = Phaser.Math.Between(60, VIEW_H - 120);
+            go();
+          },
+        });
+      };
+      go();
+    };
+    for (let i = 0; i < 3; i++) {
+      const shadow = this.add.image(Phaser.Math.Between(x0, x1), Phaser.Math.Between(80, VIEW_H - 140), 'fx_soft').setTint(0x0a1418).setAlpha(0.24).setScale(5.5 + i, 2.6 + i * 0.4);
+      drift(shadow, 9 + i * 3);
+    }
+    for (let i = 0; i < 2; i++) {
+      const cloud = this.add.image(Phaser.Math.Between(x0, x1), Phaser.Math.Between(60, VIEW_H - 160), 'fx_soft').setTint(0xffffff).setAlpha(0.3).setScale(5.5, 2.2);
+      drift(cloud, 14 + i * 4);
+    }
+    if (!this.textures.exists('map_bird')) {
+      const g = this.make.graphics({ x: 0, y: 0 }, false);
+      g.lineStyle(3, 0x2a1a10, 1);
+      g.beginPath();
+      g.moveTo(2, 4);
+      g.lineTo(9, 9);
+      g.lineTo(16, 4);
+      g.strokePath();
+      g.generateTexture('map_bird', 18, 12);
+      g.destroy();
+    }
+    const flock = () => {
+      if (!this.sys.isActive()) return;
+      const fromLeft = Math.random() < 0.5;
+      const y = Phaser.Math.Between(90, VIEW_H - 200);
+      const dy = Phaser.Math.Between(-120, 120);
+      const n = Phaser.Math.Between(3, 5);
+      for (let k = 0; k < n; k++) {
+        const b = this.add.image(fromLeft ? x0 : x1, y + (k % 2 ? 14 : -14) * Math.ceil(k / 2), 'map_bird').setScale(1.4).setAlpha(0.9);
+        this.tweens.add({ targets: b, scaleY: 0.5, duration: 150 + k * 12, yoyo: true, repeat: -1 });
+        this.tweens.add({
+          targets: b,
+          x: fromLeft ? x1 : x0,
+          y: b.y + dy,
+          delay: k * 120 + Math.abs(k - n / 2) * 160,
+          duration: 12000,
+          onComplete: () => b.destroy(),
+        });
+      }
+      this.time.delayedCall(Phaser.Math.Between(14000, 24000), flock);
+    };
+    this.time.delayedCall(600, flock);
   }
 
   private buildHud(): void {
