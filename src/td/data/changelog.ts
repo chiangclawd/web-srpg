@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 32,
+    date: '2026-10-17',
+    title: { zh: '每日挑戰新修正', en: 'New daily modifiers' },
+    items: [
+      { zh: '從 10/18 起每日挑戰多四種修正：蝠群夜襲（每波多一群蝙蝠）、巨魔之血（敵人回血）、山崩季節（地圖機關冷卻減半、傷害 +50%）、英雄之日（絕招冷卻 -40%）', en: 'From Oct 18 daily challenges can roll four new modifiers: Bat Swarm (extra bats every wave), Troll Blood (enemies regenerate), Rockslide Season (traps recharge twice as fast and hit harder) and Hero’s Day (ultimate recharges 40% faster)' },
+    ],
+  },
+  {
     id: 31,
     date: '2026-10-17',
     title: { zh: '成就進度條', en: 'Achievement progress' },

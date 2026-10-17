@@ -165,6 +165,11 @@ export class World {
     this.meteorCd = this.meteorCdMax * 0.5;
     this.reinfCd = 0;
     if (opts.hero) this.spawnHero(opts.hero.def, opts.hero.xp);
+    const um = opts.level.rules?.heroUltCdMul;
+    if (um && this.hero) {
+      this.heroUltCdMax *= um;
+      this.heroUltCd *= um;
+    }
   }
 
   private emit(e: SimEvent): void {
@@ -670,7 +675,7 @@ export class World {
   triggerHazard(i: number): boolean {
     if (!this.canTriggerHazard(i)) return false;
     const h = this.hazards[i];
-    h.cd = HAZARD[h.def.kind].cd;
+    h.cd = HAZARD[h.def.kind].cd * (this.level.rules?.hazardCdMul ?? 1);
     const p = this.paths[h.def.path].posAt(h.def.d0);
     h.roll = { t: 0, d: h.def.d0, x: p.x, y: p.y, hit: new Set(), kills: 0 };
     this.emit({ type: 'hazard', i, kind: h.def.kind, x: h.def.x, y: h.def.y, tx: p.x, ty: p.y });
@@ -691,7 +696,7 @@ export class World {
       const done = dir > 0 ? r.d >= h.def.d1 : r.d <= h.def.d1;
       if (done) r.d = h.def.d1;
       this.paths[h.def.path].posAt(r.d, 0, r);
-      const dmg = h.def.dmg ?? spec.dmg;
+      const dmg = (h.def.dmg ?? spec.dmg) * (this.level.rules?.hazardDmgMul ?? 1);
       for (const e of this.enemies) {
         if (!e.alive || e.flying || e.burrowed || r.hit.has(e.id)) continue;
         if (dist2(e.x, e.y, r.x, r.y) > spec.r * spec.r) continue;
@@ -853,6 +858,8 @@ export class World {
   private updateEnemy(e: Enemy, dt: number): void {
     if (!e.alive) return;
     const now = this.time;
+    const regenRule = this.level.rules?.enemyRegen;
+    if (regenRule && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * regenRule * dt);
     // 持續傷害
     if (e.dots.length) {
       for (const d of e.dots) {
