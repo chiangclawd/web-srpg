@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { PLAY_X0, VIEW_H, WORLD_W, bgScale, addText, setupCamera, viewW } from '../config';
-import { paintLevel } from '../art/terrain';
+import { PAINTED_LEVELS, levelArtKey, paintLevel } from '../art/terrain';
 import { EPILOGUE } from '../data/story';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { LEVELS } from '../data/levels';
@@ -40,12 +40,22 @@ export class EndingScene extends Phaser.Scene {
     this.bursts = [];
   }
 
+  preload(): void {
+    // 慶功場景用手繪的邊境村莊當背景（第一關的戰場圖）
+    if (PAINTED_LEVELS.has('l1') && !this.textures.exists(levelArtKey('l1'))) this.load.image(levelArtKey('l1'), 'assets/levels/l1.webp');
+  }
+
   create(): void {
     setupCamera(this);
     const w = viewW(this);
-    const bgS = bgScale(1.25);
-    if (!this.textures.exists('bg_menu')) this.textures.addCanvas('bg_menu', paintLevel(MENU_LEVEL, WORLD_W, PLAY_X0, bgS));
-    this.add.image((w - WORLD_W) / 2, 0, 'bg_menu').setOrigin(0).setScale(1 / bgS);
+    if (this.textures.exists(levelArtKey('l1'))) {
+      const img = this.add.image((w - WORLD_W) / 2, 0, levelArtKey('l1')).setOrigin(0);
+      img.setScale(WORLD_W / img.width, VIEW_H / img.height);
+    } else {
+      const bgS = bgScale(1.25);
+      if (!this.textures.exists('bg_menu')) this.textures.addCanvas('bg_menu', paintLevel(MENU_LEVEL, WORLD_W, PLAY_X0, bgS));
+      this.add.image((w - WORLD_W) / 2, 0, 'bg_menu').setOrigin(0).setScale(1 / bgS);
+    }
     // 黃昏慶典：整體壓暗、上方夜空、地平線暖光，讓煙火更醒目
     const sky = this.add.graphics().setDepth(1);
     sky.fillStyle(0x1a1030, 0.38);

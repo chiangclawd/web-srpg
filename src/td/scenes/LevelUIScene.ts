@@ -294,7 +294,8 @@ export class LevelUIScene extends Phaser.Scene {
     c.add(addText(this, -114, -14, T('achUnlocked'), { size: 13, color: '#9aff7a', strokeW: 2 }).setOrigin(0, 0.5));
     c.add(addText(this, -114, 10, L(a.name), { size: 20, display: true, color: '#ffe8a8' }).setOrigin(0, 0.5));
     sfx.play('star');
-    this.tweens.add({ targets: c, y: 120, duration: 420, ease: 'Back.easeOut' });
+    // 停在結算面板上方，不蓋住「勝利」標題
+    this.tweens.add({ targets: c, y: 66, duration: 420, ease: 'Back.easeOut' });
     this.tweens.add({ targets: c, y: -60, alpha: 0, delay: 2600, duration: 380, ease: 'Quad.easeIn', onComplete: () => c.destroy() });
   }
 

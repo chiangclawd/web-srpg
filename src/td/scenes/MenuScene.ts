@@ -59,9 +59,15 @@ export class MenuScene extends Phaser.Scene {
     super('Menu');
   }
 
+  preload(): void {
+    if (!this.textures.exists('keyart')) this.load.image('keyart', 'assets/keyart.webp');
+  }
+
   create(): void {
     setupCamera(this);
     this.walkers = [];
+    // 離開戰鬥後釋放戰場背景（重玩時從快取重新載入）
+    for (const k of this.textures.getTextureKeys()) if (k.startsWith('lvbg_')) this.textures.remove(k);
     const painted = this.textures.exists('keyart');
     if (painted) this.keyArt();
     else this.proceduralBg();
