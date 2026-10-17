@@ -11,6 +11,8 @@ import { save, persist, resetProgress, exportSave, importSave } from '../save';
 import { showTextDialog } from '../ui/textDialog';
 import { sfx } from '../audio';
 import { Path } from '../sim/Path';
+import { clearCheckpoint, loadCheckpoint, type Checkpoint } from '../sim/checkpoint';
+import { getLevel } from '../data/levels';
 
 /** 標題畫面背景用的裝飾地圖 */
 export const MENU_LEVEL: LevelDef = {
@@ -82,7 +84,10 @@ export class MenuScene extends Phaser.Scene {
     this.events.once('shutdown', () => this.scale.off('resize', this.build, this));
     sfx.playBgm('peaceful');
     this.cameras.main.fadeIn(500, 0, 0, 0);
-    if ((CHANGELOG[0]?.id ?? 0) > (save().newsSeen ?? 0)) this.time.delayedCall(700, () => this.showNews());
+    // 上次的戰鬥沒打完（手機切出去被重新整理）：優先問要不要繼續，更新內容下次再看
+    const cp = loadCheckpoint();
+    if (cp && getLevel(cp.levelId)) this.time.delayedCall(500, () => this.showResume(cp));
+    else if ((CHANGELOG[0]?.id ?? 0) > (save().newsSeen ?? 0)) this.time.delayedCall(700, () => this.showNews());
     if (consumeCrashNotice()) this.time.delayedCall(500, () => this.crashNotice());
   }
 
@@ -180,6 +185,33 @@ export class MenuScene extends Phaser.Scene {
   }
 
   /** 更新內容：有新的條目時開場自動跳出一次 */
+  private showResume(cp: Checkpoint): void {
+    const lv = getLevel(cp.levelId)!;
+    const w = viewW(this);
+    const c = this.add.container(WORLD_W / 2, VIEW_H / 2).setDepth(5000);
+    c.add(dimmer(this, w * 2, VIEW_H * 2, 0.55).setPosition(-w, -VIEW_H));
+    c.add(panel(this, 0, 0, 560, 300));
+    c.add(addText(this, 0, -104, T('resumeTitle'), { size: 30, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0.5));
+    const name = lv.bonus ? L(lv.name) : `${lv.index + 1}. ${L(lv.name)}`;
+    c.add(
+      addText(this, 0, -24, T('resumeBody', name, T(cp.mode), cp.waveIndex + 2), { size: 18, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: 480, align: 'center', lineSpacing: 6 }).setOrigin(0.5),
+    );
+    c.add(
+      new Button(this, -120, 92, 200, 56, T('resumeDrop'), () => {
+        clearCheckpoint();
+        c.destroy();
+      }, { color: 'grey' }),
+    );
+    c.add(
+      new Button(this, 120, 92, 200, 56, T('resumeGo'), () => {
+        sfx.play('horn', 0.6);
+        this.cameras.main.fadeOut(350, 0, 0, 0);
+        this.time.delayedCall(360, () => this.scene.start('Level', { levelId: cp.levelId, resume: true }));
+      }, { color: 'green' }),
+    );
+    popIn(this, c, 0, { w: 560, h: 300 }, 0.8, 200);
+  }
+
   private showNews(): void {
     const sv = save();
     sv.newsSeen = Math.max(sv.newsSeen ?? 0, CHANGELOG[0]?.id ?? 0);

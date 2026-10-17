@@ -21,6 +21,7 @@ import { DEPTH, Fx, camShake } from '../view/Fx';
 import { TowerView, UnitView } from '../view/Units';
 import { HazardLayer, hazardTextures } from '../view/Hazards';
 import { Bubbles } from '../view/Bubbles';
+import { clearCheckpoint, loadCheckpoint, restore, saveCheckpoint, snapshot, type Checkpoint } from '../sim/checkpoint';
 import { HERO_BARKS, towerBark } from '../data/barks';
 import { RadialMenu, type RadialOption } from '../view/RadialMenu';
 import { IconButton } from '../ui/widgets';
@@ -79,19 +80,23 @@ export class LevelScene extends Phaser.Scene {
   private hazardLayer: HazardLayer | null = null;
   /** 首領倒下的慢動作（場景時間，毫秒） */
   private slowMoUntil = 0;
+  /** 從存檔點繼續（手機被重新整理後） */
+  private resumeCp: Checkpoint | null = null;
   private bubbles!: Bubbles;
 
   constructor() {
     super('Level');
   }
 
-  init(data: { levelId: string; difficulty?: Difficulty; mode?: LevelMode }): void {
-    this.mode0 = data.mode ?? 'campaign';
+  init(data: { levelId: string; difficulty?: Difficulty; mode?: LevelMode; resume?: boolean }): void {
+    const cp = data.resume ? loadCheckpoint() : null;
+    this.resumeCp = cp && cp.levelId === data.levelId ? cp : null;
+    this.mode0 = this.resumeCp?.mode ?? data.mode ?? 'campaign';
     this.baseLevel = getLevel(data.levelId)!;
     // 每日挑戰：開局時的日期決定修正（跨午夜也記在開局那天）
-    this.dailyKey = dailyKey();
+    this.dailyKey = this.resumeCp?.dailyKey ?? dailyKey();
     this.level = this.mode0 === 'daily' ? dailyLevel(this.baseLevel, this.dailyKey) : challengeLevel(this.baseLevel, this.mode0);
-    this.difficulty = data.difficulty ?? save().settings.difficulty;
+    this.difficulty = this.resumeCp?.difficulty ?? data.difficulty ?? save().settings.difficulty;
     this.paused = false;
     this.speed = save().settings.speed ?? 1;
     this.mode = 'idle';
@@ -128,15 +133,19 @@ export class LevelScene extends Phaser.Scene {
 
   create(): void {
     const sv = save();
-    const heroId = sv.selectedHero;
+    const cp = this.resumeCp;
+    const heroId = cp?.heroId ?? sv.selectedHero;
     const heroDef = HEROES[heroId] ?? HEROES.arthur;
     this.world = new World({
       level: this.level,
       mods: computeMods(sv.upgrades),
-      hero: { def: heroDef, xp: sv.heroes[heroDef.id]?.xp ?? 0 },
+      hero: { def: heroDef, xp: cp?.hero?.xp ?? sv.heroes[heroDef.id]?.xp ?? 0 },
       difficulty: this.difficulty,
       seed: (Date.now() & 0xffff) + 1,
     });
+    // 從存檔點繼續：重建塔與狀態；否則清掉舊的存檔點（開了別的戰鬥就不再提示）
+    if (cp) restore(this.world, cp);
+    else clearCheckpoint();
     sv.stats.plays++;
     persist();
 
@@ -233,8 +242,12 @@ export class LevelScene extends Phaser.Scene {
       });
     }
 
-    // 開場：劇情（首次進入戰役）→ 介紹新敵人
+    // 開場：劇情（首次進入戰役）→ 介紹新敵人；從存檔點繼續時直接提示
     this.time.delayedCall(500, () => {
+      if (cp) {
+        this.ui.toast(T('resumed', cp.waveIndex + 2), 3500);
+        return;
+      }
       const story = STORY[this.level.id];
       const seen = save().storySeen;
       if (this.mode0 === 'campaign' && story && !seen.includes(this.level.id)) {
@@ -1360,6 +1373,8 @@ export class LevelScene extends Phaser.Scene {
           this.heroSkillFx(ev.skill, ev.x, ev.y);
           break;
         case 'waveStart':
+          // 開波前的狀態存成存檔點（手機被重新整理後可從這一波繼續）
+          saveCheckpoint(snapshot(this.world, { levelId: this.baseLevel.id, mode: this.mode0, difficulty: this.difficulty, dailyKey: this.mode0 === 'daily' ? this.dailyKey : undefined }, ev.index - 1));
           this.ui.waveBanner(ev.index + 1, this.world.waveCount, ev.boss);
           this.maybeTip(ev.index);
           if (this.hazardLayer && !save().tipsSeen.includes('hazard')) {
@@ -1706,6 +1721,7 @@ export class LevelScene extends Phaser.Scene {
   private showResult(): void {
     if (this.resultShown) return;
     this.resultShown = true;
+    clearCheckpoint();
     const w = this.world;
     const sv = save();
     const victory = w.result === 'victory';
@@ -1869,6 +1885,7 @@ export class LevelScene extends Phaser.Scene {
   }
 
   exitToMap(nextLevel?: string): void {
+    clearCheckpoint();
     this.cameras.main.fadeOut(250, 0, 0, 0);
     this.time.delayedCall(260, () => {
       this.scene.stop('LevelUI');

@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 30,
+    date: '2026-10-17',
+    title: { zh: '戰鬥存檔點', en: 'Battle checkpoints' },
+    items: [
+      { zh: '每一波開始前會自動存檔；手機切到別的 App 被重新整理時，回到標題畫面可以選擇「繼續戰鬥」，塔、金幣和生命都會保留，從那一波重新開始', en: 'The game now saves a checkpoint before every wave. If your phone reloads the page while you’re away, the title screen offers to continue: your towers, gold and lives are kept and the wave starts again' },
+    ],
+  },
+  {
     id: 29,
     date: '2026-10-17',
     title: { zh: '新模式：首領連戰', en: 'New mode: Boss Rush' },
