@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 36,
+    date: '2026-10-17',
+    title: { zh: '首領登場喊話', en: 'Boss taunts' },
+    items: [
+      { zh: '八位首領登場時會放話（沙暴巨蟲是野獸，只會吼）', en: 'Eight bosses now taunt you when they arrive (the Sandstorm Wyrm just roars)' },
+      { zh: '設定新增「角色語音」開關', en: 'New Voices switch in Settings' },
+    ],
+  },
+  {
     id: 35,
     date: '2026-10-17',
     title: { zh: '英雄開口說話了', en: 'Heroes speak' },

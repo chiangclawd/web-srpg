@@ -103,7 +103,9 @@ NODE_USE_ENV_PROXY=1 node scripts/art/gemini-listen.mjs raw/boss.mp3   # 請 Gem
 NODE_USE_ENV_PROXY=1 npx tsx scripts/art/gen-voices.ts [英雄...]   # 已存在的檔案會略過
 ```
 
-- 模型：`gemini-2.5-flash-preview-tts`（每天限 100 次）／`gemini-2.5-pro-preview-tts`（中文咬字較穩）；新版 TTS 會把語氣說明一起念出來，不要用
+- 首領登場台詞在 `BOSS_VOICES`（檔名 `boss_<首領>_<語言>.mp3`），設定裡的「角色語音」可關掉英雄與首領語音
+- 模型與每日上限：`gemini-2.5-flash-preview-tts` 100 次、`gemini-2.5-pro-preview-tts` 50 次（中文咬字較穩）、`gemini-3.1-flash-tts-preview`。2.5 版用「語氣: 台詞」，3.x 版會把語氣照念，`gemini-tts.mjs` 會自動改成 `[語氣] 台詞` 標籤
+- 內建聲線的性別不一定看名字猜得到（例如 Gacrux 偏低沉男聲），產出後確認
 - 中文短句用喊的容易咬字不清，台詞寫長一點、加「字正腔圓」的語氣說明比較穩；產出後請 Gemini 逐句聽寫比對
 - 遊戲端每關只下載目前英雄的語音，新的一句會打斷前一句
 

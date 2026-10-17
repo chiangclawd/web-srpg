@@ -15,7 +15,8 @@ if (!out || !voice || !text) {
   process.exit(2);
 }
 const model = process.env.GEMINI_TTS_MODEL ?? 'gemini-2.5-flash-preview-tts';
-const prompt = style ? `${style}: ${text}` : text;
+// 2.5 版把「語氣: 台詞」的語氣當說明；3.x 版會照念出來，要改用方括號標籤
+const prompt = !style ? text : /gemini-3/.test(model) ? `[${style}] ${text}` : `${style}: ${text}`;
 
 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
   method: 'POST',

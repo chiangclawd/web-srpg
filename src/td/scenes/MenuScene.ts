@@ -267,10 +267,17 @@ export class MenuScene extends Phaser.Scene {
       });
       c.add(b);
     };
-    row(-164, T('music'), 'music');
-    row(-108, T('sound'), 'sfx');
-    label(-52, T('shake'));
-    const shakeBtn = new IconButton(this, 140, -52, 50, sv.settings.shake ? 'ic_check' : 'ic_close', () => {
+    row(-172, T('music'), 'music');
+    row(-122, T('sound'), 'sfx');
+    label(-72, T('voices'));
+    const voiceBtn = new IconButton(this, 140, -72, 50, sv.settings.voice !== false ? 'ic_check' : 'ic_close', () => {
+      sv.settings.voice = sv.settings.voice === false;
+      persist();
+      voiceBtn.setIcon(sv.settings.voice ? 'ic_check' : 'ic_close');
+    });
+    c.add(voiceBtn);
+    label(-22, T('shake'));
+    const shakeBtn = new IconButton(this, 140, -22, 50, sv.settings.shake ? 'ic_check' : 'ic_close', () => {
       sv.settings.shake = !sv.settings.shake;
       persist();
       shakeBtn.setIcon(sv.settings.shake ? 'ic_check' : 'ic_close');
@@ -278,10 +285,10 @@ export class MenuScene extends Phaser.Scene {
     });
     c.add(shakeBtn);
     // 畫質：自動 → 高 → 省電，改了要重新載入（渲染倍率在遊戲建立時決定）
-    label(4, T('quality'));
+    label(30, T('quality'));
     const QS: Quality[] = ['auto', 'high', 'low'];
     const qName = (q: Quality) => T(q === 'auto' ? 'qAuto' : q === 'high' ? 'qHigh' : 'qLow');
-    const qBtn = new Button(this, 120, 4, 110, 44, qName(sv.settings.quality ?? 'auto'), () => {
+    const qBtn = new Button(this, 120, 30, 110, 44, qName(sv.settings.quality ?? 'auto'), () => {
       const cur = sv.settings.quality ?? 'auto';
       sv.settings.quality = QS[(QS.indexOf(cur) + 1) % QS.length];
       persist();
@@ -291,7 +298,7 @@ export class MenuScene extends Phaser.Scene {
     c.add(qBtn);
     // 清除進度：按兩次才生效
     let armed = false;
-    const wipe = new Button(this, 0, 134, 240, 46, T('resetProgress'), () => {
+    const wipe = new Button(this, 0, 148, 240, 46, T('resetProgress'), () => {
       if (!armed) {
         armed = true;
         wipe.label.setText(T('confirmWipe'));
@@ -308,10 +315,10 @@ export class MenuScene extends Phaser.Scene {
     }, { color: 'red', text: { size: 18 } });
     c.add(wipe);
     // 存檔備份 / 還原（換裝置時用）
-    c.add(new Button(this, -88, 70, 160, 46, T('backup'), () => {
+    c.add(new Button(this, -88, 90, 160, 46, T('backup'), () => {
       showTextDialog({ title: T('backupTitle'), hint: T('backupHint'), text: exportSave(), readOnly: true, okLabel: 'OK', copyLabel: T('copy'), copiedLabel: T('copied') });
     }, { color: 'blue', text: { size: 18 } }));
-    c.add(new Button(this, 88, 70, 160, 46, T('restore'), () => {
+    c.add(new Button(this, 88, 90, 160, 46, T('restore'), () => {
       showTextDialog({
         title: T('restoreTitle'),
         hint: T('restoreHint'),
@@ -325,7 +332,7 @@ export class MenuScene extends Phaser.Scene {
         },
       });
     }, { color: 'wood', text: { size: 18 } }));
-    c.add(new Button(this, 0, 208, 200, 52, 'OK', () => c.destroy(), { color: 'green' }));
+    c.add(new Button(this, 0, 214, 200, 52, 'OK', () => c.destroy(), { color: 'green' }));
     popIn(this, c, 0, { w: 460, h: 540 }, 0.8, 200);
   }
 

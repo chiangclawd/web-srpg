@@ -202,11 +202,26 @@ class TdAudio {
     for (const line of VOICE_LINES) this.loadVoice(this.voiceKey(hero, line));
   }
 
-  /** 說一句台詞；還沒下載好就這次不說。新的一句會打斷前一句，避免疊在一起 */
+  /** 預先下載首領登場台詞 */
+  preloadBossVoice(boss: string): void {
+    if (this.ensureCtx()) this.loadVoice(`boss_${boss}_${getLang()}`);
+  }
+
+  /** 英雄說一句台詞 */
   voice(hero: string, line: VoiceLine): void {
+    this.speak(this.voiceKey(hero, line));
+  }
+
+  /** 首領登場喊話 */
+  bossVoice(boss: string): void {
+    this.speak(`boss_${boss}_${getLang()}`);
+  }
+
+  /** 播一句語音；還沒下載好就這次不說。新的一句會打斷前一句，避免疊在一起 */
+  private speak(key: string): void {
+    if (save().settings.voice === false) return;
     const ctx = this.ensureCtx();
     if (!ctx || !this.master || this.sfxVol <= 0) return;
-    const key = this.voiceKey(hero, line);
     const buf = this.voices.get(key);
     if (!buf) this.loadVoice(key);
     if (!buf || buf === 'loading') return;
