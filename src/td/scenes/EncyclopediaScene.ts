@@ -200,13 +200,15 @@ export class EncyclopediaScene extends Phaser.Scene {
     const cells = stats.map(([k, v], i) => add(addText(this, tx, statY + Math.floor(i / 2) * 32, k ? `${k}: ${v}` : v, { size: 18, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false })));
     const col2 = tx + Math.max(200, ...cells.filter((_, i) => i % 2 === 0).map((t) => t.width + 28));
     cells.forEach((t, i) => i % 2 && t.setX(col2));
-    (def.skills ?? []).forEach((sk, i) => {
-      const sy = statY + 120 + i * 56;
+    // 技能說明在窄螢幕上會超出面板：折行，下一個技能跟著往下排
+    let sy = statY + 120;
+    for (const sk of def.skills ?? []) {
       add(this.add.image(tx + 20, sy, 'ui_badge_blue').setDisplaySize(44, 44));
       add(this.add.image(tx + 20, sy, `sk_${sk.id}`).setDisplaySize(28, 28));
       add(addText(this, tx + 52, sy - 12, L(sk.name), { size: 16, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
-      add(addText(this, tx + 52, sy + 13, L(sk.desc), { size: 14, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0, 0.5));
-    });
+      const sd = add(addText(this, tx + 52, sy + 2, L(sk.desc), { size: 14, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: x + w - tx - 76 }));
+      sy += Math.max(56, sd.height + 30);
+    }
   }
 
   private scrollGrid(y: number): void {
