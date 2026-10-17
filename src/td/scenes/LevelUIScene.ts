@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { VIEW_H, addText, fontPx, setupCamera, uiZoom, viewW } from '../config';
+import { VIEW_H, addText, fitText, fontPx, setupCamera, uiZoom, viewW } from '../config';
 import { ENEMIES } from '../data/enemies';
 import { ACHIEVEMENTS } from '../data/achievements';
 import type { StoryLine } from '../data/story';
@@ -396,6 +396,30 @@ export class LevelUIScene extends Phaser.Scene {
   }
 
   /** 結算面板上的寶石獎勵列 */
+  /** 結算面板左側：本場傷害最高的塔（MVP） */
+  private mvpBadge(c: Phaser.GameObjects.Container, x: number, y: number): void {
+    const t = [...this.lvl.world.towers].sort((a, b) => b.dmgDealt - a.dmgDealt)[0];
+    if (!t || t.dmgDealt <= 0) return;
+    const key = t.level >= 4 && t.def.branchId ? `icb_${t.def.branchId}` : `icb_${t.type}`;
+    const glow = this.add.image(x, y, 'fx_soft').setTint(0xffd86a).setBlendMode('ADD').setAlpha(0.5).setScale(1.1);
+    c.add(glow);
+    this.tweens.add({ targets: glow, alpha: 0.25, duration: 900, yoyo: true, repeat: -1 });
+    c.add(addText(this, x, y - 50, 'MVP', { size: 20, display: true, color: '#ffe066', strokeW: 5 }).setOrigin(0.5));
+    c.add(this.add.image(x, y, this.textures.exists(key) ? key : `icb_${t.type}`).setDisplaySize(66, 66));
+    // 依實際字高往下排（手機會放大小字）
+    const sub = { size: 13, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 0, shadow: false };
+    let ly = y + 36;
+    for (const [text, bold] of [
+      [L(t.def.name), true],
+      [T('mvpDmg', Math.round(t.dmgDealt).toLocaleString()), false],
+      [T('mvpKills', t.kills), false],
+    ] as const) {
+      const line = fitText(addText(this, x, ly, text, { ...sub, size: bold ? 14 : 13, bold }).setOrigin(0.5, 0), 96);
+      c.add(line);
+      ly += line.height * line.scaleY - 2;
+    }
+  }
+
   private gemLine(c: Phaser.GameObjects.Container, y: number): void {
     const n = this.lvl.gemsEarned;
     if (n <= 0) return;
@@ -636,6 +660,7 @@ export class LevelUIScene extends Phaser.Scene {
         addText(this, 0, 30, this.lvl.mode0 === 'heroic' ? T('heroic') : T('iron'), { size: 22, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0.5),
       );
       this.gemLine(c, 72);
+      this.mvpBadge(c, -184, -60);
       c.add(new Button(this, -100, 140, 170, 52, T('retry'), () => this.lvl.restart(), { color: 'gold' }));
       c.add(new Button(this, 100, 140, 170, 52, T('toMap'), () => this.lvl.exitToMap(), { color: 'blue' }));
     } else if (victory) {
@@ -658,6 +683,7 @@ export class LevelUIScene extends Phaser.Scene {
         }
       }
       const w0 = this.lvl.world;
+      this.mvpBadge(c, -184, -60);
       const info = addText(this, 0, 22, `${T('lives')} ${w0.lives}/${w0.maxLives}   ·   ${T('enemies')} ${w0.stats.kills}`, {
         size: 18,
         color: '#4a2a10',

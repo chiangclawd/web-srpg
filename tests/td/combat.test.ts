@@ -106,3 +106,24 @@ test('the simulation is deterministic for a given seed', () => {
   };
   assert.equal(play(), play());
 });
+
+test('damage and kills are credited to the tower that dealt them (MVP), not to spells', () => {
+  const w = mkWorld();
+  w.gold = 9999;
+  const archer = w.build(0, 'archer')!;
+  const barracks = w.build(1, 'barracks')!;
+  archer.buildUntil = barracks.buildUntil = 0;
+  run(w, 1);
+  for (let i = 0; i < 6; i++) w.spawnEnemy('goblin', 0, 200 + i * 30);
+  run(w, 25);
+  assert.ok(archer.dmgDealt > 0, 'archer arrows are credited');
+  assert.ok(barracks.dmgDealt > 0, "barracks soldiers' hits are credited to their tower");
+  assert.ok(archer.kills + barracks.kills > 0);
+  const before = archer.dmgDealt + barracks.dmgDealt;
+  const e = w.spawnEnemy('troll', 0, 900);
+  w.damageEnemy(e, 300, 'true', 'spell');
+  assert.equal(archer.dmgDealt + barracks.dmgDealt, before, 'direct spell damage is not credited to towers');
+  const g = w.spawnEnemy('goblin', 0, 950);
+  const dealt = w.damageEnemy(g, 9999, 'true', 'spell');
+  assert.ok(dealt > 0 && !g.alive);
+});

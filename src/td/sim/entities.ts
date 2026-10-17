@@ -173,6 +173,9 @@ export class Tower {
   stunUntil = 0;
   /** 停擺是被熔岩燒的（畫面染紅）；否則是冰封（染藍） */
   stunFire = false;
+  /** 本場累計傷害與擊殺（結算畫面的 MVP；含兵營士兵與塔放出的火焰區） */
+  dmgDealt = 0;
+  kills = 0;
   /** 夏儂的智慧加護：此時間前攻速提高 */
   hasteUntil = 0;
   golem: Soldier | null = null;
@@ -254,4 +257,6 @@ export interface Zone {
   slow: number;
   until: number;
   source: DamageSourceKind;
+  /** 放出這片區域的塔（記傷害用） */
+  owner?: Tower | null;
 }

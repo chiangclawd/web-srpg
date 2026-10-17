@@ -177,6 +177,8 @@ const STR = {
   heroJoined: { zh: '新英雄加入！', en: 'New hero joined!' },
   later: { zh: '稍後', en: 'Later' },
   tipHazard: { zh: '小技巧：點擊崖邊的落石可以把它推下去，沿路砸傷敵人！用完會慢慢恢復', en: 'Tip: tap the boulder on the ledge to send it rolling down the road and crush enemies! It comes back after a while' },
+  mvpDmg: { zh: '{0} 傷害', en: '{0} dmg' },
+  mvpKills: { zh: '擊殺 {0}', en: 'Kills {0}' },
   hazardWait: { zh: '{0} 秒後恢復', en: 'Ready in {0}s' },
   hazardCombo: { zh: '一次擊倒 ×{0}！', en: '{0} crushed!' },
   tipZoom: { zh: '小技巧：雙指可放大地圖，放大後拖曳移動', en: 'Tip: pinch to zoom the map, then drag to move around' },

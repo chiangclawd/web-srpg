@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 24,
+    date: '2026-10-17',
+    title: { zh: '本場 MVP', en: 'Battle MVP' },
+    items: [
+      { zh: '勝利畫面會標出本場傷害最高的塔（MVP），附上傷害與擊殺數；兵營士兵與塔放出的火焰也算進該塔', en: 'The victory screen now names the battle’s MVP tower — the one that dealt the most damage — with its damage and kills. Barracks soldiers and tower fire count toward their tower' },
+    ],
+  },
+  {
     id: 23,
     date: '2026-10-17',
     title: { zh: '外傳終章：熔岩火山口', en: 'Side-story finale: Ember Crater' },

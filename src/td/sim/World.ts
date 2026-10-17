@@ -143,6 +143,8 @@ export class World {
   heroUltCdMax = 0;
 
   hazards: HazardState[];
+  /** 目前在結算哪座塔造成的傷害（主迴圈設定；法術、機關、毒等為 null） */
+  private dmgBy: Tower | null = null;
 
   result: 'victory' | 'defeat' | null = null;
   stats = { kills: 0, leaks: 0, goldEarned: 0, towersBuilt: 0, meteorKills: 0, earlyCalls: 0, sheep: 0, bossesKilled: [] as string[], hazardKills: 0, bestHazard: 0 };
@@ -785,9 +787,19 @@ export class World {
     this.updateWaves();
     if (this.hazards.length) this.updateHazards(dt);
     for (const e of this.enemies) this.updateEnemy(e, dt);
-    for (const t of this.towers) this.updateTower(t, dt);
-    for (const s of this.soldiers) this.updateSoldier(s, dt);
-    for (const p of this.projectiles) this.updateProjectile(p, dt);
+    for (const t of this.towers) {
+      this.dmgBy = t;
+      this.updateTower(t, dt);
+    }
+    for (const s of this.soldiers) {
+      this.dmgBy = s.tower;
+      this.updateSoldier(s, dt);
+    }
+    for (const p of this.projectiles) {
+      this.dmgBy = p.owner instanceof Tower ? p.owner : (p.owner?.tower ?? null);
+      this.updateProjectile(p, dt);
+    }
+    this.dmgBy = null;
     this.updateZones(dt);
     this.updateHeroRespawn();
     // 清理
@@ -1043,6 +1055,7 @@ export class World {
       a -= absorb;
     }
     e.hp -= a;
+    if (this.dmgBy) this.dmgBy.dmgDealt += Math.min(a, a + e.hp);
     if (!silent) e.lastHitAt = this.time;
     if (src === 'hero') this.gainHeroXp(a * 0.07);
     if (e.hp <= 0) this.killEnemy(e, src);
@@ -1058,6 +1071,7 @@ export class World {
     this.gold += g;
     this.stats.goldEarned += g;
     this.stats.kills++;
+    if (this.dmgBy) this.dmgBy.kills++;
     if (e.def.boss) this.stats.bossesKilled.push(e.def.id);
     if (src === 'hero') this.gainHeroXp(g * 1.2);
     else this.gainHeroXp(g * 0.25);
@@ -2074,7 +2088,7 @@ export class World {
   }
 
   private addZone(z: Omit<Zone, 'id'>): void {
-    const zone: Zone = { ...z, id: newId() };
+    const zone: Zone = { owner: this.dmgBy, ...z, id: newId() };
     this.zones.push(zone);
     this.emit({ type: 'zone', z: zone });
   }
@@ -2085,10 +2099,12 @@ export class World {
       for (const e of this.enemies) {
         if (!e.alive || e.flying) continue;
         if (!inEllipse(z.x, z.y, e.x, e.y, z.r)) continue;
+        this.dmgBy = z.owner ?? null;
         this.damageEnemy(e, z.dps * dt, z.kind === 'fire' ? 'true' : 'magic', z.source, 0, true);
         if (e.alive && z.slow < 1) this.applySlow(e, z.slow, 0.5);
       }
     }
+    this.dmgBy = null;
     this.zones = this.zones.filter((z) => this.time < z.until);
   }
 }
