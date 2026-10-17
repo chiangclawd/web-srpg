@@ -232,3 +232,15 @@ test('battlefield easter eggs come from decor, have unique ids and stay clear of
   }
   assert.ok(totalEggs(LEVELS) >= EGG_GOAL + 10, 'plenty of eggs to find for the achievement');
 });
+
+test('every sprite and portrait the game loads at boot has its WebP copy', async () => {
+  const fs = await import('node:fs');
+  const { STORY_PORTRAITS } = await import('../../src/td/data/story');
+  const { HEROES } = await import('../../src/td/data/heroes');
+  const boot = fs.readFileSync('src/td/scenes/BootScene.ts', 'utf8');
+  const block = boot.slice(boot.indexOf('const SPRITES = ['));
+  const sprites = [...block.slice(0, block.indexOf('];')).matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
+  assert.ok(sprites.length > 20);
+  for (const s of sprites) assert.ok(fs.existsSync(`public/assets/sprites/${s}.webp`), `sprites/${s}.webp (run scripts/art/td_webp.py)`);
+  for (const id of [...Object.keys(HEROES), ...STORY_PORTRAITS]) assert.ok(fs.existsSync(`public/assets/portraits/${id}.webp`), `portraits/${id}.webp (run scripts/art/td_webp.py)`);
+});
