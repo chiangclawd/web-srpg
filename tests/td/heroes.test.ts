@@ -132,3 +132,18 @@ test('Shade blinks behind a caster and executes a badly wounded enemy', () => {
   assert.ok(skills.has('execute'), `execute used (${[...skills].join(',')})`);
   assert.ok(!lancer.alive, 'the wounded lancer is finished off');
 });
+
+test('training gives 40% of the current level span and nothing at max level', async () => {
+  const { trainXp, HERO_XP_TABLE, HERO_MAX_LEVEL } = await import('../../src/td/data/heroes');
+  assert.equal(trainXp(0), 160, 'level 1 → 2 needs 400 XP');
+  assert.equal(trainXp(HERO_XP_TABLE[4] + 10), Math.ceil(((HERO_XP_TABLE[5] - HERO_XP_TABLE[4]) * 0.4) / 10) * 10);
+  assert.equal(trainXp(HERO_XP_TABLE[HERO_MAX_LEVEL - 1]), 0);
+  // 大約 3 次（120 寶石）升一級
+  let xp = 0;
+  let n = 0;
+  while (xp < HERO_XP_TABLE[1]) {
+    xp += trainXp(xp);
+    n++;
+  }
+  assert.equal(n, 3);
+});

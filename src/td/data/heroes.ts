@@ -10,6 +10,15 @@ export function heroLevelForXp(xp: number): number {
   return lv;
 }
 
+/** 英雄室「訓練」：花寶石換經驗（每次給目前這一級所需經驗的 40%，約 3 次＝120 寶石升一級） */
+export const TRAIN_PRICE = 40;
+export function trainXp(xp: number): number {
+  const lv = heroLevelForXp(xp);
+  if (lv >= HERO_MAX_LEVEL) return 0;
+  const span = HERO_XP_TABLE[lv] - HERO_XP_TABLE[lv - 1];
+  return Math.ceil((span * 0.4) / 10) * 10;
+}
+
 export const HEROES: Record<string, HeroDef> = {
   arthur: {
     id: 'arthur',
