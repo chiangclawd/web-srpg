@@ -2,11 +2,12 @@ import Phaser from 'phaser';
 import { PLAY_W, PLAY_X0, VIEW_H, WORLD_W, bgScale, addText, fitText, setupCamera, uiZoom, viewW } from '../config';
 import { LEVELS } from '../data/levels';
 import { UPGRADE_COLUMNS } from '../data/upgrades';
-import { HEROES } from '../data/heroes';
+import { HEROES, HERO_ORDER } from '../data/heroes';
+import { heroUnlocked } from './HeroScene';
 import { mapRoads, paintWorldMap } from '../art/worldmap';
 import { showTipBubble } from '../ui/tip';
 import { DAILY_MODS, dailyBaseLevel, dailyKey, dailySpec } from '../data/daily';
-import { Button, IconButton, panel, popIn } from '../ui/widgets';
+import { Button, IconButton, dimmer, panel, popIn } from '../ui/widgets';
 import { L, T, getLang } from '../i18n';
 import { save, persist, totalStars } from '../save';
 import { sfx } from '../audio';
@@ -129,7 +130,55 @@ export class MapScene extends Phaser.Scene {
     this.cameras.main.fadeIn(400, 0, 0, 0);
     const focusIdx = this.focus ? LEVELS.findIndex((l) => l.id === this.focus) : -1;
     const auto = focusIdx >= 0 && isUnlocked(focusIdx + 1) && focusIdx + 1 < LEVELS.length ? focusIdx + 1 : lastUnlocked;
-    this.time.delayedCall(350, () => this.showLevel(auto));
+    // 有新英雄要介紹時先不自動打開關卡面板，免得兩個視窗疊在一起
+    if (!this.announceHero()) this.time.delayedCall(350, () => this.showLevel(auto));
+  }
+
+  /** 剛解鎖的英雄：地圖上跳一次介紹卡（每位只介紹一次） */
+  private announceHero(): boolean {
+    const sv = save();
+    // 舊存檔第一次進來：已經解鎖的英雄當作看過（維克托是這次新加的，仍會介紹）
+    if (!sv.heroesSeen) {
+      sv.heroesSeen = HERO_ORDER.filter((id) => id !== 'viktor' && heroUnlocked(id));
+      persist();
+    }
+    const id = HERO_ORDER.find((h) => HEROES[h].unlockAfter && heroUnlocked(h) && !sv.heroesSeen!.includes(h));
+    if (!id) return false;
+    sv.heroesSeen.push(id);
+    persist();
+    const h = HEROES[id];
+    this.time.delayedCall(900, () => {
+      const w = viewW(this);
+      const left = -(w - PLAY_W) / 2;
+      const root = this.add.container(0, 0).setDepth(9000);
+      root.add(dimmer(this, w, VIEW_H, 0.6).setPosition(left, 0));
+      const pw = 620;
+      const ph = 330;
+      const c = this.add.container(PLAY_W / 2, VIEW_H / 2);
+      root.add(c);
+      c.add(panel(this, 0, 0, pw, ph));
+      const pt = this.add.image(-pw / 2 + 120, ph / 2 - 14, `pt_${id}`).setOrigin(0.5, 1);
+      pt.setScale(Math.min(300 / pt.frame.height, 220 / pt.frame.width));
+      c.add(pt);
+      const tx = -pw / 2 + 250;
+      c.add(addText(this, tx, -ph / 2 + 40, T('heroJoined'), { size: 22, display: true, color: '#c0392b', stroke: '#fff2d0', strokeW: 4, shadow: false }).setOrigin(0, 0.5));
+      c.add(addText(this, tx, -ph / 2 + 86, L(h.name), { size: 36, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0, 0.5));
+      c.add(addText(this, tx, -ph / 2 + 126, L(h.title), { size: 18, display: true, color: '#7a4a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
+      c.add(addText(this, tx, -ph / 2 + 152, L(h.desc), { size: 15, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: pw - 280 }));
+      const close = () => {
+        sfx.play('click');
+        root.destroy();
+      };
+      c.add(new Button(this, tx + 90, ph / 2 - 44, 170, 52, T('heroes'), () => {
+        sfx.play('click');
+        this.cameras.main.fadeOut(250, 0, 0, 0);
+        this.time.delayedCall(260, () => this.scene.start('Hero'));
+      }, { color: 'green' }));
+      c.add(new Button(this, tx + 280, ph / 2 - 44, 150, 52, T('later'), close, { color: 'wood' }));
+      sfx.play('levelup');
+      popIn(this, c, 0, { w: pw, h: ph }, 0.6, 320);
+    });
+    return true;
   }
 
   /** 手繪世界地圖（Gemini 依程序地圖構圖重繪）＋向量虛線路線 */

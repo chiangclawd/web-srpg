@@ -23,7 +23,8 @@ export const SPEAKERS: Record<string, { name: L10n; enemy?: boolean }> = {
 };
 
 /** 劇情用到、但不是英雄的立繪（BootScene 會另外載入） */
-export const STORY_PORTRAITS = ['gary', 'viktor', 'morden', 'selene', 'carl', 'high_priest', 'sub_priest', 'cult_leader'];
+// viktor 也是英雄，立繪由英雄頭像那段產生（同一張圖不能被兩段各載入、各移除一次）
+export const STORY_PORTRAITS = ['gary', 'morden', 'selene', 'carl', 'high_priest', 'sub_priest', 'cult_leader'];
 
 /** 每關開場對話（第一次進入戰役時播放） */
 export const STORY: Record<string, StoryLine[]> = {

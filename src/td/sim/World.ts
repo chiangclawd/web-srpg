@@ -561,6 +561,24 @@ export class World {
         this.emit({ type: 'explosion', x, y, r, kind: 'holy' });
         break;
       }
+      case 'viktor': {
+        r = 85;
+        for (const e of near(r, true)) {
+          this.damageEnemy(e, 60 + 12 * lv, 'physical', 'hero');
+          if (e.alive) this.applyStun(e, e.def.boss ? 0.6 : 1.4);
+        }
+        // 三名重甲槍兵排成一列擋路
+        for (let i = 0; i < 3; i++) {
+          const o = FORMATION[i % FORMATION.length];
+          const s = new Soldier('militia', 'sp_player_lancer', 46, x + o.x, y + o.y, 170 + 25 * lv, 0.65, [9 + 2 * lv, 14 + 3 * lv], 1.1, 6);
+          s.expireAt = this.time + 20;
+          s.engageR = 85;
+          this.soldiers.push(s);
+          this.emit({ type: 'soldierSpawn', s });
+        }
+        this.emit({ type: 'explosion', x, y, r, kind: 'bomblet' });
+        break;
+      }
       default:
         return false;
     }
@@ -1444,6 +1462,47 @@ export class World {
             if (!e.alive) continue;
             this.damageEnemy(e, 40 + 9 * lv, 'magic', 'hero');
             this.emit({ type: 'lightning', pts: [{ x: e.x + this.rng.range(-20, 20), y: e.y - 260 }, { x: e.x, y: e.y - e.def.height * 0.5 }] });
+          }
+        }
+        break;
+      }
+      case 'viktor': {
+        if (ready('thrust') && t && t.alive && !t.flying && dist(h.x, h.y, t.x, t.y) < 60) {
+          use('thrust');
+          // 從維克托往目標的方向刺穿一整排（目標後方 70px 內、寬 26px）
+          const d = Math.max(1, dist(h.x, h.y, t.x, t.y));
+          const ux = (t.x - h.x) / d;
+          const uy = (t.y - h.y) / d;
+          for (const e of this.enemies) {
+            if (!e.alive || e.flying || e.burrowed) continue;
+            const px = e.x - h.x;
+            const py = e.y - h.y;
+            const along = px * ux + py * uy;
+            if (along < 0 || along > d + 70 || Math.abs(px * uy - py * ux) > 26) continue;
+            this.damageEnemy(e, (e === t ? 1 : 0.7) * (26 + 8 * lv), 'physical', 'hero');
+          }
+          this.emit({ type: 'beam', x1: h.x, y1: h.y - 22, x2: t.x + ux * 60, y2: t.y + uy * 60 - 20, kind: 'charge' });
+        }
+        if (ready('phalanx')) {
+          const foes = this.enemies.filter((e) => e.alive && !e.flying && dist(e.x, e.y, h.x, h.y) < 110);
+          if (foes.length >= 3 || foes.some((e) => e.def.boss)) {
+            use('phalanx');
+            for (const e of foes) this.applySlow(e, 0.6, 4);
+            for (const o of this.soldiers) {
+              if (!o.alive || dist(o.x, o.y, h.x, h.y) > 150) continue;
+              o.armorBuff = 0.35;
+              o.armorBuffUntil = this.time + 8;
+            }
+          }
+        }
+        if (ready('sunder')) {
+          const near = this.enemies.filter((e) => e.alive && !e.flying && !e.burrowed && dist(e.x, e.y, h.x, h.y) < 65);
+          const big = near.length ? near.reduce((a, b) => (b.hp > a.hp ? b : a)) : null;
+          if (big && big.hp > 300) {
+            use('sunder');
+            this.damageEnemy(big, 60 + 14 * lv, 'physical', 'hero');
+            if (big.alive) big.vulnUntil = Math.max(big.vulnUntil, this.time + 6);
+            this.emit({ type: 'melee', x: big.x, y: big.y - 16, heavy: true });
           }
         }
         break;

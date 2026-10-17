@@ -15,6 +15,8 @@ export interface SaveData {
   seenEnemies: string[];
   /** 已播放過解鎖動畫的關卡 */
   unlockedSeen: string[];
+  /** 已在地圖上介紹過的新英雄（舊存檔沒有這欄） */
+  heroesSeen?: string[];
   /** 挑戰模式完成紀錄（各 1 星） */
   challenges: Record<string, { heroic?: boolean; iron?: boolean }>;
   achievements: string[];
@@ -52,7 +54,7 @@ function defaults(): SaveData {
     version: 1,
     stars: {},
     upgrades: {},
-    heroes: { arthur: { xp: 0 }, elena: { xp: 0 }, lila: { xp: 0 }, rain: { xp: 0 }, aria: { xp: 0 }, sharon: { xp: 0 } },
+    heroes: { arthur: { xp: 0 }, elena: { xp: 0 }, lila: { xp: 0 }, rain: { xp: 0 }, aria: { xp: 0 }, sharon: { xp: 0 }, viktor: { xp: 0 } },
     selectedHero: 'arthur',
     seenEnemies: [],
     unlockedSeen: ['l1'],

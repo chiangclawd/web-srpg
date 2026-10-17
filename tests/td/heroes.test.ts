@@ -79,3 +79,25 @@ test('Sanctuary heals wounded allies', () => {
   run(w, 0.2);
   assert.ok(h.hp > h.maxHp * 0.4);
 });
+
+test('Viktor skewers a line of enemies and sunders the toughest one', () => {
+  // 7 級：三個技能都解鎖
+  const w = mkWorld(undefined, { hero: { def: HEROES.viktor, xp: 6000 } });
+  const h = w.hero!;
+  const troll = w.spawnEnemy('troll', 0, 560);
+  const behind = [w.spawnEnemy('raider', 0, 520), w.spawnEnemy('raider', 0, 500)];
+  troll.abilityCd = troll.abilityCd.map(() => 99);
+  const hp0 = behind.map((e) => e.hp);
+  const skills = new Set<string>();
+  let sundered = false;
+  for (let i = 0; i < 6 * 60 && troll.alive; i++) {
+    w.step(1 / 60);
+    for (const ev of w.drainEvents()) if (ev.type === 'heroSkill') skills.add(ev.skill);
+    if (troll.vulnUntil > w.time) sundered = true;
+  }
+  assert.ok(skills.has('thrust'), `thrust used (${[...skills].join(',')})`);
+  assert.ok(skills.has('sunder'), 'sunder used on the troll');
+  assert.ok(sundered, 'the sundered troll takes extra damage');
+  assert.ok(behind.some((e, i) => e.hp < hp0[i] || !e.alive), 'the thrust reaches enemies behind the target');
+  assert.ok(h.alive);
+});

@@ -46,23 +46,26 @@ export class HeroScene extends Phaser.Scene {
     add(addText(this, w / 2, 40, T('heroes'), { size: 38, display: true, color: '#ffd36b', strokeW: 7 }).setOrigin(0.5));
     const sv = save();
     // 左側英雄清單
+    // 超過 6 位英雄時改成兩欄，才排得進一個畫面
+    const twoCols = HERO_ORDER.length > 6;
     HERO_ORDER.forEach((id, i) => {
       const h = HEROES[id];
       const unlocked = heroUnlocked(id);
-      const y = 126 + i * 98;
+      const hx = twoCols ? 64 + (i % 2) * 102 : 90;
+      const y = twoCols ? 126 + Math.floor(i / 2) * 124 : 126 + i * 98;
       const b = add(
-        new IconButton(this, 90, y, 88, `ptc_${id}`, () => {
+        new IconButton(this, hx, y, 88, `ptc_${id}`, () => {
           this.viewing = id;
           this.build();
         }, this.viewing === id ? 'ui_badge_blue' : 'ui_badge', 0.82),
       );
       if (!unlocked) {
         b.icon.setTint(0x333333);
-        add(this.add.image(90, y, 'ic_lock').setDisplaySize(34, 34));
+        add(this.add.image(hx, y, 'ic_lock').setDisplaySize(34, 34));
       }
-      if (sv.selectedHero === id) add(this.add.image(126, y - 30, 'ic_check').setDisplaySize(28, 28));
+      if (sv.selectedHero === id) add(this.add.image(hx + 36, y - 30, 'ic_check').setDisplaySize(28, 28));
       const lv = heroLevelForXp(sv.heroes[id]?.xp ?? 0);
-      add(addText(this, 90, y + 46, unlocked ? `${L(h.name)} LV${lv}` : '???', { size: 14, display: true }).setOrigin(0.5));
+      add(addText(this, hx, y + 46, unlocked ? `${L(h.name)} LV${lv}` : '???', { size: 14, display: true }).setOrigin(0.5));
     });
     // 右側詳細
     const h = HEROES[this.viewing];
