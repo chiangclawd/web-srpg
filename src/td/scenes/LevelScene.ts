@@ -25,7 +25,7 @@ import { EggLayer } from '../view/Eggs';
 import { NightLayer } from '../view/Night';
 import { Bubbles } from '../view/Bubbles';
 import { clearCheckpoint, loadCheckpoint, restore, saveCheckpoint, snapshot, type Checkpoint } from '../sim/checkpoint';
-import { BRANCH_BARKS, HERO_BARKS, towerBark } from '../data/barks';
+import { BRANCH_BARKS, HERO_BARKS, NIGHT_BARKS, towerBark } from '../data/barks';
 import { BOSS_VOICES, towerVoiceLines, voiceText } from '../data/voices';
 import { RadialMenu, type RadialOption } from '../view/RadialMenu';
 import { IconButton } from '../ui/widgets';
@@ -726,8 +726,10 @@ export class LevelScene extends Phaser.Scene {
           this.setMode('idle');
           const hh = w.hero;
           if (hh?.hero) {
-            const i = this.bubbles.say('hero', hh.x, hh.y - hh.height - 12, HERO_BARKS[hh.hero.def.id], 0.6);
-            if (i === 0 || i === 1) sfx.voice(hh.hero.def.id, i === 0 ? 'move0' : 'move1');
+            // 夜戰時偶爾說夜晚的台詞（共用台詞沒有語音）
+            const night = w.isNight && Math.random() < 0.4;
+            const i = this.bubbles.say('hero', hh.x, hh.y - hh.height - 12, night ? NIGHT_BARKS : HERO_BARKS[hh.hero.def.id], 0.6);
+            if (!night && (i === 0 || i === 1)) sfx.voice(hh.hero.def.id, i === 0 ? 'move0' : 'move1');
           }
         }
         return;

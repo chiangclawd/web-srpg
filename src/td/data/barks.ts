@@ -62,6 +62,14 @@ export const BRANCH_BARKS: Record<string, L10n[]> = {
   ],
 };
 
+/** 夜戰時移動英雄，偶爾換成這些台詞（所有英雄共用，不播語音） */
+export const NIGHT_BARKS: L10n[] = [
+  { zh: '跟緊燈火！', en: 'Stay near the light!' },
+  { zh: '黑暗裡有東西在動……', en: 'Something is moving in the dark…' },
+  { zh: '今晚的月亮好紅。', en: 'The moon is red tonight.' },
+  { zh: '別讓怨靈躲進暗處！', en: 'Don’t let the wraiths hide in the dark!' },
+];
+
 /** 移動英雄時的台詞 */
 export const HERO_BARKS: Record<string, L10n[]> = {
   arthur: [
