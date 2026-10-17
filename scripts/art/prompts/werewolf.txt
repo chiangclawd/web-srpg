@@ -1,0 +1,8 @@
+The attached images are character sprites from my 2D fantasy tower-defense game. Use them as a strict STYLE reference: same chibi proportions (big head, compact body), same clean dark-brown outlines, same soft cel shading and painted detail level, same warm color treatment and rendering quality.
+
+Draw ONE NEW normal enemy sprite in exactly that style: a hulking werewolf standing on two legs — shaggy charcoal-grey and brown fur, a broad hunched chest, long muscular arms with big claws, a snarling wolf muzzle with sharp teeth, glowing yellow eyes, torn brown trousers with a rope belt, and a few tufts of fur sticking out. Strong and fast, cartoonish rather than scary.
+
+Requirements:
+- Full body, single creature, 3/4 side view facing RIGHT, mid-stride running pose.
+- Centered with generous empty margin around it; nothing cropped.
+- Background: perfectly flat, uniform solid magenta (#FF00FF) everywhere around the creature. No gradient, no ground, no cast shadow, no scenery, no text, no frame. Avoid magenta or pink on the creature itself.

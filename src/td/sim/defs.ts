@@ -24,7 +24,9 @@ export type EnemyAbility =
   | { kind: 'aoeMelee'; radius: number }
   | { kind: 'blink'; distance: number; cd: number }
   /** 鑽入地下：期間無法被攻擊、阻擋，移動加速 */
-  | { kind: 'burrow'; cd: number; dur: number; speedMul: number };
+  | { kind: 'burrow'; cd: number; dur: number; speedMul: number }
+  /** 隱身黑暗：夜戰中沒被燈火、塔光或英雄照到時，受到的傷害只剩 dmgMul */
+  | { kind: 'shade'; dmgMul: number };
 
 export interface EnemyDef {
   id: string;

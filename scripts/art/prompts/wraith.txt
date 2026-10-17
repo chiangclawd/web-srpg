@@ -1,0 +1,8 @@
+The attached images are character sprites from my 2D fantasy tower-defense game. Use them as a strict STYLE reference: same chibi proportions (big head, compact body), same clean dark-brown outlines, same soft cel shading and painted detail level, same warm color treatment and rendering quality.
+
+Draw ONE NEW normal enemy sprite in exactly that style: a floating wraith — a hooded ghost in tattered dark teal and slate-grey robes that fade into wispy smoke at the bottom (no legs), two bony grey hands with long fingers reaching forward, glowing pale cyan eyes inside the dark hood, a small rusty lantern hanging from one hand giving a faint cyan glow. Spooky but cartoonish, not gory.
+
+Requirements:
+- Full body, single creature, 3/4 side view facing RIGHT, drifting forward pose.
+- Centered with generous empty margin around it; nothing cropped.
+- Background: perfectly flat, uniform solid magenta (#FF00FF) everywhere around the creature. No gradient, no ground, no cast shadow, no scenery, no text, no frame. Avoid magenta or pink on the creature itself.

@@ -20,6 +20,8 @@ export interface UnitVisualState {
   frozen?: boolean;
   /** 鑽地中：只顯示移動的沙堆 */
   burrowed?: boolean;
+  /** 怨靈躲在黑暗裡：半透明閃爍 */
+  shrouded?: boolean;
 }
 
 /**
@@ -40,6 +42,7 @@ export class UnitView {
   /** 精英光環（腳下發光的圈） */
   private aura: Phaser.GameObjects.Image | null = null;
   private auraRing: Phaser.GameObjects.Image | null = null;
+  private wasShrouded = false;
   dead = false;
 
   constructor(
@@ -146,6 +149,13 @@ export class UnitView {
     if (hit) this.body.setTint(0xff9a8a);
     else if (s.tint !== undefined) this.body.setTint(s.tint);
     else this.body.clearTint();
+    if (s.shrouded) {
+      this.body.setAlpha(0.45 + Math.sin(t * 4) * 0.1);
+      this.wasShrouded = true;
+    } else if (this.wasShrouded) {
+      this.body.setAlpha(1);
+      this.wasShrouded = false;
+    }
     this.shadow.setPosition(s.x, s.y + 1);
     this.aura?.setPosition(s.x, s.y + 2).setVisible(this.body.visible);
     this.auraRing?.setPosition(s.x, s.y + 2).setVisible(this.body.visible);

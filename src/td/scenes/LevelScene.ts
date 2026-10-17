@@ -1781,6 +1781,7 @@ export class LevelScene extends Phaser.Scene {
         stunned: t < e.stunUntil && !frozen,
         frozen,
         burrowed: e.burrowed,
+        shrouded: e.shroudMul < 1,
       });
       if (e.dots.length && Math.random() < 0.05) this.fx.poisonPuff(e.x, e.y - e.def.height * 0.6);
     }
