@@ -1483,6 +1483,7 @@ export const LEVELS: LevelDef[] = [
     art: 'l9',
     bgm: 'night',
     mapLink: 'l9',
+    wisps: { tint: 0x5affb0, size: 16 },
     name: { zh: '礦坑鬼火', en: 'Mine Ghostfire' },
     desc: {
       zh: '番外篇：廢棄礦坑在夜裡亮起幽綠的鬼火，礦工的亡魂與狼人從坑道湧出。兩條路一起進攻，塔要蓋在怨靈的航線上照亮牠們！',
