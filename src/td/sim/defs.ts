@@ -247,7 +247,7 @@ export interface LevelDef {
   hazards?: HazardDef[];
 }
 
-export type LevelMode = 'campaign' | 'heroic' | 'iron' | 'endless' | 'daily';
+export type LevelMode = 'campaign' | 'heroic' | 'iron' | 'endless' | 'daily' | 'bossrush';
 
 export interface LevelRules {
   mode: LevelMode;

@@ -656,7 +656,8 @@ export class LevelUIScene extends Phaser.Scene {
     c.add(dimmer(this, w * 2, VIEW_H * 2, 0.6).setPosition(-w, -VIEW_H));
     c.add(panel(this, 0, 20, 500, 380));
     const challenge = this.lvl.mode0 === 'heroic' || this.lvl.mode0 === 'iron';
-    const daily = this.lvl.mode0 === 'daily';
+    // 每日挑戰與首領連戰：結算只有再試／回地圖
+    const daily = this.lvl.mode0 === 'daily' || this.lvl.mode0 === 'bossrush';
     const title = addText(this, 0, -150, victory ? (challenge ? T('challengeDone') : T('victory')) : T('defeat'), {
       size: 54,
       display: true,
@@ -768,6 +769,8 @@ export class LevelUIScene extends Phaser.Scene {
       case 'heroic':
       case 'iron':
         return T('shareChallenge', L(lv.name), T(this.lvl.mode0));
+      case 'bossrush':
+        return T('shareBossRush', L(lv.name), starStr);
       case 'daily': {
         const spec = dailySpec(this.lvl.dailyKey);
         return T('shareDaily', this.lvl.dailyKey, starStr, spec.mods.map((m) => L(DAILY_MODS[m].name)).join('・'));

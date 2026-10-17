@@ -24,6 +24,8 @@ export interface SaveData {
   endless: Record<string, number>;
   /** 每日挑戰：日期 → 最佳星數 */
   daily: Record<string, number>;
+  /** 首領連戰：每張地圖的最佳星數 */
+  bossrush: Record<string, number>;
   /** 商店貨幣 */
   gems: number;
   /** 道具庫存 */
@@ -62,6 +64,7 @@ function defaults(): SaveData {
     achievements: [],
     endless: {},
     daily: {},
+    bossrush: {},
     gems: 0,
     // 新玩家各送一個，讓道具列一開始就看得到
     items: { keg: 1, frost: 1, potion: 1, gold: 1 },

@@ -62,6 +62,8 @@ export function gemReward(mode: LevelMode, victory: boolean, stars: number, firs
   if (!victory) return 0;
   // 每日挑戰：當天第一次過關給較多寶石
   if (mode === 'daily') return firstClear ? 15 + stars * 3 : 0;
+  // 首領連戰：每張地圖第一次過關給大量寶石，之後少量
+  if (mode === 'bossrush') return firstClear ? 40 + stars * 5 : 6;
   if (mode === 'campaign') return 4 + stars * 3 + (firstClear ? 10 : 0);
   return firstClear ? 30 : 8;
 }

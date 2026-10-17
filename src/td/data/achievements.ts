@@ -65,6 +65,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'endless_30', name: { zh: '無盡守望', en: 'Eternal Watch' }, desc: { zh: '無盡模式撐到第 30 波', en: 'Reach wave 30 in Endless mode' }, icon: 'ic_crown' },
   { id: 'daily_first', name: { zh: '每日一戰', en: 'Daily Duty' }, desc: { zh: '完成一次每日挑戰', en: 'Complete a daily challenge' }, icon: 'ic_star' },
   { id: 'daily_7', name: { zh: '風雨無阻', en: 'Come Rain or Shine' }, desc: { zh: '累計完成 7 天每日挑戰', en: 'Complete 7 daily challenges' }, icon: 'ic_crown' },
+  { id: 'boss_rush', name: { zh: '首領獵人', en: 'Boss Hunter' }, desc: { zh: '在任一張地圖通關首領連戰', en: 'Clear Boss Rush on any map' }, icon: 'ic_skull' },
   { id: 'landslide', name: { zh: '山崩地裂', en: 'Landslide' }, desc: { zh: '一次落石或雪球擊倒 5 名敵人', en: 'Crush 5 enemies with one boulder or snowball' }, icon: 'ic_meteor' },
   { id: 'hero_max', name: { zh: '傳奇之路', en: 'Legendary' }, desc: { zh: '任一英雄達到 10 級', en: 'Raise any hero to level 10' }, icon: 'ic_crown' },
 ];
@@ -117,6 +118,7 @@ export function evaluateAchievements(o: LevelOutcome, sv: SaveData): string[] {
   if (o.heroLevel >= 10) unlock('hero_max');
   if (o.mode === 'endless' && o.wave >= 15) unlock('endless_15');
   if (o.mode === 'daily' && o.victory) unlock('daily_first');
+  if (o.mode === 'bossrush' && o.victory) unlock('boss_rush');
   if (Object.values(sv.daily ?? {}).filter((n) => n > 0).length >= 7) unlock('daily_7');
   if (o.mode === 'endless' && o.wave >= 30) unlock('endless_30');
   sv.achievements = [...got];
