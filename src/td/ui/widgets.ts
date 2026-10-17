@@ -81,6 +81,15 @@ export class Button extends Phaser.GameObjects.Container {
     return this;
   }
 
+  /** 換圖示（維持原本大小） */
+  setIcon(key: string): this {
+    if (this.icon) {
+      const { displayWidth: w, displayHeight: h } = this.icon;
+      this.icon.setTexture(key).setDisplaySize(w, h);
+    }
+    return this;
+  }
+
   setText(s: string): this {
     this.label.setText(s);
     this.fitLabel();

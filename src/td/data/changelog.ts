@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 37,
+    date: '2026-10-17',
+    title: { zh: '出征前換英雄', en: 'Swap heroes before battle' },
+    items: [
+      { zh: '關卡面板的「出征」旁邊多了英雄頭像，點一下就能直接換出戰英雄，不必再跑去英雄室', en: 'The level panel now has a hero portrait next to Battle: tap it to swap heroes without visiting the hero room' },
+    ],
+  },
+  {
     id: 36,
     date: '2026-10-17',
     title: { zh: '首領登場喊話', en: 'Boss taunts' },
