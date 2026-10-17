@@ -151,7 +151,9 @@ export class EncyclopediaScene extends Phaser.Scene {
         else if (e.tint) img.setTint(e.tint);
         const tx = detailX + 260;
         add(addText(this, tx, 196, known ? L(e.name) : '???', { size: 32, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }));
-        add(addText(this, tx, 244, known ? L(e.desc) : T('unknown'), { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: detailW - 290 }));
+        const desc = add(addText(this, tx, 244, known ? L(e.desc) : T('unknown'), { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: detailW - 290 }));
+        // 說明太長（手機放大字體、英文版）時，數值與標籤跟著往下排，不疊在說明上
+        const statY = Math.max(330, desc.y + desc.height + 14);
         if (known) {
           const stats: [string, string][] = [
             [T('hp'), String(e.hp)],
@@ -161,14 +163,16 @@ export class EncyclopediaScene extends Phaser.Scene {
             [T('livesCost'), String(e.lives)],
             [T('bounty'), String(e.gold)],
           ];
-          stats.forEach(([k, v], i) => {
-            add(addText(this, tx + (i % 2) * 200, 330 + Math.floor(i / 2) * 32, `${k}: ${v}`, { size: 18, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }));
-          });
+          const cells = stats.map(([k, v], i) => add(addText(this, tx, statY + Math.floor(i / 2) * 32, `${k}: ${v}`, { size: 18, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false })));
+          // 右欄位置依左欄最寬的一格決定，免得「魔抗：中等」和右欄撞在一起
+          const col2 = tx + Math.max(200, ...cells.filter((_, i) => i % 2 === 0).map((t) => t.width + 28));
+          cells.forEach((t, i) => i % 2 && t.setX(col2));
+          const tagY = statY + 110;
           let tagX = tx;
           for (const tg of e.tags ?? []) {
             // 底框先建立、文字疊在上面（底框的深度不能低於面板，否則會被面板蓋住）
-            const r = add(this.add.rectangle(tagX - 6, 437, 10, 10, 0x7a3a1a).setOrigin(0).setStrokeStyle(2, 0x2a1608));
-            const tag = add(addText(this, tagX, 440, L(tg), { size: 15, display: true }));
+            const r = add(this.add.rectangle(tagX - 6, tagY - 3, 10, 10, 0x7a3a1a).setOrigin(0).setStrokeStyle(2, 0x2a1608));
+            const tag = add(addText(this, tagX, tagY, L(tg), { size: 15, display: true }));
             r.setSize(tag.width + 12, tag.height + 4);
             tagX += tag.width + 24;
           }
@@ -184,7 +188,8 @@ export class EncyclopediaScene extends Phaser.Scene {
     img.setScale(0.85);
     const tx = x + 250;
     add(addText(this, tx, 196, L(def.name), { size: 30, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }));
-    add(addText(this, tx, 240, L(def.desc), { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: w - 280 }));
+    const desc = add(addText(this, tx, 240, L(def.desc), { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: w - 280 }));
+    const statY = Math.max(310, desc.y + desc.height + 14);
     const stats: [string, string][] = [];
     if (type === 'barracks' && def.soldier) {
       stats.push([T('soldiers'), String(def.soldier.count)], [T('hp'), String(def.soldier.hp)], [T('damage'), `${def.soldier.dmg[0]}-${def.soldier.dmg[1]}`], [T('armor'), armorWord(def.soldier.armor)]);
@@ -192,11 +197,11 @@ export class EncyclopediaScene extends Phaser.Scene {
       stats.push([T('damage'), `${def.damage[0]}-${def.damage[1]}`], [T('rate'), `${def.cooldown}s`], [T('range'), String(def.range)], ['', def.hitsAir ? T('hitsAir') : T('groundOnly')]);
     }
     stats.push([T('gold'), String(def.cost)]);
-    stats.forEach(([k, v], i) => {
-      add(addText(this, tx + (i % 2) * 200, 310 + Math.floor(i / 2) * 32, k ? `${k}: ${v}` : v, { size: 18, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }));
-    });
+    const cells = stats.map(([k, v], i) => add(addText(this, tx, statY + Math.floor(i / 2) * 32, k ? `${k}: ${v}` : v, { size: 18, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false })));
+    const col2 = tx + Math.max(200, ...cells.filter((_, i) => i % 2 === 0).map((t) => t.width + 28));
+    cells.forEach((t, i) => i % 2 && t.setX(col2));
     (def.skills ?? []).forEach((sk, i) => {
-      const sy = 430 + i * 56;
+      const sy = statY + 120 + i * 56;
       add(this.add.image(tx + 20, sy, 'ui_badge_blue').setDisplaySize(44, 44));
       add(this.add.image(tx + 20, sy, `sk_${sk.id}`).setDisplaySize(28, 28));
       add(addText(this, tx + 52, sy - 12, L(sk.name), { size: 16, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));

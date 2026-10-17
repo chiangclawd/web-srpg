@@ -584,20 +584,42 @@ export class LevelUIScene extends Phaser.Scene {
     if (e.tint) img.setTint(e.tint);
     c.add(img);
     const name = fitText(addText(this, -40, -74, L(e.name), { size: 26, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }), 270);
-    const desc = addText(this, -40, -36, L(e.desc), { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: 280 });
-    c.add([name, desc]);
-    // 手機字體放大後說明會變長：標籤與按鈕跟著往下排、面板一起長高，不再疊在字上
-    const tagY = Math.max(50, desc.y + desc.height + 10);
-    let tagX = -40;
-    let tagH = 0;
-    for (const tg of e.tags ?? []) {
-      const tag = addText(this, tagX, tagY, L(tg), { size: 14, display: true, color: '#fff6dc', strokeW: 3 });
-      const tb = this.add.rectangle(tagX - 6, tagY - 3, tag.width + 12, tag.height + 2, 0x7a3a1a).setOrigin(0).setStrokeStyle(2, 0x2a1608);
-      c.add([tb, tag]);
-      tagX += tag.width + 22;
-      tagH = Math.max(tagH, tag.height);
+    // 手機字體放大後說明會變長：太長就縮小一點字，免得面板比螢幕還高
+    let descSize = 16;
+    const mkDesc = () => addText(this, -40, -36, L(e.desc), { size: descSize, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: 280 });
+    let desc = mkDesc();
+    while (desc.height > 230 && descSize > 12) {
+      desc.destroy();
+      descSize--;
+      desc = mkDesc();
     }
-    const okY = Math.max(104, tagY + tagH + 38);
+    c.add([name, desc]);
+    // 標籤排在圖與說明下方、整個面板寬置中，排不下就換行；按鈕跟著往下、面板一起長高
+    const rows: Phaser.GameObjects.Text[][] = [[]];
+    let rowW = 0;
+    for (const tg of e.tags ?? []) {
+      const tag = addText(this, 0, 0, L(tg), { size: 14, display: true, color: '#fff6dc', strokeW: 3 });
+      const tw = tag.width + 12;
+      if (rowW > 0 && rowW + 10 + tw > 470) {
+        rows.push([]);
+        rowW = 0;
+      }
+      rowW += (rowW > 0 ? 10 : 0) + tw;
+      rows[rows.length - 1].push(tag);
+    }
+    let tagY = Math.max(50, desc.y + desc.height + 12);
+    for (const row of rows) {
+      if (!row.length) continue;
+      let x = -(row.reduce((sum, t) => sum + t.width + 12, 0) + 10 * (row.length - 1)) / 2;
+      for (const tag of row) {
+        const tb = this.add.rectangle(x, tagY - 3, tag.width + 12, tag.height + 2, 0x7a3a1a).setOrigin(0).setStrokeStyle(2, 0x2a1608);
+        tag.setPosition(x + 6, tagY);
+        c.add([tb, tag]);
+        x += tag.width + 22;
+      }
+      tagY += Math.max(...row.map((t) => t.height)) + 12;
+    }
+    const okY = Math.max(104, tagY + 26);
     const shift = (okY - 104) / 2;
     const ph = 280 + shift * 2;
     if (shift > 0) {
