@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { VIEW_H, addText, setupCamera, viewW, uiZoom } from '../config';
+import { VIEW_H, addText, fitText, setupCamera, viewW, uiZoom } from '../config';
 import { UPGRADE_COLUMNS } from '../data/upgrades';
 import { Button, IconButton, panel } from '../ui/widgets';
 import { L, T } from '../i18n';
@@ -50,7 +50,7 @@ export class UpgradeScene extends Phaser.Scene {
       const x = x0 + ci * colW;
       const owned = sv.upgrades[col.id] ?? 0;
       add(this.add.image(x, 112, col.icon).setDisplaySize(64, 64));
-      add(addText(this, x, 154, L(col.name), { size: 16, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0.5));
+      add(fitText(addText(this, x, 154, L(col.name), { size: 16, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0.5), colW - 10));
       // 連接線
       const line = add(this.add.graphics());
       line.lineStyle(6, 0x4a2a10, 0.6);

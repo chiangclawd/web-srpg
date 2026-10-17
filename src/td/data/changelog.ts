@@ -11,6 +11,16 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 33,
+    date: '2026-10-17',
+    title: { zh: '手機更好點、更好讀', en: 'Bigger on phones' },
+    items: [
+      { zh: '手機上的戰鬥按鈕、圖示與文字再放大，寬螢幕手機放大更多', en: 'Battle buttons, icons and text are larger on phones, more so on wide screens' },
+      { zh: '建造點、塔、英雄與地圖機關的點擊範圍加大，更不容易點錯', en: 'Build spots, towers, heroes and traps have larger tap areas' },
+      { zh: '選單、彈出視窗、英雄室與升級畫面的字也一起放大', en: 'Menus, pop-ups, the hero room and upgrades use larger text too' },
+    ],
+  },
+  {
     id: 32,
     date: '2026-10-17',
     title: { zh: '每日挑戰新修正', en: 'New daily modifiers' },

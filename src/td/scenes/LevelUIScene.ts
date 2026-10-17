@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { VIEW_H, addText, fitText, fontPx, setupCamera, uiZoom, viewW } from '../config';
+import { VIEW_H, addText, fitText, fontPx, hudZoom, setupCamera, uiZoom, viewW } from '../config';
 import { ENEMIES } from '../data/enemies';
 import { ACHIEVEMENTS } from '../data/achievements';
 import type { StoryLine } from '../data/story';
@@ -78,7 +78,7 @@ export class LevelUIScene extends Phaser.Scene {
 
   create(): void {
     setupCamera(this);
-    this.hudZoom = uiZoom();
+    this.hudZoom = hudZoom();
     // 左上：生命 / 金幣 / 波次
     this.statsPanel = this.add.container(12, 10);
     const bg = panel(this, 0, 0, 336, 50, 'ui_dark', 20).setOrigin(0);
@@ -705,6 +705,8 @@ export class LevelUIScene extends Phaser.Scene {
         strokeW: 2,
         shadow: false,
       }).setOrigin(0.5);
+      // 左邊是 MVP 欄，手機放大字後要留出空間
+      fitText(info, 250);
       c.add(info);
       const hero = w0.hero?.hero;
       if (hero) {
@@ -715,6 +717,7 @@ export class LevelUIScene extends Phaser.Scene {
           strokeW: 2,
           shadow: false,
         }).setOrigin(0.5);
+        fitText(ht, 250);
         c.add(ht);
       }
       this.gemLine(c, 84);

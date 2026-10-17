@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PLAY_W, PLAY_X0, RS, TEX, VIEW_H, WORLD_W, bgScale, freeCanvasTexture, isTouchDevice, setupCamera, uiZoom, viewW } from '../config';
+import { PLAY_W, PLAY_X0, RS, TEX, VIEW_H, WORLD_W, bgScale, freeCanvasTexture, hudZoom, isTouchDevice, setupCamera, uiZoom, viewW } from '../config';
 import { getLevel } from '../data/levels';
 import { HEROES } from '../data/heroes';
 import { TOWERS, TOWER_ORDER } from '../data/towers';
@@ -179,7 +179,9 @@ export class LevelScene extends Phaser.Scene {
     this.world.spots.forEach((s, i) => {
       const img = this.add.image(s.x, s.y, 'spot_tex').setScale(1 / TEX).setDepth(DEPTH.decal + 10);
       this.spotImgs.push(img);
-      const hit = this.add.ellipse(s.x, s.y - 4, 84, 56, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
+      // 觸控裝置點擊範圍放大（手指比滑鼠粗）
+      const touch = isTouchDevice();
+      const hit = this.add.ellipse(s.x, s.y - 4, touch ? 96 : 84, touch ? 72 : 56, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
       hit.on('pointerup', (p: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
         ev?.stopPropagation?.();
         if (this.isTap(p)) this.onSpotTap(i);
@@ -654,7 +656,7 @@ export class LevelScene extends Phaser.Scene {
     }
     // 點英雄？
     const h = w.hero;
-    if (h && h.alive && Math.hypot(h.x - x, h.y - 24 - y) < 34) {
+    if (h && h.alive && Math.hypot(h.x - x, h.y - 24 - y) < (isTouchDevice() ? 46 : 34)) {
       this.closeMenu();
       this.setMode('hero');
       return;
@@ -1059,7 +1061,7 @@ export class LevelScene extends Phaser.Scene {
 
   /** 右下角道具列（HUD）遮住的區域：波次按鈕與出口標記要避開 */
   private underItemBar(x: number, y: number, right: number): boolean {
-    const z = uiZoom();
+    const z = hudZoom();
     return x > right - 250 * z && y > VIEW_H - 90 * z;
   }
 
@@ -1425,7 +1427,8 @@ export class LevelScene extends Phaser.Scene {
           this.time.delayedCall(650, () => {
             if (this.world.towers.includes(bt)) this.bubbles.say(`t${bt.id}`, bt.x, bt.y - 96, towerBark(bt.type, bt.def.art), 0.8);
           });
-          const hit = this.add.rectangle(ev.t.x, ev.t.y - 30, 76, 84, 0xffffff, 0.001).setInteractive({ useHandCursor: true }).setDepth(ev.t.y);
+          const tw = isTouchDevice() ? 88 : 76;
+          const hit = this.add.rectangle(ev.t.x, ev.t.y - 30, tw, tw + 8, 0xffffff, 0.001).setInteractive({ useHandCursor: true }).setDepth(ev.t.y);
           hit.on('pointerup', (p2: Phaser.Input.Pointer, _x: number, _y: number, e2: Phaser.Types.Input.EventData) => {
             e2?.stopPropagation?.();
             if (!this.isTap(p2)) return;
