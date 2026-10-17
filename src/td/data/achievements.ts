@@ -25,6 +25,8 @@ export interface LevelOutcome {
   earlyCalls: number;
   meteorKills: number;
   sheep: number;
+  /** 單次地圖機關擊倒數最高 */
+  bestHazard?: number;
   heroLevel: number;
   bossesKilled: string[];
   /** 到達的波數（無盡模式用） */
@@ -62,6 +64,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'endless_30', name: { zh: '無盡守望', en: 'Eternal Watch' }, desc: { zh: '無盡模式撐到第 30 波', en: 'Reach wave 30 in Endless mode' }, icon: 'ic_crown' },
   { id: 'daily_first', name: { zh: '每日一戰', en: 'Daily Duty' }, desc: { zh: '完成一次每日挑戰', en: 'Complete a daily challenge' }, icon: 'ic_star' },
   { id: 'daily_7', name: { zh: '風雨無阻', en: 'Come Rain or Shine' }, desc: { zh: '累計完成 7 天每日挑戰', en: 'Complete 7 daily challenges' }, icon: 'ic_crown' },
+  { id: 'landslide', name: { zh: '山崩地裂', en: 'Landslide' }, desc: { zh: '一次落石或雪球擊倒 5 名敵人', en: 'Crush 5 enemies with one boulder or snowball' }, icon: 'ic_meteor' },
   { id: 'hero_max', name: { zh: '傳奇之路', en: 'Legendary' }, desc: { zh: '任一英雄達到 10 級', en: 'Raise any hero to level 10' }, icon: 'ic_crown' },
 ];
 
@@ -108,6 +111,7 @@ export function evaluateAchievements(o: LevelOutcome, sv: SaveData): string[] {
   if (o.earlyCalls >= 5) unlock('early_bird');
   if (o.meteorKills >= 15) unlock('meteor_master');
   if (o.sheep >= 5) unlock('shepherd');
+  if ((o.bestHazard ?? 0) >= 5) unlock('landslide');
   if (o.heroLevel >= 10) unlock('hero_max');
   if (o.mode === 'endless' && o.wave >= 15) unlock('endless_15');
   if (o.mode === 'daily' && o.victory) unlock('daily_first');

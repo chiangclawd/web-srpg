@@ -169,6 +169,10 @@ export class Fx {
     if (heavy) this.debris.explode(4, x, y + 10);
   }
 
+  rubble(x: number, y: number, n = 6): void {
+    this.debris.explode(n, x, y);
+  }
+
   smokePuff(x: number, y: number, n = 6): void {
     this.smoke.explode(n, x, y);
   }

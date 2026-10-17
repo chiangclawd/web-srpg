@@ -198,6 +198,20 @@ export type DecorItem =
   | { kind: 'clear'; x: number; y: number; r: number }
   | { kind: 'altar'; x: number; y: number };
 
+export type HazardKind = 'boulder' | 'snowball';
+
+/** 地圖機關：點擊後巨石／雪球從 (x,y) 落到路上，沿路徑 d0 → d1 滾動、砸傷沿途地面敵人 */
+export interface HazardDef {
+  kind: HazardKind;
+  x: number;
+  y: number;
+  path: number;
+  d0: number;
+  d1: number;
+  /** 覆寫預設傷害（後期關卡敵人較硬） */
+  dmg?: number;
+}
+
 export interface LevelDef {
   id: string;
   index: number;
@@ -226,6 +240,8 @@ export interface LevelDef {
   rules?: LevelRules;
   /** 外傳關卡（戰役完結後解鎖，不在主線路線上） */
   bonus?: boolean;
+  /** 可點擊的地圖機關（落石、雪崩） */
+  hazards?: HazardDef[];
 }
 
 export type LevelMode = 'campaign' | 'heroic' | 'iron' | 'endless' | 'daily';
