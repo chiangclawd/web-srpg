@@ -70,6 +70,7 @@ export class HeroScene extends Phaser.Scene {
     // 右側詳細
     const h = HEROES[this.viewing];
     const unlocked = heroUnlocked(h.id);
+    if (unlocked) sfx.preloadVoice(h.id);
     const px = Math.max(620, w / 2 + 80);
     add(panel(this, px, 370, Math.min(w - 220, 1000), 560));
     const portrait = add(this.add.image(px - 300, 610, `pt_${h.id}`).setOrigin(0.5, 1));
@@ -133,6 +134,7 @@ export class HeroScene extends Phaser.Scene {
           sv.selectedHero = h.id;
           persist();
           sfx.play('levelup', 0.6);
+          sfx.voice(h.id, 'select');
           this.build();
         }, { color: selected ? 'grey' : 'green', disabled: selected }),
       );

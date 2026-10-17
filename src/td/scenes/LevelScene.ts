@@ -232,6 +232,7 @@ export class LevelScene extends Phaser.Scene {
     this.ui = this.scene.get('LevelUI') as LevelUIScene;
 
     sfx.playBgm(this.level.bgm ?? THEME_BGM[this.level.theme]);
+    if (this.world.hero?.hero) sfx.preloadVoice(this.world.hero.hero.def.id);
     this.cameras.main.fadeIn(400, 0, 0, 0);
 
     // 觸控裝置第一次進關：提示可以雙指縮放
@@ -626,7 +627,10 @@ export class LevelScene extends Phaser.Scene {
         if (this.consumeItem('keg', x, y)) this.setMode('idle');
         return;
       case 'ult':
-        if (w.castHeroUlt(x, y)) this.setMode('idle');
+        if (w.castHeroUlt(x, y)) {
+          this.setMode('idle');
+          if (w.hero?.hero) sfx.voice(w.hero.hero.def.id, 'ult');
+        }
         else sfx.play('error');
         return;
       case 'rally': {
@@ -648,7 +652,10 @@ export class LevelScene extends Phaser.Scene {
           this.fx.ring(x, y, 22, 0xffd84a, 300);
           this.setMode('idle');
           const hh = w.hero;
-          if (hh?.hero) this.bubbles.say('hero', hh.x, hh.y - hh.height - 12, HERO_BARKS[hh.hero.def.id], 0.6);
+          if (hh?.hero) {
+            const i = this.bubbles.say('hero', hh.x, hh.y - hh.height - 12, HERO_BARKS[hh.hero.def.id], 0.6);
+            if (i === 0 || i === 1) sfx.voice(hh.hero.def.id, i === 0 ? 'move0' : 'move1');
+          }
         }
         return;
       default:
@@ -1378,6 +1385,8 @@ export class LevelScene extends Phaser.Scene {
           // 開波前的狀態存成存檔點（手機被重新整理後可從這一波繼續）
           saveCheckpoint(snapshot(this.world, { levelId: this.baseLevel.id, mode: this.mode0, difficulty: this.difficulty, dailyKey: this.mode0 === 'daily' ? this.dailyKey : undefined }, ev.index - 1));
           this.ui.waveBanner(ev.index + 1, this.world.waveCount, ev.boss);
+          // 開戰時英雄喊一聲
+          if (ev.index === 0 && this.world.hero?.alive && this.world.hero.hero) sfx.voice(this.world.hero.hero.def.id, 'select');
           this.maybeTip(ev.index);
           if (this.hazardLayer && !save().tipsSeen.includes('hazard')) {
             this.time.delayedCall(4000, () => {

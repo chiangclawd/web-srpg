@@ -18,13 +18,15 @@ export class Bubbles {
   constructor(private scene: Phaser.Scene) {}
 
   /** chance：這次要講的機率（被節流擋下時不講） */
-  say(key: string, x: number, y: number, lines: L10n[] | undefined, chance = 1): void {
-    if (!lines?.length) return;
+  /** 冒出一句台詞；回傳選中的台詞索引（沒冒出來回傳 -1），讓語音能對上同一句 */
+  say(key: string, x: number, y: number, lines: L10n[] | undefined, chance = 1): number {
+    if (!lines?.length) return -1;
     const now = this.scene.time.now;
-    if (now - this.last < GAP_MS || Math.random() > chance) return;
+    if (now - this.last < GAP_MS || Math.random() > chance) return -1;
     this.last = now;
     this.live.get(key)?.destroy();
-    const text = L(lines[Math.floor(Math.random() * lines.length)]);
+    const idx = Math.floor(Math.random() * lines.length);
+    const text = L(lines[idx]);
     const t = addText(this.scene, 0, 0, text, { size: 15, bold: true, color: '#3a2412', strokeW: 0, shadow: false }).setOrigin(0.5);
     const w = t.width + 20;
     const h = t.height + 10;
@@ -53,5 +55,6 @@ export class Bubbles {
         if (this.live.get(key) === c) this.live.delete(key);
       },
     });
+    return idx;
   }
 }

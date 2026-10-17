@@ -1,5 +1,7 @@
 import { save } from './save';
 import type { ThemeId } from './sim/defs';
+import { getLang } from './i18n';
+import { VOICE_LINES, type VoiceLine } from './data/voices';
 
 /**
  * 塔防音效系統：
@@ -90,6 +92,8 @@ class TdAudio {
   private wantBgm: Bgm | null = null;
   private fadeTimer: ReturnType<typeof setInterval> | null = null;
   private replayTimer: ReturnType<typeof setTimeout> | null = null;
+  private voices = new Map<string, AudioBuffer | 'loading'>();
+  private voiceSrc: AudioBufferSourceNode | null = null;
 
   constructor() {
     if (typeof window === 'undefined') return;
@@ -175,6 +179,50 @@ class TdAudio {
       return;
     }
     this.synth(k, v);
+  }
+
+  // ───────── 英雄語音 ─────────
+  private voiceKey(hero: string, line: VoiceLine): string {
+    return `${hero}_${line}_${getLang()}`;
+  }
+
+  private loadVoice(key: string): void {
+    if (!this.ctx || this.voices.has(key)) return;
+    this.voices.set(key, 'loading');
+    fetch(`assets/audio/voice/${key}.mp3`)
+      .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error('404'))))
+      .then((ab) => this.ctx!.decodeAudioData(ab))
+      .then((buf) => this.voices.set(key, buf))
+      .catch(() => this.voices.delete(key));
+  }
+
+  /** 預先下載某位英雄（目前語言）的全部語音，每句約 10KB */
+  preloadVoice(hero: string): void {
+    if (!this.ensureCtx()) return;
+    for (const line of VOICE_LINES) this.loadVoice(this.voiceKey(hero, line));
+  }
+
+  /** 說一句台詞；還沒下載好就這次不說。新的一句會打斷前一句，避免疊在一起 */
+  voice(hero: string, line: VoiceLine): void {
+    const ctx = this.ensureCtx();
+    if (!ctx || !this.master || this.sfxVol <= 0) return;
+    const key = this.voiceKey(hero, line);
+    const buf = this.voices.get(key);
+    if (!buf) this.loadVoice(key);
+    if (!buf || buf === 'loading') return;
+    try {
+      this.voiceSrc?.stop();
+    } catch {
+      // 已經播完
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const g = ctx.createGain();
+    g.gain.value = 0.9 * this.sfxVol;
+    src.connect(g);
+    g.connect(this.master);
+    src.start();
+    this.voiceSrc = src;
   }
 
   // ───────── 合成音 ─────────
