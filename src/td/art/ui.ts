@@ -301,6 +301,36 @@ function gearIcon(c: Ctx, w: number): void {
   c.fill();
 }
 
+/** 音符（音樂室曲目） */
+function musicIcon(): Fn {
+  return (c, w) => {
+    const m = w / 2;
+    c.fillStyle = '#fff6dc';
+    c.strokeStyle = '#3a2412';
+    c.lineWidth = 3;
+    // 兩個符頭＋符幹＋橫樑
+    for (const x of [m - 10, m + 10]) {
+      c.beginPath();
+      c.ellipse(x - 4, m + 11, 7, 5.5, -0.4, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+    }
+    c.lineWidth = 4;
+    c.strokeStyle = '#fff6dc';
+    c.beginPath();
+    c.moveTo(m - 8, m + 10);
+    c.lineTo(m - 8, m - 14);
+    c.lineTo(m + 12, m - 18);
+    c.lineTo(m + 12, m + 10);
+    c.stroke();
+    c.lineWidth = 6;
+    c.beginPath();
+    c.moveTo(m - 8, m - 12);
+    c.lineTo(m + 12, m - 16);
+    c.stroke();
+  };
+}
+
 function speakerIcon(on: boolean): Fn {
   return (c, w) => {
     const m = w / 2;
@@ -822,6 +852,7 @@ const ICONS: Record<string, Fn> = {
   ic_info: infoIcon,
   ic_gear: gearIcon,
   ic_sound_on: speakerIcon(true),
+  ic_music: musicIcon(),
   ic_sound_off: speakerIcon(false),
   ic_shield: shieldIcon,
   ic_book: bookIcon,

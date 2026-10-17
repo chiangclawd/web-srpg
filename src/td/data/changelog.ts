@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 39,
+    date: '2026-10-17',
+    title: { zh: '音樂室', en: 'Music room' },
+    items: [
+      { zh: '圖鑑新增「音樂」分頁，可以自由聆聽十首配樂；到過那片土地就會解鎖該曲', en: 'The encyclopedia has a new Music tab: listen to all ten tracks, each unlocking once you reach its land' },
+    ],
+  },
+  {
     id: 38,
     date: '2026-10-17',
     title: { zh: '防禦塔開口說話（英文版）', en: 'Towers talk' },

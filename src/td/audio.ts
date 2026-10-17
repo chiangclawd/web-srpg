@@ -410,6 +410,11 @@ class TdAudio {
   }
 
   // ───────── BGM ─────────
+  /** 目前（想要）播放的配樂 */
+  get currentBgm(): Bgm | null {
+    return this.wantBgm;
+  }
+
   playBgm(name: Bgm): void {
     this.wantBgm = name;
     const vol = save().settings.music;
