@@ -1426,12 +1426,15 @@ export class LevelScene extends Phaser.Scene {
           // 開戰時英雄喊一聲
           if (ev.index === 0 && this.world.hero?.alive && this.world.hero.hero) this.heroShout('select');
           this.maybeTip(ev.index);
-          if (this.hazardLayer && !save().tipsSeen.includes('hazard')) {
+          // 機關首次提示（火藥桶和落石／雪球分開提示一次）
+          const keg = this.level.hazards?.[0]?.kind === 'keg';
+          const tipId = keg ? 'hazard_keg' : 'hazard';
+          if (this.hazardLayer && !save().tipsSeen.includes(tipId)) {
             this.time.delayedCall(4000, () => {
-              if (!this.hazardLayer || this.world.result || this.ui.hasModal() || save().tipsSeen.includes('hazard')) return;
-              save().tipsSeen.push('hazard');
+              if (!this.hazardLayer || this.world.result || this.ui.hasModal() || save().tipsSeen.includes(tipId)) return;
+              save().tipsSeen.push(tipId);
               persist();
-              this.ui.toast(T('tipHazard'), 5500);
+              this.ui.toast(T(keg ? 'tipHazardKeg' : 'tipHazard'), 5500);
               this.hazardLayer.pointAt(0, 6000);
             });
           }

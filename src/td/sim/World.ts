@@ -31,9 +31,11 @@ export const TOWER_HASTE = 1.35;
 /** 審判聖典：敵人承受傷害倍率 */
 export const VULN_MUL = 1.3;
 /** 地圖機關：傷害、判定半徑、控制效果、冷卻、滾動速度（px/s） */
-export const HAZARD: Record<HazardKind, { dmg: number; r: number; stun: number; slow: number; cd: number; speed: number }> = {
+export const HAZARD: Record<HazardKind, { dmg: number; r: number; stun: number; slow: number; cd: number; speed: number; boom?: { dmg: number; r: number; stun: number } }> = {
   boulder: { dmg: 180, r: 28, stun: 1.2, slow: 0, cd: 40, speed: 230 },
   snowball: { dmg: 140, r: 32, stun: 0, slow: 0.45, cd: 35, speed: 260 },
+  // 火藥桶：滾動時撞得較輕，滾到底炸開（範圍傷害＋暈眩）
+  keg: { dmg: 80, r: 26, stun: 0, slow: 0, cd: 45, speed: 200, boom: { dmg: 300, r: 80, stun: 1 } },
 };
 /** 從崖邊落到路上的時間（秒），落地後才開始判定 */
 export const HAZARD_DROP = 0.45;
@@ -705,6 +707,16 @@ export class World {
         if (!e.alive) r.kills++;
         else if (spec.stun) this.applyStun(e, spec.stun);
         else if (spec.slow) this.applySlow(e, spec.slow, 3);
+      }
+      if (done && spec.boom) {
+        const b = spec.boom;
+        for (const e of this.enemies) {
+          if (!e.alive || e.flying || e.burrowed || dist2(e.x, e.y, r.x, r.y) > b.r * b.r) continue;
+          this.damageEnemy(e, b.dmg * (this.level.rules?.hazardDmgMul ?? 1), 'true', 'spell');
+          if (!e.alive) r.kills++;
+          else this.applyStun(e, b.stun);
+        }
+        this.emit({ type: 'explosion', x: r.x, y: r.y, r: b.r, kind: 'bomb' });
       }
       if (done) {
         h.roll = null;

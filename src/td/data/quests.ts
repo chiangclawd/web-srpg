@@ -40,7 +40,7 @@ export const QUESTS: QuestDef[] = [
   { id: 'meteorKills', text: { zh: '用流星火雨擊倒 {n} 名敵人', en: 'Defeat {n} enemies with Meteor Rain' }, targets: [12, 25], rewards: [5, 8] },
   { id: 'earlyCalls', text: { zh: '提前呼叫 {n} 次波次', en: 'Call {n} waves early' }, targets: [5, 10], rewards: [5, 7] },
   { id: 'bosses', text: { zh: '擊敗 {n} 名首領', en: 'Defeat {n} bosses' }, targets: [1, 2], rewards: [8, 12], minCleared: 4 },
-  { id: 'hazardKills', text: { zh: '用落石或雪球擊倒 {n} 名敵人', en: 'Crush {n} enemies with boulders or snowballs' }, targets: [5, 10], rewards: [6, 9], minCleared: 3 },
+  { id: 'hazardKills', text: { zh: '用地圖機關擊倒 {n} 名敵人', en: 'Take down {n} enemies with map traps' }, targets: [5, 10], rewards: [6, 9], minCleared: 3 },
   { id: 'daily', text: { zh: '通關今天的每日挑戰', en: "Clear today's Daily Challenge" }, targets: [1], rewards: [8], minCleared: 3 },
 ];
 
