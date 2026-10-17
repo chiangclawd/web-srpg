@@ -111,6 +111,13 @@ function screenScale(): number {
   return Math.min(w / computeViewW(), h / VIEW_H);
 }
 
+/** 玩家選的介面大小（設定裡的 標準／大）：彈出面板、環狀選單、地圖按鈕再放大一些 */
+let UI_BOOST = 1;
+
+export function setUiBoost(k: number): void {
+  UI_BOOST = Phaser.Math.Clamp(k || 1, 1, 1.15);
+}
+
 let textMin = MIN_CSS_PX / screenScale();
 
 /** 邏輯字級 → 實際使用的字級（小螢幕放大） */
@@ -124,7 +131,7 @@ export function fontPx(size: number): number {
  * 讓 1 邏輯像素至少約 0.84 CSS px：52px 的按鈕在手機上約 44 CSS px，符合手指點擊大小；桌機、平板為 1。
  */
 export function uiZoom(): number {
-  return Phaser.Math.Clamp(0.84 / screenScale(), 1, 1.55);
+  return Phaser.Math.Clamp((0.84 / screenScale()) * UI_BOOST, 1, 1.55 * UI_BOOST);
 }
 
 /**

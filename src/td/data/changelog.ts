@@ -11,6 +11,17 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 51,
+    date: '2026-10-17',
+    title: { zh: '手機介面調整', en: 'Phone layout fixes' },
+    items: [
+      { zh: '設定新增「介面大小」：選「大」可讓手機上的彈出面板、建塔選單與地圖按鈕再放大一些（重新整理後生效）', en: 'New UI size setting: Large makes pop-up panels, the build menu and map buttons a bit bigger on phones (applies after a reload)' },
+      { zh: '修正 16:9 手機上地圖左下的商店鈕被關閉鈕蓋住', en: 'Fixed the Shop button hiding under the close button on 16:9 phones' },
+      { zh: '修正手機上英雄室技能名稱與說明疊在一起', en: 'Fixed skill names overlapping their descriptions in the hero room on phones' },
+      { zh: '首次載入更快：角色圖改用較小的圖檔', en: 'Faster first load: character art now uses smaller files' },
+    ],
+  },
+  {
     id: 50,
     date: '2026-10-17',
     title: { zh: '戰場環境音', en: 'Battlefield ambience' },

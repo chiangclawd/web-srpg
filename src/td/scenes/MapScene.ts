@@ -371,7 +371,9 @@ export class MapScene extends Phaser.Scene {
     const z = uiZoom();
     const topLeft = this.add.container(left, 0).setScale(z);
     const topRight = this.add.container(right, 0).setScale(z);
-    const bottomRight = this.add.container(right, VIEW_H).setScale(z);
+    // 底部按鈕列（寬 870）放不下時縮小，免得最左邊的商店鈕被左下角的關閉鈕蓋住
+    const zb = this.barZoom();
+    const bottomRight = this.add.container(right, VIEW_H).setScale(zb);
     this.hud.push(topLeft, topRight, bottomRight);
     // 總星數
     const sp = panel(this, 100, 34, 170, 46, 'ui_dark', 18);
@@ -430,6 +432,12 @@ export class MapScene extends Phaser.Scene {
     }
     this.hud.push(back);
     this.hud.forEach((o) => (o as unknown as Phaser.GameObjects.Components.Depth).setDepth?.(500));
+  }
+
+  /** 底部按鈕列的放大倍率：手機放大，但整列要塞進關閉鈕右邊 */
+  private barZoom(): number {
+    const z = uiZoom();
+    return Math.min(z, (viewW(this) - (12 + 64 * z + 14)) / 870);
   }
 
   /** 今天的任務（換日自動重抽並存檔） */
@@ -570,7 +578,10 @@ export class MapScene extends Phaser.Scene {
       this.infoPanel = null;
       // 任務鈕在右上（每日挑戰下方），升級／商店在底部
       if (tip === 'quests') showTipBubble(this, w - 104 * z, 92 * z, T('tipQuests'), () => {}, 2000);
-      else showTipBubble(this, w - (tip === 'upgrades' ? 470 : 790) * z, VIEW_H - 42 * z, T(tip === 'upgrades' ? 'tipUpgrades' : 'tipShop'), () => {}, 2000);
+      else {
+        const zb = this.barZoom();
+        showTipBubble(this, w - (tip === 'upgrades' ? 470 : 790) * zb, VIEW_H - 42 * zb, T(tip === 'upgrades' ? 'tipUpgrades' : 'tipShop'), () => {}, 2000);
+      }
     });
   }
 

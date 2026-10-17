@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { VIEW_H, addText, fitText, setupCamera, viewW, uiZoom } from '../config';
+import { VIEW_H, addText, fitText, fontPx, setupCamera, viewW, uiZoom } from '../config';
 import { HEROES, HERO_ORDER, HERO_XP_TABLE, HERO_MAX_LEVEL, TRAIN_PRICE, heroLevelForXp, trainXp } from '../data/heroes';
 import { LEVELS } from '../data/levels';
 import { heroStats } from '../sim/World';
@@ -149,9 +149,11 @@ export class HeroScene extends Phaser.Scene {
       add(fitText(addText(this, bx, 390, `+${gain} XP · ${T('gems')} ${sv.gems}`, { size: 12, color: '#5a3a1a', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0.5), 140));
     }
     // 技能
-    add(addText(this, tx, 380, T('skills'), { size: 20, display: true, color: '#7a4a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }));
+    add(addText(this, tx, 372, T('skills'), { size: 20, display: true, color: '#7a4a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }));
+    // 手機上字會放大：列距跟著實際字高，名稱貼在圖示中線上方、說明貼在下方，兩行才不會疊在一起
+    const pitch = Math.max(50, fontPx(18) + fontPx(16) + 12);
     h.skills.forEach((sk, i) => {
-      const sy = 432 + i * 50;
+      const sy = 424 + i * pitch;
       const ok = lv >= sk.unlockLevel;
       const ib = add(this.add.image(tx + 24, sy, 'ui_badge_blue').setDisplaySize(48, 48));
       const ic = add(this.add.image(tx + 24, sy, `sk_${sk.id}`).setDisplaySize(30, 30));
@@ -159,18 +161,18 @@ export class HeroScene extends Phaser.Scene {
         ib.setTint(0x666666);
         ic.setTint(0x666666);
       }
-      add(addText(this, tx + 58, sy - 12, `${L(sk.name)}  (LV${sk.unlockLevel})`, { size: 18, display: true, color: ok ? '#4a2a10' : '#8a7a6a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
-      add(fitText(addText(this, tx + 58, sy + 13, L(sk.desc), { size: 16, color: ok ? '#3a2412' : '#8a7a6a', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0, 0.5), px + Math.min(w - 220, 1000) / 2 - 24 - (tx + 58)));
+      add(addText(this, tx + 58, sy + 2, `${L(sk.name)}  (LV${sk.unlockLevel})`, { size: 18, display: true, color: ok ? '#4a2a10' : '#8a7a6a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 1));
+      add(fitText(addText(this, tx + 58, sy + 2, L(sk.desc), { size: 16, color: ok ? '#3a2412' : '#8a7a6a', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0, 0), px + Math.min(w - 220, 1000) / 2 - 24 - (tx + 58)));
     });
     // 絕招（手動施放）
     {
-      const sy = 432 + h.skills.length * 50;
+      const sy = 424 + h.skills.length * pitch;
       add(this.add.image(tx + 24, sy, 'ui_badge_gold').setDisplaySize(48, 48));
       add(this.add.image(tx + 24, sy, h.ult.icon).setDisplaySize(30, 30));
-      add(addText(this, tx + 58, sy - 12, `${L(h.ult.name)}  (${T('ultimate')})`, { size: 18, display: true, color: '#8a4a00', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5));
+      add(addText(this, tx + 58, sy + 2, `${L(h.ult.name)}  (${T('ultimate')})`, { size: 18, display: true, color: '#8a4a00', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 1));
       // 一行放不下就縮小
       const room = px + Math.min(w - 220, 1000) / 2 - 24 - (tx + 58);
-      add(fitText(addText(this, tx + 58, sy + 13, L(h.ult.desc), { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0, 0.5), room));
+      add(fitText(addText(this, tx + 58, sy + 2, L(h.ult.desc), { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0, 0), room));
     }
     if (unlocked) {
       const selected = sv.selectedHero === h.id;
