@@ -82,7 +82,7 @@ export class MapScene extends Phaser.Scene {
       const n = nodes[i];
       const stars = sv.stars[lv.id] ?? 0;
       const c = this.add.container(n.x, n.y);
-      const glow = this.add.image(0, -4, 'fx_soft').setTint(lv.bonus ? 0xffa040 : stars ? 0x7ab0ff : 0xffd84a).setBlendMode('ADD').setScale(1.1).setAlpha(0.7);
+      const glow = this.add.image(0, -4, 'fx_soft').setTint(lv.night ? 0x9a8aff : lv.bonus ? 0xffa040 : stars ? 0x7ab0ff : 0xffd84a).setBlendMode('ADD').setScale(1.1).setAlpha(0.7);
       const base = this.add.ellipse(0, 6, 46, 18, 0x2a1a0c, 0.5);
       const pole = this.add.rectangle(-2, -14, 4, 42, 0x3a2412);
       const flagTex = this.add.graphics();
@@ -97,6 +97,8 @@ export class MapScene extends Phaser.Scene {
       flagTex.strokePath();
       const num = addText(this, 0, 22, String(i + 1), { size: 16, display: true }).setOrigin(0.5);
       c.add([glow, base, pole, flagTex, num]);
+      // 夜戰關卡：旗子旁掛一彎月亮
+      if (lv.night) c.add(addText(this, 26, -42, '☾', { size: 32, color: '#fff4c0', stroke: '#2a1a4a', strokeW: 5 }).setOrigin(0.5));
       this.tweens.add({ targets: flagTex, scaleX: 0.82, duration: 520 + (i % 4) * 70, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
       for (let k = 0; k < 3; k++) {
         const st = this.add.image((k - 1) * 18, 42, k < stars ? 'ic_star' : 'ic_star_empty').setDisplaySize(20, 20);

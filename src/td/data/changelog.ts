@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 63,
+    date: '2026-10-17',
+    title: { zh: '夜戰關卡標示', en: 'Night Level Markers' },
+    items: [
+      { zh: '地圖上的夜戰關卡旗子旁會掛一彎月亮、發出紫色光暈，一眼就認得出來', en: 'Night levels on the world map carry a crescent moon and a violet glow, so you can spot them at a glance' },
+      { zh: '修正夜戰關卡的螢火蟲不見了的問題', en: 'Fixed the missing fireflies in night battles' },
+    ],
+  },
+  {
     id: 62,
     date: '2026-10-17',
     title: { zh: '番外篇：礦坑鬼火', en: 'Extra chapter: Mine Ghostfire' },
