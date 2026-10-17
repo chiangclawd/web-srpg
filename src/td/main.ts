@@ -3,6 +3,7 @@ import '@fontsource/luckiest-guy/400.css';
 import { RS, VIEW_H, applyQuality, computeViewW, isTouchDevice, refreshTextScale } from './config';
 import { loadSave, persist } from './save';
 import { crashGuard } from './crashGuard';
+import { PreloadScene } from './scenes/PreloadScene';
 import { BootScene } from './scenes/BootScene';
 import { MenuScene } from './scenes/MenuScene';
 import { MapScene } from './scenes/MapScene';
@@ -31,7 +32,7 @@ const game = new Phaser.Game({
   width: Math.round(computeViewW() * RS),
   height: Math.round(VIEW_H * RS),
   backgroundColor: '#120d08',
-  scene: [BootScene, MenuScene, MapScene, LevelScene, LevelUIScene, UpgradeScene, HeroScene, EncyclopediaScene, AchievementScene, EndingScene, ShopScene],
+  scene: [PreloadScene, BootScene, MenuScene, MapScene, LevelScene, LevelUIScene, UpgradeScene, HeroScene, EncyclopediaScene, AchievementScene, EndingScene, ShopScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

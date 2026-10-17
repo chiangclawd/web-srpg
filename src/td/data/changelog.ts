@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 14,
+    date: '2026-10-17',
+    title: { zh: '新的載入畫面', en: 'New loading screen' },
+    items: [
+      { zh: '載入時改用手繪主視覺當背景，並隨機顯示一則遊戲小技巧', en: 'The loading screen shows the painted key art and a random gameplay tip' },
+    ],
+  },
+  {
     id: 13,
     date: '2026-10-16',
     title: { zh: '會動的戰場', en: 'Living battlefields' },
