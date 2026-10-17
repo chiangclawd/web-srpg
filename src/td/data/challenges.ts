@@ -20,6 +20,13 @@ const IRON_TOWERS: TowerType[][] = [
   // 外傳
   ['mage', 'barracks'],
   ['mage', 'artillery'],
+  // 冰河、火山、海灣、月夜（和原本輪到的組合相同）
+  ['archer', 'barracks'],
+  ['archer', 'artillery'],
+  ['mage', 'barracks'],
+  ['archer', 'mage'],
+  // 礦坑鬼火：有飛行的怨靈，一定要有打得到空中的塔
+  ['mage', 'barracks'],
 ];
 
 export function ironTowers(level: LevelDef): TowerType[] {

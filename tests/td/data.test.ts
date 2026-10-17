@@ -4,7 +4,7 @@ import { LEVELS } from '../../src/td/data/levels';
 import { ENEMIES } from '../../src/td/data/enemies';
 import { HEROES, HERO_ORDER } from '../../src/td/data/heroes';
 import { TOWERS } from '../../src/td/data/towers';
-import { challengeLevel, endlessLevel, endlessHpMul, ENDLESS_WAVES } from '../../src/td/data/challenges';
+import { challengeLevel, endlessLevel, endlessHpMul, ironTowers, ENDLESS_WAVES } from '../../src/td/data/challenges';
 import { STORY, SPEAKERS, STORY_PORTRAITS, EPILOGUE, SIDE_EPILOGUE } from '../../src/td/data/story';
 import { ACHIEVEMENTS, evaluateAchievements, type LevelOutcome } from '../../src/td/data/achievements';
 import type { SaveData } from '../../src/td/save';
@@ -244,4 +244,15 @@ test('every sprite and portrait the game loads at boot has its WebP copy', async
   assert.ok(sprites.length > 20);
   for (const s of sprites) assert.ok(fs.existsSync(`public/assets/sprites/${s}.webp`), `sprites/${s}.webp (run scripts/art/td_webp.py)`);
   for (const id of [...Object.keys(HEROES), ...STORY_PORTRAITS]) assert.ok(fs.existsSync(`public/assets/portraits/${id}.webp`), `portraits/${id}.webp (run scripts/art/td_webp.py)`);
+});
+
+test('Iron Challenges with more than a handful of flyers allow a tower that hits air', () => {
+  for (const l of LEVELS) {
+    const iron = challengeLevel(l, 'iron');
+    // 幾隻飛行敵人英雄就能處理（例如第 5 關的獅鷲），再多就一定要有對空的塔
+    const flyers = iron.waves.reduce((n, w) => n + w.groups.reduce((m, g) => m + (ENEMIES[g.enemy]?.flying ? g.count : 0), 0), 0);
+    if (flyers <= 5) continue;
+    const pair = ironTowers(l);
+    assert.ok(pair.some((t) => TOWERS[t].levels[0].hitsAir), `${l.id} iron (${pair.join('+')}) can hit air`);
+  }
 });

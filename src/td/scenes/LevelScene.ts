@@ -217,12 +217,11 @@ export class LevelScene extends Phaser.Scene {
     if (this.world.hazards.length) this.hazardLayer = new HazardLayer(this, this.world, this.fx, (p) => this.isTap(p));
 
     // 環境粒子
+    // 夜戰：夜幕＋光圈（夜戰關卡，或無盡模式裡有夜晚波次）；要在環境生物之前建好，螢火蟲才放得進夜幕圖層
+    if (this.isNight || this.level.waves.some((w) => w.night)) this.night = new NightLayer(this, this.world, this.level.decor ?? []);
     this.makeAmbient();
     this.makeLife();
     this.eggs = new EggLayer(this, this.level, this.fx, this.bubbles);
-    // 夜戰：夜幕＋光圈
-    // 夜戰關卡，或無盡模式裡有夜晚波次（日夜交替時夜幕淡入淡出）
-    if (this.isNight || this.level.waves.some((w) => w.night)) this.night = new NightLayer(this, this.world, this.level.decor ?? []);
 
     // 全域點擊
     this.setupGestures();
@@ -506,8 +505,9 @@ export class LevelScene extends Phaser.Scene {
       // 夜晚：螢火蟲在草叢間忽明忽滅（放在夜幕圖層裡，天亮時跟著淡出）
       const night = this.night;
       for (let i = 0; i < 14; i++) {
-        const f = night.adopt(this.add.image(Phaser.Math.Between(40, PLAY_W - 40), Phaser.Math.Between(80, 680), 'fx_soft').setTint(0xd8ff7a).setBlendMode('ADD').setDepth(3));
-        f.setDisplaySize(10, 10).setAlpha(0);
+        const wisp = this.level.wisps;
+        const f = night.adopt(this.add.image(Phaser.Math.Between(40, PLAY_W - 40), Phaser.Math.Between(80, 680), 'fx_soft').setTint(wisp?.tint ?? 0xd8ff7a).setBlendMode('ADD').setDepth(3));
+        f.setDisplaySize(wisp?.size ?? 10, wisp?.size ?? 10).setAlpha(0);
         const drift = () => {
           const tx = Phaser.Math.Clamp(f.x + Phaser.Math.Between(-120, 120), 20, PLAY_W - 20);
           const ty = Phaser.Math.Clamp(f.y + Phaser.Math.Between(-80, 80), 60, 700);

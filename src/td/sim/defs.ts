@@ -244,6 +244,8 @@ export interface LevelDef {
   intro?: string[];
   /** 指定配樂；沒寫就依地形（THEME_BGM） */
   bgm?: 'finale' | 'night';
+  /** 夜晚飄在戰場上的光點顏色與大小（預設是黃綠色的螢火蟲；礦坑鬼火是大一點的幽綠鬼火） */
+  wisps?: { tint: number; size: number };
   /** 挑戰模式規則 */
   rules?: LevelRules;
   /** 外傳關卡（戰役完結後解鎖，不在主線路線上） */
