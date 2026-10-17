@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 60,
+    date: '2026-10-17',
+    title: { zh: '夜戰小幫手', en: 'Night Battle Helpers' },
+    items: [
+      { zh: '有怨靈的夜晚，建塔或點塔時會多畫一圈黃色光圈：怨靈飛進圈內就會現形', en: 'On nights with wraiths, building or selecting a tower also shows a yellow ring: wraiths inside it are revealed' },
+      { zh: '「月夜突襲」的鋼鐵挑戰攻勢減輕，現在打得過了', en: 'Moonlit Raid’s Iron Challenge is lighter and now winnable' },
+    ],
+  },
+  {
     id: 59,
     date: '2026-10-17',
     title: { zh: '手機版圖鑑', en: 'Phone Encyclopedia' },

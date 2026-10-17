@@ -66,7 +66,9 @@ export function challengeLevel(level: LevelDef, mode: LevelMode): LevelDef {
   // iron
   const last = src.slice(Math.max(0, n - 3));
   const groups: GroupDef[] = [];
-  last.forEach((w, i) => groups.push(...noBoss(w.groups).map((g) => scale(g, 0.6, i * 30))));
+  // 夜戰關卡塔的射程本來就短一截：鋼鐵挑戰的攻勢少一點
+  const k = level.night ? 0.55 : 0.6;
+  last.forEach((w, i) => groups.push(...noBoss(w.groups).map((g) => scale(g, k, i * 30))));
   return {
     ...level,
     lives: 3,
