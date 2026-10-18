@@ -39,7 +39,8 @@ const langs = (process.env.VOICE_LANGS ?? 'zh,en').split(',');
 for (const { out, voice, style: baseStyle, text, lang } of jobs) {
   if (existsSync(out) || !langs.includes(lang)) continue;
   // 中文短句用喊的容易咬字不清，特別要求字正腔圓
-  const style = lang === 'zh' ? `${baseStyle}, speaking clear Taiwanese Mandarin with crisp, careful articulation of every syllable` : baseStyle;
+  // 語速太快也會糊成一團（「為了王國」不到一秒），要求放慢
+  const style = lang === 'zh' ? `${baseStyle}, speaking clear Taiwanese Mandarin at a measured, unhurried pace with crisp, careful articulation of every syllable` : baseStyle;
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
       execFileSync('node', ['scripts/art/gemini-tts.mjs', out, voice, text, style], { stdio: ['ignore', 'inherit', 'pipe'] });

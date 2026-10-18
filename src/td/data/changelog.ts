@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 65,
+    date: '2026-10-18',
+    title: { zh: '防禦塔中文配音', en: 'Chinese Tower Voices' },
+    items: [
+      { zh: '中文版的防禦塔也會開口說話了：弓箭手、兵營、法師、砲塔和全部特化塔都有自己的中文台詞', en: 'Towers now speak in Chinese too: archers, barracks, mages, artillery and every specialization have their own Chinese lines' },
+      { zh: '幾句中文對話泡泡稍微改寫，讓配音唸起來更清楚', en: 'A few Chinese speech bubbles were reworded so the voice lines sound clearer' },
+    ],
+  },
+  {
     id: 64,
     date: '2026-10-17',
     title: { zh: '夜戰小幫手', en: 'Night Battle Help' },
