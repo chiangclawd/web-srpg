@@ -87,8 +87,8 @@ export const BOSS_VOICES: Record<string, { voice: string; style: string; line: L
  * 防禦塔台詞配音（與對話泡泡同一句）：鍵值是塔種或第 4 級特化的塔圖，
  * 檔案 tower_<鍵值>_<第幾句>_<語言>.mp3
  */
-/** 已配音的語言（中文版咬字要用 2.5 pro TTS 重做，額度用完了，之後補上） */
-export const TOWER_VOICE_LANGS: readonly string[] = ['en'];
+/** 已配音的語言（中文每句都用轉寫比對過；太短或被語音模型擋下的句子改寫得長一點） */
+export const TOWER_VOICE_LANGS: readonly string[] = ['en', 'zh'];
 
 export const TOWER_VOICES: Record<string, { voice: string; style: string }> = {
   archer: { voice: 'Puck', style: 'eager young archer, upbeat' },

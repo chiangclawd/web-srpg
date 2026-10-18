@@ -6,14 +6,14 @@ import type { L10n, TowerType } from '../sim/defs';
  */
 export const TOWER_BARKS: Record<TowerType, L10n[]> = {
   archer: [
-    { zh: '弓已上弦！', en: 'Arrows ready!' },
+    { zh: '弓弦拉滿，準備就緒！', en: 'Arrows ready!' },
     { zh: '百步穿楊！', en: 'Never miss!' },
     { zh: '瞄準……放！', en: 'Aim… loose!' },
   ],
   barracks: [
     { zh: '為了王國！', en: 'For the kingdom!' },
     { zh: '一個都別想過！', en: 'None shall pass!' },
-    { zh: '整隊！', en: 'Fall in!' },
+    { zh: '列隊集合！', en: 'Fall in!' },
   ],
   mage: [
     { zh: '魔力充盈。', en: 'The arcane flows.' },
@@ -23,7 +23,7 @@ export const TOWER_BARKS: Record<TowerType, L10n[]> = {
   artillery: [
     { zh: '裝填完畢！', en: 'Loaded!' },
     { zh: '轟他個天翻地覆！', en: "Let's make some noise!" },
-    { zh: '火藥管夠！', en: 'Plenty of powder!' },
+    { zh: '砲彈多得是！', en: 'Plenty of powder!' },
   ],
 };
 
@@ -42,7 +42,7 @@ export const BRANCH_BARKS: Record<string, L10n[]> = {
   ],
   tw_barracks_barbarian: [
     { zh: '斧頭餓了！', en: 'My axe is thirsty!' },
-    { zh: '殺啊！', en: 'Crush them all!' },
+    { zh: '全部給我砍了！', en: 'Crush them all!' },
   ],
   tw_mage_arcane: [
     { zh: '時空皆在掌中。', en: 'Time and space obey.' },
@@ -54,7 +54,7 @@ export const BRANCH_BARKS: Record<string, L10n[]> = {
   ],
   tw_art_bertha: [
     { zh: '大傢伙要開火了！', en: "Big Bertha's hungry!" },
-    { zh: '捂住耳朵！', en: 'Cover your ears!' },
+    { zh: '快把耳朵捂住！', en: 'Cover your ears!' },
   ],
   tw_art_tesla: [
     { zh: '電力全開！', en: 'Full power!' },
