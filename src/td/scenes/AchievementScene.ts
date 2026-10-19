@@ -3,7 +3,7 @@ import { VIEW_H, addText, fitText, setupCamera, viewW, uiZoom } from '../config'
 import { ACHIEVEMENTS, achievementProgress } from '../data/achievements';
 import { Button, IconButton, dimmer, panel, popIn } from '../ui/widgets';
 import { L, T } from '../i18n';
-import { save, totalStars } from '../save';
+import { save, totalStars, STARS_PER_LEVEL } from '../save';
 import { LEVELS } from '../data/levels';
 import { HEROES } from '../data/heroes';
 import { totalEggs } from '../data/eggs';
@@ -169,7 +169,7 @@ export class AchievementScene extends Phaser.Scene {
       [T('stBosses'), String(st.bosses ?? 0)],
       [T('stElites'), String(st.elites ?? 0)],
       [T('stTowers'), String(st.towers ?? 0)],
-      [T('stStars'), `${totalStars()} / ${LEVELS.length * 5}`],
+      [T('stStars'), `${totalStars()} / ${LEVELS.length * STARS_PER_LEVEL}`],
       [T('stEggs'), `${sv.eggs?.length ?? 0} / ${totalEggs(LEVELS)}`],
     ];
     rows.forEach(([k, v], i) => {

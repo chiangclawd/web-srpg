@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 66,
+    date: '2026-10-19',
+    title: { zh: '首領連戰星數', en: 'Boss Rush Stars' },
+    items: [
+      { zh: '修正首領連戰拿到的星星沒有算進總星數的問題：每張地圖最多可再拿 3 星，也能拿去買升級', en: 'Fixed Boss Rush stars not counting toward your total: each map gives up to 3 more stars, which you can spend on upgrades' },
+      { zh: '總星數上限隨之調整為每張地圖 8 星（戰役 3、英雄 1、鋼鐵 1、首領連戰 3）', en: 'The star cap is now 8 per map (3 campaign, 1 Heroic, 1 Iron, 3 Boss Rush)' },
+    ],
+  },
+  {
     id: 65,
     date: '2026-10-18',
     title: { zh: '防禦塔中文配音', en: 'Chinese Tower Voices' },
