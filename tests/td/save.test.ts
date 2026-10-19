@@ -42,6 +42,12 @@ test('total stars include challenge stars', () => {
   assert.equal(totalStars(), 7);
 });
 
+test('total stars include boss rush stars', () => {
+  store.set(KEY, JSON.stringify({ stars: { l1: 3 }, bossrush: { l1: 3, l4: 2 } }));
+  loadSave();
+  assert.equal(totalStars(), 8);
+});
+
 test('reset progress keeps settings and persists', () => {
   store.set(KEY, JSON.stringify({ stars: { l1: 3 }, settings: { lang: 'en', shake: false } }));
   loadSave();

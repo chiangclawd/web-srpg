@@ -172,13 +172,16 @@ export function resetProgress(): void {
   persist();
 }
 
-/** 戰役星數 + 挑戰星數（英雄 / 鋼鐵各 1 星） */
+/** 戰役星數 + 挑戰星數（英雄 / 鋼鐵各 1 星）+ 首領連戰星數 */
 export function totalStars(): number {
-  const campaign = Object.values(data.stars).reduce((a, b) => a + b, 0);
+  const sum = (r: Record<string, number> | undefined) => Object.values(r ?? {}).reduce((a, b) => a + b, 0);
   let ch = 0;
   for (const c of Object.values(data.challenges ?? {})) ch += (c.heroic ? 1 : 0) + (c.iron ? 1 : 0);
-  return campaign + ch;
+  return sum(data.stars) + ch + sum(data.bossrush);
 }
+
+/** 每張地圖可拿的星數上限：戰役 3、英雄 1、鋼鐵 1、首領連戰 3 */
+export const STARS_PER_LEVEL = 8;
 
 export function spentStars(costs: (col: string, n: number) => number): number {
   let s = 0;

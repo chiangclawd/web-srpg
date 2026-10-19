@@ -12,7 +12,7 @@ import { claimable, ensureQuests, questText, type QuestDay } from '../data/quest
 import { ACHIEVEMENTS } from '../data/achievements';
 import { Button, IconButton, dimmer, panel, popIn } from '../ui/widgets';
 import { L, T, getLang } from '../i18n';
-import { save, persist, totalStars } from '../save';
+import { save, persist, totalStars, STARS_PER_LEVEL } from '../save';
 import { sfx } from '../audio';
 import type { Difficulty } from '../sim/World';
 import type { LevelMode } from '../sim/defs';
@@ -389,7 +389,7 @@ export class MapScene extends Phaser.Scene {
     // 總星數
     const sp = panel(this, 100, 34, 170, 46, 'ui_dark', 18);
     const si = this.add.image(40, 34, 'ic_star').setDisplaySize(32, 32);
-    const total = LEVELS.length * 5;
+    const total = LEVELS.length * STARS_PER_LEVEL;
     const st = addText(this, 62, 34, `${totalStars()} / ${total}`, { size: 22, display: true, color: '#ffe066' }).setOrigin(0, 0.5);
     // 寶石
     const gp = panel(this, 280, 34, 150, 46, 'ui_dark', 18);

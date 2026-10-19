@@ -7,7 +7,7 @@ import { LEVELS } from '../data/levels';
 import { Button } from '../ui/widgets';
 import { playDialog } from '../ui/dialog';
 import { L, T, getLang } from '../i18n';
-import { save, totalStars } from '../save';
+import { save, totalStars, STARS_PER_LEVEL } from '../save';
 import { sfx } from '../audio';
 import { MENU_LEVEL } from './MenuScene';
 
@@ -150,7 +150,7 @@ export class EndingScene extends Phaser.Scene {
     maskG.fillStyle(0xffffff);
     maskG.fillRect(0, 0, w, top);
     const sv = save();
-    const maxStars = LEVELS.length * 5;
+    const maxStars = LEVELS.length * STARS_PER_LEVEL;
     const c = this.add.container(w / 2, top + 30).setDepth(960);
     c.setMask(maskG.createGeometryMask());
     let y = 0;
