@@ -286,3 +286,23 @@ test('every tower skill describes what each level does', async () => {
           if (n > 1) assert.notEqual(t.zh, skillLevelText(sk.id, n - 1).zh, `${sk.id} level ${n} differs from level ${n - 1}`);
         }
 });
+
+test('3D unit sheets match their atlas images and real sprites', async () => {
+  const { UNIT_SHEETS, SHEET_ANIMS, SHEET_DIRS } = await import('../../src/td/view/Sheets');
+  const fs = await import('node:fs');
+  const sharp = (await import('sharp')).default;
+  const sprites = new Set([...Object.values(ENEMIES).map((e) => e.sprite), ...Object.values(HEROES).map((h) => h.sprite)]);
+  for (const [tex, s] of Object.entries(UNIT_SHEETS)) {
+    assert.ok(sprites.has(tex), `${tex} is an enemy or hero sprite`);
+    const file = `public/assets/m3d/${s.file}.webp`;
+    assert.ok(fs.existsSync(file), `${file} exists (scripts/art/m3d/render.mjs)`);
+    const meta = await sharp(file).metadata();
+    assert.equal(meta.width, s.cols * s.size, `${s.file} width`);
+    assert.equal(meta.height, SHEET_DIRS.length * SHEET_ANIMS.length * s.size, `${s.file} height`);
+    for (const a of SHEET_ANIMS) {
+      assert.ok(s.anims[a].frames > 0 && s.anims[a].frames <= s.cols, `${s.file} ${a} frames`);
+      assert.ok(s.anims[a].dur > 0, `${s.file} ${a} duration`);
+    }
+    assert.ok(s.footAt > 0.5 && s.footAt < 1 && s.unitPx > 0 && s.cycle > 0, `${s.file} metrics`);
+  }
+});

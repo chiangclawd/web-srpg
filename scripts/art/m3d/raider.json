@@ -1,0 +1,95 @@
+{
+  "anims": [
+    {
+      "url": "/models/idle/anim_result_animation_glb_url.glb",
+      "name": "idle",
+      "frames": 8,
+      "loop": true
+    },
+    {
+      "url": "/models/rig_result_basic_animations_walking_glb_url.glb",
+      "name": "walk",
+      "frames": 10,
+      "loop": true,
+      "measure": true
+    },
+    {
+      "url": "/models/anim_result_animation_glb_url.glb",
+      "clip": "Right_Hand_Sword_Slash",
+      "name": "attack",
+      "frames": 10,
+      "loop": false,
+      "from": 0,
+      "to": 1.5
+    },
+    {
+      "url": "/models/anim_result_animation_glb_url.glb",
+      "clip": "Hit_Reaction",
+      "name": "hit",
+      "frames": 5,
+      "loop": false,
+      "from": 0,
+      "to": 0.8
+    },
+    {
+      "url": "/models/anim_result_animation_glb_url.glb",
+      "clip": "dying_backwards",
+      "name": "death",
+      "frames": 10,
+      "loop": false,
+      "from": 0,
+      "to": 2.2
+    }
+  ],
+  "yaws": [
+    45,
+    15,
+    165
+  ],
+  "size": 144,
+  "ss": 3,
+  "span": 1.8,
+  "rim": 1.1,
+  "props": [
+    {
+      "type": "sword",
+      "bone": "RightHand",
+      "dir": [
+        0,
+        -0.35,
+        1
+      ],
+      "guard": "#7a808a"
+    },
+    {
+      "type": "shield",
+      "bone": "LeftHand",
+      "dir": [
+        1,
+        0,
+        0.5
+      ],
+      "reach": 0.0,
+      "offset": [
+        0.03,
+        0.04,
+        0.02
+      ],
+      "face": "#7d8590",
+      "mark": "#b8343a",
+      "emblem": "x",
+      "rim": "#4d535c"
+    }
+  ],
+  "elev": 12,
+  "ramp": [
+    185,
+    230,
+    255
+  ],
+  "dirs": {
+    "side": 45,
+    "front": 15,
+    "back": 165
+  }
+}
