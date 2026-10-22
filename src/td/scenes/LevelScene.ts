@@ -19,7 +19,7 @@ import { PAINTED_LEVELS, levelArtId, levelArtKey, paintLevel, paintBuildSpot } f
 import { THEMES } from '../art/scenery';
 import { visualMuzzleH } from '../art/towers';
 import { DEPTH, Fx, camShake } from '../view/Fx';
-import { TowerView, UnitView } from '../view/Units';
+import { TowerView, UnitView, setUnitDust } from '../view/Units';
 import { HazardLayer, hazardTextures } from '../view/Hazards';
 import { EggLayer } from '../view/Eggs';
 import { NightLayer } from '../view/Night';
@@ -62,6 +62,9 @@ export class LevelScene extends Phaser.Scene {
   private soldierViews = new Map<number, UnitView>();
   private towerViews = new Map<number, TowerView>();
   private projViews = new Map<number, Phaser.GameObjects.Image>();
+  /** 投射物在地上的影子：看得出箭、砲彈飛多高 */
+  private projShadows = new Map<number, Phaser.GameObjects.Image>();
+  private shadowPool: Phaser.GameObjects.Image[] = [];
   private zoneViews = new Map<number, Phaser.GameObjects.GameObject[]>();
   private spotImgs: Phaser.GameObjects.Image[] = [];
   private spotHits: Phaser.GameObjects.Ellipse[] = [];
@@ -121,6 +124,7 @@ export class LevelScene extends Phaser.Scene {
     this.soldierViews = new Map();
     this.towerViews = new Map();
     this.projViews = new Map();
+    this.projShadows = new Map();
     this.zoneViews = new Map();
     this.spotImgs = [];
     this.spotHits = [];
@@ -133,6 +137,7 @@ export class LevelScene extends Phaser.Scene {
     this.tutArrow = null;
     this.exitMarks = [];
     this.projPool = [];
+    this.shadowPool = [];
     this.skullArmedUntil = 0;
     this.hazardLayer = null;
     this.eggs = null;
@@ -194,6 +199,7 @@ export class LevelScene extends Phaser.Scene {
     this.textures.addCanvas('spot_tex', paintBuildSpot(TEX, THEMES[this.level.theme].snowy));
 
     this.fx = new Fx(this);
+    setUnitDust((x, y) => this.fx.smokePuff(x, y - 4, 4));
     this.bubbles = new Bubbles(this);
     this.rangeG = this.add.graphics().setDepth(DEPTH.rangeRing);
 
@@ -241,6 +247,7 @@ export class LevelScene extends Phaser.Scene {
     };
     document.addEventListener('visibilitychange', onHide);
     this.events.once('shutdown', () => {
+      setUnitDust(null);
       sfx.stopAmbience();
       document.removeEventListener('visibilitychange', onHide);
       this.scale.off('resize', this.onResize, this);
@@ -1367,9 +1374,9 @@ export class LevelScene extends Phaser.Scene {
             v.die('death');
             this.enemyViews.delete(ev.e.id);
           }
-          const fy = ev.e.flying ? -30 : 0;
-          this.fx.smokePuff(ev.e.x, ev.e.y - 10 + fy, ev.e.def.boss ? 16 : 4);
+          // 一般敵人倒地時才揚起塵土（UnitView），首領另外炸一團煙
           if (ev.e.def.boss) {
+            this.fx.smokePuff(ev.e.x, ev.e.y - 10 + (ev.e.flying ? -30 : 0), 16);
             this.fx.explosion(ev.e.x, ev.e.y, 90, 'meteor');
             this.fx.stars(ev.e.x, ev.e.y - 40, 14);
             sfx.play('explosion');
@@ -1438,6 +1445,12 @@ export class LevelScene extends Phaser.Scene {
               this.tweens.add({ targets: img, alpha: 0, delay: 300, duration: 400, onComplete: () => this.releaseProj(img) });
             } else this.releaseProj(img);
             this.projViews.delete(ev.p.id);
+          }
+          const psh = this.projShadows.get(ev.p.id);
+          if (psh) {
+            psh.setVisible(false);
+            this.shadowPool.push(psh);
+            this.projShadows.delete(ev.p.id);
           }
           if (ev.hit) this.projImpactFx(ev.p);
           break;
@@ -1730,6 +1743,22 @@ export class LevelScene extends Phaser.Scene {
     if (p.kind === 'bomblet') img.setScale(0.7 / TEX);
     if (p.kind === 'heroBolt' && this.world.hero?.hero?.def.id === 'lila') img.setTexture('pj_ice');
     this.projViews.set(p.id, img);
+    // 法術光彈貼地飛，不需要影子
+    if (img.blendMode !== Phaser.BlendModes.ADD) {
+      const sh = (this.shadowPool.pop() ?? this.add.image(0, 0, 'fx_shadow')).setVisible(true).setDepth(DEPTH.shadow + 0.6);
+      sh.setData('k', p.kind === 'meteor' ? 0.7 : p.kind === 'bomb' || p.kind === 'missile' ? 0.34 : p.kind === 'bomblet' ? 0.2 : 0.18);
+      this.projShadows.set(p.id, sh);
+      this.placeProjShadow(p, sh);
+    }
+  }
+
+  private placeProjShadow(p: Projectile, sh: Phaser.GameObjects.Image): void {
+    const k = p.dur > 0 ? Phaser.Math.Clamp(p.t / p.dur, 0, 1) : 1;
+    const gy = p.sy + (p.ty - p.sy) * k;
+    const h = Math.max(0, gy - p.y) + this.projLift(p);
+    const near = Phaser.Math.Clamp(1 - h / 240, 0.35, 1);
+    const base = sh.getData('k') as number;
+    sh.setPosition(p.x, gy).setScale(base * near, base * near * 0.8).setAlpha(0.38 * near);
   }
 
   /** 手繪塔比模擬的射擊點高：差距（畫面像素） */
@@ -1856,6 +1885,8 @@ export class LevelScene extends Phaser.Scene {
       const img = this.projViews.get(p.id);
       if (!img) continue;
       img.setPosition(p.x, p.y - this.projLift(p));
+      const psh = this.projShadows.get(p.id);
+      if (psh) this.placeProjShadow(p, psh);
       if (p.kind === 'bomb' || p.kind === 'bomblet' || p.kind === 'axe') img.rotation += 0.2;
       else if (p.kind === 'meteor') {
         img.setRotation(0);
