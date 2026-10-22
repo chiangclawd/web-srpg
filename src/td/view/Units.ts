@@ -491,12 +491,14 @@ export class UnitView {
       const st = { k: 0 };
       const groundY = this.shadow.y - 1;
       let landed = false;
+      // 背面倒地會倒向鏡頭、超出格子：改用側面
+      const dir = this.dir === 'back' ? 'side' : this.dir;
       this.scene.tweens.add({
         targets: st,
         k: 1,
         duration: sh.anims.death.dur * 1000,
         onUpdate: () => {
-          const f = sheetFrame(sh, this.dir, 'death', Math.floor(st.k * sh.anims.death.frames));
+          const f = sheetFrame(sh, dir, 'death', Math.floor(st.k * sh.anims.death.frames));
           b.setFrame(f);
           cast?.setFrame(f);
           applyPose(b, STILL, this.face, 1, cast, 0);

@@ -28,8 +28,29 @@ export interface UnitSheet {
   cycle: number;
 }
 
-/** 由 scripts/art/render-sheets 產生的數值 */
-export const UNIT_SHEETS: Record<string, UnitSheet> = {};
+// 手繪精靈的人物大約佔貼圖高度的 9 成：3D 角色用同樣比例，兩種畫風並排時一樣大
+const FILL = 0.9;
+const sheet = (file: string, unitPx: number, cycle: number, attack: number, death: number): UnitSheet => ({
+  file,
+  size: 144,
+  cols: 10,
+  footAt: 0.82,
+  unitPx: unitPx / FILL,
+  cycle: cycle * FILL,
+  anims: {
+    idle: { frames: 8, dur: 4.03 },
+    walk: { frames: 10, dur: 1.07 },
+    attack: { frames: 10, dur: attack },
+    hit: { frames: 5, dur: 0.35 },
+    death: { frames: 10, dur: death },
+  },
+});
+
+/** scripts/art/m3d 渲染出來的圖表（key = 原本的精靈貼圖） */
+export const UNIT_SHEETS: Record<string, UnitSheet> = {
+  sp_enemy_sword: sheet('raider', 80, 0.607, 0.7, 1.1),
+  sp_arthur: sheet('arthur', 80, 0.601, 0.75, 1.25),
+};
 
 export const sheetKey = (s: UnitSheet): string => `m3d_${s.file}`;
 

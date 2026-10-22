@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 71,
+    date: '2026-10-22',
+    title: { zh: '試作：3D 角色', en: 'Beta: 3D Units' },
+    items: [
+      { zh: '戰鬥中按暫停，可以打開「3D 角色（試作）」：蠻族掠奪者和英雄亞瑟換成 3D 模型渲染的動作，會轉向正面、背面，真的揮劍、受擊、倒地', en: 'Pause a battle and switch on "3D units (beta)": the Barbarian Raider and Arthur switch to animations rendered from 3D models that turn to face you or walk away, really swing their swords, flinch and fall' },
+      { zh: '隨時可以切回原本的手繪角色比較；歡迎告訴我們喜歡哪一種', en: 'Switch back to the hand-drawn art any time to compare, and tell us which one you prefer' },
+    ],
+  },
+  {
     id: 70,
     date: '2026-10-22',
     title: { zh: '操作修正', en: 'Control Fixes' },

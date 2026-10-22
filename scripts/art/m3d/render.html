@@ -1,0 +1,275 @@
+<!doctype html>
+<meta charset="utf-8">
+<script type="importmap">
+{ "imports": { "three": "/node_modules/three/build/three.module.js", "three/addons/": "/node_modules/three/examples/jsm/" } }
+</script>
+<body style="margin:0;background:#0000">
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OutlineEffect } from 'three/addons/effects/OutlineEffect.js';
+
+const loader = new GLTFLoader();
+const load = (url) => new Promise((ok, no) => loader.load(url, ok, undefined, no));
+
+// 卡通漸層：三階（暗、中、亮），讓 Meshy 的貼圖保持手繪感
+function toonRamp(opts) {
+  const r = opts.ramp ?? [150, 215, 255];
+  const d = new Uint8Array([r[0], r[0], r[0], 255, r[1], r[1], r[1], 255, r[2], r[2], r[2], 255]);
+  const t = new THREE.DataTexture(d, 3, 1, THREE.RGBAFormat);
+  t.minFilter = t.magFilter = THREE.NearestFilter;
+  t.needsUpdate = true;
+  return t;
+}
+
+/**
+ * opts: { anims: [{ url, clip?, name, frames, loop, from?, to?, measure?, lockRoot? }], yaws: [deg], elev, size, ss, span, footAt, ramp, rim, outline, props }
+ * 回傳 { sheets: { [name_yaw]: dataURL }, frame: { w, h, footAt, unitPx }, stats: { cycle } }
+ */
+
+// ── 道具：A 字姿勢生成時會拿掉手上的武器，這裡用簡單幾何體補回劍和盾，綁在手骨上跟著動作 ──
+function toon(color, ramp, map = null) {
+  return new THREE.MeshToonMaterial({ color, map, gradientMap: ramp });
+}
+function shieldFace(spec) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = spec.face;
+  g.fillRect(0, 0, 256, 256);
+  // 圓盾的蓋面 UV 是一個內切圓：中心 (128,128)
+  const grd = g.createRadialGradient(110, 100, 10, 128, 128, 128);
+  grd.addColorStop(0, 'rgba(255,255,255,0.35)');
+  grd.addColorStop(1, 'rgba(0,0,0,0.15)');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 256, 256);
+  if (spec.emblem === 'x') {
+    g.strokeStyle = spec.mark;
+    g.lineWidth = 34;
+    g.lineCap = 'butt';
+    g.beginPath();
+    g.moveTo(70, 70); g.lineTo(186, 186);
+    g.moveTo(186, 70); g.lineTo(70, 186);
+    g.stroke();
+  } else if (spec.emblem === 'lion') {
+    g.fillStyle = spec.mark;
+    g.beginPath(); g.arc(128, 128, 62, 0, Math.PI * 2); g.fill();
+    g.fillStyle = spec.face;
+    g.beginPath(); g.arc(128, 128, 44, 0, Math.PI * 2); g.fill();
+    g.fillStyle = spec.mark;
+    g.beginPath(); g.arc(128, 122, 24, 0, Math.PI * 2); g.fill();
+    g.fillRect(116, 130, 24, 30);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+function makeSword(spec, ramp) {
+  const g = new THREE.Group();
+  const L = spec.length ?? 0.42;
+  const W = spec.width ?? 0.045;
+  const blade = new THREE.Shape();
+  blade.moveTo(-W / 2, 0); blade.lineTo(W / 2, 0); blade.lineTo(W / 2, L - W); blade.lineTo(0, L); blade.lineTo(-W / 2, L - W); blade.closePath();
+  const bg = new THREE.ExtrudeGeometry(blade, { depth: 0.008, bevelEnabled: false });
+  bg.translate(0, 0, -0.004);
+  // 刀面朝側面（寬度沿 y），刀身沿 +z
+  bg.rotateX(Math.PI / 2);
+  bg.rotateZ(Math.PI / 2);
+  const bm = new THREE.Mesh(bg, toon(spec.blade ?? 0xc9d0da, ramp));
+  bm.position.z = 0.055;
+  g.add(bm);
+  const guard = new THREE.Mesh(new THREE.BoxGeometry(0.022, spec.guardW ?? 0.12, 0.022), toon(spec.guard ?? 0x7a808a, ramp));
+  guard.position.z = 0.05;
+  g.add(guard);
+  const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.1, 10), toon(spec.grip ?? 0x6b4423, ramp));
+  grip.rotation.x = Math.PI / 2;
+  g.add(grip);
+  const pommel = new THREE.Mesh(new THREE.SphereGeometry(0.019, 12, 8), toon(spec.guard ?? 0x7a808a, ramp));
+  pommel.position.z = -0.055;
+  g.add(pommel);
+  return g;
+}
+function makeShield(spec, ramp) {
+  const g = new THREE.Group();
+  const r = spec.radius ?? 0.17;
+  const face = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.03, 36), [toon(spec.rim ?? 0x5a606a, ramp), toon(0xffffff, ramp, shieldFace(spec)), toon(0x6b4423, ramp)]);
+  g.add(face);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(r, 0.016, 8, 36), toon(spec.rim ?? 0x5a606a, ramp));
+  rim.rotation.x = Math.PI / 2;
+  g.add(rim);
+  if (spec.boss) {
+    const boss = new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 8), toon(spec.rim ?? 0x5a606a, ramp));
+    boss.position.y = 0.02;
+    boss.scale.y = 0.6;
+    g.add(boss);
+  }
+  return g;
+}
+/** 依靜止姿勢算出道具在世界的位置與方向，再換算成手骨的區域座標掛上去 */
+function attachProps(root, props, ramp) {
+  root.updateMatrixWorld(true);
+  const bones = {};
+  root.traverse((o) => { if (o.isBone) bones[o.name] = o; });
+  for (const spec of props ?? []) {
+    const hand = bones[spec.bone];
+    const fore = hand?.parent;
+    if (!hand || !fore) continue;
+    const hp = new THREE.Vector3().setFromMatrixPosition(hand.matrixWorld);
+    const fp = new THREE.Vector3().setFromMatrixPosition(fore.matrixWorld);
+    const along = hp.clone().sub(fp).normalize();
+    const obj = spec.type === 'sword' ? makeSword(spec, ramp) : makeShield(spec, ramp);
+    const pos = hp.clone().add(along.multiplyScalar(spec.reach ?? 0.05)).add(new THREE.Vector3(...(spec.offset ?? [0, 0, 0])));
+    const dir = new THREE.Vector3(...spec.dir).normalize();
+    // 劍：+z 指向 dir；盾：+y（正面）指向 dir
+    const q = new THREE.Quaternion().setFromUnitVectors(spec.type === 'sword' ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0), dir);
+    if (spec.roll) q.multiply(new THREE.Quaternion().setFromAxisAngle(spec.type === 'sword' ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(spec.roll)));
+    const want = new THREE.Matrix4().compose(pos, q, new THREE.Vector3(1, 1, 1));
+    const local = new THREE.Matrix4().copy(hand.matrixWorld).invert().multiply(want);
+    local.decompose(obj.position, obj.quaternion, obj.scale);
+    obj.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
+    hand.add(obj);
+  }
+}
+
+window.renderSheets = async (opts) => {
+  const size = opts.size ?? 128;
+  const ss = opts.ss ?? 3;
+  const W = size * ss;
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(1);
+  renderer.setSize(W, W);
+  renderer.setClearColor(0x000000, 0);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  document.body.appendChild(renderer.domElement);
+  const effect = new OutlineEffect(renderer, { defaultThickness: opts.outline ?? 0.012, defaultColor: [0.12, 0.07, 0.04], defaultAlpha: 1 });
+
+  const scene = new THREE.Scene();
+  scene.add(new THREE.AmbientLight(0xffffff, 1.6));
+  const sun = new THREE.DirectionalLight(0xfff4e0, 2.2);
+  sun.position.set(-2, 4, 3);
+  scene.add(sun);
+
+  const ramp = toonRamp(opts);
+  const prep = (root) => {
+    root.traverse((o) => {
+      if (!o.isMesh) return;
+      const m = o.material;
+      const map = m.map ?? null;
+      if (map) map.colorSpace = THREE.SRGBColorSpace;
+      o.material = new THREE.MeshToonMaterial({ map, color: map ? 0xffffff : m.color, gradientMap: ramp });
+      o.frustumCulled = false;
+    });
+  };
+
+  const tmp = document.createElement('canvas');
+  tmp.width = tmp.height = W;
+  const tc = tmp.getContext('2d');
+  const sil = document.createElement('canvas');
+  sil.width = sil.height = W;
+  const sc = sil.getContext('2d');
+  const sheets = {};
+  const stats = {};
+  const clipNames = {};
+  let frameInfo = null;
+  // 所有動作共用同一個鏡頭比例：用第一個檔案綁定姿勢的身高定標
+  let unitH = null;
+  for (const a of opts.anims) {
+    const gltf = await load(a.url);
+    clipNames[a.url] = gltf.animations.map((c) => `${c.name}:${c.duration.toFixed(2)}`);
+    const root = gltf.scene;
+    prep(root);
+    attachProps(root, opts.props, ramp);
+    scene.add(root);
+    const clip = a.clip != null ? gltf.animations.find((c) => c.name === a.clip) ?? gltf.animations[0] : gltf.animations[0];
+    // 定標用 A 字姿勢（綁定姿勢）：所有動作的身高、腳底位置一致
+    root.updateMatrixWorld(true);
+    const box0 = new THREE.Box3().setFromObject(root, true);
+    if (unitH == null) unitH = box0.max.y - box0.min.y;
+    const footY = box0.min.y;
+    const hips = root.getObjectByName('Hips');
+    if (a.lockRoot !== false && clip && hips) {
+      // 動作裡的位移（倒地往後拖、連擊往前衝）會讓角色跑出格子：鎖住臀部的水平位置，只留上下
+      for (const tr of clip.tracks) {
+        if (!/^hips\.position$/i.test(tr.name)) continue;
+        const v = tr.values;
+        for (let i = 0; i < v.length; i += 3) {
+          v[i] = hips.position.x;
+          v[i + 2] = hips.position.z;
+        }
+      }
+    }
+    const mixer = new THREE.AnimationMixer(root);
+    let action = null;
+    if (clip) {
+      action = mixer.clipAction(clip);
+      action.play();
+    }
+    const dur = clip ? clip.duration : 1;
+    if (a.measure && clip) {
+      // 走路循環：腳掌前後擺動幅度 ×2 = 一個循環（兩步）前進的距離，遊戲裡用來讓腳步不滑
+      const feet = [];
+      root.traverse((o) => { if (o.isBone && /foot/i.test(o.name) && !/toe|end/i.test(o.name)) feet.push(o); });
+      let range = 0;
+      const v = new THREE.Vector3();
+      for (const bone of feet) {
+        let lo = Infinity, hi = -Infinity;
+        for (let k = 0; k < 32; k++) {
+          mixer.setTime((k / 32) * dur);
+          root.updateMatrixWorld(true);
+          bone.getWorldPosition(v);
+          lo = Math.min(lo, v.z);
+          hi = Math.max(hi, v.z);
+        }
+        range = Math.max(range, hi - lo);
+      }
+      stats.cycle = unitH ? (2 * range) / unitH : 0;
+      stats.feet = feet.map((f) => f.name);
+      mixer.setTime(0);
+      root.updateMatrixWorld(true);
+    }
+    for (const yaw of opts.yaws) {
+      root.rotation.y = THREE.MathUtils.degToRad(yaw);
+      // 正交鏡頭：俯角 elev，畫面寬高 = 身高 × span（留空間給舉劍、倒地）
+      const span = unitH * (opts.span ?? 1.6);
+      const cam = new THREE.OrthographicCamera(-span / 2, span / 2, span / 2, -span / 2, -100, 100);
+      const el = THREE.MathUtils.degToRad(opts.elev ?? 32);
+      cam.position.set(0, Math.sin(el) * 10 + footY, Math.cos(el) * 10);
+      cam.lookAt(0, footY, 0);
+      // 腳底放在格子高度 footAt 處
+      const shift = span * (0.5 - (opts.footAt ?? 0.82));
+      cam.top -= shift; cam.bottom -= shift;
+      cam.updateProjectionMatrix();
+      const sheet = document.createElement('canvas');
+      sheet.width = size * a.frames;
+      sheet.height = size;
+      const ctx = sheet.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      for (let f = 0; f < a.frames; f++) {
+        const t0 = a.from ?? 0;
+        const t1 = a.to ?? dur;
+        const t = a.loop ? t0 + (f / a.frames) * (t1 - t0) : t0 + (f / Math.max(1, a.frames - 1)) * (t1 - t0) * 0.999;
+        mixer.setTime(t);
+        root.updateMatrixWorld(true);
+        effect.render(scene, cam);
+        // 外輪廓：剪影往四周擴張幾像素墊在底下（跟手繪精靈的粗描邊一致）
+        sc.globalCompositeOperation = 'copy';
+        sc.drawImage(renderer.domElement, 0, 0);
+        sc.globalCompositeOperation = 'source-in';
+        sc.fillStyle = opts.rimColor ?? '#24160c';
+        sc.fillRect(0, 0, W, W);
+        tc.clearRect(0, 0, W, W);
+        const rim = (opts.rim ?? 1.2) * ss;
+        for (let k = 0; k < 16; k++) tc.drawImage(sil, Math.cos((k / 16) * Math.PI * 2) * rim, Math.sin((k / 16) * Math.PI * 2) * rim);
+        tc.drawImage(renderer.domElement, 0, 0);
+        ctx.drawImage(tmp, 0, 0, W, W, f * size, 0, size, size);
+      }
+      sheets[`${a.name}_${yaw}`] = sheet.toDataURL('image/png');
+      frameInfo = { w: size, h: size, footAt: opts.footAt ?? 0.82, unitPx: (unitH / span) * size };
+    }
+    scene.remove(root);
+    if (action) action.stop();
+  }
+  return { sheets, frame: frameInfo, stats, clips: clipNames };
+};
+window.ready = true;
+</script>

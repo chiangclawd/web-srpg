@@ -1,0 +1,96 @@
+{
+  "anims": [
+    {
+      "url": "/models/idle/anim_result_animation_glb_url.glb",
+      "name": "idle",
+      "frames": 8,
+      "loop": true
+    },
+    {
+      "url": "/models/rig_result_basic_animations_walking_glb_url.glb",
+      "name": "walk",
+      "frames": 10,
+      "loop": true,
+      "measure": true
+    },
+    {
+      "url": "/models/anim_result_animation_glb_url.glb",
+      "clip": "Double_Combo_Attack",
+      "name": "attack",
+      "frames": 10,
+      "loop": false,
+      "from": 1.3,
+      "to": 2.6
+    },
+    {
+      "url": "/models/anim_result_animation_glb_url.glb",
+      "clip": "Hit_Reaction",
+      "name": "hit",
+      "frames": 5,
+      "loop": false,
+      "from": 0,
+      "to": 0.8
+    },
+    {
+      "url": "/models/anim_result_animation_glb_url.glb",
+      "clip": "Dead",
+      "name": "death",
+      "frames": 10,
+      "loop": false,
+      "from": 0,
+      "to": 2.97
+    }
+  ],
+  "yaws": [
+    45,
+    15,
+    165
+  ],
+  "size": 144,
+  "ss": 3,
+  "span": 1.8,
+  "rim": 1.1,
+  "props": [
+    {
+      "type": "sword",
+      "bone": "RightHand",
+      "dir": [
+        0,
+        -0.35,
+        1
+      ],
+      "guard": "#d4a83a",
+      "grip": "#3a4a8a"
+    },
+    {
+      "type": "shield",
+      "bone": "LeftHand",
+      "dir": [
+        1,
+        0,
+        0.5
+      ],
+      "reach": 0.0,
+      "offset": [
+        0.03,
+        0.04,
+        0.02
+      ],
+      "face": "#cfd5dd",
+      "mark": "#9aa3ae",
+      "emblem": "lion",
+      "rim": "#a8b0ba"
+    }
+  ],
+  "elev": 12,
+  "ramp": [
+    185,
+    230,
+    255
+  ],
+  "dirs": {
+    "side": 45,
+    "front": 15,
+    "back": 165
+  }
+}
