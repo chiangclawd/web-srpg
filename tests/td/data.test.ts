@@ -274,3 +274,15 @@ test('every level story and epilogue has a painted scene on disk', async () => {
   for (const id of Object.keys(EPILOGUES)) assert.ok(STORY_ART[`ep_${id}`], `ep_${id} has story art`);
   for (const [id, art] of Object.entries(STORY_ART)) assert.ok(fs.existsSync(`public/assets/story/${art.src ?? id}.webp`), `story art for ${id} exists`);
 });
+
+test('every tower skill describes what each level does', async () => {
+  const { skillLevelText } = await import('../../src/td/data/skillFx');
+  for (const tw of Object.values(TOWERS))
+    for (const lv of [...tw.levels, ...tw.branches])
+      for (const sk of lv.skills ?? [])
+        for (let n = 1; n <= sk.costs.length; n++) {
+          const t = skillLevelText(sk.id, n);
+          assert.ok(t.zh && t.en, `${sk.id} level ${n} has a description`);
+          if (n > 1) assert.notEqual(t.zh, skillLevelText(sk.id, n - 1).zh, `${sk.id} level ${n} differs from level ${n - 1}`);
+        }
+});

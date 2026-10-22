@@ -53,6 +53,8 @@ export class HazardLayer {
     private world: World,
     private fx: Fx,
     isTap: (p: Phaser.Input.Pointer) => boolean,
+    /** 瞄準中（放援軍、施法）時點到機關，交給場景當成點地面；回傳 true 表示已處理 */
+    aimTap: (p: Phaser.Input.Pointer) => boolean = () => false,
   ) {
     world.hazards.forEach((h, i) => {
       const art = artOf(h.def);
@@ -62,7 +64,7 @@ export class HazardLayer {
       const hit = scene.add.ellipse(h.def.x, h.def.y - 22, touch ? 96 : 84, touch ? 88 : 76, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
       hit.on('pointerup', (p: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
         ev?.stopPropagation?.();
-        if (isTap(p)) this.tap(i);
+        if (isTap(p) && !aimTap(p)) this.tap(i);
       });
       hit.on('pointerover', () => base.setTint(0xfff0c0));
       hit.on('pointerout', () => base.clearTint());

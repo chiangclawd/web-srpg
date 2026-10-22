@@ -11,6 +11,16 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 70,
+    date: '2026-10-22',
+    title: { zh: '操作修正', en: 'Control Fixes' },
+    items: [
+      { zh: '點塔時不再每次都跳出塔的介紹擋住畫面：只有前兩關會自動顯示，之後要看數值就點升級或技能預覽', en: 'Tapping a tower no longer pops up its info panel every time; it only shows on the first two levels. Tap an upgrade or skill to preview its numbers' },
+      { zh: '修正放援軍時點到塔或建造點附近就放不下的問題：現在會放在手指點的位置，點在路旁一點點也會自動放到路上', en: 'Fixed reinforcements failing when you tapped near a tower or build spot: they now land where you tap, and a tap just off the road snaps onto it' },
+      { zh: '塔的特殊技能會列出 1、2、3 級各自的效果（✔ 已學、▶ 下一級），升級前就知道差在哪', en: 'Tower skills now list what levels 1, 2 and 3 each do (✔ learned, ▶ next), so you know what an upgrade buys' },
+    ],
+  },
+  {
     id: 69,
     date: '2026-10-22',
     title: { zh: '新篇章：鏡淵篇', en: 'New Chapter: The Mirror Abyss' },

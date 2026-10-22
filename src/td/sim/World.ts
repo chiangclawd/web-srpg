@@ -1,4 +1,5 @@
 import { FROST_SEC, GOLD_SACK, KEG, POTION_LIVES, type ItemId } from '../data/items';
+import { SKILL_FX } from '../data/skillFx';
 import { Path } from './Path';
 import { Rng, clamp, dist, dist2, ellipseDist, inEllipse, type Vec } from './math';
 import type { DamageKind, EliteAffix, EnemyDef, HazardDef, HazardKind, HeroDef, LevelDef, Range2, TowerLevelDef, TowerType } from './defs';
@@ -383,7 +384,8 @@ export class World {
   private applyBarracksSkillStats(t: Tower, s: Soldier): void {
     if (t.branch === 'barbarian') {
       const lv = t.skills.axes ?? 0;
-      s.ranged = lv > 0 ? { range: 130, dmg: [10 + 10 * lv, 18 + 14 * lv], cd: 2.2, kind: 'axe', dmgKind: 'physical' } : undefined;
+      const f = SKILL_FX.axes(lv);
+      s.ranged = lv > 0 ? { range: f.range, dmg: f.dmg, cd: 2.2, kind: 'axe', dmgKind: 'physical' } : undefined;
     }
   }
 
@@ -1771,8 +1773,9 @@ export class World {
     if (t.branch === 'paladin') {
       const lv = t.skills.healing ?? 0;
       if (lv > 0 && s.skillCd <= 0 && s.hp < s.maxHp * 0.5) {
-        s.skillCd = 10;
-        s.hp = Math.min(s.maxHp, s.hp + s.maxHp * (0.2 + 0.15 * lv));
+        const f = SKILL_FX.healing(lv);
+        s.skillCd = f.cd;
+        s.hp = Math.min(s.maxHp, s.hp + s.maxHp * f.heal);
         this.emit({ type: 'heal', x: s.x, y: s.y, big: true });
       }
     }
@@ -1783,17 +1786,19 @@ export class World {
     if (!t || !t.branch) return;
     if (t.branch === 'paladin') {
       const lv = t.skills.holystrike ?? 0;
-      if (lv > 0 && this.rng.chance(0.2)) {
+      const f = SKILL_FX.holystrike(lv);
+      if (lv > 0 && this.rng.chance(f.chance)) {
         for (const e of this.enemies) {
-          if (e.alive && !e.flying && dist(e.x, e.y, target.x, target.y) < 55) this.damageEnemy(e, 15 + 20 * lv, 'magic', 'soldier');
+          if (e.alive && !e.flying && dist(e.x, e.y, target.x, target.y) < 55) this.damageEnemy(e, f.dmg, 'magic', 'soldier');
         }
         this.emit({ type: 'explosion', x: target.x, y: target.y, r: 55, kind: 'holy' });
       }
     } else if (t.branch === 'barbarian') {
       const lv = t.skills.whirlwind ?? 0;
-      if (lv > 0 && this.rng.chance(0.3)) {
+      const f = SKILL_FX.whirlwind(lv);
+      if (lv > 0 && this.rng.chance(f.chance)) {
         for (const e of this.enemies) {
-          if (e.alive && !e.flying && e !== target && dist(e.x, e.y, s.x, s.y) < 50) this.damageEnemy(e, 12 + 12 * lv, 'physical', 'soldier');
+          if (e.alive && !e.flying && e !== target && dist(e.x, e.y, s.x, s.y) < 50) this.damageEnemy(e, f.dmg, 'physical', 'soldier');
         }
         this.emit({ type: 'heroSkill', skill: 'whirlwind', x: s.x, y: s.y });
       }
@@ -1902,7 +1907,7 @@ export class World {
         p.effects.pierce = this.mods.archerPierce;
         if (this.mods.archerCrit > 0 && this.rng.chance(this.mods.archerCrit)) p.effects.crit = 2;
         const poison = t.skills.poison ?? 0;
-        if (poison > 0) p.effects.poison = { dps: 4 + 5 * poison, dur: 3 };
+        if (poison > 0) p.effects.poison = SKILL_FX.poison(poison);
         this.addProjectile(p);
         break;
       }
@@ -1931,7 +1936,7 @@ export class World {
       }
       case 'tesla': {
         const sup = t.skills.supercharge ?? 0;
-        const jumps = 3 + sup * 2;
+        const jumps = SKILL_FX.supercharge(sup).jumps;
         const hit = new Set<Enemy>();
         const pts: Vec[] = [{ x: m.x, y: m.y - 8 }];
         let cur: Enemy | null = target;
@@ -1957,7 +1962,7 @@ export class World {
         const oc = t.skills.overcharge ?? 0;
         if (oc > 0) {
           for (const e of this.enemies) {
-            if (e.alive && !e.flying && inEllipse(t.x, t.y, e.x, e.y, 80)) this.damageEnemy(e, 8 + 10 * oc, 'magic', 'tower');
+            if (e.alive && !e.flying && inEllipse(t.x, t.y, e.x, e.y, 80)) this.damageEnemy(e, SKILL_FX.overcharge(oc).dmg, 'magic', 'tower');
           }
           this.emit({ type: 'explosion', x: t.x, y: t.y, r: 80, kind: 'shock' });
         }
@@ -1976,13 +1981,13 @@ export class World {
     switch (t.branch) {
       case 'ranger': {
         if (cdReady('thorns')) {
-          const lv = t.skills.thorns;
-          const list = this.enemiesInRange(t, range, false).filter((e) => !e.def.boss).slice(0, 2 + lv);
+          const f = SKILL_FX.thorns(t.skills.thorns);
+          const list = this.enemiesInRange(t, range, false).filter((e) => !e.def.boss).slice(0, f.targets);
           if (list.length) {
-            t.skillCd.thorns = 11;
+            t.skillCd.thorns = f.cd;
             for (const e of list) {
-              e.rootUntil = this.time + 1 + lv * 0.7;
-              this.damageEnemy(e, 10 * lv, 'true', 'tower');
+              e.rootUntil = this.time + f.root;
+              this.damageEnemy(e, f.dmg, 'true', 'tower');
               this.emit({ type: 'status', e, kind: 'root' });
             }
           }
@@ -1991,24 +1996,24 @@ export class World {
       }
       case 'marksman': {
         if (cdReady('snipe')) {
-          const lv = t.skills.snipe;
+          const f = SKILL_FX.snipe(t.skills.snipe);
           const list = this.enemiesInRange(t, range, true);
           if (list.length) {
             const e = list.reduce((a, b) => (b.hp > a.hp ? b : a));
-            t.skillCd.snipe = 16 - lv * 2;
-            const kill = !e.def.boss && this.rng.chance(0.1 + 0.08 * lv);
+            t.skillCd.snipe = f.cd;
+            const kill = !e.def.boss && this.rng.chance(f.kill);
             const d = dist(m.x, m.y, e.x, e.y);
-            const p = new Projectile('snipe', m.x, m.y, e.x, e.y - e.def.height * 0.5, 0.1 + d / 1600, 0, e, kill ? 99999 : 150 + 110 * lv, 'true', 'tower', t);
+            const p = new Projectile('snipe', m.x, m.y, e.x, e.y - e.def.height * 0.5, 0.1 + d / 1600, 0, e, kill ? 99999 : f.dmg, 'true', 'tower', t);
             this.addProjectile(p);
             this.emit({ type: 'towerShoot', t, tx: e.x, ty: e.y });
           }
         }
         if (cdReady('scatter')) {
-          const lv = t.skills.scatter;
+          const f = SKILL_FX.scatter(t.skills.scatter);
           const list = this.enemiesInRange(t, range, true);
           if (list.length >= 2) {
-            t.skillCd.scatter = 9;
-            const n = 3 + 2 * lv;
+            t.skillCd.scatter = f.cd;
+            const n = f.arrows;
             for (let i = 0; i < n; i++) {
               const e = list[i % list.length];
               const d = dist(m.x, m.y, e.x, e.y);
@@ -2025,22 +2030,22 @@ export class World {
           if (list.length) {
             const e = list.reduce((a, b) => (b.maxHp > a.maxHp ? b : a));
             if (e.maxHp >= 100) {
-              t.skillCd.disintegrate = 24 - 4 * lv;
+              t.skillCd.disintegrate = SKILL_FX.disintegrate(lv).cd;
               this.emit({ type: 'beam', x1: m.x, y1: m.y, x2: e.x, y2: e.y - e.def.height * 0.5, kind: 'disintegrate', t });
               this.damageEnemy(e, 999999, 'true', 'tower');
             }
           }
         }
         if (cdReady('teleport')) {
-          const lv = t.skills.teleport;
+          const f = SKILL_FX.teleport(t.skills.teleport);
           const list = this.enemiesInRange(t, range, false).filter((e) => !e.def.boss);
           if (list.length >= 2) {
-            t.skillCd.teleport = 15 - lv;
+            t.skillCd.teleport = f.cd;
             const c = this.densest(list, 55)!;
-            const group = list.filter((e) => dist(e.x, e.y, c.x, c.y) < 60).slice(0, 3 + lv);
+            const group = list.filter((e) => dist(e.x, e.y, c.x, c.y) < 60).slice(0, f.targets);
             for (const e of group) {
               this.releaseEngagers(e);
-              e.d = Math.max(0, e.d - (70 + 35 * lv));
+              e.d = Math.max(0, e.d - f.back);
               e.path.posAt(e.d, e.lane, e);
               this.emit({ type: 'status', e, kind: 'teleport' });
             }
@@ -2051,9 +2056,10 @@ export class World {
       case 'elemental': {
         const glv = t.skills.golem ?? 0;
         if (glv > 0 && !t.golem && this.time >= t.golemRespawnAt) this.spawnGolem(t, glv);
-        if (t.golem && t.golem.alive && t.golem.maxHp < 250 + 150 * glv) {
-          t.golem.maxHp = 250 + 150 * glv;
-          t.golem.dmg = [8 + 8 * glv, 16 + 10 * glv];
+        const gf = SKILL_FX.golem(glv);
+        if (t.golem && t.golem.alive && t.golem.maxHp < gf.hp) {
+          t.golem.maxHp = gf.hp;
+          t.golem.dmg = [...gf.dmg];
         }
         if (cdReady('polymorph')) {
           const lv = t.skills.polymorph;
@@ -2061,7 +2067,7 @@ export class World {
           if (list.length) {
             const e = list.reduce((a, b) => (b.hp > a.hp ? b : a));
             if (e.hp >= 60) {
-              t.skillCd.polymorph = 20 - 3 * lv;
+              t.skillCd.polymorph = SKILL_FX.polymorph(lv).cd;
               this.releaseEngagers(e);
               e.sheep = true;
               this.stats.sheep++;
@@ -2077,11 +2083,11 @@ export class World {
       }
       case 'bertha': {
         if (cdReady('cluster')) {
-          const lv = t.skills.cluster;
+          const f = SKILL_FX.cluster(t.skills.cluster);
           const target = this.pickTarget(t, range, false);
           if (target) {
-            t.skillCd.cluster = 12;
-            const n = 3 + 2 * lv;
+            t.skillCd.cluster = f.cd;
+            const n = f.bombs;
             for (let i = 0; i < n; i++) {
               const tx = target.x + this.rng.range(-55, 55);
               const ty = target.y + this.rng.range(-38, 38);
@@ -2093,13 +2099,13 @@ export class World {
           }
         }
         if (cdReady('missile')) {
-          const lv = t.skills.missile;
+          const f = SKILL_FX.missile(t.skills.missile);
           const list = this.enemiesInRange(t, range * 1.2, true);
           if (list.length) {
             const e = list.reduce((a, b) => (b.hp > a.hp ? b : a));
-            t.skillCd.missile = 11 - lv;
+            t.skillCd.missile = f.cd;
             const d = dist(m.x, m.y, e.x, e.y);
-            const p = new Projectile('missile', m.x, m.y, e.x, e.y - e.def.height * 0.5, 0.6 + d / 700, 90, e, 120 + 100 * lv, 'physical', 'tower', t);
+            const p = new Projectile('missile', m.x, m.y, e.x, e.y - e.def.height * 0.5, 0.6 + d / 700, 90, e, f.dmg, 'physical', 'tower', t);
             p.splash = 30;
             this.addProjectile(p);
           }
@@ -2125,7 +2131,8 @@ export class World {
         }
       }
     }
-    const s = new Soldier('golem', 'mon_golem', 58, t.x, t.y + 10, 250 + 150 * lv, 0.3, [8 + 8 * lv, 16 + 10 * lv], 1.4, 10);
+    const gf = SKILL_FX.golem(lv);
+    const s = new Soldier('golem', 'mon_golem', 58, t.x, t.y + 10, gf.hp, 0.3, [...gf.dmg], 1.4, 10);
     s.homeX = best.x;
     s.homeY = best.y;
     s.tower = t;
