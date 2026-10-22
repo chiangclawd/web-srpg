@@ -11,6 +11,18 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 67,
+    date: '2026-10-22',
+    title: { zh: '2.5D 立體動作', en: '2.5D Motion' },
+    items: [
+      { zh: '所有士兵、英雄與怪物不再是一張卡片平移：走路會邁步、扭腰擺肩，轉身時身體跟著轉，出招會撲上前，挨打會往後仰', en: 'Soldiers, heroes and monsters no longer slide around like cards: they stride, twist their hips and shoulders, turn their bodies, lunge to attack and reel when hit' },
+      { zh: '依體型有不同動作：四足奔跑、巨人重踏、翅膀拍動、幽靈飄盪、蠍蟹碎步、巨蛇擺動', en: 'Each body type moves its own way: galloping beasts, stomping giants, flapping wings, drifting ghosts, skittering crabs and swaying serpents' },
+      { zh: '倒下時會往後摔在地上、彈一下揚起塵土，不再只是淡出', en: 'Fallen enemies topple backward onto the ground with a bounce and a puff of dust instead of just fading out' },
+      { zh: '單位、防禦塔都會在地上投出影子；箭矢與砲彈也有地面影子，看得出飛多高', en: 'Units and towers cast shadows on the ground, and arrows and cannonballs have ground shadows that show how high they fly' },
+      { zh: '防禦塔蓋好時從地面長出來，開砲有後座力；塔上的弓手會拉弓再放箭', en: 'Towers rise out of the ground when built and recoil when they fire; archers on top draw their bows before each shot' },
+    ],
+  },
+  {
     id: 66,
     date: '2026-10-19',
     title: { zh: '首領連戰星數', en: 'Boss Rush Stars' },
