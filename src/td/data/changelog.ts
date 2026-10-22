@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 73,
+    date: '2026-10-22',
+    title: { zh: '建造點修正', en: 'Build Spot Fixes' },
+    items: [
+      { zh: '修正第二關左下角的建造點蓋在房子屋頂上；順便檢查了全部關卡，把壓到城堡、營地、樹、石頭、池塘的建造點都移到旁邊的空地（射程和原本差不多）', en: 'Fixed a build spot on Greystone Ford drawn on top of a house roof. Every level was checked, and spots that sat on castles, camps, trees, rocks or ponds moved to open ground nearby with similar reach' },
+    ],
+  },
+  {
     id: 72,
     date: '2026-10-22',
     title: { zh: '3D 角色擴大試作', en: 'More 3D Units (Beta)' },

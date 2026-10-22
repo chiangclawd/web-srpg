@@ -26,6 +26,8 @@ function hudZones(z: number, margin: number) {
 }
 const HUD_ZONES = [...hudZones(1.35, 0), ...hudZones(1.55, 140)];
 const MIN_PATH_DIST = 58;
+/** 背景建築的大小：[半寬, 錨點往上的高度]（對照手繪背景量的） */
+const BUILDING = { house: [55, 120], castle: [80, 135], camp: [70, 65], tower_ruin: [40, 100], altar: [50, 40] } as const;
 const MIN_SPACING = 92;
 
 function inHud(x: number, y: number, pad = 0): boolean {
@@ -55,8 +57,11 @@ function check(): number {
           if (rd < d.width / 2 + 42) issues.push(`in river (${rd.toFixed(0)})`);
         } else if (d.kind === 'lake') {
           if (Math.hypot((s.x - d.x) / (d.rx + 40), (s.y - d.y) / (d.ry + 30)) < 1) issues.push('in lake');
-        } else if (d.kind === 'house' || d.kind === 'castle' || d.kind === 'camp' || d.kind === 'tower_ruin' || d.kind === 'altar') {
-          if (Math.hypot(s.x - d.x, (s.y - d.y) * 1.3) < 80) issues.push(`overlaps ${d.kind}`);
+        } else if (d.kind in BUILDING) {
+          // 建築從錨點往上畫（屋頂、塔樓、旗子），用往上延伸的框檢查，建造點的石圈約 ±40 × ±22
+          const [hw, up] = BUILDING[d.kind as keyof typeof BUILDING];
+          const sc = 'scale' in d ? (d.scale ?? 1) : 1;
+          if (s.x + 40 > d.x - hw * sc && s.x - 40 < d.x + hw * sc && s.y + 22 > d.y - up * sc && s.y - 22 < d.y + 20) issues.push(`overlaps ${d.kind}`);
         }
       }
       if (inHud(s.x, s.y, 10)) issues.push('under HUD');
