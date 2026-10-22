@@ -11,6 +11,16 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 68,
+    date: '2026-10-22',
+    title: { zh: '手繪劇情插畫', en: 'Painted Story Scenes' },
+    items: [
+      { zh: '每一關的開場劇情和三段結局都畫成了電影般的插畫：鏡頭緩緩推近、前景比遠景移動得多，還有落葉、風雪、火星、鬼火在畫面上飄', en: 'Every level’s opening story and all three endings are now painted cinematic scenes, with a slow camera push, foreground that moves more than the background, and drifting leaves, snow, embers or ghostfire' },
+      { zh: '對話框左邊會顯示說話角色的頭像', en: 'The speaking character’s portrait now appears at the left of the dialogue box' },
+      { zh: '看過的劇情可以在地圖的關卡面板按「▶ 劇情」重播', en: 'Replay any story you have seen with the “▶ Story” button on the level panel' },
+    ],
+  },
+  {
     id: 67,
     date: '2026-10-22',
     title: { zh: '2.5D 立體動作', en: '2.5D Motion' },

@@ -19,6 +19,9 @@ import type { LevelMode } from '../sim/defs';
 import { ironTowers } from '../data/challenges';
 import { TOWERS } from '../data/towers';
 import { PAINTED_LEVELS, levelArtId, levelArtKey } from '../art/terrain';
+import { STORY } from '../data/story';
+import { playDialog } from '../ui/dialog';
+import { loadStoryArt } from '../ui/cinema';
 
 export function isUnlocked(i: number): boolean {
   if (i === 0) return true;
@@ -656,6 +659,15 @@ export class MapScene extends Phaser.Scene {
       const stars = sv.stars[lv.id] ?? 0;
       const thumb = PAINTED_LEVELS.has(levelArtId(lv));
       if (thumb) this.levelThumb(c, levelArtId(lv), 0, -80, pw - 56, 84);
+      // 看過的開場劇情可以重播（有手繪插畫就用電影模式）
+      const story = STORY[lv.id];
+      if (story && sv.storySeen.includes(lv.id)) {
+        const sb = new Button(this, (pw - 56) / 2 - 52, thumb ? -80 - 22 : -ph / 2 + 104, 96, 34, `▶ ${T('story')}`, () => {
+          loadStoryArt(this, lv.id, (key) => playDialog(this, story, () => {}, { depth: 3000, art: key ? { key, id: lv.id } : undefined }));
+        }, { color: 'blue', text: { size: 14 } });
+        fitText(sb.label, 84);
+        c.add(sb);
+      }
       const sy = thumb ? -40 : -ph / 2 + 130;
       for (let k = 0; k < 3; k++) {
         c.add(this.add.image((k - 1) * 46, sy, k < stars ? 'ic_star' : 'ic_star_empty').setDisplaySize(40, 40));
