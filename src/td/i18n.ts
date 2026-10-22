@@ -203,7 +203,7 @@ const STR = {
   epilogue: { zh: '尾聲', en: 'Epilogue' },
   shake: { zh: '畫面震動', en: 'Screen shake' },
   voices: { zh: '角色語音', en: 'Voices' },
-  art3d: { zh: '3D 角色（試作）', en: '3D units (beta)' },
+  art3d: { zh: '3D 角色', en: '3D units' },
   quality: { zh: '畫質', en: 'Graphics' },
   news: { zh: '更新內容', en: 'What’s new' },
   share: { zh: '分享成績', en: 'Share' },

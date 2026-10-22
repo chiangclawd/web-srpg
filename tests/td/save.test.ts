@@ -48,6 +48,15 @@ test('total stars include boss rush stars', () => {
   assert.equal(totalStars(), 8);
 });
 
+test('3D units default on for saves that never set them, but stay off when turned off', () => {
+  store.set(KEY, JSON.stringify({ stars: { l1: 3 }, settings: { lang: 'en' } }));
+  loadSave();
+  assert.equal(save().settings.art3d, true);
+  store.set(KEY, JSON.stringify({ stars: { l1: 3 }, settings: { lang: 'en', art3d: false } }));
+  loadSave();
+  assert.equal(save().settings.art3d, false);
+});
+
 test('reset progress keeps settings and persists', () => {
   store.set(KEY, JSON.stringify({ stars: { l1: 3 }, settings: { lang: 'en', shake: false } }));
   loadSave();

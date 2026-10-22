@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 74,
+    date: '2026-10-22',
+    title: { zh: '3D 角色正式上線', en: '3D Units On by Default' },
+    items: [
+      { zh: '3D 角色改成預設開啟：有 3D 版的士兵、敵人和英雄都會用 3D 動作出場', en: '3D units are now on by default: every soldier, enemy and hero with a 3D version uses it' },
+      { zh: '喜歡原本的手繪畫風？戰鬥中按暫停，關掉「3D 角色」就會切回去（之後也會記住）', en: 'Prefer the hand-drawn look? Pause a battle and switch off "3D units"; the game remembers your choice' },
+    ],
+  },
+  {
     id: 73,
     date: '2026-10-22',
     title: { zh: '建造點修正', en: 'Build Spot Fixes' },

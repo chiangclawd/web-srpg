@@ -160,7 +160,26 @@ function makeOrb(spec) {
   g.add(m);
   return g;
 }
-const PROP_MAKERS = { sword: makeSword, shield: makeShield, spear: makePole, staff: makePole, bow: makeBow, orb: makeOrb };
+/** 書：封面朝 +y（攤在手掌上），書脊沿 +z */
+function makeBook(spec, ramp) {
+  const g = new THREE.Group();
+  const w = spec.width ?? 0.13;
+  const h = spec.length ?? 0.17;
+  const t = spec.thick ?? 0.035;
+  const cover = new THREE.Mesh(new THREE.BoxGeometry(w, t, h), toon(spec.cover ?? 0x6a3a22, ramp));
+  g.add(cover);
+  // 書頁：比封面小一圈、往外露出一點白邊
+  const pages = new THREE.Mesh(new THREE.BoxGeometry(w * 0.92, t * 0.7, h * 0.94), toon(0xf2ead6, ramp));
+  pages.position.x = w * 0.05;
+  g.add(pages);
+  if (spec.trim) {
+    const band = new THREE.Mesh(new THREE.BoxGeometry(w * 1.02, t * 1.04, 0.02), toon(spec.trim, ramp));
+    band.position.z = h * 0.3;
+    g.add(band);
+  }
+  return g;
+}
+const PROP_MAKERS = { sword: makeSword, shield: makeShield, spear: makePole, staff: makePole, bow: makeBow, orb: makeOrb, book: makeBook };
 /** 依靜止姿勢算出道具在世界的位置與方向，再換算成手骨的區域座標掛上去 */
 function attachProps(root, props, ramp) {
   root.updateMatrixWorld(true);
@@ -183,8 +202,8 @@ function attachProps(root, props, ramp) {
       const x = new THREE.Vector3().crossVectors(up, dir);
       q = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, up, dir));
     } else {
-      // 劍、矛、法杖：+z 指向 dir；盾：+y（正面）指向 dir
-      const axis = spec.type === 'shield' ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(0, 0, 1);
+      // 劍、矛、法杖：+z 指向 dir；盾、書：+y（正面）指向 dir
+      const axis = spec.type === 'shield' || spec.type === 'book' ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(0, 0, 1);
       q = new THREE.Quaternion().setFromUnitVectors(axis, dir);
       if (spec.roll) q.multiply(new THREE.Quaternion().setFromAxisAngle(axis, THREE.MathUtils.degToRad(spec.roll)));
     }
