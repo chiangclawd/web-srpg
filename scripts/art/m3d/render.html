@@ -105,6 +105,62 @@ function makeShield(spec, ramp) {
   }
   return g;
 }
+/** 長柄（矛 / 法杖）：沿 +z，握點在原點，back 是握點後面佔全長的比例 */
+function makePole(spec, ramp) {
+  const g = new THREE.Group();
+  const L = spec.length ?? 1.0;
+  const back = spec.back ?? 0.4;
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(spec.thick ?? 0.014, spec.thick ?? 0.014, L, 8), toon(spec.shaft ?? 0x6b4423, ramp));
+  shaft.rotation.x = Math.PI / 2;
+  shaft.position.z = L * (0.5 - back);
+  g.add(shaft);
+  const tipZ = L * (1 - back);
+  if (spec.type === 'spear') {
+    const head = new THREE.Mesh(new THREE.ConeGeometry(0.034, 0.15, 4), toon(spec.blade ?? 0xc9d0da, ramp));
+    head.rotation.x = Math.PI / 2;
+    head.scale.set(1, 1, 0.35);
+    head.position.z = tipZ + 0.07;
+    g.add(head);
+    const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.03, 8), toon(spec.guard ?? 0x7a808a, ramp));
+    collar.rotation.x = Math.PI / 2;
+    collar.position.z = tipZ;
+    g.add(collar);
+  } else {
+    const gem = new THREE.Mesh(new THREE.IcosahedronGeometry(spec.gemSize ?? 0.05, 0), toon(spec.gem ?? 0xd03030, ramp));
+    gem.position.z = tipZ + 0.04;
+    g.add(gem);
+    const claw = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.01, 6, 12), toon(spec.shaft ?? 0x6b4423, ramp));
+    claw.position.z = tipZ + 0.02;
+    g.add(claw);
+  }
+  return g;
+}
+/** 弓：弓臂沿 +z（握把在原點），弓背朝 +y，弦在 -y */
+function makeBow(spec, ramp) {
+  const g = new THREE.Group();
+  const R = spec.radius ?? 0.3;
+  const arc = spec.arc ?? 1.7;
+  const limb = new THREE.TorusGeometry(R, spec.thick ?? 0.02, 6, 24, arc);
+  limb.rotateZ(Math.PI / 2 - arc / 2);
+  limb.translate(0, -R, 0);
+  limb.rotateY(-Math.PI / 2);
+  g.add(new THREE.Mesh(limb, toon(spec.wood ?? 0x8a5a2b, ramp)));
+  const half = R * Math.sin(arc / 2);
+  const sag = R * (Math.cos(arc / 2) - 1);
+  const string = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, half * 2, 4), toon(0xf0ead8, ramp));
+  string.rotation.x = Math.PI / 2;
+  string.position.y = sag;
+  g.add(string);
+  return g;
+}
+function makeOrb(spec) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(spec.radius ?? 0.05, 14, 10), new THREE.MeshBasicMaterial({ color: spec.color ?? 0xa050ff, transparent: true, opacity: 0.85 }));
+  m.material.userData.outlineParameters = { visible: false };
+  const g = new THREE.Group();
+  g.add(m);
+  return g;
+}
+const PROP_MAKERS = { sword: makeSword, shield: makeShield, spear: makePole, staff: makePole, bow: makeBow, orb: makeOrb };
 /** 依靜止姿勢算出道具在世界的位置與方向，再換算成手骨的區域座標掛上去 */
 function attachProps(root, props, ramp) {
   root.updateMatrixWorld(true);
@@ -117,12 +173,21 @@ function attachProps(root, props, ramp) {
     const hp = new THREE.Vector3().setFromMatrixPosition(hand.matrixWorld);
     const fp = new THREE.Vector3().setFromMatrixPosition(fore.matrixWorld);
     const along = hp.clone().sub(fp).normalize();
-    const obj = spec.type === 'sword' ? makeSword(spec, ramp) : makeShield(spec, ramp);
-    const pos = hp.clone().add(along.multiplyScalar(spec.reach ?? 0.05)).add(new THREE.Vector3(...(spec.offset ?? [0, 0, 0])));
-    const dir = new THREE.Vector3(...spec.dir).normalize();
-    // 劍：+z 指向 dir；盾：+y（正面）指向 dir
-    const q = new THREE.Quaternion().setFromUnitVectors(spec.type === 'sword' ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0), dir);
-    if (spec.roll) q.multiply(new THREE.Quaternion().setFromAxisAngle(spec.type === 'sword' ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(spec.roll)));
+    const obj = PROP_MAKERS[spec.type](spec, ramp);
+    const pos = hp.clone().add(along.clone().multiplyScalar(spec.reach ?? 0.05)).add(new THREE.Vector3(...(spec.offset ?? [0, 0, 0])));
+    const dir = new THREE.Vector3(...(spec.dir ?? [0, 0, 1])).normalize();
+    let q;
+    if (spec.type === 'bow') {
+      // 弓背跟著前臂方向（舉弓瞄準時前臂朝前，弓就直立、弓背朝前）
+      const up = along.clone().sub(dir.clone().multiplyScalar(along.dot(dir))).normalize();
+      const x = new THREE.Vector3().crossVectors(up, dir);
+      q = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, up, dir));
+    } else {
+      // 劍、矛、法杖：+z 指向 dir；盾：+y（正面）指向 dir
+      const axis = spec.type === 'shield' ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(0, 0, 1);
+      q = new THREE.Quaternion().setFromUnitVectors(axis, dir);
+      if (spec.roll) q.multiply(new THREE.Quaternion().setFromAxisAngle(axis, THREE.MathUtils.degToRad(spec.roll)));
+    }
     const want = new THREE.Matrix4().compose(pos, q, new THREE.Vector3(1, 1, 1));
     const local = new THREE.Matrix4().copy(hand.matrixWorld).invert().multiply(want);
     local.decompose(obj.position, obj.quaternion, obj.scale);
@@ -149,8 +214,48 @@ window.renderSheets = async (opts) => {
   sun.position.set(-2, 4, 3);
   scene.add(sun);
 
+  const stats = {};
   const ramp = toonRamp(opts);
+  // 模型自帶、會跟著手臂被拉扯變形的道具（例如黏在身上的法杖）：
+  // 刪掉三個頂點都落在膠囊體（綁定姿勢的世界座標 a→b、半徑 r）裡的三角形
+  const cutMesh = (root) => {
+    if (!opts.cut?.length) return;
+    root.updateMatrixWorld(true);
+    const caps = opts.cut.map((c) => ({ a: new THREE.Vector3(...c.a), b: new THREE.Vector3(...c.b), r: c.r }));
+    const seg = new THREE.Line3();
+    const near = new THREE.Vector3();
+    const v = new THREE.Vector3();
+    root.traverse((o) => {
+      if (!o.isMesh) return;
+      const pos = o.geometry.attributes.position;
+      const inside = new Uint8Array(pos.count);
+      // 蒙皮網格的頂點要先套骨架（綁定姿勢），才是畫面上的位置
+      const place = (i) => {
+        v.fromBufferAttribute(pos, i);
+        if (o.isSkinnedMesh) o.applyBoneTransform(i, v);
+        return v.applyMatrix4(o.matrixWorld);
+      };
+      for (let i = 0; i < pos.count; i++) {
+        place(i);
+        inside[i] = caps.some((c) => {
+          seg.set(c.a, c.b);
+          seg.closestPointToPoint(v, true, near);
+          return near.distanceTo(v) < c.r;
+        }) ? 1 : 0;
+      }
+      const idx = o.geometry.index ? Array.from(o.geometry.index.array) : Array.from({ length: pos.count }, (_, i) => i);
+      const keep = [];
+      let cut = 0;
+      for (let t = 0; t < idx.length; t += 3) {
+        if (inside[idx[t]] && inside[idx[t + 1]] && inside[idx[t + 2]]) cut++;
+        else keep.push(idx[t], idx[t + 1], idx[t + 2]);
+      }
+      o.geometry.setIndex(keep);
+      stats.cut = (stats.cut ?? 0) + cut;
+    });
+  };
   const prep = (root) => {
+    cutMesh(root);
     root.traverse((o) => {
       if (!o.isMesh) return;
       const m = o.material;
@@ -168,7 +273,6 @@ window.renderSheets = async (opts) => {
   sil.width = sil.height = W;
   const sc = sil.getContext('2d');
   const sheets = {};
-  const stats = {};
   const clipNames = {};
   let frameInfo = null;
   // 所有動作共用同一個鏡頭比例：用第一個檔案綁定姿勢的身高定標

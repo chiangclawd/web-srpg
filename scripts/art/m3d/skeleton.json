@@ -1,0 +1,94 @@
+{
+  "yaws": [
+    45,
+    15,
+    165
+  ],
+  "dirs": {
+    "side": 45,
+    "front": 15,
+    "back": 165
+  },
+  "size": 144,
+  "ss": 3,
+  "span": 1.8,
+  "elev": 12,
+  "ramp": [
+    185,
+    230,
+    255
+  ],
+  "rim": 1.1,
+  "anims": [
+    {
+      "url": "/models/anim_result_animation_glb_url.glb",
+      "clip": "Idle",
+      "name": "idle",
+      "frames": 8,
+      "loop": true
+    },
+    {
+      "url": "/models/rig_result_basic_animations_walking_glb_url.glb",
+      "name": "walk",
+      "frames": 10,
+      "loop": true,
+      "measure": true
+    },
+    {
+      "url": "/models/anim_result_animation_glb_url.glb",
+      "clip": "Right_Hand_Sword_Slash",
+      "name": "attack",
+      "frames": 10,
+      "loop": false
+    },
+    {
+      "url": "/models/anim_result_animation_glb_url.glb",
+      "clip": "Hit_Reaction",
+      "name": "hit",
+      "frames": 5,
+      "loop": false,
+      "from": 0,
+      "to": 0.8
+    },
+    {
+      "url": "/models/anim_result_animation_glb_url.glb",
+      "clip": "Knock_Down",
+      "name": "death",
+      "frames": 10,
+      "loop": false
+    }
+  ],
+  "props": [
+    {
+      "bone": "RightHand",
+      "dir": [
+        0,
+        -0.35,
+        1
+      ],
+      "type": "sword",
+      "length": 0.4,
+      "blade": "#a89a88",
+      "guard": "#5a4a3a",
+      "grip": "#4a3020"
+    },
+    {
+      "type": "shield",
+      "bone": "LeftHand",
+      "dir": [
+        1,
+        0,
+        0.5
+      ],
+      "reach": 0.0,
+      "offset": [
+        0.03,
+        0.04,
+        0.02
+      ],
+      "face": "#7a4a26",
+      "rim": "#5a5a5a",
+      "boss": true
+    }
+  ]
+}

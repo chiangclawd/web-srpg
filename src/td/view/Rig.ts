@@ -87,7 +87,6 @@ const smooth = (a: number, b: number, x: number): number => {
  */
 export function applyPose(p: Puppet, pose: Pose, face: number, native: number, shadow: Puppet | null = null, shadeAmt = 1): void {
   const fw = p.frame.realWidth;
-  const fh = p.frame.realHeight;
   const ox = p.displayOriginX;
   const oy = p.displayOriginY;
   const half = fw / 2;
@@ -96,8 +95,10 @@ export function applyPose(p: Puppet, pose: Pose, face: number, native: number, s
   const fallA = pose.fall * 1.38;
   const fs = Math.sin(fallA);
   const fc = Math.cos(fallA);
+  // 裁切過的圖表：格子只鋪在 frame.x/y 起、cutWidth × cutHeight 的範圍（一般貼圖這兩個位移是 0）
+  const fr = p.frame;
   for (let r = 0; r <= rows; r++) {
-    const by = (r / rows) * fh - oy;
+    const by = fr.y + (r / rows) * fr.cutHeight - oy;
     const Y0 = -by;
     const h = oy > 0 ? Math.min(1, Math.max(0, Y0 / oy)) : 0;
     const twist = smooth(0.25, 0.85, h);
@@ -106,7 +107,7 @@ export function applyPose(p: Puppet, pose: Pose, face: number, native: number, s
     const bul = Math.sin(Math.PI * h);
     for (let c = 0; c <= cols; c++) {
       const i = r * (cols + 1) + c;
-      const bx = (c / cols) * fw - ox;
+      const bx = fr.x + (c / cols) * fr.cutWidth - ox;
       // 往前 = +x 的座標系
       const uf = (bx / half) * native;
       const a0 = K * uf;

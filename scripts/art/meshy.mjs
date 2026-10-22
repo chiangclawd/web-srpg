@@ -6,7 +6,7 @@
 //   NODE_USE_ENV_PROXY=1 node scripts/art/meshy.mjs rig <out-dir> <remesh task id>  自動綁骨架
 //   NODE_USE_ENV_PROXY=1 node scripts/art/meshy.mjs anim <out-dir> <rig task id> <action_id>...  套用動作（一次最多 10 個）
 //   NODE_USE_ENV_PROXY=1 node scripts/art/meshy.mjs fetch <out-dir> <image|remesh|rig|anim>    重新下載已完成任務的 GLB
-// 每個任務的回應存成 <out-dir>/<kind>.json，GLB 存在同一個資料夾。
+// 每個任務的回應存成 <out-dir>/<kind>.json；rig / anim 的 GLB 下載到同一個資料夾。
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -91,4 +91,5 @@ if (kind === 'image') {
   throw new Error(`unknown kind ${kind}`);
 }
 fs.writeFileSync(path.join(outDir, `${kind}.json`), JSON.stringify(task, null, 2));
-await downloadAll(task, kind);
+// 圖轉 3D 和減面的模型很大（數十 MB）又用不到，只下載綁好骨架和套好動作的檔
+if (kind === 'rig' || kind === 'anim') await downloadAll(task, kind);
