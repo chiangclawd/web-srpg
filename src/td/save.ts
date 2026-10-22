@@ -57,7 +57,7 @@ export interface SaveData {
     voice: boolean;
     /** 介面大小（字與彈出面板的倍率，重新整理後生效；舊存檔沒有這欄） */
     uiScale?: number;
-    /** 3D 預渲染角色（試作；舊存檔沒有這欄） */
+    /** 3D 預渲染角色（預設開；舊存檔沒有這欄就補成開，玩家關掉過的維持關） */
     art3d?: boolean;
   };
   stats: { kills: number; plays: number; victories: number; towers: number; elites?: number; bosses?: number; playSec?: number; heroUse?: Record<string, number> };
@@ -84,7 +84,7 @@ function defaults(): SaveData {
     storySeen: [],
     tipsSeen: [],
     newsSeen: 0,
-    settings: { music: 0.6, sfx: 0.8, lang: nav.startsWith('zh') ? 'zh' : 'en', difficulty: 'normal', speed: 1, shake: true, quality: 'auto', voice: true },
+    settings: { music: 0.6, sfx: 0.8, lang: nav.startsWith('zh') ? 'zh' : 'en', difficulty: 'normal', speed: 1, shake: true, quality: 'auto', voice: true, art3d: true },
     stats: { kills: 0, plays: 0, victories: 0, towers: 0 },
   };
 }

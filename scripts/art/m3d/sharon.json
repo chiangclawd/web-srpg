@@ -1,0 +1,78 @@
+{
+  "yaws": [
+    45,
+    15,
+    165
+  ],
+  "dirs": {
+    "side": 45,
+    "front": 15,
+    "back": 165
+  },
+  "size": 144,
+  "ss": 3,
+  "span": 1.8,
+  "elev": 12,
+  "ramp": [
+    185,
+    230,
+    255
+  ],
+  "rim": 1.1,
+  "anims": [
+    {
+      "url": "/models/anim_result_animation_glb_url.glb",
+      "clip": "Idle",
+      "name": "idle",
+      "frames": 8,
+      "loop": true
+    },
+    {
+      "url": "/models/rig_result_basic_animations_walking_glb_url.glb",
+      "name": "walk",
+      "frames": 10,
+      "loop": true,
+      "measure": true
+    },
+    {
+      "url": "/models/anim_result_animation_glb_url.glb",
+      "clip": "Charged_Spell_Cast",
+      "name": "attack",
+      "frames": 10,
+      "loop": false
+    },
+    {
+      "url": "/models/anim_result_animation_glb_url.glb",
+      "clip": "Hit_Reaction",
+      "name": "hit",
+      "frames": 5,
+      "loop": false,
+      "from": 0,
+      "to": 0.8
+    },
+    {
+      "url": "/models/death/anim_result_animation_glb_url.glb",
+      "clip": "dying_backwards",
+      "name": "death",
+      "frames": 10,
+      "loop": false
+    }
+  ],
+  "props": [
+    {
+      "type": "book",
+      "bone": "LeftHand",
+      "dir": [
+        0,
+        0.3,
+        1
+      ],
+      "reach": 0.06,
+      "cover": "#2a4a8a",
+      "trim": "#d4b060",
+      "width": 0.19,
+      "length": 0.24,
+      "thick": 0.055
+    }
+  ]
+}

@@ -11,6 +11,24 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 74,
+    date: '2026-10-22',
+    title: { zh: '3D 角色正式上線', en: '3D Units On by Default' },
+    items: [
+      { zh: '3D 角色改成預設開啟：有 3D 版的士兵、敵人和英雄都會用 3D 動作出場', en: '3D units are now on by default: every soldier, enemy and hero with a 3D version uses it' },
+      { zh: '新增 3D 英雄：艾蓮娜拉弓射箭、莉拉舉法杖施法（另一手拿魔法書）、雪倫翻書念咒、維克多持長槍突刺（近衛兵營的騎士也一起換）', en: 'New 3D heroes: Elena draws her bow, Lila raises her staff with a spellbook in hand, Sharon reads from her tome and Viktor lunges with his spear (his royal-guard barracks knights too)' },
+      { zh: '喜歡原本的手繪畫風？戰鬥中按暫停，關掉「3D 角色」就會切回去（之後也會記住）', en: 'Prefer the hand-drawn look? Pause a battle and switch off "3D units"; the game remembers your choice' },
+    ],
+  },
+  {
+    id: 73,
+    date: '2026-10-22',
+    title: { zh: '建造點修正', en: 'Build Spot Fixes' },
+    items: [
+      { zh: '修正第二關左下角的建造點蓋在房子屋頂上；順便檢查了全部關卡，把壓到城堡、營地、樹、石頭、池塘的建造點都移到旁邊的空地（射程和原本差不多）', en: 'Fixed a build spot on Greystone Ford drawn on top of a house roof. Every level was checked, and spots that sat on castles, camps, trees, rocks or ponds moved to open ground nearby with similar reach' },
+    ],
+  },
+  {
     id: 72,
     date: '2026-10-22',
     title: { zh: '3D 角色擴大試作', en: 'More 3D Units (Beta)' },
