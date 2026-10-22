@@ -22,6 +22,7 @@ import { THEMES } from '../art/scenery';
 import { visualMuzzleH } from '../art/towers';
 import { DEPTH, Fx, camShake } from '../view/Fx';
 import { TowerView, UnitView, setUnitDust } from '../view/Units';
+import { UNIT_SHEETS, setUse3d, sheetKey } from '../view/Sheets';
 import { HazardLayer, hazardTextures } from '../view/Hazards';
 import { EggLayer } from '../view/Eggs';
 import { NightLayer } from '../view/Night';
@@ -156,6 +157,32 @@ export class LevelScene extends Phaser.Scene {
     const id = levelArtId(this.baseLevel);
     if (PAINTED_LEVELS.has(id) && !this.textures.exists(levelArtKey(id))) this.load.image(levelArtKey(id), `assets/levels/${id}.webp`);
     for (const k of hazardTextures(this.level.hazards ?? [])) if (!this.textures.exists(k)) this.load.image(k, `assets/sprites/hz/${k}.webp`);
+    setUse3d(!!save().settings.art3d);
+    if (save().settings.art3d) this.queueSheets();
+  }
+
+  /** 3D 角色圖表（試作，每張約數百 KB，只在開啟時下載） */
+  private queueSheets(): boolean {
+    let queued = false;
+    for (const s of Object.values(UNIT_SHEETS)) {
+      if (this.textures.exists(sheetKey(s))) continue;
+      this.load.spritesheet(sheetKey(s), `assets/m3d/${s.file}.webp`, { frameWidth: s.size, frameHeight: s.size });
+      queued = true;
+    }
+    return queued;
+  }
+
+  /** 暫停選單切換 3D 角色：需要時先下載圖表，再把場上單位換外觀 */
+  setArt3d(on: boolean): void {
+    setUse3d(on);
+    const refresh = (): void => {
+      for (const v of this.enemyViews.values()) v.refreshArt();
+      for (const v of this.soldierViews.values()) v.refreshArt();
+    };
+    if (on && this.queueSheets()) {
+      this.load.once('complete', refresh);
+      this.load.start();
+    } else refresh();
   }
 
   create(): void {

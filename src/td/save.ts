@@ -57,6 +57,8 @@ export interface SaveData {
     voice: boolean;
     /** 介面大小（字與彈出面板的倍率，重新整理後生效；舊存檔沒有這欄） */
     uiScale?: number;
+    /** 3D 預渲染角色（試作；舊存檔沒有這欄） */
+    art3d?: boolean;
   };
   stats: { kills: number; plays: number; victories: number; towers: number; elites?: number; bosses?: number; playSec?: number; heroUse?: Record<string, number> };
 }

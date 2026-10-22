@@ -5,6 +5,7 @@ import { TOWER_ART, BARREL_ORIGIN, TW_BASE, TW_H } from '../art/towers';
 import type { Tower } from '../sim/entities';
 import { Puppet } from './Puppet';
 import { applyPose, gaitFor, restPose, type Gait } from './Rig';
+import { sheetFor, sheetFrame, sheetKey, type SheetAnim, type SheetDir, type UnitSheet } from './Sheets';
 
 export interface UnitVisualState {
   x: number;
@@ -25,6 +26,9 @@ export interface UnitVisualState {
   /** 怨靈躲在黑暗裡：半透明閃爍 */
   shrouded?: boolean;
 }
+
+/** 逐格動畫的身體不變形，只用來投影子 */
+const STILL = restPose();
 
 /** 死亡倒地時揚起的塵土（由關卡場景接上特效層） */
 let dustFx: ((x: number, y: number) => void) | null = null;
@@ -56,6 +60,11 @@ export class UnitView {
   private wasShrouded = false;
   private gait: Gait;
   private pose = restPose();
+  private tex = '';
+  /** 3D 預渲染的逐格動畫（沒有就用網格變形） */
+  private sheet: UnitSheet | null = null;
+  private dir: SheetDir = 'side';
+  private dirY = 0;
   /** 畫面上的朝向（轉身動畫播完才換） */
   private face = 1;
   private turnT = -1;
@@ -102,13 +111,65 @@ export class UnitView {
   }
 
   setTexture(tex: string, height: number): void {
-    this.body.setTexture(tex);
-    this.cast?.setTexture(tex);
+    this.tex = tex;
+    this.sheet = sheetFor(tex, this.scene);
+    const sh = this.sheet;
+    for (const p of [this.body, this.cast]) {
+      if (!p) continue;
+      if (sh) p.setTexture(sheetKey(sh), sheetFrame(sh, this.dir, 'idle', 0)).setOrigin(0.5, sh.footAt);
+      else p.setTexture(tex).setOrigin(0.5, 1);
+      p.resetGrid();
+    }
     this.gait = gaitFor(tex, this.flying);
     this.height = height;
-    this.baseScale = height / this.body.frame.height;
+    this.baseScale = height / (sh ? sh.unitPx : this.body.frame.height);
     this.body.setScale(this.baseScale);
     this.cast?.setScale(this.baseScale);
+  }
+
+  /** 切換「3D 角色」後重新套用外觀 */
+  refreshArt(): void {
+    if (!this.dead && this.tex) this.setTexture(this.tex, this.height);
+  }
+
+  /** 逐格動畫：依移動方向選側面 / 正面 / 背面，依狀態選動作 */
+  private animateSheet(s: UnitVisualState, dt: number): void {
+    const sh = this.sheet!;
+    const dx = s.x - this.lastX;
+    const dy = s.y - this.lastY;
+    const dist = Math.hypot(dx, dy);
+    const moving = s.moving && !s.frozen && !s.stunned;
+    this.face = s.facing >= 0 ? 1 : -1;
+    if (dist > 0.01) this.dirY += (dy / dist - this.dirY) * Math.min(1, dt * 10);
+    // 往上下走才轉正面 / 背面（有遲滯，斜走時不會一直換）
+    if (!moving) this.dir = 'side';
+    else if (this.dir === 'side' ? this.dirY > 0.8 : this.dirY > 0.6) this.dir = 'front';
+    else if (this.dir === 'side' ? this.dirY < -0.8 : this.dirY < -0.6) this.dir = 'back';
+    else this.dir = 'side';
+    if (s.frozen) return;
+    const sinceAtk = s.t - s.lastAttackAt;
+    const sinceHit = s.t - s.lastHitAt;
+    let anim: SheetAnim;
+    let k: number;
+    if (sinceAtk >= 0 && sinceAtk < sh.anims.attack.dur) {
+      anim = 'attack';
+      k = sinceAtk / sh.anims.attack.dur;
+      this.dir = 'side';
+    } else if (moving) {
+      anim = 'walk';
+      // 腳步跟實際移動距離同步
+      this.phase += dist / (sh.cycle * this.height);
+      k = this.phase % 1;
+    } else if (sinceHit >= 0 && sinceHit < sh.anims.hit.dur) {
+      anim = 'hit';
+      k = sinceHit / sh.anims.hit.dur;
+    } else {
+      anim = 'idle';
+      k = ((s.t + this.phase) / sh.anims.idle.dur) % 1;
+    }
+    const f = sheetFrame(sh, this.dir, anim, Math.floor(k * sh.anims[anim].frames));
+    this.body.setFrame(f);
+    this.cast?.setFrame(f);
   }
 
   /** 精英：腳下一圈發光光環＋身體放大一點 */
@@ -322,7 +383,8 @@ export class UnitView {
       this.face = s.facing >= 0 ? 1 : -1;
     }
     const dt = this.lastT < 0 ? 0 : Phaser.Math.Clamp(s.t - this.lastT, 0, 0.05);
-    this.animate(s, dt);
+    if (this.sheet) this.animateSheet(s, dt);
+    else this.animate(s, dt);
     this.lastX = s.x;
     this.lastY = s.y;
     this.lastT = s.t;
@@ -333,7 +395,8 @@ export class UnitView {
     }
     this.body.setPosition(s.x, s.y + fy);
     this.body.setDepth(s.y + (this.flying ? 400 : 0));
-    applyPose(this.body, this.pose, this.face, this.facesRight ? 1 : -1, this.cast);
+    if (this.sheet) applyPose(this.body, STILL, this.face, 1, this.cast, 0);
+    else applyPose(this.body, this.pose, this.face, this.facesRight ? 1 : -1, this.cast);
     const hit = s.t - s.lastHitAt < 0.09;
     if (hit) this.body.setTint(0xff9a8a);
     else if (s.tint !== undefined) this.body.setTint(s.tint);
@@ -421,7 +484,42 @@ export class UnitView {
     this.auraRing?.destroy();
     const b = this.body;
     const cast = this.cast;
-    if (kind === 'death') {
+    const sh = this.sheet;
+    if (kind === 'death' && sh) {
+      // 3D 動作：播完倒地那幾格，落地揚塵，再淡出
+      b.setTint(0xffffff);
+      const st = { k: 0 };
+      const groundY = this.shadow.y - 1;
+      let landed = false;
+      this.scene.tweens.add({
+        targets: st,
+        k: 1,
+        duration: sh.anims.death.dur * 1000,
+        onUpdate: () => {
+          const f = sheetFrame(sh, this.dir, 'death', Math.floor(st.k * sh.anims.death.frames));
+          b.setFrame(f);
+          cast?.setFrame(f);
+          applyPose(b, STILL, this.face, 1, cast, 0);
+          if (!landed && st.k > 0.6) {
+            landed = true;
+            dustFx?.(b.x, groundY);
+          }
+        },
+        onComplete: () => {
+          this.scene.tweens.add({
+            targets: [b, ...(cast ? [cast] : [])],
+            alpha: 0,
+            y: '+=3',
+            delay: 260,
+            duration: 420,
+            onComplete: () => {
+              b.destroy();
+              cast?.destroy();
+            },
+          });
+        },
+      });
+    } else if (kind === 'death') {
       // 往後倒進地面（有透視縮短），落地彈一下、揚起塵土，再沉下去淡出
       b.setTint(0xffffff);
       const pose = this.pose;

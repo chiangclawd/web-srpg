@@ -9,6 +9,7 @@ import { ITEMS, ITEM_ORDER, GOLD_SACK, POTION_LIVES, type ItemId } from '../data
 import type { EliteAffix, EnemyDef } from '../sim/defs';
 import { ELITE } from '../sim/World';
 import { IconButton, Button, panel, dimmer, popIn } from '../ui/widgets';
+import { UNIT_SHEETS } from '../view/Sheets';
 import { playDialog } from '../ui/dialog';
 import { showTipBubble } from '../ui/tip';
 import { shareResult } from '../ui/share';
@@ -671,8 +672,12 @@ export class LevelUIScene extends Phaser.Scene {
     const c = this.add.container(w / 2, VIEW_H / 2).setDepth(100);
     c.setData('pause', true);
     c.add(dimmer(this, w * 2, VIEW_H * 2, 0.55).setPosition(-w, -VIEW_H));
-    c.add(panel(this, 0, 0, 420, 380));
-    c.add(addText(this, 0, -150, T('pause'), { size: 34, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0.5));
+    // 有 3D 角色圖表時多一列開關（試作，方便直接比較）
+    const has3d = Object.keys(UNIT_SHEETS).length > 0;
+    const dy = has3d ? 25 : 0;
+    const ph = 380 + dy * 2;
+    c.add(panel(this, 0, 0, 420, ph));
+    c.add(addText(this, 0, -150 - dy, T('pause'), { size: 34, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }).setOrigin(0.5));
     const sv = save();
     const mkVol = (y: number, label: string, key: 'music' | 'sfx') => {
       const t = addText(this, -150, y, label, { size: 20, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5);
@@ -684,13 +689,25 @@ export class LevelUIScene extends Phaser.Scene {
       });
       c.add([t, b]);
     };
-    mkVol(-92, T('music'), 'music');
-    mkVol(-38, T('sound'), 'sfx');
-    c.add(new Button(this, 0, 30, 240, 52, T('resume'), () => this.lvl.togglePause(false), { color: 'green' }));
-    c.add(new Button(this, 0, 92, 240, 52, T('restart'), () => this.lvl.restart(), { color: 'gold' }));
-    c.add(new Button(this, 0, 154, 240, 52, T('quit'), () => this.lvl.exitToMap(), { color: 'red' }));
+    mkVol(-92 - dy, T('music'), 'music');
+    mkVol(-38 - dy, T('sound'), 'sfx');
+    if (has3d) {
+      const y = 16 - dy;
+      const t = addText(this, -150, y, T('art3d'), { size: 20, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5);
+      fitText(t, 240);
+      const b = new IconButton(this, 120, y, 48, sv.settings.art3d ? 'ic_check' : 'ic_close', () => {
+        sv.settings.art3d = !sv.settings.art3d;
+        persist();
+        b.setIcon(sv.settings.art3d ? 'ic_check' : 'ic_close');
+        this.lvl.setArt3d(!!sv.settings.art3d);
+      });
+      c.add([t, b]);
+    }
+    c.add(new Button(this, 0, 30 + dy, 240, 52, T('resume'), () => this.lvl.togglePause(false), { color: 'green' }));
+    c.add(new Button(this, 0, 92 + dy, 240, 52, T('restart'), () => this.lvl.restart(), { color: 'gold' }));
+    c.add(new Button(this, 0, 154 + dy, 240, 52, T('quit'), () => this.lvl.exitToMap(), { color: 'red' }));
     this.modal = c;
-    popIn(this, c, 0, { w: 420, h: 380 }, 0.8, 200);
+    popIn(this, c, 0, { w: 420, h: ph }, 0.8, 200);
   }
 
   // ───────── 結算 ─────────
