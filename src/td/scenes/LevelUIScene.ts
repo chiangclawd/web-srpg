@@ -638,14 +638,19 @@ export class LevelUIScene extends Phaser.Scene {
   }
 
   // ───────── 開場劇情 ─────────
-  showStory(lines: StoryLine[], done: () => void): void {
+  showStory(lines: StoryLine[], done: () => void, art?: { key: string; id: string }): void {
     this.lvl.togglePause(true);
     this.closeModal();
-    this.modal = playDialog(this, lines, () => {
-      this.modal = null;
-      this.lvl.togglePause(false);
-      done();
-    });
+    this.modal = playDialog(
+      this,
+      lines,
+      () => {
+        this.modal = null;
+        this.lvl.togglePause(false);
+        done();
+      },
+      { art },
+    );
   }
 
   private closeModal(): void {

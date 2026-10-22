@@ -5,7 +5,7 @@ import { ENEMIES } from '../../src/td/data/enemies';
 import { HEROES, HERO_ORDER } from '../../src/td/data/heroes';
 import { TOWERS } from '../../src/td/data/towers';
 import { challengeLevel, endlessLevel, endlessHpMul, ironTowers, ENDLESS_WAVES } from '../../src/td/data/challenges';
-import { STORY, SPEAKERS, STORY_PORTRAITS, EPILOGUE, SIDE_EPILOGUE } from '../../src/td/data/story';
+import { STORY, SPEAKERS, STORY_PORTRAITS, EPILOGUE, SIDE_EPILOGUE, STORY_ART, EPILOGUES } from '../../src/td/data/story';
 import { ACHIEVEMENTS, evaluateAchievements, type LevelOutcome } from '../../src/td/data/achievements';
 import type { SaveData } from '../../src/td/save';
 import { BRANCH_BARKS, HERO_BARKS, TOWER_BARKS } from '../../src/td/data/barks';
@@ -266,4 +266,11 @@ test('Iron Challenges with more than a handful of flyers allow a tower that hits
     const pair = ironTowers(l);
     assert.ok(pair.some((t) => TOWERS[t].levels[0].hitsAir), `${l.id} iron (${pair.join('+')}) can hit air`);
   }
+});
+
+test('every level story and epilogue has a painted scene on disk', async () => {
+  const fs = await import('node:fs');
+  for (const id of Object.keys(STORY)) assert.ok(STORY_ART[id], `${id} has story art`);
+  for (const id of Object.keys(EPILOGUES)) assert.ok(STORY_ART[`ep_${id}`], `ep_${id} has story art`);
+  for (const id of Object.keys(STORY_ART)) assert.ok(fs.existsSync(`public/assets/story/${id}.webp`), `story/${id}.webp exists`);
 });

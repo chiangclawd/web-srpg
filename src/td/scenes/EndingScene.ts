@@ -6,6 +6,7 @@ import { ACHIEVEMENTS } from '../data/achievements';
 import { LEVELS } from '../data/levels';
 import { Button } from '../ui/widgets';
 import { playDialog } from '../ui/dialog';
+import { loadStoryArt } from '../ui/cinema';
 import { L, T, getLang } from '../i18n';
 import { save, totalStars, STARS_PER_LEVEL } from '../save';
 import { sfx } from '../audio';
@@ -93,7 +94,11 @@ export class EndingScene extends Phaser.Scene {
     this.input.on('pointerdown', () => (this.held = true));
     this.input.on('pointerup', () => (this.held = false));
     if (this.epilogue) {
-      this.time.delayedCall(700, () => playDialog(this, EPILOGUES[this.story], () => this.credits(), { dim: 0.25, depth: 1000 }));
+      this.time.delayedCall(700, () =>
+        loadStoryArt(this, `ep_${this.story}`, (key) =>
+          playDialog(this, EPILOGUES[this.story], () => this.credits(), { dim: 0.25, depth: 1000, art: key ? { key, id: `ep_${this.story}` } : undefined }),
+        ),
+      );
     } else {
       this.time.delayedCall(400, () => this.credits());
     }

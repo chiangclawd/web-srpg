@@ -28,6 +28,35 @@ export const SPEAKERS: Record<string, { name: L10n; enemy?: boolean }> = {
 // viktor 也是英雄，立繪由英雄頭像那段產生（同一張圖不能被兩段各載入、各移除一次）
 export const STORY_PORTRAITS = ['gary', 'morden', 'selene', 'carl', 'high_priest', 'sub_priest', 'cult_leader'];
 
+/** 劇情插畫上飄的粒子 */
+export type StoryAtmos = 'leaves' | 'snow' | 'blizzard' | 'embers' | 'sand' | 'ghost' | 'motes' | 'dark' | 'petals';
+
+/** 有手繪劇情插畫的段落（assets/story/<id>.webp）：關卡開場與三段尾聲 */
+export const STORY_ART: Record<string, { atmos?: StoryAtmos; startPan?: number }> = {
+  l1: { atmos: 'motes' },
+  l2: { atmos: 'snow' },
+  l3: { atmos: 'dark' },
+  l4: { atmos: 'snow' },
+  l5: { atmos: 'leaves', startPan: 1 },
+  l6: { atmos: 'motes' },
+  l7: { atmos: 'blizzard', startPan: 1 },
+  l8: { atmos: 'ghost' },
+  l9: { atmos: 'motes', startPan: 1 },
+  l10: { atmos: 'dark', startPan: 1 },
+  l11: { atmos: 'embers' },
+  l12: { atmos: 'dark', startPan: 1 },
+  l13: { atmos: 'sand' },
+  l14: { atmos: 'sand' },
+  l15: { atmos: 'snow' },
+  l16: { atmos: 'embers' },
+  l17: { atmos: 'motes' },
+  l18: { atmos: 'motes' },
+  l19: { atmos: 'ghost' },
+  ep_main: { atmos: 'petals' },
+  ep_side: { atmos: 'motes' },
+  ep_extra: { atmos: 'motes' },
+};
+
 /** 每關開場對話（第一次進入戰役時播放） */
 export const STORY: Record<string, StoryLine[]> = {
   l1: [

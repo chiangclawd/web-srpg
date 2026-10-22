@@ -129,6 +129,7 @@ const STR = {
   achUnlocked: { zh: '解鎖成就', en: 'Achievement unlocked' },
   bossHp: { zh: '首領', en: 'Boss' },
   skip: { zh: '略過', en: 'Skip' },
+  story: { zh: '劇情', en: 'Story' },
   endless: { zh: '無盡', en: 'Endless' },
   bossrush: { zh: '首領連戰', en: 'Boss Rush' },
   bossRushRules: { zh: '十名首領依序登場，各帶一支隨行部隊。起始金幣3200、20條命，首領漏失最多扣5條命。', en: 'All ten bosses in a row, each with an escort. 3200 gold and 20 lives; a leaking boss costs at most 5.' },

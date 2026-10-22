@@ -13,6 +13,7 @@ import { dailyKey, dailyLevel } from '../data/daily';
 import { addQuestProgress, ensureQuests, questText } from '../data/quests';
 import { evaluateAchievements } from '../data/achievements';
 import { STORY, type EpilogueId } from '../data/story';
+import { loadStoryArt } from '../ui/cinema';
 import { GEMS_PER_ACHIEVEMENT, ITEMS, KEG, gemReward, type ItemId } from '../data/items';
 import { RANGE_Y, inEllipse } from '../sim/math';
 import { PAINTED_LEVELS, levelArtId, levelArtKey, paintLevel, paintBuildSpot } from '../art/terrain';
@@ -293,7 +294,10 @@ export class LevelScene extends Phaser.Scene {
       if (this.mode0 === 'campaign' && story && !seen.includes(this.level.id)) {
         seen.push(this.level.id);
         persist();
-        this.ui.showStory(story, () => this.introNewEnemies(this.level.intro ?? []));
+        this.togglePause(true);
+        loadStoryArt(this, this.level.id, (key) => {
+          this.ui.showStory(story, () => this.introNewEnemies(this.level.intro ?? []), key ? { key, id: this.level.id } : undefined);
+        });
       } else this.introNewEnemies(this.level.intro ?? []);
     });
   }
