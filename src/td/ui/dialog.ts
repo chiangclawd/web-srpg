@@ -103,9 +103,10 @@ export function playDialog(
       avatar?.destroy();
       avatar = null;
       avFrame?.setStrokeStyle(3, enemy ? 0xff8a6a : 0xffd36b, 0.9);
-      if (scene.textures.exists(`pt_${ln.who}`)) {
+      const pt = `pt_${sp?.portrait ?? ln.who}`;
+      if (scene.textures.exists(pt)) {
         // 立繪裁出臉的部分放進對話框左側的框裡
-        const a = scene.add.image(0, 0, `pt_${ln.who}`).setOrigin(0);
+        const a = scene.add.image(0, 0, pt).setOrigin(0);
         const fw = a.frame.width;
         const fh = a.frame.height;
         const cw = fw * 0.46;
@@ -119,9 +120,9 @@ export function playDialog(
         scene.tweens.add({ targets: a, alpha: 1, duration: 200 });
         avatar = a;
       }
-    } else if (scene.textures.exists(`pt_${ln.who}`)) {
+    } else if (scene.textures.exists(`pt_${sp?.portrait ?? ln.who}`)) {
       const px = enemy ? w - 210 : 210;
-      const p = scene.add.image(px + (enemy ? 60 : -60), VIEW_H - 150, `pt_${ln.who}`).setOrigin(0.5, 1);
+      const p = scene.add.image(px + (enemy ? 60 : -60), VIEW_H - 150, `pt_${sp?.portrait ?? ln.who}`).setOrigin(0.5, 1);
       p.setScale(Math.min(400 / p.frame.height, 380 / p.frame.width));
       if (enemy) p.setFlipX(true);
       p.setAlpha(0);

@@ -81,6 +81,9 @@ export const BOSS_VOICES: Record<string, { voice: string; style: string; line: L
   high_priest: { voice: 'Rasalgethi', style: 'Say it like a sinister, raspy high priest of a dark cult', line: { zh: '亡者們，起來吧！', en: 'Rise, my dead!' } },
   sub_priest: { voice: 'Erinome', style: 'Say it like a cold, calm and eerie young woman', line: { zh: '你們的塔，我收下了。', en: 'Your towers are mine now.' } },
   cult_leader: { voice: 'Charon', style: 'Say it calmly and menacingly, like a dark lord', line: { zh: '黑暗終將吞噬一切。', en: 'Darkness will swallow everything.' } },
+  // 鏡淵篇的殘影重複本尊說過的話（沿用同一段錄音）
+  echo_giant: { voice: 'Umbriel', style: 'Say it slowly with a deep, booming voice, like an enormous giant', line: { zh: '渺小的人類，滾開！', en: 'Out of my way, tiny humans!' } },
+  echo_umbra: { voice: 'Charon', style: 'Say it calmly and menacingly, like a dark lord', line: { zh: '黑暗終將吞噬一切。', en: 'Darkness will swallow everything.' } },
 };
 
 /**

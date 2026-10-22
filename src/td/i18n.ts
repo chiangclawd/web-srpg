@@ -132,7 +132,7 @@ const STR = {
   story: { zh: '劇情', en: 'Story' },
   endless: { zh: '無盡', en: 'Endless' },
   bossrush: { zh: '首領連戰', en: 'Boss Rush' },
-  bossRushRules: { zh: '十名首領依序登場，各帶一支隨行部隊。起始金幣3200、20條命，首領漏失最多扣5條命。', en: 'All ten bosses in a row, each with an escort. 3200 gold and 20 lives; a leaking boss costs at most 5.' },
+  bossRushRules: { zh: '十二名首領依序登場，各帶一支隨行部隊。起始金幣3200、20條命，首領漏失最多扣5條命。', en: 'All twelve bosses in a row, each with an escort. 3200 gold and 20 lives; a leaking boss costs at most 5.' },
   bossRushLocked: { zh: '通關最終關「終焉之門」後解鎖首領連戰', en: 'Beat the finale, Gate of the End, to unlock Boss Rush' },
   bestStars: { zh: '最佳紀錄', en: 'Best' },
   endlessRules: { zh: '20 條命・無限波次，敵人越來越強・每 10 波出現首領・第 16–20 波入夜', en: '20 lives · endless waves that keep getting stronger · a boss every 10 waves · night falls on waves 16–20' },

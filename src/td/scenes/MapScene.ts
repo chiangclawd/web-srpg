@@ -658,7 +658,7 @@ export class MapScene extends Phaser.Scene {
     if (mode === 'campaign') {
       const stars = sv.stars[lv.id] ?? 0;
       const thumb = PAINTED_LEVELS.has(levelArtId(lv));
-      if (thumb) this.levelThumb(c, levelArtId(lv), 0, -80, pw - 56, 84);
+      if (thumb) this.levelThumb(c, levelArtId(lv), 0, -80, pw - 56, 84, lv);
       // 看過的開場劇情可以重播（有手繪插畫就用電影模式）
       const story = STORY[lv.id];
       if (story && sv.storySeen.includes(lv.id)) {
@@ -807,7 +807,7 @@ export class MapScene extends Phaser.Scene {
    * 關卡面板上的戰場縮圖：按需下載該關的手繪背景（只留這一張），裁出中段。
    * 進關時 LevelScene 直接沿用同一張紋理，不必再下載。
    */
-  private levelThumb(c: Phaser.GameObjects.Container, id: string, x: number, y: number, w: number, h: number): void {
+  private levelThumb(c: Phaser.GameObjects.Container, id: string, x: number, y: number, w: number, h: number, lv?: { mirror?: boolean; grade?: number }): void {
     const frame = this.add.graphics();
     frame.fillStyle(0x3a2412, 1);
     frame.fillRoundedRect(x - w / 2 - 5, y - h / 2 - 5, w + 10, h + 10, 10);
@@ -824,6 +824,8 @@ export class MapScene extends Phaser.Scene {
       const ch = h / k;
       const img = this.add.image(x, y, key).setScale(k).setAlpha(0);
       img.setCrop((src.width - cw) / 2, (src.height - ch) / 2, cw, ch);
+      if (lv?.mirror) img.setFlipX(true);
+      if (lv?.grade) img.setTint(lv.grade);
       c.addAt(img, c.getIndex(frame) + 1);
       this.tweens.add({ targets: img, alpha: 1, duration: 200 });
     };

@@ -1,4 +1,5 @@
-import type { GroupDef, LevelDef, WaveDef } from '../sim/defs';
+import type { DecorItem, GroupDef, LevelDef, WaveDef } from '../sim/defs';
+import type { Vec } from '../sim/math';
 
 /** 小工具：g(路徑, 敵人, 數量, 間隔, 延遲) */
 function g(path: number, enemy: string, count: number, interval: number, delay = 0): GroupDef {
@@ -1562,6 +1563,151 @@ export const LEVELS: LevelDef[] = [
     ],
   },
 ];
+
+// ───────── 鏡淵篇：深淵之鏡照出的舊戰場（左右鏡像的手繪圖，路線、建造點、裝飾一起翻） ─────────
+
+const mx = (v: Vec): Vec => ({ x: 1280 - v.x, y: v.y });
+
+function mirrorDecor(d: DecorItem): DecorItem {
+  switch (d.kind) {
+    case 'river':
+      return { ...d, points: d.points.map(mx) };
+    case 'cliff':
+      return { ...d, points: d.points.map(mx) };
+    case 'bridge':
+      return { ...d, x: 1280 - d.x, angle: Math.PI - d.angle };
+    default:
+      return { ...d, x: 1280 - d.x };
+  }
+}
+
+/** 以某一關的戰場為底，整張左右翻轉 */
+function mirrorOf(id: string): Pick<LevelDef, 'art' | 'mirror' | 'theme' | 'paths' | 'spots' | 'heroStart' | 'decor' | 'hazards'> {
+  const base = LEVELS.find((l) => l.id === id)!;
+  return {
+    art: base.art ?? base.id,
+    mirror: true,
+    theme: base.theme,
+    paths: base.paths.map((p) => p.map(mx)),
+    spots: base.spots.map(mx),
+    heroStart: mx(base.heroStart),
+    decor: base.decor?.map(mirrorDecor),
+    hazards: base.hazards?.map((h) => ({ ...h, x: 1280 - h.x })),
+  };
+}
+
+const MIRROR_GRADE = 0xc4b2ff;
+
+LEVELS.push(
+  {
+    ...mirrorOf('l3'),
+    // 原本的建造點翻過來，再補四個（後期關卡要多一點空間）
+    spots: [...mirrorOf('l3').spots, { x: 480, y: 160 }, { x: 1020, y: 250 }, { x: 710, y: 520 }, { x: 820, y: 500 }],
+    id: 'l20',
+    index: 19,
+    bonus: true,
+    grade: MIRROR_GRADE,
+    mapLink: 'l1',
+    name: { zh: '鏡影之森', en: 'Mirrorwood' },
+    desc: {
+      zh: '鏡淵篇：紀念碑旁出現一面發光的鏡子，裡面映出左右顛倒的森林，過去敵人的殘影正要走出來。鏡影騎士會突然閃到前方！',
+      en: 'Mirror chapter: a glowing mirror appeared beside the monument, showing a forest flipped left to right, and echoes of old foes are about to step out. Echo Knights can flash forward without warning!',
+    },
+    seed: 1203,
+    startGold: 1600,
+    lives: 20,
+    mapPos: { x: 0.29, y: 0.88 },
+    intro: ['echo_knight', 'shard'],
+    waves: [
+      w(g(0, 'raider', 6, 1.2), g(1, 'shard', 4, 0.8, 3)),
+      w(g(1, 'echo_knight', 3, 2.5), g(0, 'wolf', 8, 0.6, 4)),
+      w(g(0, 'adept', 3, 2), g(1, 'raider', 6, 1, 2), g(0, 'shard', 6, 0.6, 8)),
+      w(g(1, 'lancer', 5, 1.8), g(0, 'echo_knight', 3, 2, 4), g(1, 'hunter', 5, 1.2, 8)),
+      w(g(0, 'troll', 1, 1), g(1, 'shard', 8, 0.5, 2), g(0, 'raider', 8, 0.8, 6)),
+      w(g(1, 'echo_knight', 5, 1.6), g(0, 'griffin', 5, 1.4, 3), g(1, 'adept', 3, 2, 8)),
+      w(g(0, 'blackguard', 3, 2.5), g(1, 'wolf', 12, 0.45, 2), g(0, 'echo_knight', 4, 1.6, 8)),
+      w(g(1, 'troll', 2, 5), g(0, 'shard', 10, 0.45, 2), g(1, 'lancer', 6, 1.4, 8)),
+      w(g(0, 'echo_knight', 6, 1.3), g(1, 'echo_knight', 6, 1.3, 2), g(0, 'adept', 4, 1.6, 8)),
+      w(g(1, 'blackguard', 4, 2), g(0, 'troll', 2, 5, 3), g(1, 'shard', 11, 0.4, 8), g(0, 'hunter', 8, 0.9, 12)),
+      { ...w(g(0, 'echo_knight', 8, 1.1), g(1, 'troll', 3, 4, 2), g(0, 'griffin', 8, 1, 8), g(1, 'shard', 11, 0.4, 14)), gap: 30 },
+      w(g(0, 'troll', 3, 4), g(1, 'echo_knight', 10, 1), g(0, 'blackguard', 5, 1.8, 6), g(1, 'shard', 14, 0.35, 10), g(0, 'wolf', 14, 0.4, 16)),
+    ],
+  },
+  {
+    ...mirrorOf('l15'),
+    // 左下那個點翻過來後會被手機的英雄 / 法術列蓋住，換到右邊
+    spots: [...mirrorOf('l15').spots.filter((p) => !(p.x < 200 && p.y > 500)), { x: 880, y: 540 }, { x: 280, y: 470 }],
+    id: 'l21',
+    index: 20,
+    bonus: true,
+    night: true,
+    bgm: 'night',
+    grade: 0xb8acff,
+    mapLink: 'l20',
+    wisps: { tint: 0xc0a0ff, size: 14 },
+    name: { zh: '倒影冰河', en: 'Reflected Glacier' },
+    desc: {
+      zh: '鏡淵篇：鏡子裡的冰河永遠是黑夜，冰霜巨人的殘影帶著鏡晶魔像出現了。魔像碎裂會散成會飛的碎片，記得留幾座打得到空中的塔！',
+      en: 'Mirror chapter: night never ends on the glacier in the mirror, and the frost giant’s echo marches with Shard Golems. Broken golems scatter into flying shards, so keep some towers that can hit the air!',
+    },
+    seed: 1215,
+    startGold: 1900,
+    lives: 20,
+    mapPos: { x: 0.44, y: 0.9 },
+    intro: ['shard_golem'],
+    waves: [
+      w(g(0, 'wolf', 8, 0.6), g(1, 'shard', 6, 0.7, 3)),
+      w(g(1, 'echo_knight', 4, 2), g(0, 'frost_sprite', 8, 0.7, 3)),
+      w(g(0, 'shard_golem', 1, 1), g(1, 'raider', 8, 1, 2), g(0, 'shard', 6, 0.6, 8)),
+      w(g(1, 'yeti', 2, 4), g(0, 'wraith', 6, 1.2, 3), g(1, 'hunter', 6, 1.1, 8)),
+      w(g(0, 'shard_golem', 2, 6), g(1, 'echo_knight', 5, 1.5, 3), g(0, 'frost_sprite', 10, 0.6, 8)),
+      w(g(1, 'werewolf', 4, 2), g(0, 'wraith', 8, 1, 3), g(1, 'shard', 8, 0.5, 8)),
+      w(g(0, 'yeti', 3, 3), g(1, 'shard_golem', 2, 5, 3), g(0, 'echo_knight', 6, 1.3, 8)),
+      w(g(0, 'wolf', 14, 0.4), g(1, 'wolf', 14, 0.4, 2), g(0, 'werewolf', 4, 2, 8)),
+      w(g(1, 'shard_golem', 3, 4), g(0, 'wraith', 10, 0.8, 3), g(1, 'frost_sprite', 12, 0.55, 8)),
+      w(g(0, 'echo_knight', 8, 1), g(1, 'yeti', 4, 3, 3), g(0, 'shard', 11, 0.4, 10)),
+      w(g(1, 'shard_golem', 3, 3.5), g(0, 'shard_golem', 3, 3.5, 2), g(1, 'werewolf', 6, 1.5, 10), g(0, 'wraith', 8, 0.9, 12)),
+      { ...w(g(0, 'troll', 3, 4), g(1, 'echo_knight', 8, 1, 2), g(0, 'shard', 13, 0.4, 8), g(1, 'yeti', 4, 3, 12)), gap: 30 },
+      w(g(0, 'echo_giant', 1, 1, 3), g(1, 'wolf', 12, 0.5, 0), g(0, 'shard_golem', 2, 8, 12), g(1, 'shard', 11, 0.45, 18), g(0, 'echo_knight', 8, 1, 26)),
+    ],
+  },
+  {
+    ...mirrorOf('l12'),
+    id: 'l22',
+    index: 21,
+    bonus: true,
+    bgm: 'finale',
+    grade: 0xc8b0ff,
+    mapLink: 'l21',
+    epilogue: 'mirror',
+    name: { zh: '鏡淵之門', en: 'Gate of the Mirror Abyss' },
+    desc: {
+      zh: '鏡淵篇終章：深淵之門的倒影裡，教主・黯的影子正等著你們。他的鏡之護盾會保護身邊的部下，三路一起進攻，打碎這面鏡子！',
+      en: 'Mirror chapter finale: in the reflection of the Abyss Gate, Umbra’s shadow awaits. His mirror ward shields the troops around him, and the attack comes down three roads. Shatter the mirror!',
+    },
+    seed: 1224,
+    startGold: 2000,
+    lives: 20,
+    mapPos: { x: 0.59, y: 0.91 },
+    intro: ['echo_umbra'],
+    waves: [
+      w(g(0, 'cultist', 6, 1), g(1, 'shard', 7, 0.5, 2), g(2, 'echo_knight', 3, 2, 4)),
+      w(g(1, 'assassin', 4, 1.3), g(2, 'raider', 8, 0.9, 3), g(0, 'shard', 6, 0.5, 6)),
+      w(g(0, 'shard_golem', 1, 1), g(2, 'adept', 3, 2, 2), g(1, 'echo_knight', 4, 1.6, 5)),
+      w(g(1, 'demon', 4, 1.6), g(0, 'griffin', 4, 1.4, 4), g(2, 'shard', 8, 0.45, 6)),
+      w(g(2, 'troll', 2, 5), g(1, 'necromancer', 2, 3, 3), g(0, 'cultist', 8, 0.8, 6)),
+      w(g(0, 'echo_knight', 6, 1.3), g(1, 'lancer', 5, 1.4, 2), g(2, 'wolf', 12, 0.4, 6)),
+      w(g(2, 'shard_golem', 2, 5), g(0, 'assassin', 6, 1.1, 4), g(1, 'bat', 10, 0.3, 8)),
+      w(g(1, 'demon', 5, 1.4), g(2, 'necromancer', 3, 3, 3), g(0, 'skeleton', 14, 0.4, 10)),
+      w(g(0, 'shard_golem', 1, 5), g(1, 'shard_golem', 1, 5, 3), g(2, 'shard_golem', 1, 5, 6), g(1, 'echo_knight', 5, 1.4, 10)),
+      w(g(2, 'griffin', 8, 0.9), g(0, 'demon', 6, 1.3, 4), g(1, 'assassin', 8, 0.9, 10)),
+      { ...w(g(0, 'blackguard', 4, 2.5), g(1, 'echo_knight', 6, 1.2, 2), g(2, 'shard', 10, 0.4, 8)), gap: 30 },
+      { ...w(g(1, 'selene', 1, 1), g(0, 'echo_knight', 6, 1.2, 4), g(2, 'shard_golem', 2, 4, 10)), gap: 30 },
+      { ...w(g(2, 'echo_giant', 1, 1), g(1, 'demon', 5, 1.2, 4), g(2, 'cultist', 8, 0.7, 8)), gap: 30 },
+      w(g(1, 'echo_umbra', 1, 1, 4), g(0, 'blackguard', 4, 2.5), g(2, 'shard_golem', 2, 6, 8), g(0, 'echo_knight', 6, 1, 14), g(2, 'shard', 10, 0.4, 20)),
+    ],
+  },
+);
 
 export function getLevel(id: string): LevelDef | undefined {
   return LEVELS.find((l) => l.id === id);

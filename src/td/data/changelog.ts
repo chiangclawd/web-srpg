@@ -11,6 +11,17 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 69,
+    date: '2026-10-22',
+    title: { zh: '新篇章：鏡淵篇', en: 'New Chapter: The Mirror Abyss' },
+    items: [
+      { zh: '通關「礦坑鬼火」後解鎖三個新關卡：鏡影之森、倒影冰河（夜戰）、鏡淵之門。深淵之鏡把舊戰場照成左右顛倒的紫色倒影，路線和建造點全都不一樣了', en: 'Clear Mine Ghostfire to unlock three new levels: Mirrorwood, Reflected Glacier (a night battle) and Gate of the Mirror Abyss. The Abyss Mirror turns old battlefields into violet reflections flipped left to right, with new roads and build spots' },
+      { zh: '新敵人：會閃到前方的鏡影騎士、高速飛行的鏡晶碎片，以及碎裂後散成碎片的鏡晶魔像', en: 'New enemies: Echo Knights that flash forward, fast-flying Mirror Shards, and Shard Golems that burst into shards when they break' },
+      { zh: '新首領：巨人之影、會用鏡之護盾保護部下的鏡淵之黯；首領連戰也多了這兩位', en: 'New bosses: the Echo of the Giant, and Umbra Reflected, whose mirror ward shields his troops. Both join the Boss Rush too' },
+      { zh: '新的開場劇情、結局與兩個首領成就', en: 'New story scenes, a chapter ending and two boss achievements' },
+    ],
+  },
+  {
     id: 68,
     date: '2026-10-22',
     title: { zh: '手繪劇情插畫', en: 'Painted Story Scenes' },

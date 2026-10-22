@@ -250,10 +250,14 @@ export interface LevelDef {
   rules?: LevelRules;
   /** 外傳關卡（戰役完結後解鎖，不在主線路線上） */
   bonus?: boolean;
-  /** 通關後播放的尾聲（外傳終章 side、番外篇 extra；主線最終關自動是 main） */
-  epilogue?: 'side' | 'extra';
+  /** 通關後播放的尾聲（外傳終章 side、番外篇 extra、鏡淵篇 mirror；主線最終關自動是 main） */
+  epilogue?: 'side' | 'extra' | 'mirror';
   /** 沿用另一關的手繪戰場圖（同一張地圖的變奏關卡） */
   art?: string;
+  /** 手繪戰場圖左右鏡像（鏡淵篇：路線、建造點已經跟著翻過來） */
+  mirror?: boolean;
+  /** 戰場圖染色（乘色，例如鏡淵篇的淡紫） */
+  grade?: number;
   /** 夜戰：畫面變暗、塔與英雄周圍有光；防禦塔射程 -15% */
   night?: boolean;
   /** 地圖上的路線改從這一關的旗子連過來（不接在外傳路線後面） */
