@@ -12,6 +12,7 @@ import { challengeLevel } from '../data/challenges';
 import { dailyKey, dailyLevel } from '../data/daily';
 import { addQuestProgress, ensureQuests, questText } from '../data/quests';
 import { evaluateAchievements } from '../data/achievements';
+import { skillLevelText } from '../data/skillFx';
 import { STORY, type EpilogueId } from '../data/story';
 import { loadStoryArt } from '../ui/cinema';
 import { GEMS_PER_ACHIEVEMENT, ITEMS, KEG, gemReward, type ItemId } from '../data/items';
@@ -233,7 +234,8 @@ export class LevelScene extends Phaser.Scene {
       const hit = this.add.ellipse(s.x, s.y - 4, touch ? 96 : 84, touch ? 72 : 56, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
       hit.on('pointerup', (p: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
         ev?.stopPropagation?.();
-        if (this.isTap(p)) this.onSpotTap(i);
+        if (!this.isTap(p) || this.aimTap(p)) return;
+        this.onSpotTap(i);
       });
       hit.on('pointerover', () => img.setTint(0xfff0c0));
       hit.on('pointerout', () => img.clearTint());
@@ -241,7 +243,7 @@ export class LevelScene extends Phaser.Scene {
     });
 
     // 地圖機關（落石／雪球）
-    if (this.world.hazards.length) this.hazardLayer = new HazardLayer(this, this.world, this.fx, (p) => this.isTap(p));
+    if (this.world.hazards.length) this.hazardLayer = new HazardLayer(this, this.world, this.fx, (p) => this.isTap(p), (p) => this.aimTap(p));
 
     // 環境粒子
     // 夜戰：夜幕＋光圈（夜戰關卡，或無盡模式裡有夜晚波次）；要在環境生物之前建好，螢火蟲才放得進夜幕圖層
@@ -684,13 +686,23 @@ export class LevelScene extends Phaser.Scene {
 
   // ═════════════════════════ 輸入 ═════════════════════════
 
+  /**
+   * 瞄準中（隕石、援軍、道具、英雄絕招、移動英雄、兵營集合點）點到塔、建造點或地圖機關時，
+   * 一律當成點地面，而且用手指實際點的位置（以前會改用塔／建造點的中心，援軍就放不到路上）。
+   */
+  private aimTap(p: Phaser.Input.Pointer): boolean {
+    if (this.mode === 'idle') return false;
+    this.onGroundTap(p.worldX, p.worldY);
+    return true;
+  }
+
+  /** 前兩關（戰役）點塔時自動顯示塔的介紹；之後熟悉了就不擋畫面 */
+  private get newbieInfo(): boolean {
+    return this.mode0 === 'campaign' && this.baseLevel.index < 2;
+  }
+
   private onSpotTap(i: number): void {
     if (this.world.result) return;
-    if (this.mode === 'meteor' || this.mode === 'reinforce' || this.mode === 'keg' || this.mode === 'ult') {
-      const s = this.world.spots[i];
-      this.onGroundTap(s.x, s.y);
-      return;
-    }
     const spot = this.world.spots[i];
     if (spot.tower) {
       this.openTowerMenu(spot.tower);
@@ -714,11 +726,23 @@ export class LevelScene extends Phaser.Scene {
         }
         return;
       case 'reinforce': {
-        const onPath = w.paths.some((p) => p.nearest({ x, y }).dist < 42);
-        if (!onPath) {
+        // 點在路上就放在那裡；離路不遠（手指點偏）就吸到最近的路上
+        let best: { dist: number; x: number; y: number } | null = null;
+        for (const p of w.paths) {
+          const n = p.nearest({ x, y });
+          if (!best || n.dist < best.dist) {
+            const q = p.posAt(n.d);
+            best = { dist: n.dist, x: q.x, y: q.y };
+          }
+        }
+        if (!best || best.dist > 80) {
           sfx.play('error');
           this.fx.floatText(x, y - 10, '✖', '#ff6a5a', 22);
           return;
+        }
+        if (best.dist > 42) {
+          x = best.x;
+          y = best.y;
         }
         if (w.castReinforce(x, y)) {
           sfx.play('horn', 0.4);
@@ -1010,7 +1034,9 @@ export class LevelScene extends Phaser.Scene {
     const opts: RadialOption[] = [];
     const range = w.towerRange(t);
     this.drawRange(t.x, t.y, range, t.type === 'barracks' ? 0x6aa0ff : 0xffffff);
-    this.ui.showInfo(this.towerInfo(t.type, t.def, null, t));
+    // 塔的介紹面板會蓋住畫面下方：只在前兩關自動彈出，之後要看數值就點升級 / 技能預覽
+    if (this.newbieInfo) this.ui.showInfo(this.towerInfo(t.type, t.def, null, t));
+    else this.ui.hideInfo();
     if (t.type === 'barracks') this.showRallyFlag(t, true);
 
     if (t.level < 3) {
@@ -1073,9 +1099,15 @@ export class LevelScene extends Phaser.Scene {
           angle: angs[i],
           dist: 70,
           onPreview: () => {
+            // 每一級的實際效果：✔ 已學、▶ 下一級
+            const rows = sk.costs.map((_, k) => {
+              const n = k + 1;
+              const mark = n <= lv ? '✔' : n === lv + 1 ? '▶' : '・';
+              return `${mark} ${L({ zh: `${n} 級`, en: `Lv ${n}` })}：${L(skillLevelText(sk.id, n))}`;
+            });
             this.ui.showInfo({
               title: L(sk.name),
-              desc: L(sk.desc),
+              desc: `${L(sk.desc)}\n${rows.join('\n')}`,
               stats: [[T('level'), `${lv} / ${sk.costs.length}`]],
               cost: cost ?? undefined,
             });
@@ -1614,11 +1646,7 @@ export class LevelScene extends Phaser.Scene {
           const hit = this.add.rectangle(ev.t.x, ev.t.y - 30, tw, tw + 8, 0xffffff, 0.001).setInteractive({ useHandCursor: true }).setDepth(ev.t.y);
           hit.on('pointerup', (p2: Phaser.Input.Pointer, _x: number, _y: number, e2: Phaser.Types.Input.EventData) => {
             e2?.stopPropagation?.();
-            if (!this.isTap(p2)) return;
-            if (this.mode === 'meteor' || this.mode === 'reinforce' || this.mode === 'hero' || this.mode === 'keg' || this.mode === 'ult') {
-              this.onGroundTap(ev.t.x, ev.t.y + 10);
-              return;
-            }
+            if (!this.isTap(p2) || this.aimTap(p2)) return;
             if (this.menuTarget?.tower === ev.t) this.closeMenu();
             else this.openTowerMenu(ev.t);
           });
