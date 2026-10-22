@@ -4,6 +4,7 @@
 //   1. scripts/art/meshy.mjs image / remesh / rig / anim 產生模型與動作（GLB），fetch 下載到 <models-dir>
 //   2. npm i --no-save three@0.169.0（只有渲染時需要，不進遊戲）
 //   3. node scripts/art/m3d/render.mjs scripts/art/m3d/raider.json <models-dir> public/assets/m3d/raider.webp
+//      （同時寫出 raider.json：裁掉透明邊的格子位置，Phaser atlas 格式）
 //   4. 把印出來的 unitPx / cycle 填進 src/td/view/Sheets.ts
 //
 // 用 headless Chromium 跑 three.js：卡通材質 + 描邊，從遊戲的斜俯視角渲染
@@ -56,7 +57,6 @@ srv.close();
 for (const [k, url] of Object.entries(r.sheets)) fs.writeFileSync(path.join(strips, `${k}.png`), Buffer.from(url.split(',')[1], 'base64'));
 fs.writeFileSync(path.join(strips, 'frame.json'), JSON.stringify({ ...r.frame, ...r.stats }));
 console.log('clips', JSON.stringify(r.clips));
-const durs = Object.fromEntries(cfg.anims.map((a) => [a.name, 1]));
-const out = execFileSync('python3', [path.join(repo, 'scripts/art/m3d/pack.py'), strips, outFile, JSON.stringify(cfg.dirs), JSON.stringify(cfg.anims.map((a) => a.name)), JSON.stringify(durs)], { encoding: 'utf8' });
+const out = execFileSync('python3', [path.join(repo, 'scripts/art/m3d/pack.py'), strips, outFile, JSON.stringify(cfg.dirs), JSON.stringify(cfg.anims.map((a) => a.name))], { encoding: 'utf8' });
 console.log(out.trim());
 fs.rmSync(strips, { recursive: true, force: true });

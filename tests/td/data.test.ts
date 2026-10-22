@@ -287,22 +287,30 @@ test('every tower skill describes what each level does', async () => {
         }
 });
 
-test('3D unit sheets match their atlas images and real sprites', async () => {
-  const { UNIT_SHEETS, SHEET_ANIMS, SHEET_DIRS } = await import('../../src/td/view/Sheets');
+test('3D unit sheets have every frame the game asks for', async () => {
+  const { UNIT_SHEETS, SHEET_ANIMS, SHEET_DIRS, sheetFrame } = await import('../../src/td/view/Sheets');
   const fs = await import('node:fs');
   const sharp = (await import('sharp')).default;
-  const sprites = new Set([...Object.values(ENEMIES).map((e) => e.sprite), ...Object.values(HEROES).map((h) => h.sprite)]);
+  const sprites = new Set([...Object.values(ENEMIES).map((e) => e.sprite), ...Object.values(HEROES).map((h) => h.sprite), ...Object.values(TOWERS).flatMap((t) => [...t.levels, ...t.branches].flatMap((l) => (l.soldier ? [l.soldier.sprite] : [])))]);
   for (const [tex, s] of Object.entries(UNIT_SHEETS)) {
-    assert.ok(sprites.has(tex), `${tex} is an enemy or hero sprite`);
-    const file = `public/assets/m3d/${s.file}.webp`;
-    assert.ok(fs.existsSync(file), `${file} exists (scripts/art/m3d/render.mjs)`);
-    const meta = await sharp(file).metadata();
-    assert.equal(meta.width, s.cols * s.size, `${s.file} width`);
-    assert.equal(meta.height, SHEET_DIRS.length * SHEET_ANIMS.length * s.size, `${s.file} height`);
-    for (const a of SHEET_ANIMS) {
-      assert.ok(s.anims[a].frames > 0 && s.anims[a].frames <= s.cols, `${s.file} ${a} frames`);
-      assert.ok(s.anims[a].dur > 0, `${s.file} ${a} duration`);
-    }
+    assert.ok(sprites.has(tex), `${tex} is an enemy, hero or soldier sprite`);
+    const img = `public/assets/m3d/${s.file}.webp`;
+    const json = `public/assets/m3d/${s.file}.json`;
+    assert.ok(fs.existsSync(img) && fs.existsSync(json), `${s.file} atlas exists (scripts/art/m3d/render.mjs)`);
+    const atlas = JSON.parse(fs.readFileSync(json, 'utf8')) as { frames: Record<string, { frame: { x: number; y: number; w: number; h: number }; sourceSize: { w: number; h: number } }> };
+    const meta = await sharp(img).metadata();
+    for (const dir of SHEET_DIRS)
+      for (const anim of SHEET_ANIMS) {
+        // 背面倒地用側面的格子
+        if (dir === 'back' && anim === 'death') continue;
+        assert.ok(s.anims[anim].frames > 0 && s.anims[anim].dur > 0, `${s.file} ${anim} timing`);
+        for (let i = 0; i < s.anims[anim].frames; i++) {
+          const f = atlas.frames[String(sheetFrame(s, dir, anim, i))];
+          assert.ok(f, `${s.file} ${dir} ${anim} #${i}`);
+          assert.equal(f.sourceSize.w, s.size, `${s.file} cell size`);
+          assert.ok(f.frame.x + f.frame.w <= meta.width! && f.frame.y + f.frame.h <= meta.height!, `${s.file} ${dir} ${anim} #${i} inside atlas`);
+        }
+      }
     assert.ok(s.footAt > 0.5 && s.footAt < 1 && s.unitPx > 0 && s.cycle > 0, `${s.file} metrics`);
   }
 });

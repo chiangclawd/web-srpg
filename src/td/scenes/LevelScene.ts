@@ -62,6 +62,8 @@ export class LevelScene extends Phaser.Scene {
 
   private acc = 0;
   private enemyViews = new Map<number, UnitView>();
+  /** 已排進下載的 3D 圖表（避免重複） */
+  private sheetQueued = new Set<string>();
   private soldierViews = new Map<number, UnitView>();
   private towerViews = new Map<number, TowerView>();
   private projViews = new Map<number, Phaser.GameObjects.Image>();
@@ -124,6 +126,7 @@ export class LevelScene extends Phaser.Scene {
     this.gemsEarned = 0;
     this.acc = 0;
     this.enemyViews = new Map();
+    this.sheetQueued = new Set();
     this.soldierViews = new Map();
     this.towerViews = new Map();
     this.projViews = new Map();
@@ -158,31 +161,43 @@ export class LevelScene extends Phaser.Scene {
     if (PAINTED_LEVELS.has(id) && !this.textures.exists(levelArtKey(id))) this.load.image(levelArtKey(id), `assets/levels/${id}.webp`);
     for (const k of hazardTextures(this.level.hazards ?? [])) if (!this.textures.exists(k)) this.load.image(k, `assets/sprites/hz/${k}.webp`);
     setUse3d(!!save().settings.art3d);
-    if (save().settings.art3d) this.queueSheets();
-  }
-
-  /** 3D 角色圖表（試作，每張約數百 KB，只在開啟時下載） */
-  private queueSheets(): boolean {
-    let queued = false;
-    for (const s of Object.values(UNIT_SHEETS)) {
-      if (this.textures.exists(sheetKey(s))) continue;
-      this.load.spritesheet(sheetKey(s), `assets/m3d/${s.file}.webp`, { frameWidth: s.size, frameHeight: s.size });
-      queued = true;
+    // 這關會出現的敵人、出戰英雄、兵營士兵先下載；其他（召喚物、無盡模式後段）出場時才補
+    if (save().settings.art3d) {
+      const sv = save();
+      const hero = HEROES[this.resumeCp?.heroId ?? sv.selectedHero] ?? HEROES.arthur;
+      const texs = new Set<string>([hero.sprite, ...BARRACKS_SPRITES]);
+      for (const w of this.level.waves) for (const g of w.groups) texs.add(ENEMIES[g.enemy].sprite);
+      for (const t of texs) this.queueSheet(t);
     }
-    return queued;
   }
 
-  /** 暫停選單切換 3D 角色：需要時先下載圖表，再把場上單位換外觀 */
+  /** 3D 角色圖表（試作，每個角色約 300 KB，只在開啟時下載）；回傳是否排進下載 */
+  private queueSheet(tex: string): boolean {
+    const s = UNIT_SHEETS[tex];
+    if (!s || this.textures.exists(sheetKey(s)) || this.sheetQueued.has(s.file)) return false;
+    this.sheetQueued.add(s.file);
+    this.load.atlas(sheetKey(s), `assets/m3d/${s.file}.webp`, `assets/m3d/${s.file}.json`);
+    return true;
+  }
+
+  /** 戰鬥中才需要的圖表：下載完把場上單位換成 3D */
+  private wantSheet(tex: string): void {
+    if (!save().settings.art3d || !this.queueSheet(tex)) return;
+    this.load.once('complete', () => this.refreshUnitArt());
+    this.load.start();
+  }
+
+  private refreshUnitArt(): void {
+    for (const v of this.enemyViews.values()) v.refreshArt();
+    for (const v of this.soldierViews.values()) v.refreshArt();
+  }
+
+  /** 暫停選單切換 3D 角色：需要時先下載場上單位的圖表，再換外觀 */
   setArt3d(on: boolean): void {
     setUse3d(on);
-    const refresh = (): void => {
-      for (const v of this.enemyViews.values()) v.refreshArt();
-      for (const v of this.soldierViews.values()) v.refreshArt();
-    };
-    if (on && this.queueSheets()) {
-      this.load.once('complete', refresh);
-      this.load.start();
-    } else refresh();
+    this.refreshUnitArt();
+    if (!on) return;
+    for (const v of [...this.enemyViews.values(), ...this.soldierViews.values()]) this.wantSheet(v.tex);
   }
 
   create(): void {
@@ -1427,6 +1442,7 @@ export class LevelScene extends Phaser.Scene {
       switch (ev.type) {
         case 'enemySpawn': {
           const e = ev.e;
+          this.wantSheet(e.def.sprite);
           const v = new UnitView(this, e.def.sprite, e.def.height, e.def.facesRight, !!e.def.flying, Math.max(20, e.def.radius * 2), true, 0x5ad04a);
           if (e.def.boss) v.body.setScale(v.body.scale);
           this.enemyViews.set(e.id, v);
@@ -1495,6 +1511,7 @@ export class LevelScene extends Phaser.Scene {
           } else {
             const isHero = s.kind === 'hero';
             const tex = s.sprite;
+            this.wantSheet(tex);
             v = new UnitView(this, tex, s.height, isHero ? s.hero!.def.facesRight : soldierFacesRight(tex), !!s.hero?.def.flying, isHero ? 30 : 22, isHero, isHero ? 0x4ab0ff : 0x7ad0ff);
             this.soldierViews.set(s.id, v);
           }
@@ -2260,6 +2277,9 @@ const PROJ_TEX: Record<string, string> = {
 };
 
 /** 士兵 sprite 原圖朝向 */
+/** 兵營各級士兵的外觀（3D 圖表開戰前先下載） */
+const BARRACKS_SPRITES = Object.values(TOWERS).flatMap((t) => [...t.levels, ...t.branches].flatMap((l) => (l.soldier ? [l.soldier.sprite] : [])));
+
 function soldierFacesRight(tex: string): boolean {
   return !['sp_gary', 'sp_vlad'].includes(tex);
 }

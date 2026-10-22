@@ -11,6 +11,16 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 72,
+    date: '2026-10-22',
+    title: { zh: '3D 角色擴大試作', en: 'More 3D Units (Beta)' },
+    items: [
+      { zh: '「3D 角色（試作）」多了 9 種：長槍兵（含黑衛士、鏡影騎士）、邪教徒、骷髏兵、刺客（英雄影刃也一起換）、兵營的步兵和長槍兵、哥布林、獵手、術士', en: '"3D units (beta)" now covers 9 more: Lancers (plus Blackguards and Echo Knights), Cultists, Skeletons, Assassins (and the hero Shade), barracks Footmen and Pikemen, Goblins, Hunters and Adepts' },
+      { zh: '獵手真的拉弓、術士舉法杖施法、長槍兵往前突刺；兵營士兵也會轉身面向敵人', en: 'Hunters draw their bows, Adepts raise their staffs to cast and Lancers thrust; barracks soldiers turn to face the enemy too' },
+      { zh: '只下載這一關會出場的角色，圖檔也縮小了，手機比較不吃記憶體', en: 'Only the units a level needs are downloaded, and the images are smaller, so phones use less memory' },
+    ],
+  },
+  {
     id: 71,
     date: '2026-10-22',
     title: { zh: '試作：3D 角色', en: 'Beta: 3D Units' },

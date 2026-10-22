@@ -37,17 +37,16 @@ export class Puppet extends Phaser.GameObjects.Image {
     this.resetGrid();
   }
 
-  /** 回到未變形的格子 */
+  /** 回到未變形的格子（裁切過的圖表格子只鋪在有畫面的那塊：frame.x/y 是裁切位移） */
   resetGrid(): void {
-    const fw = this.frame.realWidth;
-    const fh = this.frame.realHeight;
-    const ox = this.displayOriginX;
-    const oy = this.displayOriginY;
+    const fr = this.frame;
+    const ox = this.displayOriginX - fr.x;
+    const oy = this.displayOriginY - fr.y;
     for (let r = 0; r <= this.rows; r++) {
       for (let c = 0; c <= this.cols; c++) {
         const i = r * (this.cols + 1) + c;
-        this.px[i] = (c / this.cols) * fw - ox;
-        this.py[i] = (r / this.rows) * fh - oy;
+        this.px[i] = (c / this.cols) * fr.cutWidth - ox;
+        this.py[i] = (r / this.rows) * fr.cutHeight - oy;
         this.shade[i] = 1;
         this.va[i] = 1;
       }

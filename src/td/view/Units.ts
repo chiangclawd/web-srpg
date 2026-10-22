@@ -60,7 +60,8 @@ export class UnitView {
   private wasShrouded = false;
   private gait: Gait;
   private pose = restPose();
-  private tex = '';
+  /** 目前的外觀貼圖（3D 圖表依這個 key 對應） */
+  tex = '';
   /** 3D 預渲染的逐格動畫（沒有就用網格變形） */
   private sheet: UnitSheet | null = null;
   private dir: SheetDir = 'side';
