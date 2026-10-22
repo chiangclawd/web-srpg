@@ -1636,7 +1636,7 @@ LEVELS.push(
   {
     ...mirrorOf('l15'),
     // 左下那個點翻過來後會被手機的英雄 / 法術列蓋住，換到右邊
-    spots: [...mirrorOf('l15').spots.filter((p) => !(p.x < 200 && p.y > 500)), { x: 880, y: 540 }, { x: 280, y: 470 }],
+    spots: [...mirrorOf('l15').spots.filter((p) => !(p.x < 200 && p.y > 500)), { x: 880, y: 540 }, { x: 230, y: 500 }],
     id: 'l21',
     index: 20,
     bonus: true,
