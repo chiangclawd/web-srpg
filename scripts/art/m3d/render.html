@@ -181,11 +181,13 @@ function makeBook(spec, ramp) {
 }
 const PROP_MAKERS = { sword: makeSword, shield: makeShield, spear: makePole, staff: makePole, bow: makeBow, orb: makeOrb, book: makeBook };
 /** 依靜止姿勢算出道具在世界的位置與方向，再換算成手骨的區域座標掛上去 */
-function attachProps(root, props, ramp) {
+function attachProps(root, props, ramp, anim) {
   root.updateMatrixWorld(true);
   const bones = {};
   root.traverse((o) => { if (o.isBone) bones[o.name] = o; });
-  for (const spec of props ?? []) {
+  // per：某個動作要換握法時覆寫（例如施法時手腕轉了，法杖要換角度才不會指向鏡頭）
+  for (const base of props ?? []) {
+    const spec = { ...base, ...(base.per?.[anim] ?? {}) };
     const hand = bones[spec.bone];
     const fore = hand?.parent;
     if (!hand || !fore) continue;
@@ -301,7 +303,7 @@ window.renderSheets = async (opts) => {
     clipNames[a.url] = gltf.animations.map((c) => `${c.name}:${c.duration.toFixed(2)}`);
     const root = gltf.scene;
     prep(root);
-    attachProps(root, opts.props, ramp);
+    attachProps(root, opts.props, ramp, a.name);
     scene.add(root);
     const clip = a.clip != null ? gltf.animations.find((c) => c.name === a.clip) ?? gltf.animations[0] : gltf.animations[0];
     // 定標用 A 字姿勢（綁定姿勢）：所有動作的身高、腳底位置一致

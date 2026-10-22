@@ -51,8 +51,8 @@
       "to": 0.8
     },
     {
-      "url": "/models/anim_result_animation_glb_url.glb",
-      "clip": "Dead",
+      "url": "/models/death/anim_result_animation_glb_url.glb",
+      "clip": "dying_backwards",
       "name": "death",
       "frames": 10,
       "loop": false
@@ -63,15 +63,16 @@
       "type": "book",
       "bone": "LeftHand",
       "dir": [
+        0,
         0.3,
-        1,
-        0.2
+        1
       ],
       "reach": 0.06,
       "cover": "#2a4a8a",
       "trim": "#d4b060",
-      "width": 0.15,
-      "length": 0.19
+      "width": 0.19,
+      "length": 0.24,
+      "thick": 0.055
     }
   ]
 }

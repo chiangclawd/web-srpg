@@ -66,6 +66,12 @@ export const UNIT_SHEETS: Record<string, UnitSheet> = {
   mon_goblin: sheet('goblin', 0.593, { fill: 1 }),
   sp_enemy_archer: sheet('hunter', 0.688, { attack: 0.8 }),
   sp_enemy_mage: sheet('adept', 0.555, { attack: 0.9 }),
+  // 英雄（雷恩騎馬、艾莉亞騎獅鷲，自動綁骨架只支援人形，維持手繪）
+  sp_elena: sheet('elena', 0.817, { attack: 0.8, fill: 1 }),
+  sp_lila: sheet('lila', 0.846, { attack: 0.9, fill: 1 }),
+  sp_sharon: sheet('sharon', 0.577, { attack: 0.9 }),
+  // 維克多與他的近衛兵營共用
+  sp_viktor: sheet('viktor', 0.962, { attack: 0.75, fill: 1 }),
 };
 
 export const sheetKey = (s: UnitSheet): string => `m3d_${s.file}`;

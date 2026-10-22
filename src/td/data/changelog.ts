@@ -16,6 +16,7 @@ export const CHANGELOG: ChangeEntry[] = [
     title: { zh: '3D 角色正式上線', en: '3D Units On by Default' },
     items: [
       { zh: '3D 角色改成預設開啟：有 3D 版的士兵、敵人和英雄都會用 3D 動作出場', en: '3D units are now on by default: every soldier, enemy and hero with a 3D version uses it' },
+      { zh: '新增 3D 英雄：艾蓮娜拉弓射箭、莉拉舉法杖施法（另一手拿魔法書）、雪倫翻書念咒、維克多持長槍突刺（近衛兵營的騎士也一起換）', en: 'New 3D heroes: Elena draws her bow, Lila raises her staff with a spellbook in hand, Sharon reads from her tome and Viktor lunges with his spear (his royal-guard barracks knights too)' },
       { zh: '喜歡原本的手繪畫風？戰鬥中按暫停，關掉「3D 角色」就會切回去（之後也會記住）', en: 'Prefer the hand-drawn look? Pause a battle and switch off "3D units"; the game remembers your choice' },
     ],
   },

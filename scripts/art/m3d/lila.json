@@ -63,10 +63,19 @@
       "type": "staff",
       "bone": "RightHand",
       "dir": [
-        0,
-        -0.2,
-        1
+        0.3,
+        1,
+        0.55
       ],
+      "per": {
+        "attack": {
+          "dir": [
+            0,
+            1,
+            0.2
+          ]
+        }
+      },
       "length": 1.0,
       "back": 0.45,
       "shaft": "#c8ccd8",
@@ -77,13 +86,16 @@
       "type": "book",
       "bone": "LeftHand",
       "dir": [
+        0,
         0.3,
-        1,
-        0.2
+        1
       ],
       "reach": 0.06,
       "cover": "#4a2a6a",
-      "trim": "#c8a040"
+      "trim": "#c8a040",
+      "width": 0.17,
+      "length": 0.22,
+      "thick": 0.05
     }
   ]
 }
