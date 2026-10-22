@@ -11,11 +11,14 @@ export const storyArtKey = (id: string): string => `story_${id}`;
  * 沒有插畫、離線載不到都直接回呼 null，劇情改用一般對話框。
  */
 export function loadStoryArt(scene: Phaser.Scene, id: string, cb: (key: string | null) => void): void {
-  if (!STORY_ART[id]) {
+  const art = STORY_ART[id];
+  if (!art) {
     cb(null);
     return;
   }
-  const key = storyArtKey(id);
+  // 可以沿用另一段的插畫（鏡淵篇翻轉後再用）
+  const file = art.src ?? id;
+  const key = storyArtKey(file);
   if (scene.textures.exists(key)) {
     cb(key);
     return;
@@ -33,7 +36,7 @@ export function loadStoryArt(scene: Phaser.Scene, id: string, cb: (key: string |
   };
   scene.load.once('filecomplete-image-' + key, () => finish(true));
   scene.load.on('loaderror', onError);
-  scene.load.image(key, `assets/story/${id}.webp`);
+  scene.load.image(key, `assets/story/${file}.webp`);
   scene.load.start();
   // 網路很慢時不要讓玩家乾等：4 秒內沒載完就先用一般對話框
   scene.time.delayedCall(4000, () => finish(false));
@@ -104,6 +107,9 @@ export class StoryCinema {
     // 蓋滿畫面再多留一點平移空間
     this.cover = Math.max(w / this.art.frame.width, VIEW_H / this.art.frame.height) * 1.12;
     this.art.setScale(this.cover).setAlpha(0);
+    const look = STORY_ART[id];
+    if (look?.flip) this.art.setFlipX(true);
+    if (look?.grade) this.art.setTint(look.grade);
     this.layer.add(this.art);
     const atmos = STORY_ART[id]?.atmos;
     if (atmos) {

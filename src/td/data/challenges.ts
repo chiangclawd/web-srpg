@@ -187,10 +187,12 @@ export const BOSS_RUSH: { boss: string; escort: string; count: number }[] = [
   { boss: 'fire_lord', escort: 'magma_imp', count: 10 },
   { boss: 'leviathan', escort: 'drowned', count: 8 },
   { boss: 'cult_leader', escort: 'demon', count: 6 },
+  { boss: 'echo_giant', escort: 'shard', count: 10 },
+  { boss: 'echo_umbra', escort: 'echo_knight', count: 4 },
 ];
 
 /**
- * 首領連戰：在任一張地圖上依序迎戰十名首領（各帶一支隨行部隊）。
+ * 首領連戰：在任一張地圖上依序迎戰全部首領（各帶一支隨行部隊）。
  * 起始金幣多、20 條命，首領漏失最多扣 5 條命；依剩餘生命給 1~3 星。
  */
 export function bossRushLevel(level: LevelDef): LevelDef {

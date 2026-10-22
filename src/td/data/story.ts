@@ -6,7 +6,7 @@ export interface StoryLine {
   text: L10n;
 }
 
-export const SPEAKERS: Record<string, { name: L10n; enemy?: boolean }> = {
+export const SPEAKERS: Record<string, { name: L10n; enemy?: boolean; portrait?: string }> = {
   arthur: { name: { zh: '亞瑟', en: 'Arthur' } },
   sharon: { name: { zh: '夏儂', en: 'Sharon' } },
   elena: { name: { zh: '艾蓮娜', en: 'Elena' } },
@@ -22,6 +22,8 @@ export const SPEAKERS: Record<string, { name: L10n; enemy?: boolean }> = {
   high_priest: { name: { zh: '黑暗主教', en: 'Dark Bishop' }, enemy: true },
   sub_priest: { name: { zh: '凜', en: 'Rin' }, enemy: true },
   cult_leader: { name: { zh: '黯', en: 'Umbra' }, enemy: true },
+  // 鏡淵篇：深淵之鏡裡的教主倒影（沿用教主立繪）
+  echo_umbra: { name: { zh: '鏡中的黯', en: 'Umbra’s Reflection' }, enemy: true, portrait: 'cult_leader' },
 };
 
 /** 劇情用到、但不是英雄的立繪（BootScene 會另外載入） */
@@ -31,8 +33,11 @@ export const STORY_PORTRAITS = ['gary', 'morden', 'selene', 'carl', 'high_priest
 /** 劇情插畫上飄的粒子 */
 export type StoryAtmos = 'leaves' | 'snow' | 'blizzard' | 'embers' | 'sand' | 'ghost' | 'motes' | 'dark' | 'petals';
 
-/** 有手繪劇情插畫的段落（assets/story/<id>.webp）：關卡開場與三段尾聲 */
-export const STORY_ART: Record<string, { atmos?: StoryAtmos; startPan?: number }> = {
+/**
+ * 有手繪劇情插畫的段落（assets/story/<id>.webp）：關卡開場與各段尾聲。
+ * src：沿用另一段的插畫；flip / grade：左右翻轉、乘色（鏡淵篇把舊場景「照進鏡子裡」）。
+ */
+export const STORY_ART: Record<string, { atmos?: StoryAtmos; startPan?: number; src?: string; flip?: boolean; grade?: number }> = {
   l1: { atmos: 'motes' },
   l2: { atmos: 'snow' },
   l3: { atmos: 'dark' },
@@ -55,6 +60,11 @@ export const STORY_ART: Record<string, { atmos?: StoryAtmos; startPan?: number }
   ep_main: { atmos: 'petals' },
   ep_side: { atmos: 'motes' },
   ep_extra: { atmos: 'motes' },
+  // 鏡淵篇：舊戰場的插畫翻轉、染紫，像是鏡子裡的倒影
+  l20: { atmos: 'dark', src: 'l3', flip: true, grade: 0xc8b8ff },
+  l21: { atmos: 'snow', src: 'l15', flip: true, grade: 0xb8b0ff },
+  l22: { atmos: 'dark', src: 'l12', flip: true, grade: 0xd0b8ff, startPan: -1 },
+  ep_mirror: { atmos: 'petals', src: 'ep_main' },
 };
 
 /** 每關開場對話（第一次進入戰役時播放） */
@@ -134,6 +144,21 @@ export const STORY: Record<string, StoryLine[]> = {
     { who: 'shadow', text: { zh: '夜裡塔的視線會變短，只有營火和民房照得到的塔能看得遠。夜行的魔物交給我。', en: 'Towers see less far at night. Only towers lit by campfires and houses keep their full range. Leave the night creatures to me.' } },
     { who: 'sharon', text: { zh: '小心提燈的怨靈，躲在黑暗裡的牠只會受到一半傷害。塔身邊和英雄身上都有光，讓牠飛進光裡再打！', en: 'Watch out for the lantern wraiths. In the dark they take only half damage. Towers and heroes give off light, so strike when they drift into it!' } },
   ],
+  l20: [
+    { who: 'gary', text: { zh: '隊長！村口紀念碑旁冒出一面發光的鏡子……鏡子裡的森林跟我們打過仗的那片一模一樣，可是左右顛倒了！', en: 'Captain! A glowing mirror appeared beside the monument at the gate. The forest inside looks just like the one we fought in, only flipped left to right!' } },
+    { who: 'lila', text: { zh: '是深淵之門封印時崩落的碎片。它把我們記憶裡的戰場照了出來，裡面的敵人……全是過去敵人的殘影。', en: 'It is a shard that broke off when the Abyss Gate was sealed. It reflects the battlefields in our memories, and the enemies inside are echoes of old foes.' } },
+    { who: 'arthur', text: { zh: '殘影要從鏡子裡走出來了，在鏡中把它們擋下！鏡影騎士會突然閃到前方，防線後面要多留幾座塔。', en: 'The echoes are about to walk out of the mirror. Stop them inside it! Echo Knights can flash forward, so keep a few towers behind the front line.' } },
+  ],
+  l21: [
+    { who: 'elena', text: { zh: '鏡子裡的冰河沒有白天……冰霜巨人又站起來了，可是牠全身像玻璃一樣透著紫光。', en: 'The glacier in the mirror has no daylight… The frost giant is standing again, but its whole body glows violet like glass.' } },
+    { who: 'sharon', text: { zh: '那只是巨人的殘影。鏡晶魔像被打碎時會散成碎片飛走，記得留幾座打得到空中的塔。', en: 'That is only the giant’s echo. Shard Golems burst into flying shards when they break, so keep some towers that can hit the air.' } },
+    { who: 'rain', text: { zh: '夜裡塔的射程會變短，只有營火旁的塔看得遠。上吧，把鏡子裡的冬天打碎！', en: 'Towers see less far at night, except the ones by the campfires. Let’s go and shatter the winter in the mirror!' } },
+  ],
+  l22: [
+    { who: 'echo_umbra', text: { zh: '你們封住了門，卻封不住門的倒影。這面鏡子，就是新的深淵。', en: 'You sealed the gate, but not its reflection. This mirror is the new abyss.' } },
+    { who: 'aria', text: { zh: '他的鏡之護盾會保護身邊的部下！先把部下引開，再集中火力打他！', en: 'His mirror ward shields the troops around him! Draw them away first, then focus fire on him!' } },
+    { who: 'arthur', text: { zh: '不過是個影子。大家，最後一次——把這面鏡子打碎！', en: 'You are only a shadow. Everyone, one last time: shatter this mirror!' } },
+  ],
   l19: [
     { who: 'rain', text: { zh: '礦坑那邊怎麼有綠色的光？卡爾不是早就被我們打倒了嗎……', en: 'Why is there green light over at the mines? Didn’t we beat Carl long ago…?' } },
     { who: 'sharon', text: { zh: '是鬼火。血月喚醒了埋在坑道裡的礦工亡魂，狼人也循著月光跟來了。', en: 'Ghostfire. The blood moon woke the miners buried in the tunnels, and the werewolves followed the moonlight here.' } },
@@ -172,6 +197,14 @@ export const EPILOGUE: StoryLine[] = [
   { who: 'arthur', text: { zh: '那就回家吧。為了守護這片土地的每一個人，乾杯！', en: 'Then let us go home. To everyone who held this land together. Cheers!' } },
 ];
 
-export type EpilogueId = 'main' | 'side' | 'extra';
+/** 通關鏡淵篇終章（鏡淵之門）後的尾聲 */
+export const MIRROR_EPILOGUE: StoryLine[] = [
+  { who: 'lila', text: { zh: '鏡子碎了。碎片化成光點，一片一片飄回天上。', en: 'The mirror has shattered. The shards turned into motes of light and drifted back up into the sky.' } },
+  { who: 'sharon', text: { zh: '那些被困在鏡子裡的殘影，終於能安息了。', en: 'The echoes trapped inside the mirror can finally rest.' } },
+  { who: 'gary', text: { zh: '紀念碑旁邊又只剩下花了。我還是比較喜歡這樣！', en: 'There are only flowers by the monument again. I like it much better this way!' } },
+  { who: 'arthur', text: { zh: '不管是真實還是倒影，這個王國都由我們守護。謝謝你，指揮官。', en: 'Real or reflected, we will always guard this kingdom. Thank you, Commander.' } },
+];
 
-export const EPILOGUES: Record<EpilogueId, StoryLine[]> = { main: EPILOGUE, side: SIDE_EPILOGUE, extra: EXTRA_EPILOGUE };
+export type EpilogueId = 'main' | 'side' | 'extra' | 'mirror';
+
+export const EPILOGUES: Record<EpilogueId, StoryLine[]> = { main: EPILOGUE, side: SIDE_EPILOGUE, extra: EXTRA_EPILOGUE, mirror: MIRROR_EPILOGUE };

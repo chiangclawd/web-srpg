@@ -190,6 +190,26 @@ export class LevelScene extends Phaser.Scene {
     if (this.textures.exists(painted)) {
       const img = this.add.image(-PLAY_X0, 0, painted).setOrigin(0).setDepth(DEPTH.bg);
       img.setScale(WORLD_W / img.width, VIEW_H / img.height);
+      // 鏡淵篇：同一張手繪圖左右翻轉、染上淡紫，成為另一個地方
+      if (this.baseLevel.mirror) {
+        img.setFlipX(true);
+        // 鏡子裡的世界：空中飄著細碎的紫色鏡光
+        this.add
+          .particles(0, 0, 'fx_soft', {
+            x: { min: -PLAY_X0, max: WORLD_W - PLAY_X0 },
+            y: { min: 0, max: VIEW_H },
+            lifespan: 4200,
+            speedY: { min: -14, max: -4 },
+            speedX: { min: -6, max: 6 },
+            scale: { start: 0.02, end: 0.09 },
+            alpha: { start: 0, end: 0.75, ease: 'Sine.easeInOut' },
+            tint: [0xd8c0ff, 0xa890ff, 0xffffff],
+            blendMode: 'ADD',
+            frequency: 160,
+          })
+          .setDepth(DEPTH.decal + 6);
+      }
+      if (this.baseLevel.grade) img.setTint(this.baseLevel.grade);
     } else {
       const bgS = bgScale(1.5);
       const bg = paintLevel(this.level, WORLD_W, PLAY_X0, bgS);

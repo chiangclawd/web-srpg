@@ -50,6 +50,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'boss_giant', name: { zh: '冰河崩塌', en: 'Glacier Breaker' }, desc: { zh: '擊敗冰霜巨人・約頓', en: 'Defeat Jotun the Frost Giant' }, icon: 'ic_skull' },
   { id: 'boss_ignis', name: { zh: '撲滅烈焰', en: 'Fire Fighter' }, desc: { zh: '擊敗炎魔・伊格尼斯', en: 'Defeat Ignis the Fire Lord' }, icon: 'ic_skull' },
   { id: 'boss_leviathan', name: { zh: '平息怒海', en: 'Calm Waters' }, desc: { zh: '擊敗深淵利維坦', en: 'Defeat the Abyssal Leviathan' }, icon: 'ic_skull' },
+  { id: 'boss_echo_giant', name: { zh: '冰鏡碎裂', en: 'Cracked Glass' }, desc: { zh: '擊敗巨人之影', en: 'Defeat the Echo of the Giant' }, icon: 'ic_skull' },
+  { id: 'boss_echo_umbra', name: { zh: '破鏡之人', en: 'Mirror Breaker' }, desc: { zh: '擊敗鏡淵之黯，完成鏡淵篇', en: 'Defeat Umbra Reflected and finish the Mirror chapter' }, icon: 'ic_skull' },
   { id: 'side_clear', name: { zh: '外傳完結', en: 'Side Story Complete' }, desc: { zh: '通關外傳終章「熔岩火山口」', en: 'Clear the side-story finale, Ember Crater' }, icon: 'ic_crown' },
   { id: 'heroic_first', name: { zh: '英雄本色', en: 'True Hero' }, desc: { zh: '完成任一英雄挑戰', en: 'Complete any Heroic challenge' }, icon: 'ic_crown' },
   { id: 'iron_first', name: { zh: '鋼鐵意志', en: 'Iron Will' }, desc: { zh: '完成任一鋼鐵挑戰', en: 'Complete any Iron challenge' }, icon: 'ic_shield' },
@@ -88,6 +90,8 @@ const BOSS_ACH: Record<string, string> = {
   frost_giant: 'boss_giant',
   fire_lord: 'boss_ignis',
   leviathan: 'boss_leviathan',
+  echo_giant: 'boss_echo_giant',
+  echo_umbra: 'boss_echo_umbra',
 };
 
 /** 依本場結果與累計存檔判定新解鎖的成就（會寫入 save.achievements） */
