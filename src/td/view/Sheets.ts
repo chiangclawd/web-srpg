@@ -31,15 +31,18 @@ export interface UnitSheet {
 /**
  * fill：手繪精靈的人物佔貼圖高度的比例（大多 9 成；骷髏、哥布林畫滿整張）。
  * 3D 角色用同樣比例，兩種畫風並排時一樣大。
+ * size：每格邊長。一般 144（角色約 80 px 高）；英雄用 288，手機放大看時跟手繪一樣清楚。
  */
-const sheet = (file: string, cycle: number, o: { attack?: number; death?: number; fill?: number } = {}): UnitSheet => {
+const sheet = (file: string, cycle: number, o: { attack?: number; death?: number; fill?: number; size?: number } = {}): UnitSheet => {
   const fill = o.fill ?? 0.9;
+  const size = o.size ?? 144;
   return {
     file,
-    size: 144,
+    size,
     cols: 10,
     footAt: 0.82,
-    unitPx: 80 / fill,
+    // 渲染時鏡頭框住 1.8 個身高
+    unitPx: size / 1.8 / fill,
     cycle: cycle * fill,
     anims: {
       idle: { frames: 8, dur: 4.03 },
@@ -51,10 +54,13 @@ const sheet = (file: string, cycle: number, o: { attack?: number; death?: number
   };
 };
 
+/** 英雄的格子大小（2 倍解析度） */
+const HERO = 288;
+
 /** scripts/art/m3d 渲染出來的圖表（key = 原本的精靈貼圖；cycle 由 render.mjs 量腳步算出） */
 export const UNIT_SHEETS: Record<string, UnitSheet> = {
   sp_enemy_sword: sheet('raider', 0.607),
-  sp_arthur: sheet('arthur', 0.601, { attack: 0.75, death: 1.25 }),
+  sp_arthur: sheet('arthur', 0.601, { attack: 0.75, death: 1.25, size: HERO }),
   // 長槍兵、黑衛士、鏡影騎士共用
   sp_enemy_lance: sheet('lancer', 0.763, { attack: 0.75 }),
   sp_eo: sheet('cultist', 0.625),
@@ -67,7 +73,7 @@ export const UNIT_SHEETS: Record<string, UnitSheet> = {
   sp_enemy_archer: sheet('hunter', 0.688, { attack: 0.8 }),
   sp_enemy_mage: sheet('adept', 0.555, { attack: 0.9 }),
   // 英雄（雷恩騎馬、艾莉亞騎獅鷲，自動綁骨架只支援人形，維持手繪）
-  sp_elena: sheet('elena', 0.817, { attack: 0.8, fill: 1 }),
+  sp_elena: sheet('elena', 0.817, { attack: 0.8, fill: 1, size: HERO }),
   sp_lila: sheet('lila', 0.846, { attack: 0.9, fill: 1 }),
   sp_sharon: sheet('sharon', 0.577, { attack: 0.9 }),
   // 維克多與他的近衛兵營共用
