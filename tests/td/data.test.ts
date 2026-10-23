@@ -314,3 +314,13 @@ test('3D unit sheets have every frame the game asks for', async () => {
     assert.ok(s.footAt > 0.5 && s.footAt < 1 && s.unitPx > 0 && s.cycle > 0, `${s.file} metrics`);
   }
 });
+
+test('3D sheet download URLs carry the current content fingerprint', async () => {
+  const { SHEET_REV } = await import('../../src/td/view/sheetRev');
+  const { UNIT_SHEETS } = await import('../../src/td/view/Sheets');
+  // @ts-expect-error 純 JS 腳本
+  const { sheetRevs } = await import('../../scripts/art/m3d/rev.mjs');
+  // 圖改了卻沒更新指紋，手機的離線快取會拿舊圖配新座標（角色變成閃爍的碎片）
+  assert.deepEqual(SHEET_REV, sheetRevs(), 'run: node scripts/art/m3d/rev.mjs');
+  for (const s of Object.values(UNIT_SHEETS)) assert.ok(SHEET_REV[s.file], `${s.file} has a fingerprint`);
+});

@@ -5,7 +5,7 @@
 //   2. npm i --no-save three@0.169.0（只有渲染時需要，不進遊戲）
 //   3. node scripts/art/m3d/render.mjs scripts/art/m3d/raider.json <models-dir> public/assets/m3d/raider.webp
 //      （同時寫出 raider.json：裁掉透明邊的格子位置，Phaser atlas 格式）
-//   4. 把印出來的 unitPx / cycle 填進 src/td/view/Sheets.ts
+//   4. 把印出來的 unitPx / cycle 填進 src/td/view/Sheets.ts（版本指紋 sheetRev.ts 會自動更新）
 //
 // 用 headless Chromium 跑 three.js：卡通材質 + 描邊，從遊戲的斜俯視角渲染
 // 側面 / 正面 / 背面 × 待機 / 走路 / 出招 / 受擊 / 倒地，再交給 pack.py 排成一張圖。
@@ -60,3 +60,5 @@ console.log('clips', JSON.stringify(r.clips));
 const out = execFileSync('python3', [path.join(repo, 'scripts/art/m3d/pack.py'), strips, outFile, JSON.stringify(cfg.dirs), JSON.stringify(cfg.anims.map((a) => a.name))], { encoding: 'utf8' });
 console.log(out.trim());
 fs.rmSync(strips, { recursive: true, force: true });
+// 更新下載網址的版本指紋（src/td/view/sheetRev.ts）
+console.log(execFileSync('node', [path.join(repo, 'scripts/art/m3d/rev.mjs')], { encoding: 'utf8' }).trim());

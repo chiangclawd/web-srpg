@@ -2,7 +2,8 @@
 // - 頁面導覽：先走網路（拿到新版），失敗才用快取
 // - 其他同源 GET（打包檔、圖片、字型）：先回快取、背景更新（stale-while-revalidate）
 // - 帶 Range 的請求（音樂串流）不處理：206 部分回應無法安全快取
-const CACHE = 'kb-td-v1';
+// 版本號變了，啟用時會清掉舊快取（v2：清掉 3D 圖表改格式前留下的舊圖）
+const CACHE = 'kb-td-v2';
 
 self.addEventListener('install', () => self.skipWaiting());
 

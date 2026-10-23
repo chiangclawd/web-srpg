@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 75,
+    date: '2026-10-23',
+    title: { zh: '修正 3D 角色閃爍', en: '3D Flicker Fix' },
+    items: [
+      { zh: '修正手機上亞瑟、蠻族掠奪者等 3D 角色有時只剩一塊塊閃爍的碎片：手機留著舊版的角色圖，跟新版的動作格子對不起來；現在每次更新圖檔都會換新網址，並清掉舊的快取', en: 'Fixed 3D units such as Arthur and the Barbarian Raider sometimes showing as flickering fragments on phones: the phone kept an old copy of the image that did not match the new frame layout. Updated images now get a new address, and old cached copies are cleared' },
+    ],
+  },
+  {
     id: 74,
     date: '2026-10-22',
     title: { zh: '3D 角色正式上線', en: '3D Units On by Default' },

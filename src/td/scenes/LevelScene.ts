@@ -23,6 +23,7 @@ import { visualMuzzleH } from '../art/towers';
 import { DEPTH, Fx, camShake } from '../view/Fx';
 import { TowerView, UnitView, setUnitDust } from '../view/Units';
 import { UNIT_SHEETS, setUse3d, sheetKey } from '../view/Sheets';
+import { SHEET_REV } from '../view/sheetRev';
 import { HazardLayer, hazardTextures } from '../view/Hazards';
 import { EggLayer } from '../view/Eggs';
 import { NightLayer } from '../view/Night';
@@ -176,7 +177,9 @@ export class LevelScene extends Phaser.Scene {
     const s = UNIT_SHEETS[tex];
     if (!s || this.textures.exists(sheetKey(s)) || this.sheetQueued.has(s.file)) return false;
     this.sheetQueued.add(s.file);
-    this.load.atlas(sheetKey(s), `assets/m3d/${s.file}.webp`, `assets/m3d/${s.file}.json`);
+    // ?v= 內容指紋：重新渲染後網址改變，離線快取不會拿舊圖配新的格子座標
+    const v = SHEET_REV[s.file] ?? '0';
+    this.load.atlas(sheetKey(s), `assets/m3d/${s.file}.webp?v=${v}`, `assets/m3d/${s.file}.json?v=${v}`);
     return true;
   }
 
