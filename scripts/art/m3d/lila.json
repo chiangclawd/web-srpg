@@ -9,7 +9,7 @@
     "front": 15,
     "back": 165
   },
-  "size": 144,
+  "size": 288,
   "ss": 3,
   "span": 1.8,
   "elev": 12,
@@ -18,7 +18,7 @@
     230,
     255
   ],
-  "rim": 1.1,
+  "rim": 2.2,
   "anims": [
     {
       "url": "/models/anim_result_animation_glb_url.glb",
@@ -97,5 +97,9 @@
       "length": 0.22,
       "thick": 0.05
     }
+  ],
+  "sharpen": [
+    1.2,
+    70
   ]
 }

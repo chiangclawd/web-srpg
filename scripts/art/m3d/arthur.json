@@ -46,10 +46,10 @@
     15,
     165
   ],
-  "size": 144,
+  "size": 288,
   "ss": 3,
   "span": 1.8,
-  "rim": 1.1,
+  "rim": 2.2,
   "props": [
     {
       "type": "sword",
@@ -72,14 +72,14 @@
       ],
       "reach": 0.0,
       "offset": [
-        0.03,
+        0.07,
         0.04,
-        0.02
+        0.045
       ],
-      "face": "#cfd5dd",
-      "mark": "#9aa3ae",
-      "emblem": "lion",
-      "rim": "#a8b0ba"
+      "face": "#c4cbd4",
+      "rim": "#9aa3ae",
+      "emblemImage": "/scripts/art/m3d/props/arthur_lion.png",
+      "radius": 0.18
     }
   ],
   "elev": 12,
@@ -92,5 +92,9 @@
     "side": 45,
     "front": 15,
     "back": 165
-  }
+  },
+  "sharpen": [
+    1.2,
+    70
+  ]
 }

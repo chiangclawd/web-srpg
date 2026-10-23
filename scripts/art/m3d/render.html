@@ -31,6 +31,16 @@ function toonRamp(opts) {
 function toon(color, ramp, map = null) {
   return new THREE.MeshToonMaterial({ color, map, gradientMap: ramp });
 }
+/** 道具用到的圖片（renderSheets 開始時先載好，畫布繪製是同步的） */
+const IMAGES = {};
+function loadImage(url) {
+  return new Promise((ok, no) => {
+    const im = new Image();
+    im.onload = () => ok(im);
+    im.onerror = no;
+    im.src = url;
+  });
+}
 function shieldFace(spec) {
   const c = document.createElement('canvas');
   c.width = c.height = 256;
@@ -51,6 +61,11 @@ function shieldFace(spec) {
     g.moveTo(70, 70); g.lineTo(186, 186);
     g.moveTo(186, 70); g.lineTo(70, 186);
     g.stroke();
+  } else if (spec.emblemImage && IMAGES[spec.emblemImage]) {
+    // 從手繪精靈裁下的徽章（正面的浮雕），貼在盾面中央
+    const im = IMAGES[spec.emblemImage];
+    const d = 256 * (spec.emblemSize ?? 0.82);
+    g.drawImage(im, 128 - d / 2, 128 - d / 2, d, d);
   } else if (spec.emblem === 'lion') {
     g.fillStyle = spec.mark;
     g.beginPath(); g.arc(128, 128, 62, 0, Math.PI * 2); g.fill();
@@ -218,6 +233,7 @@ function attachProps(root, props, ramp, anim) {
 }
 
 window.renderSheets = async (opts) => {
+  for (const p of opts.props ?? []) if (p.emblemImage && !IMAGES[p.emblemImage]) IMAGES[p.emblemImage] = await loadImage(p.emblemImage);
   const size = opts.size ?? 128;
   const ss = opts.ss ?? 3;
   const W = size * ss;
