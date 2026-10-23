@@ -66,7 +66,7 @@ export const UNIT_SHEETS: Record<string, UnitSheet> = {
   sp_eo: sheet('cultist', 0.625),
   mon_skeleton: sheet('skeleton', 0.587, { fill: 1 }),
   // 刺客與英雄影刃共用
-  sp_shadow: sheet('shadow', 0.602, { attack: 0.55 }),
+  sp_shadow: sheet('shadow', 0.602, { attack: 0.55, size: HERO }),
   sp_player_sword: sheet('soldier', 0.612),
   sp_player_lancer: sheet('pike', 0.783, { attack: 0.75 }),
   mon_goblin: sheet('goblin', 0.593, { fill: 1 }),
@@ -74,10 +74,10 @@ export const UNIT_SHEETS: Record<string, UnitSheet> = {
   sp_enemy_mage: sheet('adept', 0.555, { attack: 0.9 }),
   // 英雄（雷恩騎馬、艾莉亞騎獅鷲，自動綁骨架只支援人形，維持手繪）
   sp_elena: sheet('elena', 0.817, { attack: 0.8, fill: 1, size: HERO }),
-  sp_lila: sheet('lila', 0.846, { attack: 0.9, fill: 1 }),
-  sp_sharon: sheet('sharon', 0.577, { attack: 0.9 }),
+  sp_lila: sheet('lila', 0.846, { attack: 0.9, fill: 1, size: HERO }),
+  sp_sharon: sheet('sharon', 0.577, { attack: 0.9, size: HERO }),
   // 維克多與他的近衛兵營共用
-  sp_viktor: sheet('viktor', 0.962, { attack: 0.75, fill: 1 }),
+  sp_viktor: sheet('viktor', 0.962, { attack: 0.75, fill: 1, size: HERO }),
 };
 
 export const sheetKey = (s: UnitSheet): string => `m3d_${s.file}`;
