@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 76,
+    date: '2026-10-23',
+    title: { zh: '3D 英雄更清楚', en: 'Sharper 3D Heroes' },
+    items: [
+      { zh: '亞瑟、艾蓮娜、莉拉、雪倫、維克多、影刃的 3D 圖改成兩倍解析度：手機上放大看也很清楚，臉、頭髮、盔甲花紋都看得到', en: 'Arthur, Elena, Lila, Sharon, Viktor and Shade now use double-resolution 3D art, so faces, hair and armour stay crisp even when you zoom in on a phone' },
+      { zh: '亞瑟的盾牌換上跟手繪版一樣的獅子浮雕，也不會再有手穿過盾牌', en: "Arthur's shield now carries the same lion relief as his hand-drawn art, and his hand no longer pokes through it" },
+    ],
+  },
+  {
     id: 75,
     date: '2026-10-23',
     title: { zh: '修正 3D 角色閃爍', en: '3D Flicker Fix' },
