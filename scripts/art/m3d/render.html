@@ -299,8 +299,67 @@ window.renderSheets = async (opts) => {
       const map = m.map ?? null;
       if (map) map.colorSpace = THREE.SRGBColorSpace;
       o.material = new THREE.MeshToonMaterial({ map, color: map ? 0xffffff : m.color, gradientMap: ramp });
+      if (opts.recolor) recolorMesh(o);
       o.frustumCulled = false;
     });
+  };
+  // 換色：同一個模型做成不同角色（敵方騎兵 → 英雄雷恩）。
+  // recolor: { rider: [規則], mount: [規則] }；綁在 Rider 骨頭上的頂點用 rider，其他（坐騎）用 mount。
+  // 規則：{ hue: [起, 迄]（度，可跨 0）, sat: [下, 上], val: [下, 上], set: { h, s, v }, mul: { s, v } }
+  // 以貼圖的 sRGB 顏色判斷，第一條符合的規則生效
+  const recolorMesh = (o) => {
+    const pos = o.geometry.attributes.position;
+    const zone = new Float32Array(pos.count);
+    const si = o.geometry.attributes.skinIndex;
+    const sw = o.geometry.attributes.skinWeight;
+    const rider = o.isSkinnedMesh ? o.skeleton.bones.findIndex((b) => /rider/i.test(b.name)) : -1;
+    if (rider >= 0 && si && sw)
+      for (let i = 0; i < pos.count; i++) for (let k = 0; k < 4; k++) if (si.getComponent(i, k) === rider) zone[i] += sw.getComponent(i, k);
+    o.geometry.setAttribute('kbZone', new THREE.BufferAttribute(zone, 1));
+    const f = (x) => Number(x).toFixed(4);
+    const rules = (list) =>
+      (list ?? [])
+        .map((r) => {
+          const c = [];
+          if (r.hue) c.push(r.hue[0] <= r.hue[1] ? `(h >= ${f(r.hue[0] / 360)} && h <= ${f(r.hue[1] / 360)})` : `(h >= ${f(r.hue[0] / 360)} || h <= ${f(r.hue[1] / 360)})`);
+          if (r.sat) c.push(`(s >= ${f(r.sat[0])} && s <= ${f(r.sat[1])})`);
+          if (r.val) c.push(`(v >= ${f(r.val[0])} && v <= ${f(r.val[1])})`);
+          const a = [];
+          if (r.set?.h != null) a.push(`h = ${f(r.set.h / 360)};`);
+          if (r.set?.s != null) a.push(`s = ${f(r.set.s)};`);
+          if (r.set?.v != null) a.push(`v = ${f(r.set.v)};`);
+          if (r.mul?.s != null) a.push(`s = clamp(s * ${f(r.mul.s)}, 0.0, 1.0);`);
+          if (r.mul?.v != null) a.push(`v = clamp(v * ${f(r.mul.v)}, 0.0, 1.0);`);
+          return `if (${c.join(' && ') || 'true'}) { ${a.join(' ')} }`;
+        })
+        .join(' else ');
+    const glsl = `
+      vec3 kbHsv(vec3 c) {
+        vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+        vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+        vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+        float d = q.x - min(q.w, q.y);
+        return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + 1e-10)), d / (q.x + 1e-10), q.x);
+      }
+      vec3 kbRgb(vec3 c) {
+        vec3 p = abs(fract(c.xxx + vec3(1.0, 2.0 / 3.0, 1.0 / 3.0)) * 6.0 - 3.0);
+        return c.z * mix(vec3(1.0), clamp(p - 1.0, 0.0, 1.0), c.y);
+      }
+      vec3 kbRecolor(vec3 lin, float zone) {
+        vec3 hsv = kbHsv(pow(max(lin, vec3(0.0)), vec3(1.0 / 2.2)));
+        float h = hsv.x, s = hsv.y, v = hsv.z;
+        if (zone > 0.5) { ${rules(opts.recolor.rider)} } else { ${rules(opts.recolor.mount)} }
+        return pow(kbRgb(vec3(fract(h), s, v)), vec3(2.2));
+      }`;
+    o.material.onBeforeCompile = (sh) => {
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nattribute float kbZone;\nvarying float vKbZone;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvKbZone = kbZone;');
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nvarying float vKbZone;\n' + glsl)
+        .replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.rgb = kbRecolor(diffuseColor.rgb, vKbZone);');
+    };
+    o.material.customProgramCacheKey = () => JSON.stringify(opts.recolor);
   };
 
   const tmp = document.createElement('canvas');

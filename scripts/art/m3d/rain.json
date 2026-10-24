@@ -1,0 +1,130 @@
+{
+ "yaws": [
+  45,
+  15,
+  165
+ ],
+ "dirs": {
+  "side": 45,
+  "front": 15,
+  "back": 165
+ },
+ "size": 288,
+ "ss": 3,
+ "span": 1.8,
+ "elev": 12,
+ "ramp": [
+  185,
+  230,
+  255
+ ],
+ "rim": 2.2,
+ "anims": [
+  {
+   "url": "/models/cavalry_rig.glb",
+   "clip": "idle",
+   "name": "idle",
+   "frames": 8,
+   "loop": true
+  },
+  {
+   "url": "/models/cavalry_rig.glb",
+   "clip": "walk",
+   "name": "walk",
+   "frames": 10,
+   "loop": true,
+   "measure": true
+  },
+  {
+   "url": "/models/cavalry_rig.glb",
+   "clip": "attack",
+   "name": "attack",
+   "frames": 10,
+   "loop": false
+  },
+  {
+   "url": "/models/cavalry_rig.glb",
+   "clip": "hit",
+   "name": "hit",
+   "frames": 5,
+   "loop": false
+  },
+  {
+   "url": "/models/cavalry_rig.glb",
+   "clip": "death",
+   "name": "death",
+   "frames": 10,
+   "loop": false
+  }
+ ],
+ "sharpen": [
+  1.2,
+  70
+ ],
+ "recolor": {
+  "rider": [
+   {
+    "hue": [
+     330,
+     25
+    ],
+    "sat": [
+     0.3,
+     1
+    ],
+    "set": {
+     "h": 215,
+     "s": 0.07
+    },
+    "mul": {
+     "v": 1.15
+    }
+   },
+   {
+    "val": [
+     0,
+     0.3
+    ],
+    "sat": [
+     0,
+     0.6
+    ],
+    "set": {
+     "h": 215,
+     "s": 0.08
+    },
+    "mul": {
+     "v": 2.0
+    }
+   }
+  ],
+  "mount": [
+   {
+    "hue": [
+     330,
+     25
+    ],
+    "sat": [
+     0.45,
+     1
+    ],
+    "mul": {
+     "s": 1.05
+    }
+   },
+   {
+    "val": [
+     0,
+     0.4
+    ],
+    "set": {
+     "h": 24,
+     "s": 0.62
+    },
+    "mul": {
+     "v": 2.3
+    }
+   }
+  ]
+ }
+}
