@@ -32,17 +32,19 @@ export interface UnitSheet {
  * fill：手繪精靈的人物佔貼圖高度的比例（大多 9 成；骷髏、哥布林畫滿整張）。
  * 3D 角色用同樣比例，兩種畫風並排時一樣大。
  * size：每格邊長。一般 144（角色約 80 px 高）；英雄用 288，手機放大看時跟手繪一樣清楚。
+ * span：渲染時鏡頭框住幾個身高（預設 1.8）。
  */
-const sheet = (file: string, cycle: number, o: { attack?: number; death?: number; fill?: number; size?: number } = {}): UnitSheet => {
+const sheet = (file: string, cycle: number, o: { attack?: number; death?: number; fill?: number; size?: number; span?: number } = {}): UnitSheet => {
   const fill = o.fill ?? 0.9;
   const size = o.size ?? 144;
+  // 渲染時鏡頭框住幾個身高（翅膀很寬、倒地很長的角色放大一點，跟渲染設定的 span 一致）
+  const span = o.span ?? 1.8;
   return {
     file,
     size,
     cols: 10,
     footAt: 0.82,
-    // 渲染時鏡頭框住 1.8 個身高
-    unitPx: size / 1.8 / fill,
+    unitPx: size / span / fill,
     cycle: cycle * fill,
     anims: {
       idle: { frames: 8, dur: 4.03 },
@@ -77,6 +79,14 @@ export const UNIT_SHEETS: Record<string, UnitSheet> = {
   // 獅鷲騎手：四足骨架加左右翅膀（griffin.rig 見 scripts/art/m3d/flier.rig.json）。
   // 飛行時腳不動、量不到步幅：cycle 手動設成每秒拍翅約 1.6 下
   sp_enemy_flier: sheet('griffin', 0.42, { attack: 0.8, fill: 1 }),
+  // Meshy 人形流程（兩足怪物也能綁）
+  sp_zerin: sheet('necro', 0.842, { attack: 0.9, fill: 1 }),
+  mon_troll: sheet('troll', 0.693, { attack: 0.8, death: 1.25, fill: 1 }),
+  mon_werewolf: sheet('werewolf', 0.723, { fill: 1 }),
+  // 惡魔：人形骨架加會拍的翅膀（scripts/art/m3d/wingrig.py）；飛行時腳不動，cycle 手動設成每秒拍翅約 1.6 下
+  mon_demon: sheet('demon', 0.475, { attack: 0.8, fill: 1, span: 1.9 }),
+  // 蝙蝠：沒有腳，wingrig.py 綁身體 + 頭 + 翅膀；翅膀很寬，鏡頭框 2.6 個身高。每秒拍翅約 4 下
+  mon_bat: sheet('bat', 0.89, { fill: 1, span: 2.6 }),
   sp_enemy_archer: sheet('hunter', 0.688, { attack: 0.8 }),
   sp_enemy_mage: sheet('adept', 0.555, { attack: 0.9 }),
   // 英雄（雷恩騎馬、艾莉亞騎獅鷲，自動綁骨架只支援人形，維持手繪）

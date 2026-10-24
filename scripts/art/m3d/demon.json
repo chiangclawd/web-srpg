@@ -1,0 +1,66 @@
+{
+  "yaws": [
+    45,
+    15,
+    165
+  ],
+  "dirs": {
+    "side": 45,
+    "front": 15,
+    "back": 165
+  },
+  "size": 144,
+  "ss": 3,
+  "span": 1.9,
+  "elev": 12,
+  "ramp": [
+    185,
+    230,
+    255
+  ],
+  "rim": 1.1,
+  "anims": [
+    {
+      "url": "/models/demon_wings.glb",
+      "clip": "Idle",
+      "name": "idle",
+      "frames": 8,
+      "loop": true,
+      "from": 0,
+      "to": 2.0
+    },
+    {
+      "url": "/models/demon_wings.glb",
+      "clip": "Fly",
+      "name": "walk",
+      "frames": 10,
+      "loop": true,
+      "from": 0,
+      "to": 0.667
+    },
+    {
+      "url": "/models/demon_wings.glb",
+      "clip": "Punch_Forward_with_Both_Fists",
+      "name": "attack",
+      "frames": 10,
+      "loop": false
+    },
+    {
+      "url": "/models/demon_wings.glb",
+      "clip": "Hit_Reaction",
+      "name": "hit",
+      "frames": 5,
+      "loop": false,
+      "from": 0,
+      "to": 0.8
+    },
+    {
+      "url": "/models/demon_wings.glb",
+      "clip": "Shot_and_Fall_Forward",
+      "name": "death",
+      "frames": 10,
+      "loop": false,
+      "to": 1.4
+    }
+  ]
+}

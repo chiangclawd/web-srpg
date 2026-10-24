@@ -57,7 +57,7 @@ srv.close();
 for (const [k, url] of Object.entries(r.sheets)) fs.writeFileSync(path.join(strips, `${k}.png`), Buffer.from(url.split(',')[1], 'base64'));
 fs.writeFileSync(path.join(strips, 'frame.json'), JSON.stringify({ ...r.frame, ...r.stats }));
 console.log('clips', JSON.stringify(r.clips));
-const out = execFileSync('python3', [path.join(repo, 'scripts/art/m3d/pack.py'), strips, outFile, JSON.stringify(cfg.dirs), JSON.stringify(cfg.anims.map((a) => a.name)), ...(cfg.sharpen ? [JSON.stringify(cfg.sharpen)] : [])], { encoding: 'utf8' });
+const out = execFileSync('python3', [path.join(repo, 'scripts/art/m3d/pack.py'), strips, outFile, JSON.stringify(cfg.dirs), JSON.stringify(cfg.anims.map((a) => a.name)), ...(cfg.sharpen || cfg.color ? [JSON.stringify(cfg.sharpen ?? null)] : []), ...(cfg.color ? [JSON.stringify(cfg.color)] : [])], { encoding: 'utf8' });
 console.log(out.trim());
 fs.rmSync(strips, { recursive: true, force: true });
 // 更新下載網址的版本指紋（src/td/view/sheetRev.ts）
