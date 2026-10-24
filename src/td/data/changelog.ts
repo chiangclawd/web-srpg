@@ -17,6 +17,7 @@ export const CHANGELOG: ChangeEntry[] = [
     items: [
       { zh: '戰鬥進行中手機螢幕會保持亮著，等下一波時不會自動變暗鎖屏；暫停或離開戰鬥就恢復平常設定', en: 'Your screen now stays on during battles, so it will not dim or lock while you wait for the next wave; pausing or leaving the battle restores the usual setting' },
       { zh: 'Android App：劇情對話時按返回鍵可以直接略過', en: 'Android app: the back button skips story dialogue' },
+      { zh: '有瀏海或動態島的 iPhone 橫拿時，畫面會讓出左右兩側，HUD 和出怪點的按鈕不再被擋住', en: 'On iPhones with a notch or Dynamic Island, the game now stays clear of the sides in landscape, so HUD and wave buttons are no longer covered' },
     ],
   },
   {
