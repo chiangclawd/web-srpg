@@ -24,6 +24,7 @@ const PHRASES: [string, string][] = [
   ['訊息', '消息'],
   ['檔案', '文件'],
   ['程式', '程序'],
+  ['砲', '炮'],
 ];
 
 let map: Map<string, string> | null = null;
