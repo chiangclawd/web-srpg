@@ -27,6 +27,9 @@ concurrency:
 jobs:
   apk:
     runs-on: ubuntu-latest
+    env:
+      # 有設定 Google Play 上傳金鑰（GitHub Secrets）才建 AAB；沒設定就只建測試版 APK
+      HAS_UPLOAD_KEY: ${{ secrets.KB_UPLOAD_KEYSTORE_B64 != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -59,6 +62,33 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon --stacktrace
           cp app/build/outputs/apk/release/app-release.apk ../KingdomBastion.apk
+
+      # 上架 Google Play 用的 AAB：用自己保管的上傳金鑰簽名（不是 repo 裡的測試金鑰），
+      # 放在這次執行的 Artifacts（不公開發佈）。設定方式見 STORE_RELEASE.md。
+      - name: Build Play bundle (AAB)
+        if: github.event_name != 'pull_request' && env.HAS_UPLOAD_KEY == 'true'
+        working-directory: android
+        env:
+          KB_UPLOAD_KEYSTORE_B64: ${{ secrets.KB_UPLOAD_KEYSTORE_B64 }}
+          KB_KEYSTORE_PASSWORD: ${{ secrets.KB_KEYSTORE_PASSWORD }}
+          KB_KEY_ALIAS: ${{ secrets.KB_KEY_ALIAS }}
+          KB_KEY_PASSWORD: ${{ secrets.KB_KEY_PASSWORD }}
+        run: |
+          echo "$KB_UPLOAD_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.keystore"
+          export KB_KEYSTORE="$RUNNER_TEMP/upload.keystore"
+          export APP_VERSION_CODE=${{ github.run_number }}
+          export APP_VERSION_NAME="$(node -p "require('../package.json').version")-${{ github.run_number }}"
+          ./gradlew bundleRelease --no-daemon --stacktrace
+          cp app/build/outputs/bundle/release/app-release.aab ../KingdomBastion.aab
+          rm -f "$RUNNER_TEMP/upload.keystore"
+
+      - name: Upload Play bundle
+        if: github.event_name != 'pull_request' && env.HAS_UPLOAD_KEY == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: KingdomBastion-play-aab
+          path: KingdomBastion.aab
+          retention-days: 30
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
