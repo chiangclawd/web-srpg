@@ -1,0 +1,60 @@
+{
+ "yaws": [
+  45,
+  15,
+  165
+ ],
+ "dirs": {
+  "side": 45,
+  "front": 15,
+  "back": 165
+ },
+ "size": 144,
+ "ss": 3,
+ "span": 1.8,
+ "elev": 12,
+ "ramp": [
+  185,
+  230,
+  255
+ ],
+ "rim": 1.1,
+ "anims": [
+  {
+   "url": "/models/flier_rig.glb",
+   "clip": "idle",
+   "name": "idle",
+   "frames": 8,
+   "loop": true
+  },
+  {
+   "url": "/models/flier_rig.glb",
+   "clip": "walk",
+   "name": "walk",
+   "frames": 10,
+   "loop": true,
+   "measure": true
+  },
+  {
+   "url": "/models/flier_rig.glb",
+   "clip": "attack",
+   "name": "attack",
+   "frames": 10,
+   "loop": false
+  },
+  {
+   "url": "/models/flier_rig.glb",
+   "clip": "hit",
+   "name": "hit",
+   "frames": 5,
+   "loop": false
+  },
+  {
+   "url": "/models/flier_rig.glb",
+   "clip": "death",
+   "name": "death",
+   "frames": 10,
+   "loop": false
+  }
+ ]
+}

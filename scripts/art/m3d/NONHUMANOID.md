@@ -24,18 +24,28 @@ Meshy 的自動綁骨架 API 只支援兩足人形，動作庫 678 個動作也�
 
 坐騎 + 騎士：在設定檔用方框框出騎士（以及伸出身體外的武器），框內頂點整塊綁在 `Rider` 骨頭上，跟著馬背走，出招時往前揮。範例見 `cavalry.rig.json`。
 
+翅膀：`wings` 給左右兩個方框，框內頂點綁在兩節翅膀骨頭上（翅根放在方框內側邊緣，拍動時接縫幾乎不動）。
+每節骨頭依自己的方向算拍動軸，翅膀往旁邊或斜前方伸都能上下拍。加上 `"flyer": true`，動作改成拍翅飛行、滑翔、
+高舉翅膀下拍的攻擊、收翅翻落的死亡，腿一直收著。範例見 `flier.rig.json`（敵方獅鷲騎手）。
+飛行時腳不動、量不到步幅，`Sheets.ts` 裡的 cycle 要手動設（決定拍翅快慢）。
+
+找方框的方法：先用 Blender 輸出俯視的頂點高度分布（哪裡有頭、騎士、武器、翅膀一目了然），再換算成比例座標。
+Meshy 有時會把模型斜放（例如艾莉亞的獅鷲斜了 36 度），用 `rotateZ` 先轉正：從四隻腳的位置算出身體方向。
+
 ```bash
 python3 -m venv .venv-bpy && .venv-bpy/bin/pip install bpy==5.2.3
 .venv-bpy/bin/python -I scripts/art/m3d/quadrig.py -- <models>/remesh_model_urls_glb.glb <models>/wolf_rig.glb [scripts/art/m3d/xxx.rig.json]
 node scripts/art/m3d/render.mjs scripts/art/m3d/wolf.json <models> public/assets/m3d/wolf.webp
 ```
 
-設定檔可調：`rider`（騎士方框）、`swing`（走路擺幅，預設 1.3）、`deathRoll`（倒向哪一側）、`headLen`（頭長占全長比例）、`footFracs`（找腳掌時的高度比例）。
+設定檔可調：`rider`（騎士方框）、`wings`（左右翅膀方框）、`flyer`（飛行動作）、`flap`（拍翅幅度，預設 0.6）、`rotateZ`（先轉正的角度）、`swing`（走路擺幅，預設 1.3）、`deathRoll`（倒向哪一側）、`headLen`（頭長占全長比例）、`footFracs`（找腳掌時的高度比例）。
 
 ## 其他非人形角色的建議
 
 - **兩足怪物**：巨魔、雪怪、狼人、魔像、熔岩魔像、霜巨人、火焰領主、熔岩小鬼、惡魔、溺屍。體型是兩足，直接走 Meshy 人形流程（`pipeline.sh`）應該就能綁，每隻約 52 點。
-- **獅鷲騎士**（艾莉亞、敵方獅鷲兵）：沿用 `quadrig.py`，再加翅膀骨頭（身體兩側往外伸的頂點）和拍翅動作。
+- **敵方獅鷲騎手**：已完成（`flier.rig.json`）。
+- **艾莉亞**：已試過但沒採用。她的手繪圖是側面視角，Meshy 重建出來兩片翅膀一高一低、方向不對稱，拍起來有一片會立成直的。
+  要做的話，先準備一張正面或斜前方、兩片翅膀對稱張開的參考圖（Gemini 每月額度恢復後可以重畫），再重跑一次。
 - **雷恩**：手繪圖是人站在馬旁邊，不是騎在馬上。要嘛人和馬分成兩個模型分別綁骨架、渲染時放在一起，要嘛重畫成騎馬的樣子。
 - **蠍子、沙灘蟹**：多足版的 `quadrig.py`（找 6～8 團腳）。
 - **沙蟲、利維坦**：一條脊椎骨鏈 + 波浪動作。

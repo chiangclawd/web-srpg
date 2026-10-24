@@ -6,6 +6,7 @@ export const SHEET_REV: Record<string, string> = {
   cultist: 'db8f13be6f',
   elena: 'dab7fd9e7e',
   goblin: '22dd56f195',
+  griffin: 'b748b0f89c',
   hunter: '198fb74f57',
   lancer: '1cbac5915d',
   lila: '0d34561e28',

@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 79,
+    date: '2026-10-24',
+    title: { zh: '3D 獅鷲騎手', en: '3D Griffin Riders' },
+    items: [
+      { zh: '敵方獅鷲騎手也有 3D 版了：飛行時翅膀上下拍動、攻擊時高舉翅膀用力下拍，被擊倒時收起翅膀從空中摔落', en: 'Enemy Griffin Riders now have 3D art: their wings beat as they fly, rise and slam down when they attack, and fold as they fall out of the sky' },
+      { zh: '所有 3D 飛行單位倒下時都會從空中掉到地面', en: 'All 3D flying units now fall to the ground when defeated' },
+    ],
+  },
+  {
     id: 78,
     date: '2026-10-24',
     title: { zh: '上架準備', en: 'Getting Ready for the Stores' },

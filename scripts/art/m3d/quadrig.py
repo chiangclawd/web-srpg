@@ -32,6 +32,8 @@ bpy.context.view_layer.objects.active = meshes[0]
 if len(meshes) > 1:
     bpy.ops.object.join()
 body = bpy.context.view_layer.objects.active
+# Meshy 有時把側面圖的身體擺成沿 X 軸：rotateZ（度）先把頭轉到 -Y
+body.matrix_world = Matrix.Rotation(math.radians(cfg.get('rotateZ', 0)), 4, 'Z') @ body.matrix_world
 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 # 有些模型的父物件帶旋轉，套用後清掉多餘的空物件
 for o in list(bpy.data.objects):
@@ -276,18 +278,29 @@ if rider_pts:
     rc = centroid(rider_pts)
     bone('Rider', Vector((0, rc.y, zmn + BOXES[0]['z'] * H)), Vector((0, rc.y, max(w.z for w in rider_pts))), 'Spine', roll_to=FWD)
 WING_TIP = {}
+# 每節翅膀骨頭「往上拍」的旋轉正負號
+WSIGN = {}
+
+
+def wing_bone(name, head, tail_, parent, connect=False):
+    # 區域 Z 軸 = 水平且垂直於翅膀方向：繞區域 Z 轉就是上下拍（不管翅膀往旁邊還是斜前方伸）
+    axis = UP.cross((tail_ - head).normalized())
+    b = bone(name, head, tail_, parent, roll_to=axis.normalized() if axis.length > 1e-3 else FWD, connect=connect)
+    # 繞區域 Z 正轉時骨頭末端往區域 -X 移動：-X 朝上就是正號
+    WSIGN[name] = 1 if -b.x_axis.z > 0 else -1
+
+
 for side, pts in wing_pts.items():
-    # 翅根 = 最靠身體中線的那群頂點（往身體裡收一點）；翅尖 = 離翅根最遠的頂點；中間一節在一半距離處
+    # 翅根 = 最靠身體中線的那群頂點（放在翅膀框的內側邊緣，拍動時接縫幾乎不動）；
+    # 翅尖 = 離翅根最遠的頂點；中間一節在一半距離處
     inner = sorted(pts, key=lambda w: abs(w.x))[: max(10, len(pts) // 20)]
     root = centroid(inner)
-    root.x *= 0.5
     tip = max(pts, key=lambda w: (w - root).length)
     d = (tip - root).length
     ring = [w for w in pts if 0.4 * d < (w - root).length < 0.6 * d]
     mid = centroid(ring) if ring else root.lerp(tip, 0.5)
-    # 區域 Z 軸朝前：繞區域 Z 轉 = 上下拍
-    bone(f'Wing1.{side}', root, mid, 'Spine1', roll_to=FWD)
-    bone(f'Wing2.{side}', mid, tip, f'Wing1.{side}', roll_to=FWD, connect=True)
+    wing_bone(f'Wing1.{side}', root, mid, 'Spine1')
+    wing_bone(f'Wing2.{side}', mid, tip, f'Wing1.{side}', connect=True)
     WING_TIP[side] = tip
     print(f'wing {side} root', tuple(round(v, 3) for v in root), 'tip', tuple(round(v, 3) for v in tip))
 bpy.ops.object.mode_set(mode='OBJECT')
@@ -490,14 +503,13 @@ def pose_death(t):
 
 # ---- 飛行單位（獅鷲）：walk = 拍翅飛行、idle = 滑翔，腿一直收著 ----
 FLAP = cfg.get('flap', 0.6)
-# 翅膀骨頭的區域 Z 朝前：左翅繞 Z 正轉 = 往上，右翅鏡像
-WSIGN = {'L': 1, 'R': -1}
 
 
 def wings(a1, a2):
+    # 正值 = 往上
     for side in wing_pts:
-        pb[f'Wing1.{side}'].rotation_euler.z = WSIGN[side] * a1
-        pb[f'Wing2.{side}'].rotation_euler.z = WSIGN[side] * a2
+        pb[f'Wing1.{side}'].rotation_euler.z = WSIGN[f'Wing1.{side}'] * a1
+        pb[f'Wing2.{side}'].rotation_euler.z = WSIGN[f'Wing2.{side}'] * a2
 
 
 def tuck(k=1.0):
@@ -519,7 +531,8 @@ def tail_sway(t, amp=0.12):
 def pose_fly(t):
     ph = TAU * t
     # 翅尖比翅根慢一點，拍起來有彈性
-    wings(FLAP * math.sin(ph), FLAP * 0.7 * math.sin(ph - 0.8))
+    # 擺動中心往下偏：往上拍時兩片翅膀不會在頭頂交叉
+    wings(FLAP * math.sin(ph) - 0.25, FLAP * 0.7 * math.sin(ph - 0.8) - 0.1)
     # 下拍時身體被抬起來
     pb['Hips'].location = (0, 0, -0.025 * H * math.cos(ph))
     pb['Hips'].rotation_euler.x = 0.03 * math.sin(ph)
