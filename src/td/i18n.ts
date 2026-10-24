@@ -119,6 +119,7 @@ const STR = {
   earned: { zh: '獲得', en: 'Earned' },
   heroLevelUp: { zh: '英雄升級！', en: 'Hero level up!' },
   credits: { zh: '製作群', en: 'Credits' },
+  privacy: { zh: '隱私權政策', en: 'Privacy Policy' },
   allClear: { zh: '恭喜通關全部戰役！', en: 'Campaign complete!' },
   noSpells: { zh: '鋼鐵挑戰中無法使用法術', en: 'Spells are disabled in Iron challenges' },
   heroicRules: { zh: '僅有\u00a03\u00a0條命・6\u00a0波高密度精英敵軍・起始金幣較多', en: '3 lives · 6 dense elite waves · extra starting gold' },

@@ -17,7 +17,8 @@ try {
 }
 const buildDate = new Date().toISOString().slice(0, 16).replace('T', ' ');
 
-export default defineConfig({
+// npm run build:app（vite build --mode app）：只打包塔防，給 Capacitor 包成 iOS / Android App
+export default defineConfig(({ mode }) => ({
   base: './',
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
@@ -30,14 +31,17 @@ export default defineConfig({
   },
   build: {
     target: 'es2022',
-    outDir: 'dist',
-    sourcemap: true,
+    outDir: mode === 'app' ? 'dist-app' : 'dist',
+    sourcemap: mode !== 'app',
     rollupOptions: {
       // 多頁面：index.html = 戰術 SRPG、td.html = 塔防《王國防線》
-      input: {
-        main: fileURLToPath(new URL('./index.html', import.meta.url)),
-        td: fileURLToPath(new URL('./td.html', import.meta.url)),
-      },
+      input:
+        mode === 'app'
+          ? { td: fileURLToPath(new URL('./td.html', import.meta.url)) }
+          : {
+              main: fileURLToPath(new URL('./index.html', import.meta.url)),
+              td: fileURLToPath(new URL('./td.html', import.meta.url)),
+            },
     },
   },
-});
+}));

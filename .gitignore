@@ -54,3 +54,4 @@ __pycache__/
 
 # Blender Python 模組（scripts/art/m3d/quadrig.py 用）
 .venv-bpy/
+dist-app/
