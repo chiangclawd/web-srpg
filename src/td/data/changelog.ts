@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 84,
+    date: '2026-10-24',
+    title: { zh: '圖鑑動起來', en: 'Living Encyclopedia' },
+    items: [
+      { zh: '開著 3D 角色時，圖鑑裡有 3D 版的怪物會在說明頁走路、出手', en: 'With 3D characters on, monsters that have 3D art walk and attack on their encyclopedia page' },
+      { zh: '世界地圖：畫面較窄時，關卡面板蓋到的底部按鈕先藏起來，不再只露出半個', en: 'World map: on narrower screens, bottom buttons under the level panel are hidden instead of half-covered' },
+    ],
+  },
+  {
     id: 83,
     date: '2026-10-24',
     title: { zh: '戰鬥中螢幕不會暗掉', en: 'Screen Stays On in Battle' },
