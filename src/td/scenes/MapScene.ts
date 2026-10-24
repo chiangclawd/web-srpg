@@ -44,7 +44,7 @@ export class MapScene extends Phaser.Scene {
   private heroPick: Phaser.GameObjects.Container | null = null;
   private heroHud: Button | null = null;
   private hud: Phaser.GameObjects.GameObject[] = [];
-  /** 底部按鈕列（商店、成就、升級、英雄、圖鑑）：關卡面板蓋到的先藏起來 */
+  /** 底部按鈕列（商店、成就、升級、英雄、圖鑑）與右上的每日挑戰、任務：關卡面板蓋到的先藏起來 */
   private barBtns: Button[] = [];
   private focus?: string;
 
@@ -430,6 +430,7 @@ export class MapScene extends Phaser.Scene {
       this.showDaily();
     }, { color: dailyOpen ? 'gold' : 'grey', icon: 'ic_star', iconSize: 28, text: { size: 18 }, sound: dailyOpen });
     topRight.add(dly);
+    this.barBtns.push(dly);
     if (!dailyOpen) dly.add(this.add.image(72, -14, 'ic_lock').setDisplaySize(20, 20));
     else if (!save().daily[dailyKey()] && (save().stars[dailySpec(dailyKey()).levelId] ?? 0) > 0) {
       // 今天的挑戰打得了、還沒過：小紅點提醒
@@ -440,6 +441,7 @@ export class MapScene extends Phaser.Scene {
     // 每日任務（每日挑戰下方；有任務可領獎時亮紅點）
     const qb = new Button(this, -104, 92, 180, 48, T('quests'), () => this.showQuests(), { color: 'wood', icon: 'ic_check', iconSize: 26, text: { size: 18 } });
     topRight.add(qb);
+    this.barBtns.push(qb);
     const ready = claimable(this.todayQuests());
     if (ready > 0) {
       const dot = this.add.circle(-22, 74, 11, 0xc0392b).setStrokeStyle(2, 0xffffff);
@@ -779,9 +781,22 @@ export class MapScene extends Phaser.Scene {
       const hit = Phaser.Geom.Rectangle.Intersection(box, bb);
       return b.visible && hit.width * hit.height > 0.2 * bb.width * bb.height;
     });
-    for (const b of covered) b.setVisible(false);
+    // 按鈕旁邊的小紅點、可用星數徽章跟著藏，不要留在面板外飄著
+    const extras: Phaser.GameObjects.GameObject[] = [];
+    if (covered.length) {
+      const zones = covered.map((b) => Phaser.Geom.Rectangle.Inflate(Phaser.Geom.Rectangle.Clone(b.getBounds()), 16, 16));
+      for (const hud of this.hud)
+        if (hud instanceof Phaser.GameObjects.Container)
+          for (const o of hud.list) {
+            if (this.barBtns.includes(o as Button) || !('getBounds' in o)) continue;
+            const ob = (o as unknown as Phaser.GameObjects.Components.GetBounds).getBounds();
+            if ((o as unknown as Phaser.GameObjects.Components.Visible).visible && ob.width * ob.height < 4000 && zones.some((z) => Phaser.Geom.Intersects.RectangleToRectangle(z, ob))) extras.push(o);
+          }
+    }
+    const hide = [...covered, ...extras] as unknown as Phaser.GameObjects.Components.Visible[];
+    for (const o of hide) o.setVisible(false);
     c.once('destroy', () => {
-      for (const b of covered) if (b.scene) b.setVisible(true);
+      for (const o of hide) if ((o as unknown as Phaser.GameObjects.GameObject).scene) o.setVisible(true);
     });
   }
 
