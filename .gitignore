@@ -58,3 +58,6 @@ dist-app/
 
 # 商店截圖輸出（scripts/store-shots.cjs）
 store-shots/
+
+# Phone layout check screenshots
+phone-check/
