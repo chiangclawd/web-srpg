@@ -98,6 +98,12 @@ export class ShopScene extends Phaser.Scene {
     if (t) this.tweens.add({ targets: t, scale: 1.3, duration: 120, yoyo: true });
   }
 
+  /** Android 返回鍵：回世界地圖 */
+  onBack(): boolean {
+    this.back();
+    return true;
+  }
+
   private back(): void {
     this.cameras.main.fadeOut(200, 0, 0, 0);
     this.time.delayedCall(210, () => this.scene.start('Map'));

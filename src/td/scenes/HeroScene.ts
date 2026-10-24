@@ -199,6 +199,12 @@ export class HeroScene extends Phaser.Scene {
     this.tweens.add({ targets: t, y: y - 30, alpha: 0, delay: 700, duration: 500, onComplete: () => t.destroy() });
   }
 
+  /** Android 返回鍵：回世界地圖 */
+  onBack(): boolean {
+    this.back();
+    return true;
+  }
+
   private back(): void {
     this.cameras.main.fadeOut(200, 0, 0, 0);
     this.time.delayedCall(210, () => this.scene.start('Map'));

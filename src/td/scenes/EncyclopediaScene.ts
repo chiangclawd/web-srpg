@@ -261,6 +261,12 @@ export class EncyclopediaScene extends Phaser.Scene {
     this.build();
   }
 
+  /** Android 返回鍵：回世界地圖 */
+  onBack(): boolean {
+    this.back();
+    return true;
+  }
+
   private back(): void {
     this.cameras.main.fadeOut(200, 0, 0, 0);
     this.time.delayedCall(210, () => this.scene.start('Map'));
