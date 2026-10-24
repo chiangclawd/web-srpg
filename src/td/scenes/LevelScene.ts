@@ -22,6 +22,7 @@ import { THEMES } from '../art/scenery';
 import { visualMuzzleH } from '../art/towers';
 import { DEPTH, Fx, camShake } from '../view/Fx';
 import { TowerView, UnitView, setUnitDust } from '../view/Units';
+import { keepScreenOn } from '../wakeLock';
 import { UNIT_SHEETS, setUse3d, sheetKey } from '../view/Sheets';
 import { SHEET_REV } from '../view/sheetRev';
 import { HazardLayer, hazardTextures } from '../view/Hazards';
@@ -319,7 +320,9 @@ export class LevelScene extends Phaser.Scene {
       if (document.hidden && !this.paused && !this.world.result) this.togglePause(true);
     };
     document.addEventListener('visibilitychange', onHide);
+    keepScreenOn(!this.paused);
     this.events.once('shutdown', () => {
+      keepScreenOn(false);
       setUnitDust(null);
       sfx.stopAmbience();
       document.removeEventListener('visibilitychange', onHide);
@@ -977,11 +980,12 @@ export class LevelScene extends Phaser.Scene {
     return true;
   }
 
-  /** Android 返回鍵：先取消選單 / 選位，再暫停；暫停選單開著就繼續。結算、劇情、提示時不動作 */
+  /** Android 返回鍵：先取消選單 / 選位，再暫停；暫停選單開著就繼續，劇情對話就略過。結算、提示時不動作 */
   onBack(): boolean {
     if (this.world.result) return true;
     if (this.paused) {
       if (this.ui.isPauseOpen()) this.togglePause(false);
+      else this.ui.skipDialog();
     } else if (this.menu || this.mode !== 'idle') {
       this.cancelAll();
     } else {
@@ -993,6 +997,7 @@ export class LevelScene extends Phaser.Scene {
   togglePause(force?: boolean): void {
     this.paused = force ?? !this.paused;
     this.ui?.showPause(this.paused);
+    keepScreenOn(!this.paused && !this.world?.result);
   }
 
   toggleSpeed(): number {
@@ -1752,6 +1757,7 @@ export class LevelScene extends Phaser.Scene {
           break;
         case 'victory':
         case 'defeat':
+          keepScreenOn(false);
           this.time.delayedCall(ev.type === 'victory' ? 1400 : 900, () => this.showResult());
           break;
         default:

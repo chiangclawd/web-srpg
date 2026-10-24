@@ -59,10 +59,18 @@ export function freeCanvasTexture(scene: Phaser.Scene, key: string): void {
   }
 }
 
+/**
+ * 遊戲能用的畫面大小：iPhone 橫拿時 #game 會讓出左右的瀏海安全區域（見 td.html），
+ * 所以量 #game；還沒排版量不到時用整個視窗
+ */
+function screenBox(): { w: number; h: number } {
+  const el = document.getElementById('game');
+  return { w: el?.clientWidth || window.innerWidth, h: el?.clientHeight || window.innerHeight };
+}
+
 export function computeViewW(): number {
   if (typeof window === 'undefined') return MAX_W;
-  const w = window.innerWidth;
-  const h = window.innerHeight;
+  const { w, h } = screenBox();
   const aspect = Math.max(w, h) / Math.min(w, h);
   return Math.round(Phaser.Math.Clamp(VIEW_H * aspect, MIN_W, MAX_W));
 }
@@ -107,8 +115,9 @@ const MAX_BOOST = 1.5;
 
 function screenScale(): number {
   if (typeof window === 'undefined') return 1;
-  const w = Math.max(window.innerWidth, window.innerHeight);
-  const h = Math.min(window.innerWidth, window.innerHeight);
+  const box = screenBox();
+  const w = Math.max(box.w, box.h);
+  const h = Math.min(box.w, box.h);
   return Math.min(w / computeViewW(), h / VIEW_H);
 }
 
