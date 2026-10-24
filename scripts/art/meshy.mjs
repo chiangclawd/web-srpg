@@ -70,7 +70,8 @@ if (kind === 'image') {
     ai_model: process.env.MESHY_MODEL ?? 'latest',
     should_texture: true,
     enable_pbr: false,
-    pose_mode: 'a-pose',
+    // 人形用 A 字姿勢方便綁骨架；動物等非人形設 MESHY_POSE=none（照原圖姿勢）
+    pose_mode: process.env.MESHY_POSE === 'none' ? '' : (process.env.MESHY_POSE ?? 'a-pose'),
     topology: 'triangle',
     target_polycount: Number(process.env.MESHY_POLY ?? 20000),
     target_formats: ['glb'],

@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 77,
+    date: '2026-10-24',
+    title: { zh: '3D 雪原狼與騎兵', en: '3D Wolves and Riders' },
+    items: [
+      { zh: '雪原狼和蠻族騎兵也有 3D 版了：狼會小跑、撲咬、側倒；騎兵的馬跑起來四腳交替，馬上的騎士會揮劍', en: 'Snow Wolves and Barbarian Riders now have 3D art: wolves trot, lunge and topple over, and riders swing their swords from galloping horses' },
+      { zh: '開啟「3D 角色」時生效（預設開啟，可在暫停選單切換）', en: 'Shown when “3D units” is on (on by default; toggle it in the pause menu)' },
+    ],
+  },
+  {
     id: 76,
     date: '2026-10-23',
     title: { zh: '3D 英雄更清楚', en: 'Sharper 3D Heroes' },

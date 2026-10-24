@@ -2,6 +2,7 @@
 export const SHEET_REV: Record<string, string> = {
   adept: 'a655f012b8',
   arthur: 'e1e800fbd8',
+  cavalry: 'f8ccb001cd',
   cultist: 'db8f13be6f',
   elena: 'dab7fd9e7e',
   goblin: '22dd56f195',
@@ -15,4 +16,5 @@ export const SHEET_REV: Record<string, string> = {
   skeleton: '68547cac9b',
   soldier: '45df2532e7',
   viktor: '7f982d527b',
+  wolf: '4aa8f7b536',
 };
