@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 80,
+    date: '2026-10-24',
+    title: { zh: '更多 3D 怪物', en: 'More 3D Monsters' },
+    items: [
+      { zh: '巨魔、狼人、死靈法師、惡魔和蝙蝠也有 3D 版了：巨魔掄棍重擊、狼人連續揮爪、死靈法師施法', en: 'Trolls, werewolves, necromancers, demons and bats now have 3D art: trolls swing their clubs, werewolves claw away and necromancers cast spells' },
+      { zh: '惡魔和蝙蝠飛行時翅膀會上下拍動', en: 'Demons and bats beat their wings as they fly' },
+    ],
+  },
+  {
     id: 79,
     date: '2026-10-24',
     title: { zh: '3D 獅鷲騎手', en: '3D Griffin Riders' },

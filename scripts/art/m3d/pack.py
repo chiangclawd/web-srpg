@@ -1,15 +1,17 @@
 # 把 render.mjs 輸出的動作條（<anim>_<yaw>.png）裁掉透明邊、緊密排成一張圖 + Phaser atlas JSON
-# python3 pack.py <strips-dir> <out.webp> <dirs json> <anims json> [sharpen json]（由 render.mjs 呼叫）
+# python3 pack.py <strips-dir> <out.webp> <dirs json> <anims json> [sharpen json] [color json]（由 render.mjs 呼叫）
 #   dirs:  {"side": 45, "front": 15, "back": 165}
 #   anims: ["idle","walk","attack","hit","death"]
 # 格子編號 = (方向序 × 動作數 + 動作序) × cols + 第幾格，跟 src/td/view/Sheets.ts 的 sheetFrame 一致。
 # 背面不渲染倒地（遊戲裡改用側面），省下一列。
 import json, os, sys
-from PIL import Image, ImageFilter
+from PIL import Image, ImageEnhance, ImageFilter
 
 src, out, dirs, anims = sys.argv[1], sys.argv[2], json.loads(sys.argv[3]), json.loads(sys.argv[4])
 # 銳化 [半徑, 強度%]（高解析度的英雄圖表用，讓貼圖細節像手繪線條一樣清楚）
 SHARPEN = json.loads(sys.argv[5]) if len(sys.argv) > 5 else None
+# 飽和度倍數（Meshy 貼圖偏灰時拉回手繪版的鮮豔度，例如巨魔）
+COLOR = json.loads(sys.argv[6]) if len(sys.argv) > 6 else None
 info = json.load(open(f'{src}/frame.json'))
 size = info['w']
 PAD = 2  # 格子之間留透明邊，縮放取樣時不會吃到隔壁
@@ -27,9 +29,13 @@ for di, (d, yaw) in enumerate(dirs.items()):
             box = cell.getbbox() or (0, 0, 1, 1)
             name = str((di * len(anims) + ai) * cols + f)
             cut = cell.crop(box)
-            if SHARPEN:
+            if SHARPEN or COLOR:
                 r, g, bl, al = cut.split()
-                rgb = Image.merge('RGB', (r, g, bl)).filter(ImageFilter.UnsharpMask(radius=SHARPEN[0], percent=SHARPEN[1], threshold=2))
+                rgb = Image.merge('RGB', (r, g, bl))
+                if COLOR:
+                    rgb = ImageEnhance.Color(rgb).enhance(COLOR)
+                if SHARPEN:
+                    rgb = rgb.filter(ImageFilter.UnsharpMask(radius=SHARPEN[0], percent=SHARPEN[1], threshold=2))
                 cut = Image.merge('RGBA', (*rgb.split(), al))
             cells.append((name, cut, box))
 
