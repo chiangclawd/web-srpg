@@ -802,7 +802,7 @@ export class LevelUIScene extends Phaser.Scene {
       // 夜戰輸了優先教「照亮怨靈」，其他時候隨機
       const night = this.lvl.world.isNight || this.lvl.level.night;
       const pool = night ? NIGHT_TIPS : TIPS;
-      const tip = addText(this, 0, -30, pool[Math.floor(Math.random() * pool.length)][save().settings.lang], {
+      const tip = addText(this, 0, -30, L(pool[Math.floor(Math.random() * pool.length)]), {
         size: 18,
         color: '#4a2a10',
         stroke: '#f4e2b8',

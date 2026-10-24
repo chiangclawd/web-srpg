@@ -1,18 +1,33 @@
 import type { L10n } from './sim/defs';
+import { toHans } from './hans';
 
-export type Lang = 'zh' | 'en';
+/** zh = 繁體中文、zhs = 簡體中文（由繁體逐字轉換）、en = 英文 */
+export type Lang = 'zh' | 'zhs' | 'en';
 let lang: Lang = 'zh';
 
 export function setLang(l: Lang): void {
-  lang = l;
+  lang = l === 'zhs' || l === 'en' ? l : 'zh';
 }
 export function getLang(): Lang {
   return lang;
 }
+/** 繁體或簡體中文 */
+export function isZh(): boolean {
+  return lang !== 'en';
+}
+/** 語音、字串資料只分中英：簡體用繁體的那份 */
+export function baseLang(): 'zh' | 'en' {
+  return lang === 'en' ? 'en' : 'zh';
+}
+/** 主選單語言鍵的循環：繁 → 簡 → 英 */
+export const LANG_CYCLE: Lang[] = ['zh', 'zhs', 'en'];
+/** 切換鍵上顯示「下一個」語言的名稱 */
+export const LANG_LABEL: Record<Lang, string> = { zh: '繁體', zhs: '简体', en: 'EN' };
 
 /** 取雙語字串 */
 export function L(s: L10n | undefined): string {
   if (!s) return '';
+  if (lang === 'zhs') return toHans(s.zh);
   return s[lang] ?? s.zh;
 }
 

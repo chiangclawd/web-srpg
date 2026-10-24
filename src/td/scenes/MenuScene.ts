@@ -4,7 +4,7 @@ import { paintLevel } from '../art/terrain';
 import type { LevelDef } from '../sim/defs';
 import { TW_BASE, TW_H } from '../art/towers';
 import { Button, IconButton, dimmer, panel, popIn } from '../ui/widgets';
-import { L, T, getLang, setLang } from '../i18n';
+import { L, LANG_CYCLE, LANG_LABEL, T, getLang, isZh, setLang } from '../i18n';
 import { CHANGELOG } from '../data/changelog';
 import { consumeCrashNotice } from '../crashGuard';
 import { save, persist, resetProgress, exportSave, importSave } from '../save';
@@ -167,7 +167,7 @@ export class MenuScene extends Phaser.Scene {
     grd.addColorStop(0.6, '#ffc040');
     grd.addColorStop(1, '#d07a10');
     title.setFill(grd);
-    const sub = addText(this, cx, 196, getLang() === 'zh' ? 'KINGDOM BASTION' : '王國防線', { size: 26, display: true, color: '#f4e2b8', strokeW: 6 }).setOrigin(0.5).setDepth(2000);
+    const sub = addText(this, cx, 196, isZh() ? 'KINGDOM BASTION' : '王國防線', { size: 26, display: true, color: '#f4e2b8', strokeW: 6 }).setOrigin(0.5).setDepth(2000);
     this.tweens.add({ targets: title, y: 126, duration: 2200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     // 主按鈕一組，手機上整組放大
     const z = uiZoom();
@@ -187,8 +187,10 @@ export class MenuScene extends Phaser.Scene {
     } else {
       btns.add(new Button(this, 164, 86, 150, 52, T('srpg'), () => (window.location.href = './'), { color: 'blue', text: { size: 18 } }));
     }
-    const lang = new Button(this, cx + w / 2 - 14 - 50 * z, 12 + 22 * z, 100, 44, getLang() === 'zh' ? 'EN' : '中文', () => {
-      setLang(getLang() === 'zh' ? 'en' : 'zh');
+    // 語言鍵：繁 → 簡 → 英，鍵上寫下一個語言
+    const nextLang = LANG_CYCLE[(LANG_CYCLE.indexOf(getLang()) + 1) % LANG_CYCLE.length];
+    const lang = new Button(this, cx + w / 2 - 14 - 50 * z, 12 + 22 * z, 100, 44, LANG_LABEL[nextLang], () => {
+      setLang(nextLang);
       save().settings.lang = getLang();
       persist();
       this.build();

@@ -1,6 +1,6 @@
 import { save } from './save';
 import type { ThemeId } from './sim/defs';
-import { getLang } from './i18n';
+import { baseLang } from './i18n';
 import { TOWER_VOICE_LANGS, VOICE_LINES, type VoiceLine } from './data/voices';
 
 /**
@@ -194,7 +194,7 @@ class TdAudio {
 
   // ───────── 英雄語音 ─────────
   private voiceKey(hero: string, line: VoiceLine): string {
-    return `${hero}_${line}_${getLang()}`;
+    return `${hero}_${line}_${baseLang()}`;
   }
 
   private loadVoice(key: string): void {
@@ -215,18 +215,18 @@ class TdAudio {
 
   /** 預先下載首領登場台詞 */
   preloadBossVoice(boss: string): void {
-    if (this.ensureCtx()) this.loadVoice(`boss_${boss}_${getLang()}`);
+    if (this.ensureCtx()) this.loadVoice(`boss_${boss}_${baseLang()}`);
   }
 
   /** 預先下載防禦塔台詞（keys：塔種或特化塔圖） */
   preloadTowerVoices(lines: { key: string; i: number }[]): void {
-    if (!TOWER_VOICE_LANGS.includes(getLang()) || !this.ensureCtx()) return;
-    for (const { key, i } of lines) this.loadVoice(`tower_${key}_${i}_${getLang()}`);
+    if (!TOWER_VOICE_LANGS.includes(baseLang()) || !this.ensureCtx()) return;
+    for (const { key, i } of lines) this.loadVoice(`tower_${key}_${i}_${baseLang()}`);
   }
 
   /** 防禦塔說一句台詞（和對話泡泡同一句） */
   towerVoice(key: string, i: number): void {
-    if (TOWER_VOICE_LANGS.includes(getLang())) this.speak(`tower_${key}_${i}_${getLang()}`);
+    if (TOWER_VOICE_LANGS.includes(baseLang())) this.speak(`tower_${key}_${i}_${baseLang()}`);
   }
 
   /** 英雄說一句台詞 */
@@ -236,7 +236,7 @@ class TdAudio {
 
   /** 首領登場喊話 */
   bossVoice(boss: string): void {
-    this.speak(`boss_${boss}_${getLang()}`);
+    this.speak(`boss_${boss}_${baseLang()}`);
   }
 
   /** 播一句語音；還沒下載好就這次不說。新的一句會打斷前一句，避免疊在一起 */

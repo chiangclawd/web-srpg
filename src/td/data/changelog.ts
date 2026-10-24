@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 81,
+    date: '2026-10-24',
+    title: { zh: '簡體中文', en: 'Simplified Chinese' },
+    items: [
+      { zh: '新增簡體中文：主選單右上角的語言鍵依序切換 繁體 → 简体 → EN', en: 'Added Simplified Chinese: the language button at the top right of the main menu now cycles 繁體 → 简体 → EN' },
+      { zh: '第一次開啟時，簡體中文環境的手機與電腦會自動用簡體', en: 'Phones and computers set to Simplified Chinese start in Simplified Chinese the first time' },
+    ],
+  },
+  {
     id: 80,
     date: '2026-10-24',
     title: { zh: '更多 3D 怪物', en: 'More 3D Monsters' },

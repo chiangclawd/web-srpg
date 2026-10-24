@@ -11,7 +11,7 @@ import { LOGIN_GEMS, loginReward, previousDay } from '../data/login';
 import { claimable, ensureQuests, questText, type QuestDay } from '../data/quests';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { Button, IconButton, dimmer, panel, popIn } from '../ui/widgets';
-import { L, T, getLang } from '../i18n';
+import { L, T, isZh } from '../i18n';
 import { save, persist, totalStars, STARS_PER_LEVEL } from '../save';
 import { sfx } from '../audio';
 import type { Difficulty } from '../sim/World';
@@ -649,7 +649,7 @@ export class MapScene extends Phaser.Scene {
           return;
         }
         this.showLevel(i, m);
-      }, { color: mode === m ? TAB_COLOR[m] : 'grey', text: { size: getLang() === 'zh' ? (label.length >= 4 ? 13 : 15) : 12 }, sound: !locked });
+      }, { color: mode === m ? TAB_COLOR[m] : 'grey', text: { size: isZh() ? (label.length >= 4 ? 13 : 15) : 12 }, sound: !locked });
       fitText(b.label, 64);
       if (locked) b.add(this.add.image(28, -10, 'ic_lock').setDisplaySize(18, 18));
       if (done) b.add(this.add.image(30, -12, 'ic_star').setDisplaySize(20, 20));
