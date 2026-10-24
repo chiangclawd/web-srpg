@@ -9,6 +9,8 @@ import { sfx } from '../audio';
 import { MUSIC_TRACKS } from '../data/music';
 import { armorWord } from './LevelScene';
 import type { TowerLevelDef, TowerType } from '../sim/defs';
+import { UNIT_SHEETS, sheetFrame, sheetKey, type SheetAnim, type UnitSheet } from '../view/Sheets';
+import { SHEET_REV } from '../view/sheetRev';
 
 type Tab = 'towers' | 'enemies' | 'music';
 
@@ -17,6 +19,10 @@ const DRAG_PX = 8;
 
 export class EncyclopediaScene extends Phaser.Scene {
   private objs: Phaser.GameObjects.GameObject[] = [];
+  /** 說明面板裡 3D 怪物的動作輪播 */
+  private sheetAnim: Phaser.Time.TimerEvent | null = null;
+  /** 這次進來已經試著下載過的圖表（下載失敗不重試，免得一直重畫） */
+  private sheetTried = new Set<string>();
   private tab: Tab = 'towers';
   private sel = '';
   /** 手機版格子：捲動容器、目前捲動量與上限、可點的範圍 */
@@ -31,6 +37,8 @@ export class EncyclopediaScene extends Phaser.Scene {
   }
 
   create(): void {
+    // 戰鬥會釋放用不到的圖表，每次進來重新判斷要不要下載
+    this.sheetTried.clear();
     setupCamera(this);
     this.tab = 'towers';
     this.sel = 'archer:0';
@@ -50,6 +58,8 @@ export class EncyclopediaScene extends Phaser.Scene {
   private build(): void {
     this.objs.forEach((o) => o.destroy());
     this.objs = [];
+    this.sheetAnim?.remove();
+    this.sheetAnim = null;
     this.grid = null;
     this.gridMax = 0;
     const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
@@ -145,10 +155,17 @@ export class EncyclopediaScene extends Phaser.Scene {
       const e = ENEMIES[this.sel];
       if (e) {
         const known = seen.has(e.id);
-        const img = add(this.add.image(detailX + 130, 400, e.sprite).setOrigin(0.5, 1));
-        img.setScale(Math.min(185 / img.frame.height, 220 / img.frame.width));
-        if (!known) img.setTint(0x000000);
-        else if (e.tint) img.setTint(e.tint);
+        // 開著 3D 角色時，有 3D 圖表的怪物在這裡動起來（圖表還沒下載就先顯示手繪，下載好再換）
+        const sh = known && save().settings.art3d ? UNIT_SHEETS[e.sprite] : undefined;
+        if (sh && this.textures.exists(sheetKey(sh))) {
+          add(this.sheetSprite(sh, detailX + 130, 400, e.tint));
+        } else {
+          const img = add(this.add.image(detailX + 130, 400, e.sprite).setOrigin(0.5, 1));
+          img.setScale(Math.min(185 / img.frame.height, 220 / img.frame.width));
+          if (!known) img.setTint(0x000000);
+          else if (e.tint) img.setTint(e.tint);
+          if (sh) this.loadSheet(sh, e.id);
+        }
         const tx = detailX + 260;
         add(addText(this, tx, 196, known ? L(e.name) : '???', { size: 32, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }));
         const desc = add(addText(this, tx, 244, known ? L(e.desc) : T('unknown'), { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: detailW - 290 }));
@@ -251,6 +268,42 @@ export class EncyclopediaScene extends Phaser.Scene {
         b.add(sub);
       }
     });
+  }
+
+  /** 3D 怪物：走兩步、出手一次，一直輪播 */
+  private sheetSprite(sh: UnitSheet, x: number, y: number, tint?: number): Phaser.GameObjects.Sprite {
+    const spr = this.add.sprite(x, y, sheetKey(sh), sheetFrame(sh, 'side', 'walk', 0)).setOrigin(0.5, sh.footAt);
+    // 站立身高約 170；翅膀寬、倒地長的圖表格子較大，整格不超出說明面板
+    spr.setScale(Math.min(170 / sh.unitPx, 280 / sh.size));
+    if (tint) spr.setTint(tint);
+    const seq: SheetAnim[] = ['walk', 'walk', 'attack'];
+    let step = 0;
+    let frame = 0;
+    const tick = () => {
+      const anim = seq[step];
+      const a = sh.anims[anim];
+      spr.setFrame(sheetFrame(sh, 'side', anim, frame));
+      frame++;
+      if (frame >= a.frames) {
+        frame = 0;
+        step = (step + 1) % seq.length;
+      }
+      this.sheetAnim = this.time.delayedCall((a.dur / a.frames) * 1000, tick);
+    };
+    tick();
+    return spr;
+  }
+
+  /** 下載 3D 圖表；好了之後如果還停在這隻怪物就重畫 */
+  private loadSheet(sh: UnitSheet, enemyId: string): void {
+    if (this.sheetTried.has(sh.file)) return;
+    this.sheetTried.add(sh.file);
+    const v = SHEET_REV[sh.file] ?? '0';
+    this.load.atlas(sheetKey(sh), `assets/m3d/${sh.file}.webp?v=${v}`, `assets/m3d/${sh.file}.json?v=${v}`);
+    this.load.once('complete', () => {
+      if (this.scene.isActive() && this.tab === 'enemies' && this.sel === enemyId) this.build();
+    });
+    this.load.start();
   }
 
   private select(id: string): void {
