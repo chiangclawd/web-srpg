@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 85,
+    date: '2026-10-24',
+    title: { zh: '新敵人卡片', en: 'New Enemy Cards' },
+    items: [
+      { zh: '戰鬥中第一次遇到敵人時跳出的介紹卡，有 3D 版的怪物也會在卡片上動起來', en: 'The intro card for a newly met enemy now shows its 3D version in motion when it has one' },
+    ],
+  },
+  {
     id: 84,
     date: '2026-10-24',
     title: { zh: '圖鑑動起來', en: 'Living Encyclopedia' },

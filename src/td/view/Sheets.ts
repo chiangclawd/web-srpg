@@ -115,3 +115,31 @@ export function sheetFor(tex: string, scene: Phaser.Scene): UnitSheet | null {
   const s = UNIT_SHEETS[tex];
   return s && scene.textures.exists(sheetKey(s)) ? s : null;
 }
+
+/**
+ * 介面裡展示用的 3D 角色（圖鑑、新敵人卡）：面向右，走兩步、出手一次，一直輪播。
+ * 站立身高約 height；翅膀寬、倒地長的圖表整格不超過 maxBox。精靈銷毀時計時器跟著停。
+ */
+export function showcaseSprite(scene: Phaser.Scene, sh: UnitSheet, x: number, y: number, height: number, maxBox: number, tint?: number): Phaser.GameObjects.Sprite {
+  const spr = scene.add.sprite(x, y, sheetKey(sh), sheetFrame(sh, 'side', 'walk', 0)).setOrigin(0.5, sh.footAt);
+  spr.setScale(Math.min(height / sh.unitPx, maxBox / sh.size));
+  if (tint) spr.setTint(tint);
+  const seq: SheetAnim[] = ['walk', 'walk', 'attack'];
+  let step = 0;
+  let frame = 0;
+  let timer: Phaser.Time.TimerEvent | null = null;
+  const tick = () => {
+    const anim = seq[step];
+    const a = sh.anims[anim];
+    spr.setFrame(sheetFrame(sh, 'side', anim, frame));
+    frame++;
+    if (frame >= a.frames) {
+      frame = 0;
+      step = (step + 1) % seq.length;
+    }
+    timer = scene.time.delayedCall((a.dur / a.frames) * 1000, tick);
+  };
+  spr.once('destroy', () => timer?.remove());
+  tick();
+  return spr;
+}
