@@ -287,32 +287,37 @@ test('every tower skill describes what each level does', async () => {
         }
 });
 
-test('3D unit sheets have every frame the game asks for', async () => {
-  const { UNIT_SHEETS, SHEET_ANIMS, SHEET_DIRS, sheetFrame } = await import('../../src/td/view/Sheets');
+test('3D unit sheets have every frame the game asks for (normal and 2x)', async () => {
+  const { UNIT_SHEETS, SHEET_ANIMS, SHEET_DIRS, sheetFrame, setHdSheets } = await import('../../src/td/view/Sheets');
   const fs = await import('node:fs');
   const sharp = (await import('sharp')).default;
   const sprites = new Set([...Object.values(ENEMIES).map((e) => e.sprite), ...Object.values(HEROES).map((h) => h.sprite), ...Object.values(TOWERS).flatMap((t) => [...t.levels, ...t.branches].flatMap((l) => (l.soldier ? [l.soldier.sprite] : [])))]);
-  for (const [tex, s] of Object.entries(UNIT_SHEETS)) {
-    assert.ok(sprites.has(tex), `${tex} is an enemy, hero or soldier sprite`);
-    const img = `public/assets/m3d/${s.file}.webp`;
-    const json = `public/assets/m3d/${s.file}.json`;
-    assert.ok(fs.existsSync(img) && fs.existsSync(json), `${s.file} atlas exists (scripts/art/m3d/render.mjs)`);
-    const atlas = JSON.parse(fs.readFileSync(json, 'utf8')) as { frames: Record<string, { frame: { x: number; y: number; w: number; h: number }; sourceSize: { w: number; h: number } }> };
-    const meta = await sharp(img).metadata();
-    for (const dir of SHEET_DIRS)
-      for (const anim of SHEET_ANIMS) {
-        // 背面倒地用側面的格子
-        if (dir === 'back' && anim === 'death') continue;
-        assert.ok(s.anims[anim].frames > 0 && s.anims[anim].dur > 0, `${s.file} ${anim} timing`);
-        for (let i = 0; i < s.anims[anim].frames; i++) {
-          const f = atlas.frames[String(sheetFrame(s, dir, anim, i))];
-          assert.ok(f, `${s.file} ${dir} ${anim} #${i}`);
-          assert.equal(f.sourceSize.w, s.size, `${s.file} cell size`);
-          assert.ok(f.frame.x + f.frame.w <= meta.width! && f.frame.y + f.frame.h <= meta.height!, `${s.file} ${dir} ${anim} #${i} inside atlas`);
+  // 高畫質裝置改用 2 倍解析度的 _hd 圖表（setHdSheets）：兩種都要齊全
+  for (const hd of [false, true]) {
+    setHdSheets(hd);
+    for (const [tex, s] of Object.entries(UNIT_SHEETS)) {
+      assert.ok(sprites.has(tex), `${tex} is an enemy, hero or soldier sprite`);
+      const img = `public/assets/m3d/${s.file}.webp`;
+      const json = `public/assets/m3d/${s.file}.json`;
+      assert.ok(fs.existsSync(img) && fs.existsSync(json), `${s.file} atlas exists (scripts/art/m3d/render.mjs)`);
+      const atlas = JSON.parse(fs.readFileSync(json, 'utf8')) as { frames: Record<string, { frame: { x: number; y: number; w: number; h: number }; sourceSize: { w: number; h: number } }> };
+      const meta = await sharp(img).metadata();
+      for (const dir of SHEET_DIRS)
+        for (const anim of SHEET_ANIMS) {
+          // 背面倒地用側面的格子
+          if (dir === 'back' && anim === 'death') continue;
+          assert.ok(s.anims[anim].frames > 0 && s.anims[anim].dur > 0, `${s.file} ${anim} timing`);
+          for (let i = 0; i < s.anims[anim].frames; i++) {
+            const f = atlas.frames[String(sheetFrame(s, dir, anim, i))];
+            assert.ok(f, `${s.file} ${dir} ${anim} #${i}`);
+            assert.equal(f.sourceSize.w, s.size, `${s.file} cell size`);
+            assert.ok(f.frame.x + f.frame.w <= meta.width! && f.frame.y + f.frame.h <= meta.height!, `${s.file} ${dir} ${anim} #${i} inside atlas`);
+          }
         }
-      }
-    assert.ok(s.footAt > 0.5 && s.footAt < 1 && s.unitPx > 0 && s.cycle > 0, `${s.file} metrics`);
+      assert.ok(s.footAt > 0.5 && s.footAt < 1 && s.unitPx > 0 && s.cycle > 0, `${s.file} metrics`);
+    }
   }
+  setHdSheets(false);
 });
 
 test('3D sheet download URLs carry the current content fingerprint', async () => {
@@ -323,4 +328,23 @@ test('3D sheet download URLs carry the current content fingerprint', async () =>
   // 圖改了卻沒更新指紋，手機的離線快取會拿舊圖配新座標（角色變成閃爍的碎片）
   assert.deepEqual(SHEET_REV, sheetRevs(), 'run: node scripts/art/m3d/rev.mjs');
   for (const s of Object.values(UNIT_SHEETS)) assert.ok(SHEET_REV[s.file], `${s.file} has a fingerprint`);
+});
+
+test('2x sheets swap in for regular characters only, and switch back', async () => {
+  const { UNIT_SHEETS, setHdSheets } = await import('../../src/td/view/Sheets');
+  const { SHEET_REV } = await import('../../src/td/view/sheetRev');
+  const before = Object.fromEntries(Object.entries(UNIT_SHEETS).map(([k, s]) => [k, { file: s.file, size: s.size, unitPx: s.unitPx }]));
+  setHdSheets(true);
+  for (const [k, s] of Object.entries(UNIT_SHEETS)) {
+    const b = before[k];
+    const hd = b.size < 288 && SHEET_REV[`${b.file}_hd`] !== undefined;
+    assert.equal(s.file, hd ? `${b.file}_hd` : b.file, `${k} file`);
+    assert.equal(s.size, hd ? b.size * 2 : b.size, `${k} size`);
+    // 身高像素跟著放大，遊戲裡顯示的大小不變
+    assert.equal(s.unitPx / s.size, b.unitPx / b.size, `${k} scale`);
+  }
+  // 英雄本來就是 2 倍解析度
+  assert.equal(UNIT_SHEETS.sp_arthur.file, 'arthur');
+  setHdSheets(false);
+  for (const [k, s] of Object.entries(UNIT_SHEETS)) assert.deepEqual({ file: s.file, size: s.size, unitPx: s.unitPx }, before[k], `${k} restored`);
 });

@@ -1,9 +1,11 @@
 // 由 scripts/art/m3d/rev.mjs 產生，不要手改：圖檔 + 座標 JSON 的內容指紋（下載網址的 ?v=）
 export const SHEET_REV: Record<string, string> = {
   adept: 'a655f012b8',
+  adept_hd: '910ce40275',
   arthur: 'e1e800fbd8',
   bat: '16c6886dc5',
   cavalry: 'f8ccb001cd',
+  cavalry_hd: '60a918e4ae',
   cultist: 'db8f13be6f',
   demon: 'ea547f8fe6',
   elena: 'dab7fd9e7e',
@@ -13,6 +15,7 @@ export const SHEET_REV: Record<string, string> = {
   hunter: '198fb74f57',
   hunter_hd: '8be9466403',
   lancer: '1cbac5915d',
+  lancer_hd: '6e6e153f62',
   lila: '0d34561e28',
   necro: 'a847a1f88a',
   pike: '6222958778',

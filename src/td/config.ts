@@ -40,6 +40,18 @@ export function applyQuality(q: Quality): void {
   RS = q === 'low' ? 1 : q === 'high' ? 2 : autoRS();
 }
 
+/**
+ * 一般角色的 3D 圖表要不要用 2 倍解析度版（<file>_hd，每張約 4 倍顯示記憶體）：
+ * 省電畫質不用、高畫質一律用；自動時只在畫布夠清楚（渲染倍率 1.5 以上）、
+ * 記憶體不明或 4 GB 以上的裝置用。真的吃不消當機了，crashGuard 會改成省電畫質，下次就回到一般版。
+ */
+export function wantHdSheets(q: Quality): boolean {
+  if (q === 'low') return false;
+  if (q === 'high') return true;
+  const mem = typeof navigator === 'undefined' ? undefined : (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+  return RS >= 1.5 && (mem === undefined || mem >= 4);
+}
+
 /** 程序繪圖背景的解析度：跟著渲染倍率，但有上限（大圖最吃記憶體） */
 export function bgScale(max: number): number {
   return Math.min(RS, max);
