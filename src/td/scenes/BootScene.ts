@@ -8,7 +8,7 @@ import { mkCanvas } from '../art/paint';
 import { HEROES } from '../data/heroes';
 import { STORY_PORTRAITS } from '../data/story';
 import { LOADING_TIPS } from '../data/tips';
-import { L, isZh } from '../i18n';
+import { L, T, altTitle, getLang, isZh } from '../i18n';
 
 const SPRITES = [
   'aria', 'arthur', 'baron', 'carl', 'cult_leader', 'elena', 'enemy_archer', 'enemy_cavalry', 'enemy_flier', 'enemy_lance',
@@ -54,15 +54,15 @@ export class BootScene extends Phaser.Scene {
     }
     const ty = art ? 150 : VIEW_H / 2 - 60;
     const zh = isZh();
-    addText(this, w / 2, ty, zh ? '王國防線' : 'KINGDOM BASTION', { size: zh ? 72 : 64, display: true, color: '#ffd36b', strokeW: 10, stroke: '#3a1a04' }).setOrigin(0.5);
-    addText(this, w / 2, ty + 58, zh ? 'KINGDOM BASTION' : '王國防線', { size: 24, display: true, color: '#f4e2b8', strokeW: 5 }).setOrigin(0.5);
+    addText(this, w / 2, ty, getLang() === 'en' ? 'KINGDOM BASTION' : T('title'), { size: zh ? 72 : 64, display: true, color: '#ffd36b', strokeW: 10, stroke: '#3a1a04' }).setOrigin(0.5);
+    addText(this, w / 2, ty + 58, altTitle(), { size: 24, display: true, color: '#f4e2b8', strokeW: 5 }).setOrigin(0.5);
     const by = art ? VIEW_H - 120 : VIEW_H / 2 + 40;
     this.add.rectangle(w / 2, by, 404, 20, 0x2a1a0c, 0.9).setStrokeStyle(2, 0xc89a50);
     this.bar = this.add.rectangle(w / 2 - 200, by, 2, 14, 0xffc84a).setOrigin(0, 0.5);
     this.label = addText(this, w / 2, by + 34, 'Loading…', { size: 16, color: '#f4e2b8' }).setOrigin(0.5);
     // 載入小技巧
     const tip = LOADING_TIPS[Math.floor(Math.random() * LOADING_TIPS.length)];
-    const tipText = addText(this, w / 2, by - 52, zh ? `小技巧：${L(tip)}` : `Tip: ${L(tip)}`, { size: 18, color: '#fff2d0', wrap: Math.min(860, w - 80), align: 'center' }).setOrigin(0.5, 1);
+    const tipText = addText(this, w / 2, by - 52, `${L({ zh: '小技巧：', en: 'Tip: ' })}${L(tip)}`, { size: 18, color: '#fff2d0', wrap: Math.min(860, w - 80), align: 'center' }).setOrigin(0.5, 1);
     tipText.setAlpha(art ? 1 : 0.85);
     this.load.on('progress', (p: number) => {
       this.bar.width = 400 * p * 0.85;

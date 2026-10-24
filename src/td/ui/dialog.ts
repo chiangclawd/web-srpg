@@ -92,7 +92,7 @@ export function playDialog(
     const ln = lines[idx];
     const sp = SPEAKERS[ln.who];
     const enemy = !!sp?.enemy;
-    name.setText(L(sp?.name ?? { zh: ln.who, en: ln.who }));
+    name.setText(L(sp?.name ?? { zh: ln.who, en: ln.who, ja: ln.who }));
     name.setColor(enemy ? '#ff8a6a' : '#ffd36b');
     text.setWordWrapWidth(wrapW, true);
     full = cjkWrap(text, L(ln.text)).text;

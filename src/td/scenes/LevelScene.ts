@@ -1171,7 +1171,7 @@ export class LevelScene extends Phaser.Scene {
             const rows = sk.costs.map((_, k) => {
               const n = k + 1;
               const mark = n <= lv ? '✔' : n === lv + 1 ? '▶' : '・';
-              return `${mark} ${L({ zh: `${n} 級`, en: `Lv ${n}` })}：${L(skillLevelText(sk.id, n))}`;
+              return `${mark} ${L({ zh: `${n} 級`, en: `Lv ${n}`, ja: `Lv ${n}` })}：${L(skillLevelText(sk.id, n))}`;
             });
             this.ui.showInfo({
               title: L(sk.name),

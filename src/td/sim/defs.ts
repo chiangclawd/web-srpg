@@ -1,9 +1,10 @@
 import type { Vec } from './math';
 
-/** 雙語字串（zh-TW 為主、en 為輔） */
+/** 雙語字串（zh-TW 為主、en 為輔）。日文平常查 ja.ts 的翻譯表；執行時才組出來的句子（帶數字的）自己帶 ja */
 export interface L10n {
   zh: string;
   en: string;
+  ja?: string;
 }
 
 export type DamageKind = 'physical' | 'magic' | 'true';

@@ -1,34 +1,51 @@
 import type { L10n } from './sim/defs';
 import { toHans } from './hans';
 
-/** zh = 繁體中文、zhs = 簡體中文（由繁體逐字轉換）、en = 英文 */
-export type Lang = 'zh' | 'zhs' | 'en';
+/** zh = 繁體中文、zhs = 簡體中文（由繁體逐字轉換）、en = 英文、ja = 日文（翻譯表 ja.ts，用到才下載） */
+export type Lang = 'zh' | 'zhs' | 'en' | 'ja';
 let lang: Lang = 'zh';
+let JA: Record<string, string> | null = null;
+const HTML_LANG: Record<Lang, string> = { zh: 'zh-TW', zhs: 'zh-CN', en: 'en', ja: 'ja' };
 
 export function setLang(l: Lang): void {
-  lang = l === 'zhs' || l === 'en' ? l : 'zh';
+  lang = l === 'zhs' || l === 'en' || l === 'ja' ? l : 'zh';
+  if (typeof document !== 'undefined') document.documentElement.lang = HTML_LANG[lang];
+  if (lang === 'ja') void loadLang('ja');
 }
 export function getLang(): Lang {
   return lang;
 }
+/** 換成這個語言之前先等翻譯表下載好（日文才需要；還沒好之前日文先顯示英文） */
+export async function loadLang(l: Lang): Promise<void> {
+  if (l === 'ja' && !JA) JA = (await import('./ja')).JA;
+}
 /** 繁體或簡體中文 */
 export function isZh(): boolean {
-  return lang !== 'en';
+  return lang === 'zh' || lang === 'zhs';
 }
-/** 語音、字串資料只分中英：簡體用繁體的那份 */
+/** 語音只有中英：簡體用繁體的那份，日文用英文的 */
 export function baseLang(): 'zh' | 'en' {
-  return lang === 'en' ? 'en' : 'zh';
+  return isZh() ? 'zh' : 'en';
 }
-/** 主選單語言鍵的循環：繁 → 簡 → 英 */
-export const LANG_CYCLE: Lang[] = ['zh', 'zhs', 'en'];
+/** 主選單語言鍵的循環：繁 → 簡 → 英 → 日 */
+export const LANG_CYCLE: Lang[] = ['zh', 'zhs', 'en', 'ja'];
 /** 切換鍵上顯示「下一個」語言的名稱 */
-export const LANG_LABEL: Record<Lang, string> = { zh: '繁體', zhs: '简体', en: 'EN' };
+export const LANG_LABEL: Record<Lang, string> = { zh: '繁體', zhs: '简体', en: 'EN', ja: '日本語' };
 
 /** 取雙語字串 */
 export function L(s: L10n | undefined): string {
   if (!s) return '';
   if (lang === 'zhs') return toHans(s.zh);
+  if (lang === 'ja') return jaOf(s) ?? s.en;
   return s[lang] ?? s.zh;
+}
+/** 日文：句子自己帶的 ja，否則查翻譯表（沒翻到回 undefined） */
+export function jaOf(s: L10n): string | undefined {
+  return s.ja ?? JA?.[s.zh];
+}
+/** 標題下面那行小字：顯示另一種語言的名字 */
+export function altTitle(): string {
+  return lang === 'en' ? '王國防線' : 'KINGDOM BASTION';
 }
 
 const STR = {
