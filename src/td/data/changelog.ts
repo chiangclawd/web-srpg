@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 89,
+    date: '2026-10-24',
+    title: { zh: '雷恩的 3D 造型', en: 'Rain in 3D' },
+    items: [
+      { zh: '英雄雷恩也有 3D 了：銀甲騎士騎著栗色戰馬、披紅色馬鎧（暫停選單可切回手繪版）', en: 'Rain now has a 3D look too: a silver-armored knight on a chestnut warhorse with red barding (switch back to the hand-drawn art in the pause menu)' },
+    ],
+  },
+  {
     id: 88,
     date: '2026-10-24',
     title: { zh: '第一關新手引導', en: 'First-Level Guide' },

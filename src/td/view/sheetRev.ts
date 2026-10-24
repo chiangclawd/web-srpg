@@ -27,6 +27,7 @@ export const SHEET_REV: Record<string, string> = {
   pike_hd: '2e299f6707',
   raider: '74fb97e328',
   raider_hd: 'e92a551a69',
+  rain: 'eac44c5dc0',
   shadow: 'efa74a02a2',
   sharon: '68610f5e74',
   skeleton: '68547cac9b',
