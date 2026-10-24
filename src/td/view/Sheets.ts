@@ -70,6 +70,10 @@ export const UNIT_SHEETS: Record<string, UnitSheet> = {
   sp_player_sword: sheet('soldier', 0.612),
   sp_player_lancer: sheet('pike', 0.783, { attack: 0.75 }),
   mon_goblin: sheet('goblin', 0.593, { fill: 1 }),
+  // 四足：Meshy 只綁人形骨架，狼用 scripts/art/m3d/quadrig.py 自己綁骨架、程式做動作
+  mon_wolf: sheet('wolf', 0.804, { fill: 1 }),
+  // 騎兵：馬用四足骨架，騎士整塊綁在 Rider 骨頭（scripts/art/m3d/cavalry.rig.json 框出騎士和劍）
+  sp_enemy_cavalry: sheet('cavalry', 0.716, { fill: 1 }),
   sp_enemy_archer: sheet('hunter', 0.688, { attack: 0.8 }),
   sp_enemy_mage: sheet('adept', 0.555, { attack: 0.9 }),
   // 英雄（雷恩騎馬、艾莉亞騎獅鷲，自動綁骨架只支援人形，維持手繪）

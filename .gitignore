@@ -51,3 +51,6 @@ public/assets/portraits_with_bg/
 .DS_Store
 **/.DS_Store
 __pycache__/
+
+# Blender Python 模組（scripts/art/m3d/quadrig.py 用）
+.venv-bpy/
