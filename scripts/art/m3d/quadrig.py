@@ -32,6 +32,8 @@ bpy.context.view_layer.objects.active = meshes[0]
 if len(meshes) > 1:
     bpy.ops.object.join()
 body = bpy.context.view_layer.objects.active
+# Meshy 有時把側面圖的身體擺成沿 X 軸：rotateZ（度）先把頭轉到 -Y
+body.matrix_world = Matrix.Rotation(math.radians(cfg.get('rotateZ', 0)), 4, 'Z') @ body.matrix_world
 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 # 有些模型的父物件帶旋轉，套用後清掉多餘的空物件
 for o in list(bpy.data.objects):
@@ -53,15 +55,35 @@ BOXES = RB if isinstance(RB, list) else [RB] if RB else []
 W = xmx - xmn
 
 
-def in_rider(w):
+def in_box(w, b):
     fy, fz, fx = (w.y - ymn) / L, (w.z - zmn) / H, (w.x - xmn) / W
-    return any(b['y'][0] <= fy <= b['y'][1] and fz >= b['z'] and b.get('x', [0, 1])[0] <= fx <= b.get('x', [0, 1])[1] for b in BOXES)
+    return b['y'][0] <= fy <= b['y'][1] and fz >= b['z'] and b.get('x', [0, 1])[0] <= fx <= b.get('x', [0, 1])[1]
+
+
+def in_rider(w):
+    return any(in_box(w, b) for b in BOXES)
+
+
+# 翅膀（獅鷲）：設定給左右兩個方框（座標同上），框內頂點綁在 Wing 骨頭上拍動。左邊是 +X（頭朝 -Y）。
+WB = cfg.get('wings', {})
+
+
+def wing_side(w):
+    if in_rider(w):
+        return None
+    for side in ('L', 'R'):
+        if side in WB and in_box(w, WB[side]):
+            return side
+    return None
 
 
 rider_pts = [w for w in ws if in_rider(w)]
-ws = [w for w in ws if not in_rider(w)]
+wing_pts = {side: [w for w in ws if wing_side(w) == side] for side in WB}
+ws = [w for w in ws if not in_rider(w) and not wing_side(w)]
 if BOXES:
     print('rider verts', len(rider_pts))
+for side, pts in wing_pts.items():
+    print(f'wing {side} verts', len(pts))
 
 
 def components(pts, cell):
@@ -255,6 +277,32 @@ if rider_pts:
     # 騎士往上指：區域 Z 朝前，繞區域 X 轉 = 前傾、繞區域 Y 轉 = 扭身
     rc = centroid(rider_pts)
     bone('Rider', Vector((0, rc.y, zmn + BOXES[0]['z'] * H)), Vector((0, rc.y, max(w.z for w in rider_pts))), 'Spine', roll_to=FWD)
+WING_TIP = {}
+# 每節翅膀骨頭「往上拍」的旋轉正負號
+WSIGN = {}
+
+
+def wing_bone(name, head, tail_, parent, connect=False):
+    # 區域 Z 軸 = 水平且垂直於翅膀方向：繞區域 Z 轉就是上下拍（不管翅膀往旁邊還是斜前方伸）
+    axis = UP.cross((tail_ - head).normalized())
+    b = bone(name, head, tail_, parent, roll_to=axis.normalized() if axis.length > 1e-3 else FWD, connect=connect)
+    # 繞區域 Z 正轉時骨頭末端往區域 -X 移動：-X 朝上就是正號
+    WSIGN[name] = 1 if -b.x_axis.z > 0 else -1
+
+
+for side, pts in wing_pts.items():
+    # 翅根 = 最靠身體中線的那群頂點（放在翅膀框的內側邊緣，拍動時接縫幾乎不動）；
+    # 翅尖 = 離翅根最遠的頂點；中間一節在一半距離處
+    inner = sorted(pts, key=lambda w: abs(w.x))[: max(10, len(pts) // 20)]
+    root = centroid(inner)
+    tip = max(pts, key=lambda w: (w - root).length)
+    d = (tip - root).length
+    ring = [w for w in pts if 0.4 * d < (w - root).length < 0.6 * d]
+    mid = centroid(ring) if ring else root.lerp(tip, 0.5)
+    wing_bone(f'Wing1.{side}', root, mid, 'Spine1')
+    wing_bone(f'Wing2.{side}', mid, tip, f'Wing1.{side}', connect=True)
+    WING_TIP[side] = tip
+    print(f'wing {side} root', tuple(round(v, 3) for v in root), 'tip', tuple(round(v, 3) for v in tip))
 bpy.ops.object.mode_set(mode='OBJECT')
 
 # ---- 3. 權重：合併接縫頂點的代理網格算 bone heat，再轉給原網格 ----
@@ -295,8 +343,27 @@ if rider_pts:
             g.remove(rid)
     body.vertex_groups['Rider'].remove(non)
     body.vertex_groups['Rider'].add(rid, 1.0, 'REPLACE')
-# 沒拿到權重的頂點（bone heat 偶爾漏掉的小碎片）給最近的骨頭（騎士骨頭除外）
-bones_mid = {b.name: (b.head_local + b.tail_local) / 2 for b in arm_data.bones if b.name != 'Rider'}
+if wing_pts:
+    # 翅膀頂點只跟同一邊的翅膀骨頭；身體其他部分不受翅膀骨頭影響
+    for side in wing_pts:
+        names = (f'Wing1.{side}', f'Wing2.{side}')
+        mine = [v.index for v in body.data.vertices if wing_side(v.co) == side]
+        for g in body.vertex_groups:
+            if g.name not in names:
+                g.remove(mine)
+        others = [v.index for v in body.data.vertices if wing_side(v.co) != side]
+        for n in names:
+            body.vertex_groups[n].remove(others)
+        # bone heat 沒給到的翅膀頂點：照離翅根的距離分給兩節
+        b1 = arm_data.bones[names[0]]
+        for i in mine:
+            v = body.data.vertices[i]
+            if sum(g.weight for g in v.groups) < 1e-3:
+                k = min(1.0, (v.co - b1.head_local).length / max(1e-6, (WING_TIP[side] - b1.head_local).length))
+                body.vertex_groups[names[0]].add([i], 1 - k, 'REPLACE')
+                body.vertex_groups[names[1]].add([i], k, 'REPLACE')
+# 沒拿到權重的頂點（bone heat 偶爾漏掉的小碎片）給最近的骨頭（騎士、翅膀骨頭除外）
+bones_mid = {b.name: (b.head_local + b.tail_local) / 2 for b in arm_data.bones if b.name != 'Rider' and not b.name.startswith('Wing')}
 gi = {g.name: g.index for g in body.vertex_groups}
 fixed = 0
 for v in body.data.vertices:
@@ -434,13 +501,112 @@ def pose_death(t):
             pb[n].rotation_euler.z = -0.2 * settle
 
 
+# ---- 飛行單位（獅鷲）：walk = 拍翅飛行、idle = 滑翔，腿一直收著 ----
+FLAP = cfg.get('flap', 0.6)
+
+
+def wings(a1, a2):
+    # 正值 = 往上
+    for side in wing_pts:
+        pb[f'Wing1.{side}'].rotation_euler.z = WSIGN[f'Wing1.{side}'] * a1
+        pb[f'Wing2.{side}'].rotation_euler.z = WSIGN[f'Wing2.{side}'] * a2
+
+
+def tuck(k=1.0):
+    # 前腳往前彎、後腳往後拖
+    for lk in legs_k:
+        front = lk[0] == 'F'
+        pb[f'UpperLeg.{lk}'].rotation_euler.x += (0.45 if front else -0.5) * k
+        pb[f'LowerLeg.{lk}'].rotation_euler.x += (-0.9 if front else 0.55) * k
+
+
+def tail_sway(t, amp=0.12):
+    for i in range(4):
+        n = f'Tail{i}'
+        if n in pb:
+            pb[n].rotation_euler.z = amp * math.sin(TAU * t - i * 0.6)
+            pb[n].rotation_euler.x = 0.1
+
+
+def pose_fly(t):
+    ph = TAU * t
+    # 翅尖比翅根慢一點，拍起來有彈性
+    # 擺動中心往下偏：往上拍時兩片翅膀不會在頭頂交叉
+    wings(FLAP * math.sin(ph) - 0.25, FLAP * 0.7 * math.sin(ph - 0.8) - 0.1)
+    # 下拍時身體被抬起來
+    pb['Hips'].location = (0, 0, -0.025 * H * math.cos(ph))
+    pb['Hips'].rotation_euler.x = 0.03 * math.sin(ph)
+    pb['Neck'].rotation_euler.x = 0.05 * math.sin(ph + 1.2)
+    rider(0.03 * math.cos(ph))
+    tuck()
+    tail_sway(t)
+
+
+def pose_hover(t):
+    ph = TAU * t
+    wings(0.25 + FLAP * 0.3 * math.sin(ph), 0.15 + FLAP * 0.25 * math.sin(ph - 0.7))
+    pb['Hips'].location = (0, 0, 0.015 * H * math.sin(ph))
+    pb['Neck'].rotation_euler.z = 0.1 * math.sin(ph + 0.8)
+    pb['Head'].rotation_euler.x = 0.04 * math.sin(ph)
+    rider(0.02 * math.sin(ph), 0.05 * math.sin(ph + 0.4))
+    tuck()
+    tail_sway(t, 0.08)
+
+
+def pose_fly_attack(t):
+    # 翅膀高舉蓄力 → 用力下拍、往前啄、騎士出招 → 收回
+    wind = ease(t / 0.35) * (1 - ease((t - 0.35) / 0.15))
+    strike = ease((t - 0.35) / 0.2) * (1 - ease((t - 0.7) / 0.3))
+    wings(0.9 * wind - 0.5 * strike, 0.6 * wind - 0.3 * strike)
+    pb['Hips'].location = (0, 0, (0.03 * wind - 0.02 * strike) * H)
+    pb['Hips'].rotation_euler.x = 0.08 * wind - 0.1 * strike
+    pb['Neck'].rotation_euler.x = 0.25 * wind - 0.4 * strike
+    pb['Head'].rotation_euler.x = 0.1 * wind - 0.25 * strike
+    rider(-0.18 * wind + 0.32 * strike, 0.35 * wind - 0.45 * strike)
+    tuck()
+    # 前爪往前抓
+    for lk in legs_k:
+        if lk[0] == 'F':
+            pb[f'UpperLeg.{lk}'].rotation_euler.x += 0.5 * strike
+            pb[f'LowerLeg.{lk}'].rotation_euler.x += 0.6 * strike
+    tail_sway(t, 0.1)
+
+
+def pose_fly_hit(t):
+    k = math.sin(math.pi * min(1.0, t / 0.9))
+    wings(0.6 * k, 0.4 * k)
+    pb['Hips'].rotation_euler.x = 0.12 * k
+    pb['Neck'].rotation_euler.x = 0.3 * k
+    pb['Head'].rotation_euler.x = 0.2 * k
+    rider(-0.22 * k)
+    tuck()
+
+
+def pose_fly_death(t):
+    # 翅膀往上收起、身體翻向側邊落地（遊戲裡同時把整隻往地面放）
+    fall = ease(t / 0.55)
+    settle = ease((t - 0.5) / 0.5)
+    wings(1.0 * fall - 0.6 * settle, 0.8 * fall - 0.5 * settle)
+    pb['Hips'].rotation_euler.y = ROLL * 1.45 * fall
+    pb['Hips'].location = (0, 0, -(spine_z(hip_y) - zmn - 0.22 * (xmx - xmn)) * fall)
+    pb['Neck'].rotation_euler.x = 0.2 * fall - 0.15 * settle
+    pb['Head'].rotation_euler.x = 0.25 * settle
+    rider(0.35 * fall)
+    tuck(1 - settle)
+    for i in range(4):
+        n = f'Tail{i}'
+        if n in pb:
+            pb[n].rotation_euler.z = -0.2 * settle
+
+
+FLYER = bool(cfg.get('flyer'))
 ANIMS = [
     # 名稱、長度（秒）、循環、姿勢函式
-    ('idle', 2.0, True, pose_idle),
-    ('walk', 1.0, True, pose_walk),
-    ('attack', 0.8, False, pose_attack),
-    ('hit', 0.4, False, pose_hit),
-    ('death', 1.2, False, pose_death),
+    ('idle', 2.0, True, pose_hover if FLYER else pose_idle),
+    ('walk', 1.0, True, pose_fly if FLYER else pose_walk),
+    ('attack', 0.8, False, pose_fly_attack if FLYER else pose_attack),
+    ('hit', 0.4, False, pose_fly_hit if FLYER else pose_hit),
+    ('death', 1.2, False, pose_fly_death if FLYER else pose_death),
 ]
 arm.animation_data_create()
 for name, dur, loop, fn in ANIMS:

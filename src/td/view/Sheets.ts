@@ -74,6 +74,9 @@ export const UNIT_SHEETS: Record<string, UnitSheet> = {
   mon_wolf: sheet('wolf', 0.804, { fill: 1 }),
   // 騎兵：馬用四足骨架，騎士整塊綁在 Rider 骨頭（scripts/art/m3d/cavalry.rig.json 框出騎士和劍）
   sp_enemy_cavalry: sheet('cavalry', 0.716, { fill: 1 }),
+  // 獅鷲騎手：四足骨架加左右翅膀（griffin.rig 見 scripts/art/m3d/flier.rig.json）。
+  // 飛行時腳不動、量不到步幅：cycle 手動設成每秒拍翅約 1.6 下
+  sp_enemy_flier: sheet('griffin', 0.42, { attack: 0.8, fill: 1 }),
   sp_enemy_archer: sheet('hunter', 0.688, { attack: 0.8 }),
   sp_enemy_mage: sheet('adept', 0.555, { attack: 0.9 }),
   // 英雄（雷恩騎馬、艾莉亞騎獅鷲，自動綁骨架只支援人形，維持手繪）
