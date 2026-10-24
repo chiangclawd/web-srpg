@@ -494,6 +494,9 @@ export class UnitView {
       let landed = false;
       // 背面倒地會倒向鏡頭、超出格子：改用側面
       const dir = this.dir === 'back' ? 'side' : this.dir;
+      // 飛行單位邊播倒下的格子邊從空中掉到地面（加速落下）
+      const y0 = b.y;
+      const fly = this.flying;
       this.scene.tweens.add({
         targets: st,
         k: 1,
@@ -503,6 +506,7 @@ export class UnitView {
           b.setFrame(f);
           cast?.setFrame(f);
           applyPose(b, STILL, this.face, 1, cast, 0);
+          if (fly) b.setY(y0 + (groundY - y0) * Math.min(1, Math.pow(st.k / 0.5, 2)));
           if (!landed && st.k > 0.6) {
             landed = true;
             dustFx?.(b.x, groundY);
