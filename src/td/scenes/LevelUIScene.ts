@@ -9,7 +9,7 @@ import { ITEMS, ITEM_ORDER, GOLD_SACK, POTION_LIVES, type ItemId } from '../data
 import type { EliteAffix, EnemyDef } from '../sim/defs';
 import { ELITE } from '../sim/World';
 import { IconButton, Button, panel, dimmer, popIn } from '../ui/widgets';
-import { UNIT_SHEETS } from '../view/Sheets';
+import { UNIT_SHEETS, sheetFor, showcaseSprite } from '../view/Sheets';
 import { playDialog } from '../ui/dialog';
 import { showTipBubble } from '../ui/tip';
 import { shareResult } from '../ui/share';
@@ -591,11 +591,17 @@ export class LevelUIScene extends Phaser.Scene {
     c.add(bg);
     const head = addText(this, 0, -112, T('newEnemy'), { size: 26, display: true, color: '#c0392b', stroke: '#fff2d0', strokeW: 4, shadow: false }).setOrigin(0.5);
     c.add(head);
-    const img = this.add.image(-150, 40, e.sprite).setOrigin(0.5, 1);
-    img.setScale(Math.min(140 / img.frame.height, 160 / img.frame.width));
-    if (!e.facesRight) img.setFlipX(true);
-    if (e.tint) img.setTint(e.tint);
-    c.add(img);
+    // 開著 3D 角色時（這關的圖表已經下載好）用會動的 3D 版
+    const sh = sheetFor(e.sprite, this);
+    if (sh) {
+      c.add(showcaseSprite(this, sh, -150, 40, 130, 210, e.tint));
+    } else {
+      const img = this.add.image(-150, 40, e.sprite).setOrigin(0.5, 1);
+      img.setScale(Math.min(140 / img.frame.height, 160 / img.frame.width));
+      if (!e.facesRight) img.setFlipX(true);
+      if (e.tint) img.setTint(e.tint);
+      c.add(img);
+    }
     const name = fitText(addText(this, -40, -74, L(e.name), { size: 26, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 3, shadow: false }), 270);
     // 手機字體放大後說明會變長：太長就縮小一點字，免得面板比螢幕還高
     let descSize = 16;
