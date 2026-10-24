@@ -143,6 +143,17 @@ export class RadialMenu extends Phaser.GameObjects.Container {
     o.onPreview?.();
   }
 
+  /** 選項在世界座標的位置（新手引導指向用） */
+  optionPos(id: string): { x: number; y: number } | null {
+    const it = this.items.get(id);
+    return it ? { x: this.x + it.x * this.zoom, y: this.y + it.y * this.zoom } : null;
+  }
+
+  /** 目前選中（等第二下確認）的選項 */
+  get selectedId(): string | null {
+    return this.selected;
+  }
+
   close(): void {
     if (this.closing) return;
     this.closing = true;

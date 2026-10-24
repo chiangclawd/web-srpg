@@ -29,6 +29,7 @@ import { HazardLayer, hazardTextures } from '../view/Hazards';
 import { EggLayer } from '../view/Eggs';
 import { NightLayer } from '../view/Night';
 import { Bubbles } from '../view/Bubbles';
+import { Coach } from '../view/Coach';
 import { clearCheckpoint, loadCheckpoint, restore, saveCheckpoint, snapshot, type Checkpoint } from '../sim/checkpoint';
 import { BRANCH_BARKS, HERO_BARKS, NIGHT_BARKS, towerBark } from '../data/barks';
 import { BOSS_VOICES, towerVoiceLines, voiceText } from '../data/voices';
@@ -90,7 +91,8 @@ export class LevelScene extends Phaser.Scene {
   private resultShown = false;
   private lastTapTouch = false;
   private skullArmedUntil = 0;
-  private tutArrow: Phaser.GameObjects.Image | null = null;
+  /** 第一關的新手引導（箭頭＋一行說明） */
+  private coach: Coach | null = null;
   private exitMarks: Phaser.GameObjects.Image[] = [];
   private projPool: Phaser.GameObjects.Image[] = [];
   private ambient: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
@@ -142,7 +144,7 @@ export class LevelScene extends Phaser.Scene {
     this.menu = null;
     this.menuTarget = null;
     this.resultShown = false;
-    this.tutArrow = null;
+    this.coach = null;
     this.exitMarks = [];
     this.projPool = [];
     this.shadowPool = [];
@@ -332,9 +334,7 @@ export class LevelScene extends Phaser.Scene {
 
     this.createWaveButtons();
     this.createExitMarks();
-    if (this.level.tutorial) {
-      this.tutArrow = this.add.image(0, 0, 'fx_arrow').setScale(1 / TEX).setDepth(DEPTH.menu + 5).setVisible(false);
-    }
+    if (this.level.tutorial) this.coach = new Coach(this, DEPTH.menu + 5);
 
     // HUD
     this.scene.launch('LevelUI', { level: this });
@@ -923,9 +923,10 @@ export class LevelScene extends Phaser.Scene {
   private maybeTip(waveIndex: number): void {
     const w = this.world;
     const seen = save().tipsSeen;
-    let id: 'spells' | 'ult' | 'items' | null = null;
+    let id: 'hero' | 'spells' | 'ult' | 'items' | null = null;
     if (this.baseLevel.index === 0) {
-      if (waveIndex === 1 && w.spellsEnabled && !seen.includes('spells')) id = 'spells';
+      if (waveIndex === 0 && this.level.tutorial && w.hero && !seen.includes('tut_hero')) id = 'hero';
+      else if (waveIndex === 1 && w.spellsEnabled && !seen.includes('spells')) id = 'spells';
     } else if (waveIndex === 0) {
       if (w.hero && !seen.includes('ult')) id = 'ult';
       else if (w.spellsEnabled && !seen.includes('items') && Object.values(save().items).some((n) => n > 0)) id = 'items';
@@ -1074,7 +1075,6 @@ export class LevelScene extends Phaser.Scene {
     });
     this.menu = this.radial(s.x, s.y - 20, opts, 64);
     this.menuTarget = { spot };
-    if (this.level.tutorial && this.world.towers.length === 0) this.ui.toast(T('tutConfirm'));
   }
 
   /** 預覽射程（x, y：塔的位置，夜戰時燈火照到的地方不打折） */
@@ -1339,36 +1339,66 @@ export class LevelScene extends Phaser.Scene {
     }
   }
 
+  /** 第一關的新手引導：蓋塔（建造點 → 弓兵塔 → 確認）→ 開第一波 → 金幣夠了教升級。
+   *  依當下的戰場狀態決定指哪裡，玩家怎麼亂點都不會卡住 */
   private updateTutorial(time: number): void {
-    const a = this.tutArrow;
-    if (!a) return;
+    const c = this.coach;
+    if (!c) return;
     const w = this.world;
-    let target: { x: number; y: number } | null = null;
-    // 劇情 / 介紹卡等對話框開著時先不提示
-    if (this.ui?.hasModal()) {
-      a.setVisible(false);
+    const sv = save();
+    if (w.result || (w.waveIndex >= 0 && sv.tipsSeen.includes('tut_up'))) {
+      c.destroy();
+      this.coach = null;
       return;
     }
-    if (w.towers.length === 0 && !this.menu) {
+    // 劇情、介紹卡、提示泡泡開著或暫停時先不指
+    if (this.paused || this.ui?.hasModal()) {
+      c.hide();
+      return;
+    }
+    const z = uiZoom() / this.userZoom;
+    const v = this.visibleRect();
+    // 說明框不要壓到上方的生命／金幣列
+    const view = { left: v.left, right: v.right, top: v.top + (64 * uiZoom()) / this.userZoom };
+    const point = (x: number, y: number, text: string): void => c.show(x, y, text, time, z, 1 / this.userZoom, view);
+    const m = this.menu && !this.menu.closing ? this.menu : null;
+    const option = (id: string, pick: string, confirm: string): boolean => {
+      const p = m?.optionPos(id);
+      if (!m || !p) return false;
+      point(p.x, p.y - 30 * z, m.selectedId === id ? confirm : pick);
+      return true;
+    };
+    if (w.towers.length === 0) {
+      if (this.menuTarget?.spot !== undefined) {
+        if (!option('archer', T('tutPick'), T('tutConfirm'))) c.hide();
+        return;
+      }
+      if (m) return c.hide();
       // 推薦建造點：最靠近路徑中段的點
       const mid = w.paths[0].posAt(w.paths[0].length * 0.55);
       let best = w.spots[0];
       for (const s of w.spots) if (Math.hypot(s.x - mid.x, s.y - mid.y) < Math.hypot(best.x - mid.x, best.y - mid.y)) best = s;
-      target = { x: best.x, y: best.y - 34 };
-    } else if (w.towers.length > 0 && w.waveIndex < 0 && !this.menu) {
-      const b = this.waveBtns.find((x) => x.btn.visible);
-      if (b) target = { x: b.btn.x, y: b.btn.y - 40 * uiZoom() };
+      return point(best.x, best.y - 20, T('tutBuild'));
     }
-    if (!target) {
-      a.setVisible(false);
-      if (w.waveIndex >= 0) {
-        a.destroy();
-        this.tutArrow = null;
-      }
+    if (w.waveIndex < 0) {
+      const b = this.waveBtns.find((x) => x.btn.visible);
+      if (!b || m) return c.hide();
+      const r = b.btn.getBounds();
+      return point(r.centerX, r.top, T('tutWave'));
+    }
+    // 金幣夠升級了：指那座塔 → 升級鍵 → 再點一次確認；有塔升到 2 級就算學會
+    if (w.towers.some((t) => t.level >= 2)) {
+      sv.tipsSeen.push('tut_up');
+      persist();
+      return c.hide();
+    }
+    if (this.menuTarget?.tower) {
+      if (!option('up', T('tutUpgradeBtn'), T('tutConfirmUp'))) c.hide();
       return;
     }
-    a.setVisible(true);
-    a.setPosition(target.x, target.y - Math.abs(Math.sin(time / 220)) * 14);
+    const t = w.towers.find((x) => x.level === 1 && w.gold >= (w.upgradeCost(x) ?? Infinity));
+    if (t && !m && this.mode === 'idle') return point(t.x, t.y - 56, T('tutUpgrade'));
+    c.hide();
   }
 
   private positionWaveButtons(): void {
@@ -2023,13 +2053,7 @@ export class LevelScene extends Phaser.Scene {
   private introNewEnemies(ids: string[]): void {
     const sv = save();
     const fresh = ids.filter((id) => ENEMIES[id] && !sv.seenEnemies.includes(id));
-    if (!fresh.length) {
-      if (this.level.tutorial && this.world.towers.length === 0) this.ui.toast(T('tutBuild'), 4000);
-      return;
-    }
-    this.ui.showEnemyIntro(fresh, () => {
-      if (this.level.tutorial && this.world.towers.length === 0) this.ui.toast(T('tutBuild'), 4000);
-    });
+    if (fresh.length) this.ui.showEnemyIntro(fresh, () => undefined);
   }
 
   /** 塔冒出一句台詞，有配音就一起說（第 4 級特化用自己的台詞） */

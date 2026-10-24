@@ -333,12 +333,16 @@ export class LevelUIScene extends Phaser.Scene {
   }
 
   /** 首次提示：暫停並用泡泡指向對應按鈕；有開對話框時不顯示（下次再試） */
-  showTip(id: 'spells' | 'ult' | 'items'): boolean {
+  showTip(id: 'hero' | 'spells' | 'ult' | 'items'): boolean {
     if (this.modal) return false;
     const bl = this.bottomLeft;
     let x = 0;
     let y = 0;
-    if (id === 'ult') {
+    if (id === 'hero') {
+      if (!this.heroBtn) return false;
+      x = bl.x + this.heroBtn.x * bl.scaleX;
+      y = bl.y + this.heroBtn.y * bl.scaleY;
+    } else if (id === 'ult') {
       if (!this.ult) return false;
       x = bl.x + this.ult.btn.x * bl.scaleX;
       y = bl.y + this.ult.btn.y * bl.scaleY;
@@ -352,11 +356,12 @@ export class LevelUIScene extends Phaser.Scene {
       y = this.itemBar.y - 32 * this.itemBar.scaleY;
     }
     const sv = save();
-    if (!sv.tipsSeen.includes(id)) sv.tipsSeen.push(id);
+    const seenId = id === 'hero' ? 'tut_hero' : id;
+    if (!sv.tipsSeen.includes(seenId)) sv.tipsSeen.push(seenId);
     persist();
     this.lvl.togglePause(true);
     this.closeModal();
-    const text = T(id === 'ult' ? 'tipUlt' : id === 'spells' ? 'tipSpells' : 'tipItems');
+    const text = T(id === 'hero' ? 'tutHero' : id === 'ult' ? 'tipUlt' : id === 'spells' ? 'tipSpells' : 'tipItems');
     this.modal = showTipBubble(this, x, y, text, () => {
       this.modal = null;
       this.lvl.togglePause(false);

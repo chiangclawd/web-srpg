@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 88,
+    date: '2026-10-24',
+    title: { zh: '第一關新手引導', en: 'First-Level Guide' },
+    items: [
+      { zh: '第一關改成一步步帶著玩：箭頭會指出要點哪裡（建造點 → 弓兵塔 → 再點一次確認 → 骷髏開波），開戰後介紹英雄，金幣夠了再教怎麼升級塔', en: 'Level 1 now walks you through it step by step: an arrow shows where to tap (build spot → Archer Tower → tap again to confirm → skull to start), then introduces your hero, and shows how to upgrade a tower once you have the gold' },
+    ],
+  },
+  {
     id: 87,
     date: '2026-10-24',
     title: { zh: '新增日文', en: 'Japanese Language' },
