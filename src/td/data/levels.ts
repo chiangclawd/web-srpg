@@ -416,7 +416,7 @@ export const LEVELS: LevelDef[] = [
     startGold: 700,
     lives: 20,
     heroStart: { x: 690, y: 330 },
-    mapPos: { x: 0.75, y: 0.16 },
+    mapPos: { x: 0.72, y: 0.17 },
     intro: ['bat'],
     decor: [
       { kind: 'trees', x: 1180, y: 120, n: 8, r: 110 },
@@ -489,7 +489,7 @@ export const LEVELS: LevelDef[] = [
     startGold: 760,
     lives: 20,
     heroStart: { x: 300, y: 330 },
-    mapPos: { x: 0.88, y: 0.28 },
+    mapPos: { x: 0.88, y: 0.31 },
     intro: ['selene'],
     decor: [
       { kind: 'lake', x: 720, y: 360, rx: 150, ry: 60 },
@@ -1060,7 +1060,7 @@ export const LEVELS: LevelDef[] = [
     startGold: 1500,
     lives: 20,
     heroStart: { x: 560, y: 330 },
-    mapPos: { x: 0.21, y: 0.13 },
+    mapPos: { x: 0.21, y: 0.19 },
     intro: ['wyrm'],
     decor: [
       { kind: 'tower_ruin', x: 820, y: 160 },
@@ -1241,7 +1241,7 @@ export const LEVELS: LevelDef[] = [
     startGold: 2000,
     lives: 20,
     heroStart: { x: 560, y: 400 },
-    mapPos: { x: 0.44, y: 0.115 },
+    mapPos: { x: 0.45, y: 0.115 },
     intro: ['magma_imp', 'lava_golem'],
     decor: [
       { kind: 'lake', x: 1150, y: 540, rx: 90, ry: 38 },
@@ -1616,7 +1616,7 @@ LEVELS.push(
     seed: 1203,
     startGold: 1600,
     lives: 20,
-    mapPos: { x: 0.29, y: 0.88 },
+    mapPos: { x: 0.31, y: 0.77 },
     intro: ['echo_knight', 'shard'],
     waves: [
       w(g(0, 'raider', 6, 1.2), g(1, 'shard', 4, 0.8, 3)),
@@ -1653,7 +1653,7 @@ LEVELS.push(
     seed: 1215,
     startGold: 1900,
     lives: 20,
-    mapPos: { x: 0.44, y: 0.9 },
+    mapPos: { x: 0.44, y: 0.75 },
     intro: ['shard_golem'],
     waves: [
       w(g(0, 'wolf', 8, 0.6), g(1, 'shard', 6, 0.7, 3)),
@@ -1688,7 +1688,7 @@ LEVELS.push(
     seed: 1224,
     startGold: 2000,
     lives: 20,
-    mapPos: { x: 0.59, y: 0.91 },
+    mapPos: { x: 0.47, y: 0.61 },
     intro: ['echo_umbra'],
     waves: [
       w(g(0, 'cultist', 6, 1), g(1, 'shard', 7, 0.5, 2), g(2, 'echo_knight', 3, 2, 4)),

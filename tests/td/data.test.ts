@@ -23,6 +23,21 @@ test('every level wave references a known enemy and a valid path', () => {
   }
 });
 
+test('world map nodes stay clear of the map buttons on phones', () => {
+  // 16:9 手機（最窄的版面，地圖 1280×720 剛好佔滿畫面），按鈕放大 1.4 倍時：
+  // 底部按鈕列從 y≈620 起；左上星數與寶石到 x≈544、y≈92；右上每日挑戰與任務從 x≈984 起、到 y≈172。
+  // 節點的旗子往上 34、往右 28，星星往下約 30、左右各約 20。
+  const px = LEVELS.map((l) => ({ id: l.id, x: l.mapPos.x * 1280, y: l.mapPos.y * 720 }));
+  for (const n of px) {
+    assert.ok(n.x >= 50 && n.x + 28 <= 1250, `${n.id} inside the map`);
+    assert.ok(n.y + 30 <= 620, `${n.id} above the bottom button bar`);
+    if (n.x - 20 < 544) assert.ok(n.y - 34 >= 92, `${n.id} below the star / gem counters`);
+    if (n.x + 30 > 984) assert.ok(n.y - 34 >= 172, `${n.id} below the daily / quest buttons`);
+  }
+  for (let i = 0; i < px.length; i++)
+    for (let j = i + 1; j < px.length; j++) assert.ok(Math.hypot(px[i].x - px[j].x, px[i].y - px[j].y) >= 80, `${px[i].id} and ${px[j].id} too close`);
+});
+
 test('level ids, indices and map order are consistent', () => {
   LEVELS.forEach((l, i) => {
     assert.equal(l.index, i);

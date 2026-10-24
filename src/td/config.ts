@@ -41,15 +41,20 @@ export function applyQuality(q: Quality): void {
 }
 
 /**
- * 一般角色的 3D 圖表要不要用 2 倍解析度版（<file>_hd，每張約 4 倍顯示記憶體）：
- * 省電畫質不用、高畫質一律用；自動時只在畫布夠清楚（渲染倍率 1.5 以上）、
- * 記憶體不明或 4 GB 以上的裝置用。真的吃不消當機了，crashGuard 會改成省電畫質，下次就回到一般版。
+ * 一般角色的 3D 圖表要不要用 2 倍解析度版（<file>_hd，每張約 4 倍顯示記憶體；最重的關卡約 160 MB，一般版約 70 MB）：
+ * 省電畫質不用、高畫質一律用。自動時要畫布夠清楚（渲染倍率 1.5 以上），而且：
+ * 有回報記憶體的（Android Chrome）要 4 GB 以上；沒回報的手機（iPhone）看螢幕短邊實體像素，
+ * 1080 以上大約是 iPhone X / 8 Plus 之後的機種；電腦不限。
+ * 真的吃不消當機了，crashGuard 會改成省電畫質，下次就回到一般版。
  */
 export function wantHdSheets(q: Quality): boolean {
   if (q === 'low') return false;
   if (q === 'high') return true;
-  const mem = typeof navigator === 'undefined' ? undefined : (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
-  return RS >= 1.5 && (mem === undefined || mem >= 4);
+  if (typeof window === 'undefined' || RS < 1.5) return false;
+  const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+  if (mem !== undefined) return mem >= 4;
+  if (!isTouchDevice()) return true;
+  return Math.min(window.screen.width, window.screen.height) * (window.devicePixelRatio || 1) >= 1080;
 }
 
 /** 程序繪圖背景的解析度：跟著渲染倍率，但有上限（大圖最吃記憶體） */
