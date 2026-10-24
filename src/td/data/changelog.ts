@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 83,
+    date: '2026-10-24',
+    title: { zh: '戰鬥中螢幕不會暗掉', en: 'Screen Stays On in Battle' },
+    items: [
+      { zh: '戰鬥進行中手機螢幕會保持亮著，等下一波時不會自動變暗鎖屏；暫停或離開戰鬥就恢復平常設定', en: 'Your screen now stays on during battles, so it will not dim or lock while you wait for the next wave; pausing or leaving the battle restores the usual setting' },
+      { zh: 'Android App：劇情對話時按返回鍵可以直接略過', en: 'Android app: the back button skips story dialogue' },
+    ],
+  },
+  {
     id: 82,
     date: '2026-10-24',
     title: { zh: '手機更順', en: 'Smoother on Phones' },

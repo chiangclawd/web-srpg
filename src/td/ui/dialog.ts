@@ -71,6 +71,8 @@ export function playDialog(
     c.destroy();
     done();
   };
+  // Android 返回鍵也能略過（見 LevelUIScene.skipDialog）
+  c.setData('skip', finish);
   // 略過鈕放在對話框右上角，不蓋住 HUD 的暫停 / 加速鈕
   c.add(new Button(scene, w / 2 + (bw / 2 - 80) * z, boxY - 70 * z - 24, 130, 40, `${T('skip')} ▶▶`, () => finish(), { color: 'grey', text: { size: 15 } }));
   // 先排好整句的換行再逐字顯示：打字時不會跳行，中文標點也不會落在行首

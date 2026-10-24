@@ -316,6 +316,14 @@ export class LevelUIScene extends Phaser.Scene {
     for (const id of ITEM_ORDER) this.itemSlots[id]?.btn.badge.setTint(m === id ? 0xffe08a : 0xffffff);
   }
 
+  /** 開著劇情對話就整段略過（Android 返回鍵）；回傳是否有略過 */
+  skipDialog(): boolean {
+    const skip: unknown = this.modal?.getData('skip');
+    if (typeof skip !== 'function') return false;
+    skip();
+    return true;
+  }
+
   isPauseOpen(): boolean {
     return !!this.modal?.getData('pause');
   }
