@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import '@fontsource/luckiest-guy/400.css';
 import { RS, VIEW_H, applyQuality, computeViewW, isTouchDevice, refreshTextScale, setUiBoost } from './config';
-import { loadSave, persist } from './save';
+import { SAVE_KEY, loadSave, persist } from './save';
+import { isNativeApp, restoreNativeSaves } from './native';
 import { crashGuard } from './crashGuard';
 import { PreloadScene } from './scenes/PreloadScene';
 import { BootScene } from './scenes/BootScene';
@@ -15,6 +16,9 @@ import { EncyclopediaScene } from './scenes/EncyclopediaScene';
 import { AchievementScene } from './scenes/AchievementScene';
 import { EndingScene } from './scenes/EndingScene';
 import { ShopScene } from './scenes/ShopScene';
+
+// App 版：localStorage 被系統清掉時，先從原生儲存搬回存檔
+await restoreNativeSaves([SAVE_KEY]);
 
 {
   const sv = loadSave();
@@ -74,8 +78,8 @@ window.addEventListener(
   { once: true },
 );
 
-// 離線遊玩：正式版註冊 service worker（範圍只限 td.html）
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+// 離線遊玩：正式版註冊 service worker（範圍只限 td.html）；App 版的檔案本來就在手機裡，不需要
+if (import.meta.env.PROD && !isNativeApp && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('td-sw.js', { scope: './td' }).catch(() => {
       // 不支援或被沙盒擋下：照常線上遊玩

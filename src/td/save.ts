@@ -2,8 +2,10 @@ import { setLang, type Lang } from './i18n';
 import type { Difficulty } from './sim/World';
 import type { Quality } from './config';
 import type { QuestDay } from './data/quests';
+import { mirrorNativeSave } from './native';
 
-const KEY = 'kb_td_save_v1';
+/** localStorage 的存檔 key（App 版另外同步到原生儲存） */
+export const SAVE_KEY = 'kb_td_save_v1';
 
 export interface SaveData {
   version: 1;
@@ -106,7 +108,7 @@ function migrate(parsed: Partial<SaveData>): SaveData {
 
 export function loadSave(): SaveData {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(SAVE_KEY);
     if (raw) data = migrate(JSON.parse(raw) as Partial<SaveData>);
   } catch {
     data = defaults();
@@ -159,11 +161,13 @@ export function save(): SaveData {
 }
 
 export function persist(): void {
+  const json = JSON.stringify(data);
   try {
-    localStorage.setItem(KEY, JSON.stringify(data));
+    localStorage.setItem(SAVE_KEY, json);
   } catch {
     // 私密模式 / 容量不足：靜默失敗
   }
+  mirrorNativeSave(SAVE_KEY, json);
 }
 
 /** 清除所有進度（保留音量 / 語言等設定） */

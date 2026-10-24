@@ -1,0 +1,13 @@
+{
+  "appId": "com.chiangclawd.kingdombastion",
+  "appName": "王國防線",
+  "webDir": "dist-app",
+  "backgroundColor": "#120d08",
+  "android": {
+    "backgroundColor": "#120d08"
+  },
+  "ios": {
+    "backgroundColor": "#120d08",
+    "contentInset": "never"
+  }
+}

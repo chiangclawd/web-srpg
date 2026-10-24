@@ -11,6 +11,16 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 78,
+    date: '2026-10-24',
+    title: { zh: '上架準備', en: 'Getting Ready for the Stores' },
+    items: [
+      { zh: '主選單左下角加上「隱私權政策」：遊戲不收集任何個人資料，沒有廣告、沒有內購', en: 'Added a Privacy Policy link at the bottom left of the main menu: the game collects no personal data and has no ads or in-app purchases' },
+      { zh: '製作群名單更新：列出使用的工具與授權，並註明美術、音樂、語音以 AI 輔助製作', en: 'Updated the credits with the tools and licences used, noting that art, music and voices were made with the help of AI' },
+      { zh: '加到手機主畫面時有專屬的城堡圖示；Android 手機可以安裝 App 測試版', en: 'Adding the game to your home screen now shows its own castle icon, and Android phones can install a test build of the app' },
+    ],
+  },
+  {
     id: 77,
     date: '2026-10-24',
     title: { zh: '3D 雪原狼與騎兵', en: '3D Wolves and Riders' },

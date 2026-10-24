@@ -13,6 +13,7 @@ import { sfx } from '../audio';
 import { Path } from '../sim/Path';
 import { clearCheckpoint, loadCheckpoint, type Checkpoint } from '../sim/checkpoint';
 import { getLevel } from '../data/levels';
+import { isNativeApp } from '../native';
 
 /** 標題畫面背景用的裝飾地圖 */
 export const MENU_LEVEL: LevelDef = {
@@ -178,8 +179,14 @@ export class MenuScene extends Phaser.Scene {
       this.cameras.main.fadeOut(300, 0, 0, 0);
       this.time.delayedCall(310, () => this.scene.start('Ending', { epilogue: false, back: 'Menu' }));
     }, { color: 'wood' });
-    const srpg = new Button(this, 164, 86, 150, 52, T('srpg'), () => (window.location.href = './'), { color: 'blue', text: { size: 18 } });
-    btns.add([start, set, cred, srpg]);
+    btns.add([start, set, cred]);
+    if (isNativeApp) {
+      // App 版只有塔防：拿掉「戰術 SRPG」，兩顆按鈕置中
+      set.x = -82;
+      cred.x = 82;
+    } else {
+      btns.add(new Button(this, 164, 86, 150, 52, T('srpg'), () => (window.location.href = './'), { color: 'blue', text: { size: 18 } }));
+    }
     const lang = new Button(this, cx + w / 2 - 14 - 50 * z, 12 + 22 * z, 100, 44, getLang() === 'zh' ? 'EN' : '中文', () => {
       setLang(getLang() === 'zh' ? 'en' : 'zh');
       save().settings.lang = getLang();
@@ -187,8 +194,11 @@ export class MenuScene extends Phaser.Scene {
       this.build();
     }, { color: 'grey' }).setBaseScale(z).setDepth(2000);
     const ver = addText(this, cx + w / 2 - 12, VIEW_H - 10, `v${__APP_VERSION__} · ${__GIT_SHA__}`, { size: 13, color: '#e8d8b8', strokeW: 3 }).setOrigin(1, 1).setDepth(2000);
+    // 隱私權政策（上架必備）：左下角，跟版本號對稱
+    const privacy = addText(this, cx - w / 2 + 12, VIEW_H - 10, T('privacy'), { size: 15, color: '#e8d8b8', strokeW: 3 }).setOrigin(0, 1).setDepth(2000);
+    privacy.setPadding(6, 8, 6, 2).setInteractive({ useHandCursor: true }).on('pointerup', () => (window.location.href = 'td-privacy.html'));
     const news = new Button(this, cx - w / 2 + 14 + 70 * z, 12 + 22 * z, 140, 44, T('news'), () => this.showNews(), { color: 'grey', text: { size: 16 } }).setBaseScale(z).setDepth(2000);
-    this.ui.push(title, sub, btns, lang, ver, news);
+    this.ui.push(title, sub, btns, lang, ver, privacy, news);
   }
 
   /** 更新內容：有新的條目時開場自動跳出一次 */

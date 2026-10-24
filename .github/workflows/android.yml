@@ -1,0 +1,80 @@
+name: Android APK
+
+# 塔防《王國防線》的 Android 測試版：用 Capacitor 把網頁版包成 App。
+# main 每次更新就重建，放到 Releases 的「android-test」給朋友下載安裝。
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'capacitor.config.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/app-dist.mjs'
+      - 'src/td/native.ts'
+      - 'vite.config.ts'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build:app
+
+      - name: Copy into the Android project
+        run: npx cap sync android
+
+      - name: Build APK
+        working-directory: android
+        run: |
+          export APP_VERSION_CODE=${{ github.run_number }}
+          export APP_VERSION_NAME="$(node -p "require('../package.json').version")-${{ github.run_number }}"
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+          cp app/build/outputs/apk/release/app-release.apk ../KingdomBastion.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: KingdomBastion-android
+          path: KingdomBastion.apk
+          retention-days: 14
+
+      - name: Publish test build
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete android-test --cleanup-tag --yes || true
+          gh release create android-test KingdomBastion.apk \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "王國防線 Android 測試版" \
+            --notes "Android 手機下載 KingdomBastion.apk 後點開安裝（第一次要允許「安裝未知來源的應用程式」）。新版可以直接覆蓋安裝，存檔會保留。版本：${GITHUB_SHA::7}"
