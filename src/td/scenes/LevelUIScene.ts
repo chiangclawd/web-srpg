@@ -316,6 +316,10 @@ export class LevelUIScene extends Phaser.Scene {
     for (const id of ITEM_ORDER) this.itemSlots[id]?.btn.badge.setTint(m === id ? 0xffe08a : 0xffffff);
   }
 
+  isPauseOpen(): boolean {
+    return !!this.modal?.getData('pause');
+  }
+
   hasModal(): boolean {
     return !!this.modal;
   }

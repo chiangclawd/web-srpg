@@ -611,6 +611,20 @@ export class MapScene extends Phaser.Scene {
     this.tweens.add({ targets: t, alpha: 0, y: 70, delay: 1400, duration: 400, onComplete: () => t.destroy() });
   }
 
+  /** Android 返回鍵：先關英雄快選、關卡面板，都沒開就回主選單 */
+  onBack(): boolean {
+    if (this.heroPick) {
+      this.heroPick.destroy();
+      this.heroPick = null;
+    } else if (this.infoPanel) {
+      this.infoPanel.destroy();
+      this.infoPanel = null;
+    } else {
+      this.leave('Menu');
+    }
+    return true;
+  }
+
   private leave(scene: string): void {
     this.cameras.main.fadeOut(250, 0, 0, 0);
     this.time.delayedCall(260, () => this.scene.start(scene));

@@ -204,6 +204,17 @@ export class EndingScene extends Phaser.Scene {
     skip.setName('skip');
   }
 
+  /** Android 返回鍵：字幕還在跑就跳到結尾，已經跑完就離開 */
+  onBack(): boolean {
+    if (!this.finished) {
+      this.finishRoll();
+    } else {
+      this.cameras.main.fadeOut(400, 0, 0, 0);
+      this.time.delayedCall(420, () => this.scene.start(this.back));
+    }
+    return true;
+  }
+
   private finishRoll(): void {
     if (this.finished || !this.roll) return;
     this.finished = true;

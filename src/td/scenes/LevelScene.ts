@@ -163,13 +163,18 @@ export class LevelScene extends Phaser.Scene {
     for (const k of hazardTextures(this.level.hazards ?? [])) if (!this.textures.exists(k)) this.load.image(k, `assets/sprites/hz/${k}.webp`);
     setUse3d(!!save().settings.art3d);
     // 這關會出現的敵人、出戰英雄、兵營士兵先下載；其他（召喚物、無盡模式後段）出場時才補
+    const texs = new Set<string>();
     if (save().settings.art3d) {
       const sv = save();
       const hero = HEROES[this.resumeCp?.heroId ?? sv.selectedHero] ?? HEROES.arthur;
-      const texs = new Set<string>([hero.sprite, ...BARRACKS_SPRITES]);
+      texs.add(hero.sprite);
+      for (const t of BARRACKS_SPRITES) texs.add(t);
       for (const w of this.level.waves) for (const g of w.groups) texs.add(ENEMIES[g.enemy].sprite);
-      for (const t of texs) this.queueSheet(t);
     }
+    // 之前幾關留下、這關用不到的 3D 圖表先釋放：一路玩下來全部留著約 110 MB 顯示記憶體，舊手機吃不消
+    const keep = new Set([...texs].flatMap((t) => (UNIT_SHEETS[t] ? [sheetKey(UNIT_SHEETS[t])] : [])));
+    for (const k of this.textures.getTextureKeys()) if (k.startsWith('m3d_') && !keep.has(k)) this.textures.remove(k);
+    for (const t of texs) this.queueSheet(t);
   }
 
   /** 3D 角色圖表（試作，每個角色約 300 KB，只在開啟時下載）；回傳是否排進下載 */
@@ -969,6 +974,19 @@ export class LevelScene extends Phaser.Scene {
     sv.items[id] = Math.max(0, (sv.items[id] ?? 0) - 1);
     persist();
     this.ui.refreshItems();
+    return true;
+  }
+
+  /** Android 返回鍵：先取消選單 / 選位，再暫停；暫停選單開著就繼續。結算、劇情、提示時不動作 */
+  onBack(): boolean {
+    if (this.world.result) return true;
+    if (this.paused) {
+      if (this.ui.isPauseOpen()) this.togglePause(false);
+    } else if (this.menu || this.mode !== 'idle') {
+      this.cancelAll();
+    } else {
+      this.togglePause(true);
+    }
     return true;
   }
 

@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import '@fontsource/luckiest-guy/400.css';
 import { RS, VIEW_H, applyQuality, computeViewW, isTouchDevice, refreshTextScale, setUiBoost } from './config';
 import { SAVE_KEY, loadSave, persist } from './save';
-import { isNativeApp, restoreNativeSaves } from './native';
+import { initBackButton, isNativeApp, restoreNativeSaves } from './native';
 import { getLang } from './i18n';
 import { toHans } from './hans';
 import { crashGuard } from './crashGuard';
@@ -61,6 +61,7 @@ const game = new Phaser.Game({
   },
   disableContextMenu: true,
 });
+initBackButton(game);
 
 // 視窗比例改變（旋轉、縮放）→ 重新計算邏輯寬度
 let resizeTimer: ReturnType<typeof setTimeout> | null = null;

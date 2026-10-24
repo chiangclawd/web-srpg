@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 82,
+    date: '2026-10-24',
+    title: { zh: '手機更順', en: 'Smoother on Phones' },
+    items: [
+      { zh: '換關時會釋放用不到的 3D 角色圖，連續玩很多關也不會越來越吃記憶體', en: 'Unused 3D character art is freed between levels, so long play sessions no longer pile up memory' },
+      { zh: 'Android App：返回鍵在戰鬥中會先暫停（再按一次繼續），在其他畫面回上一頁，不會再直接關掉遊戲', en: 'Android app: the back button now pauses during battles (press again to resume) and goes back a screen elsewhere instead of closing the game' },
+    ],
+  },
+  {
     id: 81,
     date: '2026-10-24',
     title: { zh: '簡體中文', en: 'Simplified Chinese' },

@@ -21,6 +21,7 @@
     "test:td": "tsx --test tests/td/*.test.ts"
   },
   "dependencies": {
+    "@capacitor/app": "8.1.2",
     "@capacitor/core": "8.5.3",
     "@capacitor/preferences": "8.0.1",
     "@fontsource/luckiest-guy": "^5.3.0",

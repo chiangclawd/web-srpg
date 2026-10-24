@@ -18,6 +18,8 @@ export interface TextDialogOpts {
 
 export function showTextDialog(o: TextDialogOpts): () => void {
   const root = document.createElement('div');
+  // Android 返回鍵會找這個標記把對話框關掉
+  root.dataset.kbDialog = '1';
   root.style.cssText =
     'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(10,6,4,0.6);font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;padding:16px;box-sizing:border-box;';
   const box = document.createElement('div');
