@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { getLang } from './i18n';
 
 /** 邏輯高度固定 720；寬度依裝置比例 1280~1560（玩法區永遠是中央 1280） */
 export const VIEW_H = 720;
@@ -105,9 +106,12 @@ export function setupCamera(scene: Phaser.Scene): Phaser.Cameras.Scene2D.Camera 
   return cam;
 }
 
-// 簡體字在繁體字型裡缺字時，接著找簡體字型
-export const FONT_DISPLAY = '"Luckiest Guy", "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", "Heiti TC", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif';
-export const FONT_BODY = '"Trebuchet MS", "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", "Heiti TC", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif';
+// 簡體字在繁體字型裡缺字時，接著找簡體字型；日文時日文字型排最前面（漢字要用日本字形）
+const CJK_FONTS = '"PingFang TC", "Microsoft JhengHei", "Noto Sans TC", "Heiti TC", "PingFang SC", "Microsoft YaHei", "Noto Sans SC"';
+const JA_FONTS = '"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic", "Meiryo"';
+export const FONT_DISPLAY = `"Luckiest Guy", ${CJK_FONTS}, sans-serif`;
+export const FONT_BODY = `"Trebuchet MS", ${CJK_FONTS}, sans-serif`;
+const fontFor = (display: boolean): string => (getLang() === 'ja' ? `${display ? '"Luckiest Guy"' : '"Trebuchet MS"'}, ${JA_FONTS}, ${CJK_FONTS}, sans-serif` : display ? FONT_DISPLAY : FONT_BODY);
 
 export interface TextOpts {
   size?: number;
@@ -179,7 +183,7 @@ export function refreshTextScale(): void {
 export function textStyle(o: TextOpts = {}): Phaser.Types.GameObjects.Text.TextStyle {
   const size = fontPx(o.size ?? 20);
   const st: Phaser.Types.GameObjects.Text.TextStyle = {
-    fontFamily: o.display ? FONT_DISPLAY : FONT_BODY,
+    fontFamily: fontFor(!!o.display),
     fontSize: `${size}px`,
     color: o.color ?? '#fff6dc',
     stroke: o.stroke ?? '#2a1708',
@@ -220,7 +224,7 @@ export function fitText<T extends Phaser.GameObjects.Text>(t: T, maxW: number): 
 
 const CJK = /[\u3000-\u9fff\uff00-\uffef]/;
 /** 不能出現在行首的標點（中文排版的避頭點） */
-const NO_LINE_START = '。，、．！？：；」』）】》〉〕…～,.!?:;)';
+const NO_LINE_START = '。，、．！？：；」』）】》〉〕…～ーぁぃぅぇぉっゃゅょァィゥェォッャュョ,.!?:;)';
 
 /**
  * 依文字物件目前的換行寬度把字串排成多行，並處理中文避頭點：

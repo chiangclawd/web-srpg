@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 87,
+    date: '2026-10-24',
+    title: { zh: '新增日文', en: 'Japanese Language' },
+    items: [
+      { zh: '新增日本語：主選單右上角的語言鍵可以切換（繁體 → 简体 → EN → 日本語），手機語言是日文時一開始就是日文（語音維持英文）', en: 'Japanese is here: switch with the language key at the top right of the main menu (繁體 → 简体 → EN → 日本語); phones set to Japanese start in Japanese (voices stay in English)' },
+      { zh: '修正：手機上打開關卡面板時，「任務」和「每日挑戰」按鈕會從面板後面露出來', en: 'Fixed: on phones, the Quests and Daily Challenge buttons poked out from behind the level panel' },
+    ],
+  },
+  {
     id: 86,
     date: '2026-10-24',
     title: { zh: '更清楚的 3D 怪物', en: 'Sharper 3D Monsters' },

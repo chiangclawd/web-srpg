@@ -1,5 +1,6 @@
 import type { L10n } from '../sim/defs';
 import { Rng } from '../sim/math';
+import { jaOf } from '../i18n';
 
 /**
  * 每日任務：每天從任務池抽 3 個（依日期決定，同一天不會變），
@@ -102,7 +103,8 @@ export function addQuestProgress(q: QuestDay, tally: QuestTally): QuestState[] {
 
 export function questText(s: QuestState): L10n {
   const def = QUESTS.find((q) => q.id === s.id)!;
-  return { zh: def.text.zh.replace('{n}', String(s.n)), en: def.text.en.replace('{n}', String(s.n)) };
+  const n = String(s.n);
+  return { zh: def.text.zh.replace('{n}', n), en: def.text.en.replace('{n}', n), ja: jaOf(def.text)?.replace('{n}', n) };
 }
 
 /** 可以領獎的任務數（地圖按鈕上的紅點） */

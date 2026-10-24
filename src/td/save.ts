@@ -86,7 +86,7 @@ function defaults(): SaveData {
     storySeen: [],
     tipsSeen: [],
     newsSeen: 0,
-    settings: { music: 0.6, sfx: 0.8, lang: /^zh-(cn|sg|my|hans)/i.test(nav) ? 'zhs' : nav.startsWith('zh') ? 'zh' : 'en', difficulty: 'normal', speed: 1, shake: true, quality: 'auto', voice: true, art3d: true },
+    settings: { music: 0.6, sfx: 0.8, lang: /^zh-(cn|sg|my|hans)/i.test(nav) ? 'zhs' : nav.startsWith('zh') ? 'zh' : nav.startsWith('ja') ? 'ja' : 'en', difficulty: 'normal', speed: 1, shake: true, quality: 'auto', voice: true, art3d: true },
     stats: { kills: 0, plays: 0, victories: 0, towers: 0 },
   };
 }

@@ -4,7 +4,7 @@ import { paintLevel } from '../art/terrain';
 import type { LevelDef } from '../sim/defs';
 import { TW_BASE, TW_H } from '../art/towers';
 import { Button, IconButton, dimmer, panel, popIn } from '../ui/widgets';
-import { L, LANG_CYCLE, LANG_LABEL, T, getLang, isZh, setLang } from '../i18n';
+import { L, LANG_CYCLE, LANG_LABEL, T, altTitle, getLang, loadLang, setLang } from '../i18n';
 import { CHANGELOG } from '../data/changelog';
 import { consumeCrashNotice } from '../crashGuard';
 import { save, persist, resetProgress, exportSave, importSave } from '../save';
@@ -167,7 +167,7 @@ export class MenuScene extends Phaser.Scene {
     grd.addColorStop(0.6, '#ffc040');
     grd.addColorStop(1, '#d07a10');
     title.setFill(grd);
-    const sub = addText(this, cx, 196, isZh() ? 'KINGDOM BASTION' : '王國防線', { size: 26, display: true, color: '#f4e2b8', strokeW: 6 }).setOrigin(0.5).setDepth(2000);
+    const sub = addText(this, cx, 196, altTitle(), { size: 26, display: true, color: '#f4e2b8', strokeW: 6 }).setOrigin(0.5).setDepth(2000);
     this.tweens.add({ targets: title, y: 126, duration: 2200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     // 主按鈕一組，手機上整組放大
     const z = uiZoom();
@@ -187,13 +187,16 @@ export class MenuScene extends Phaser.Scene {
     } else {
       btns.add(new Button(this, 164, 86, 150, 52, T('srpg'), () => (window.location.href = './'), { color: 'blue', text: { size: 18 } }));
     }
-    // 語言鍵：繁 → 簡 → 英，鍵上寫下一個語言
+    // 語言鍵：繁 → 簡 → 英 → 日，鍵上寫下一個語言（日文翻譯表用到才下載，下載好再換）
     const nextLang = LANG_CYCLE[(LANG_CYCLE.indexOf(getLang()) + 1) % LANG_CYCLE.length];
     const lang = new Button(this, cx + w / 2 - 14 - 50 * z, 12 + 22 * z, 100, 44, LANG_LABEL[nextLang], () => {
-      setLang(nextLang);
-      save().settings.lang = getLang();
-      persist();
-      this.build();
+      void loadLang(nextLang).then(() => {
+        if (!this.scene.isActive()) return;
+        setLang(nextLang);
+        save().settings.lang = getLang();
+        persist();
+        this.build();
+      });
     }, { color: 'grey' }).setBaseScale(z).setDepth(2000);
     const ver = addText(this, cx + w / 2 - 12, VIEW_H - 10, `v${__APP_VERSION__} · ${__GIT_SHA__}`, { size: 13, color: '#e8d8b8', strokeW: 3 }).setOrigin(1, 1).setDepth(2000);
     // 隱私權政策（上架必備）：左下角，跟版本號對稱

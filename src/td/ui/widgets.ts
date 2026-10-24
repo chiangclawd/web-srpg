@@ -42,7 +42,9 @@ export class Button extends Phaser.GameObjects.Container {
     }
     this.label = addText(scene, tx, -3, text, { size: Math.round(h * 0.4), display: true, ...o.text }).setOrigin(0.5);
     this.add(this.label);
-    this.labelRoom = w - 16 - (o.icon && text ? (o.iconSize ?? h * 0.62) * 0.9 : 0);
+    // 有圖示時字以 tx 為中心：左邊不能壓到圖示、右邊留 8px（長的日文、英文字會縮小）
+    const isz = o.iconSize ?? h * 0.62;
+    this.labelRoom = o.icon && text ? 2 * Math.min(w / 2 - 8 - tx, tx - (-w / 2 + 12 + isz) - 2) : w - 16;
     this.fitLabel();
     this.hit = scene.add.rectangle(0, 0, w, h, 0xffffff, 0.001);
     this.hit.setInteractive({ useHandCursor: true });

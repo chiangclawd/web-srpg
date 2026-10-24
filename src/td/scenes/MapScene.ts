@@ -11,7 +11,7 @@ import { LOGIN_GEMS, loginReward, previousDay } from '../data/login';
 import { claimable, ensureQuests, questText, type QuestDay } from '../data/quests';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { Button, IconButton, dimmer, panel, popIn } from '../ui/widgets';
-import { L, T, isZh } from '../i18n';
+import { L, T, getLang } from '../i18n';
 import { save, persist, totalStars, STARS_PER_LEVEL } from '../save';
 import { sfx } from '../audio';
 import type { Difficulty } from '../sim/World';
@@ -653,11 +653,13 @@ export class MapScene extends Phaser.Scene {
     const ch = sv.challenges[lv.id] ?? {};
     const modes = ['campaign', 'heroic', 'iron', 'endless', 'bossrush'] as const;
     const TAB_COLOR = { campaign: 'gold', heroic: 'red', iron: 'blue', endless: 'green', bossrush: 'wood' } as const;
+    // 日文的模式名稱（キャンペーン、英雄チャレンジ…）放不進分頁，分頁上用短的
+    const TAB_JA = { campaign: '本編', heroic: '英雄', iron: '鋼鉄', endless: '無限', bossrush: 'ボス連戦' } as const;
     // 首領連戰：通關最終關後才開放（每張地圖都能打）
     const rushOpen = (sv.stars.l12 ?? 0) > 0;
     modes.forEach((m, k) => {
       const locked = m === 'bossrush' ? !rushOpen : m !== 'campaign' && !beaten;
-      const label = T(m);
+      const label = getLang() === 'ja' ? TAB_JA[m] : T(m);
       const done = m === 'heroic' ? ch.heroic : m === 'iron' ? ch.iron : m === 'bossrush' ? (sv.bossrush[lv.id] ?? 0) > 0 : false;
       const b = new Button(this, (k - 2) * 75, -ph / 2 + 78, 72, 38, label, () => {
         if (locked) {
@@ -666,7 +668,7 @@ export class MapScene extends Phaser.Scene {
           return;
         }
         this.showLevel(i, m);
-      }, { color: mode === m ? TAB_COLOR[m] : 'grey', text: { size: isZh() ? (label.length >= 4 ? 13 : 15) : 12 }, sound: !locked });
+      }, { color: mode === m ? TAB_COLOR[m] : 'grey', text: { size: getLang() !== 'en' ? (label.length >= 4 ? 13 : 15) : 12 }, sound: !locked });
       fitText(b.label, 64);
       if (locked) b.add(this.add.image(28, -10, 'ic_lock').setDisplaySize(18, 18));
       if (done) b.add(this.add.image(30, -12, 'ic_star').setDisplaySize(20, 20));

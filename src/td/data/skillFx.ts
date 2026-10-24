@@ -50,67 +50,67 @@ export function skillLevelText(id: string, lv: number): L10n {
   switch (k) {
     case 'poison': {
       const f = SKILL_FX.poison(lv);
-      return { zh: `每秒 ${f.dps} 點毒傷，持續 ${f.dur} 秒`, en: `${f.dps} poison dmg/s for ${f.dur}s` };
+      return { zh: `每秒 ${f.dps} 點毒傷，持續 ${f.dur} 秒`, en: `${f.dps} poison dmg/s for ${f.dur}s`, ja: `毎秒${f.dps}の毒ダメージ、${f.dur}秒間` };
     }
     case 'thorns': {
       const f = SKILL_FX.thorns(lv);
-      return { zh: `每 ${f.cd} 秒束縛 ${f.targets} 個敵人 ${sec(f.root)} 秒，${f.dmg} 傷害`, en: `Every ${f.cd}s roots ${f.targets} foes for ${sec(f.root)}s, ${f.dmg} dmg` };
+      return { zh: `每 ${f.cd} 秒束縛 ${f.targets} 個敵人 ${sec(f.root)} 秒，${f.dmg} 傷害`, en: `Every ${f.cd}s roots ${f.targets} foes for ${sec(f.root)}s, ${f.dmg} dmg`, ja: `${f.cd}秒ごとに敵${f.targets}体を${sec(f.root)}秒拘束、${f.dmg}ダメージ` };
     }
     case 'snipe': {
       const f = SKILL_FX.snipe(lv);
-      return { zh: `每 ${f.cd} 秒 ${f.dmg} 傷害，${pct(f.kill)}% 機率秒殺`, en: `Every ${f.cd}s: ${f.dmg} dmg, ${pct(f.kill)}% instant kill` };
+      return { zh: `每 ${f.cd} 秒 ${f.dmg} 傷害，${pct(f.kill)}% 機率秒殺`, en: `Every ${f.cd}s: ${f.dmg} dmg, ${pct(f.kill)}% instant kill`, ja: `${f.cd}秒ごとに${f.dmg}ダメージ、${pct(f.kill)}%の確率で即死` };
     }
     case 'scatter': {
       const f = SKILL_FX.scatter(lv);
-      return { zh: `每 ${f.cd} 秒射出 ${f.arrows} 支箭`, en: `Every ${f.cd}s fires ${f.arrows} bolts` };
+      return { zh: `每 ${f.cd} 秒射出 ${f.arrows} 支箭`, en: `Every ${f.cd}s fires ${f.arrows} bolts`, ja: `${f.cd}秒ごとに矢を${f.arrows}本放つ` };
     }
     case 'healing': {
       const f = SKILL_FX.healing(lv);
-      return { zh: `血量低於一半時回復 ${pct(f.heal)}% 生命（每 ${f.cd} 秒）`, en: `Below half HP heals ${pct(f.heal)}% (every ${f.cd}s)` };
+      return { zh: `血量低於一半時回復 ${pct(f.heal)}% 生命（每 ${f.cd} 秒）`, en: `Below half HP heals ${pct(f.heal)}% (every ${f.cd}s)`, ja: `HPが半分未満でライフを${pct(f.heal)}%回復（${f.cd}秒ごと）` };
     }
     case 'holystrike': {
       const f = SKILL_FX.holystrike(lv);
-      return { zh: `${pct(f.chance)}% 機率造成範圍 ${f.dmg} 魔法傷害`, en: `${pct(f.chance)}% chance: ${f.dmg} area magic dmg` };
+      return { zh: `${pct(f.chance)}% 機率造成範圍 ${f.dmg} 魔法傷害`, en: `${pct(f.chance)}% chance: ${f.dmg} area magic dmg`, ja: `${pct(f.chance)}%の確率で範囲に${f.dmg}の魔法ダメージ` };
     }
     case 'whirlwind': {
       const f = SKILL_FX.whirlwind(lv);
-      return { zh: `${pct(f.chance)}% 機率對周圍造成 ${f.dmg} 傷害`, en: `${pct(f.chance)}% chance: ${f.dmg} dmg to all around` };
+      return { zh: `${pct(f.chance)}% 機率對周圍造成 ${f.dmg} 傷害`, en: `${pct(f.chance)}% chance: ${f.dmg} dmg to all around`, ja: `${pct(f.chance)}%の確率で周囲に${f.dmg}ダメージ` };
     }
     case 'axes': {
       const f = SKILL_FX.axes(lv);
-      return { zh: `擲出 ${f.dmg[0]}~${f.dmg[1]} 傷害的飛斧（射程 ${f.range}）`, en: `Throws axes for ${f.dmg[0]}-${f.dmg[1]} dmg (range ${f.range})` };
+      return { zh: `擲出 ${f.dmg[0]}~${f.dmg[1]} 傷害的飛斧（射程 ${f.range}）`, en: `Throws axes for ${f.dmg[0]}-${f.dmg[1]} dmg (range ${f.range})`, ja: `${f.dmg[0]}~${f.dmg[1]}ダメージの投げ斧を放つ（射程${f.range}）` };
     }
     case 'disintegrate': {
       const f = SKILL_FX.disintegrate(lv);
-      return { zh: `每 ${f.cd} 秒分解一個非首領敵人`, en: `Every ${f.cd}s erases one non-boss foe` };
+      return { zh: `每 ${f.cd} 秒分解一個非首領敵人`, en: `Every ${f.cd}s erases one non-boss foe`, ja: `${f.cd}秒ごとにボス以外の敵1体を分解する` };
     }
     case 'teleport': {
       const f = SKILL_FX.teleport(lv);
-      return { zh: `每 ${f.cd} 秒把最多 ${f.targets} 個敵人送回 ${f.back} 步`, en: `Every ${f.cd}s sends up to ${f.targets} foes ${f.back} steps back` };
+      return { zh: `每 ${f.cd} 秒把最多 ${f.targets} 個敵人送回 ${f.back} 步`, en: `Every ${f.cd}s sends up to ${f.targets} foes ${f.back} steps back`, ja: `${f.cd}秒ごとに最大${f.targets}体の敵を${f.back}歩押し戻す` };
     }
     case 'golem': {
       const f = SKILL_FX.golem(lv);
-      return { zh: `土元素：生命 ${f.hp}，攻擊 ${f.dmg[0]}~${f.dmg[1]}`, en: `Earth golem: ${f.hp} HP, ${f.dmg[0]}-${f.dmg[1]} dmg` };
+      return { zh: `土元素：生命 ${f.hp}，攻擊 ${f.dmg[0]}~${f.dmg[1]}`, en: `Earth golem: ${f.hp} HP, ${f.dmg[0]}-${f.dmg[1]} dmg`, ja: `土のエレメンタル：ライフ${f.hp}、攻撃${f.dmg[0]}~${f.dmg[1]}` };
     }
     case 'polymorph': {
       const f = SKILL_FX.polymorph(lv);
-      return { zh: `每 ${f.cd} 秒把一個敵人變成羊`, en: `Every ${f.cd}s turns a foe into a sheep` };
+      return { zh: `每 ${f.cd} 秒把一個敵人變成羊`, en: `Every ${f.cd}s turns a foe into a sheep`, ja: `${f.cd}秒ごとに敵1体を羊に変える` };
     }
     case 'supercharge': {
       const f = SKILL_FX.supercharge(lv);
-      return { zh: `閃電跳躍 ${f.jumps} 次（原本 3 次）`, en: `Lightning jumps ${f.jumps} times (base 3)` };
+      return { zh: `閃電跳躍 ${f.jumps} 次（原本 3 次）`, en: `Lightning jumps ${f.jumps} times (base 3)`, ja: `稲妻が${f.jumps}回連鎖（通常3回）` };
     }
     case 'overcharge': {
       const f = SKILL_FX.overcharge(lv);
-      return { zh: `每次放電對周圍造成 ${f.dmg} 魔法傷害`, en: `Each zap deals ${f.dmg} magic dmg around the tower` };
+      return { zh: `每次放電對周圍造成 ${f.dmg} 魔法傷害`, en: `Each zap deals ${f.dmg} magic dmg around the tower`, ja: `放電のたびに周囲に${f.dmg}の魔法ダメージ` };
     }
     case 'cluster': {
       const f = SKILL_FX.cluster(lv);
-      return { zh: `每 ${f.cd} 秒灑下 ${f.bombs} 顆子母彈`, en: `Every ${f.cd}s drops ${f.bombs} bomblets` };
+      return { zh: `每 ${f.cd} 秒灑下 ${f.bombs} 顆子母彈`, en: `Every ${f.cd}s drops ${f.bombs} bomblets`, ja: `${f.cd}秒ごとに子爆弾を${f.bombs}個ばらまく` };
     }
     case 'missile': {
       const f = SKILL_FX.missile(lv);
-      return { zh: `每 ${f.cd} 秒發射 ${f.dmg} 傷害的飛彈`, en: `Every ${f.cd}s fires a ${f.dmg}-dmg missile` };
+      return { zh: `每 ${f.cd} 秒發射 ${f.dmg} 傷害的飛彈`, en: `Every ${f.cd}s fires a ${f.dmg}-dmg missile`, ja: `${f.cd}秒ごとに${f.dmg}ダメージのミサイルを発射` };
     }
     default:
       return { zh: '', en: '' };

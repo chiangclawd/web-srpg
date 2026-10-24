@@ -25,7 +25,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   keg: {
     id: 'keg',
     name: { zh: '炸藥桶', en: 'Powder Keg' },
-    desc: { zh: `點選地面引爆：範圍內地面敵人受到 ${KEG.dmg} 點真實傷害並暈眩`, en: `Tap the ground: ${KEG.dmg} true damage to ground enemies nearby, plus a stun` },
+    desc: { zh: `點選地面引爆：範圍內地面敵人受到 ${KEG.dmg} 點真實傷害並暈眩`, en: `Tap the ground: ${KEG.dmg} true damage to ground enemies nearby, plus a stun`, ja: `地面をタップして起爆：範囲内の地上の敵に${KEG.dmg}の確定ダメージを与え、スタンさせる` },
     icon: 'it_keg',
     price: 60,
     targeted: true,
@@ -33,7 +33,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   frost: {
     id: 'frost',
     name: { zh: '冰霜水晶', en: 'Frost Crystal' },
-    desc: { zh: `冰凍全場敵人 ${FROST_SEC} 秒（首領較短）`, en: `Freezes every enemy for ${FROST_SEC}s (shorter on bosses)` },
+    desc: { zh: `冰凍全場敵人 ${FROST_SEC} 秒（首領較短）`, en: `Freezes every enemy for ${FROST_SEC}s (shorter on bosses)`, ja: `すべての敵を${FROST_SEC}秒間凍結させる（ボスは短め）` },
     icon: 'it_frost',
     price: 80,
     targeted: false,
@@ -41,7 +41,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   potion: {
     id: 'potion',
     name: { zh: '生命藥水', en: 'Heart Potion' },
-    desc: { zh: `恢復 ${POTION_LIVES} 條生命（不超過上限）`, en: `Restores ${POTION_LIVES} lives (up to the maximum)` },
+    desc: { zh: `恢復 ${POTION_LIVES} 條生命（不超過上限）`, en: `Restores ${POTION_LIVES} lives (up to the maximum)`, ja: `ライフを${POTION_LIVES}回復する（上限まで）` },
     icon: 'it_potion',
     price: 50,
     targeted: false,
@@ -49,7 +49,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   gold: {
     id: 'gold',
     name: { zh: '金幣袋', en: 'Gold Sack' },
-    desc: { zh: `立即獲得 ${GOLD_SACK} 金幣`, en: `Gain ${GOLD_SACK} gold instantly` },
+    desc: { zh: `立即獲得 ${GOLD_SACK} 金幣`, en: `Gain ${GOLD_SACK} gold instantly`, ja: `すぐに${GOLD_SACK}ゴールドを獲得` },
     icon: 'it_gold',
     price: 40,
     targeted: false,

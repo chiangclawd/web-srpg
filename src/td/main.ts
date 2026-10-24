@@ -4,7 +4,7 @@ import { RS, VIEW_H, applyQuality, computeViewW, isTouchDevice, refreshTextScale
 import { setHdSheets } from './view/Sheets';
 import { SAVE_KEY, loadSave, persist } from './save';
 import { initBackButton, isNativeApp, restoreNativeSaves } from './native';
-import { getLang } from './i18n';
+import { getLang, loadLang } from './i18n';
 import { toHans } from './hans';
 import { crashGuard } from './crashGuard';
 import { PreloadScene } from './scenes/PreloadScene';
@@ -23,11 +23,19 @@ import { ShopScene } from './scenes/ShopScene';
 // App 版：localStorage 被系統清掉時，先從原生儲存搬回存檔
 await restoreNativeSaves([SAVE_KEY]);
 
+const sv0 = loadSave();
+// 日文翻譯表另外打包：先下載好再開始，免得第一個畫面閃英文
+await loadLang(getLang()).catch(() => undefined);
+
 {
-  const sv = loadSave();
-  // 「請橫向」提示寫在 td.html 裡（遊戲還沒載入就要顯示）：跟著語言換成簡體
+  const sv = sv0;
+  // 「請橫向」提示寫在 td.html 裡（遊戲還沒載入就要顯示）：跟著語言換成簡體 / 日文
+  const rotate = document.querySelectorAll<HTMLElement>('#rotate-prompt .title, #rotate-prompt .desc');
   if (getLang() === 'zhs') {
-    for (const el of document.querySelectorAll<HTMLElement>('#rotate-prompt .title, #rotate-prompt .desc')) el.innerHTML = toHans(el.innerHTML);
+    for (const el of rotate) el.innerHTML = toHans(el.innerHTML);
+  } else if (getLang() === 'ja' && rotate.length === 2) {
+    rotate[0].textContent = '端末を横向きにしてください';
+    rotate[1].innerHTML = 'キングダム・バスティオンは横画面のゲームです<br/>Rotate your device to play';
   }
   setUiBoost(sv.settings.uiScale ?? 1);
   const quality = crashGuard(sv.settings.quality ?? 'auto', () => {
