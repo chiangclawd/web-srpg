@@ -65,6 +65,9 @@ export const STORY_ART: Record<string, { atmos?: StoryAtmos; startPan?: number; 
   l21: { atmos: 'snow', src: 'l15', flip: true, grade: 0xb8b0ff },
   l22: { atmos: 'dark', src: 'l12', flip: true, grade: 0xd0b8ff, startPan: -1 },
   ep_mirror: { atmos: 'petals', src: 'ep_main' },
+  // 夜之番外：外傳的插畫染成夜色
+  l23: { atmos: 'sand', src: 'l13', grade: 0x8a98d0 },
+  l24: { atmos: 'embers', src: 'l16', grade: 0x9a8ab8 },
 };
 
 /** 每關開場對話（第一次進入戰役時播放） */
@@ -163,6 +166,16 @@ export const STORY: Record<string, StoryLine[]> = {
     { who: 'rain', text: { zh: '礦坑那邊怎麼有綠色的光？卡爾不是早就被我們打倒了嗎……', en: 'Why is there green light over at the mines? Didn’t we beat Carl long ago…?' } },
     { who: 'sharon', text: { zh: '是鬼火。血月喚醒了埋在坑道裡的礦工亡魂，狼人也循著月光跟來了。', en: 'Ghostfire. The blood moon woke the miners buried in the tunnels, and the werewolves followed the moonlight here.' } },
     { who: 'elena', text: { zh: '兩條路都有東西過來！把塔蓋在路邊照亮怨靈，營火旁的塔射程也不會打折。', en: 'Things are coming down both roads! Build towers by the road to light up the wraiths. Towers by the campfires keep their full range, too.' } },
+  ],
+  l23: [
+    { who: 'elena', text: { zh: '沙漠的晚上好冷……營火那邊有影子在動。', en: 'The desert is freezing at night… something is moving by the campfire.' } },
+    { who: 'aria', text: { zh: '我從天上看到了！沙丘底下有好幾道隆起正往這邊鑽，是巨蠍！', en: 'I saw it from the air! Ridges are tunneling toward us under the dunes. Scorpions!' } },
+    { who: 'arthur', text: { zh: '夜裡塔看不遠，把塔蓋在營火和城堡旁邊。等月亮升高，沙暴巨蟲也會醒來。', en: 'Towers can’t see far at night. Build them by the campfire and the castle. When the moon rises, the Sandstorm Wyrm will wake too.' } },
+  ],
+  l24: [
+    { who: 'viktor', text: { zh: '火山口又亮起來了。伊格尼斯不是已經熄滅了嗎？', en: 'The crater is glowing again. Didn’t we put Ignis out?' } },
+    { who: 'sharon', text: { zh: '只剩一點餘燼……但血月把狼人和怨靈引來了，餘燼借著牠們的力量又燒了起來。', en: 'Only embers were left… but the blood moon drew werewolves and wraiths here, and the embers are burning again on their strength.' } },
+    { who: 'lila', text: { zh: '那就用我的冰霜把它徹底澆熄！熔岩池旁邊很亮，塔蓋在那裡看得最遠。', en: 'Then my frost will put it out for good! It’s bright by the lava pools, so towers there see the farthest.' } },
   ],
 };
 

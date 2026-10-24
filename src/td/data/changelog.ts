@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 90,
+    date: '2026-10-24',
+    title: { zh: '夜之番外：兩個新關卡', en: 'Night Extras: Two New Levels' },
+    items: [
+      { zh: '通關「鏡淵之門」後解鎖：「沙丘夜襲」—— 外傳的沙漠入夜，巨蠍、蝙蝠、怨靈和沙暴巨蟲趁黑來襲', en: 'Unlocked after Gate of the Mirror Abyss: "Dune Night Raid" — night falls on the side-story desert, and scorpions, bats, wraiths and the Sandstorm Wyrm attack in the dark' },
+      { zh: '「餘燼之夜」—— 火山的夜裡，炎魔伊格尼斯的餘燼帶著狼人和怨靈捲土重來；熔岩池會照亮周圍，旁邊的塔射程不打折', en: '"Night of Embers" — on the volcano at night, the embers of Ignis return with werewolves and wraiths; the lava pools light up their surroundings, so towers beside them keep full range' },
+    ],
+  },
+  {
     id: 89,
     date: '2026-10-24',
     title: { zh: '雷恩的 3D 造型', en: 'Rain in 3D' },

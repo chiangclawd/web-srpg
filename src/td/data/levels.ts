@@ -1709,6 +1709,91 @@ LEVELS.push(
   },
 );
 
+/** 以某一關的戰場為底（同一張手繪圖、同樣的路與建造點），做成夜戰等變奏 */
+function sameMapAs(id: string): Pick<LevelDef, 'art' | 'theme' | 'paths' | 'spots' | 'heroStart' | 'decor' | 'hazards'> {
+  const base = LEVELS.find((l) => l.id === id)!;
+  return {
+    art: base.art ?? base.id,
+    theme: base.theme,
+    paths: base.paths.map((p) => p.map((q) => ({ ...q }))),
+    spots: base.spots.map((q) => ({ ...q })),
+    heroStart: { ...base.heroStart },
+    decor: base.decor?.map((d) => ({ ...d })),
+    hazards: base.hazards?.map((h) => ({ ...h })),
+  };
+}
+
+// 夜之番外：外傳的沙漠與火山入夜（夜裡塔的射程變短，營火、城堡、熔岩池旁邊不受影響）
+LEVELS.push(
+  {
+    ...sameMapAs('l13'),
+    id: 'l23',
+    index: 22,
+    bonus: true,
+    night: true,
+    bgm: 'night',
+    mapLink: 'l13',
+    name: { zh: '沙丘夜襲', en: 'Dune Night Raid' },
+    desc: {
+      zh: '夜之番外：沙漠的夜晚冷得刺骨，巨蠍趁黑鑽出沙丘，蝙蝠和怨靈循著營火而來，沙暴巨蟲也在月光下甦醒。把塔蓋在營火和城堡旁邊！',
+      en: 'Night extra: desert nights are bitterly cold. Scorpions burrow out of the dunes under cover of darkness, bats and wraiths follow the campfires, and the Sandstorm Wyrm stirs in the moonlight. Build near the campfire and the castle!',
+    },
+    seed: 2301,
+    startGold: 1500,
+    lives: 20,
+    mapPos: { x: 0.24, y: 0.4 },
+    waves: [
+      w(g(0, 'scorpion', 4, 2), g(1, 'bat', 10, 0.5, 3)),
+      w(g(1, 'wolf', 12, 0.6), g(0, 'wraith', 3, 1.6, 4)),
+      w(g(0, 'rider', 5, 1.4), g(1, 'scorpion', 5, 1.6, 3)),
+      { ...w(g(1, 'werewolf', 2, 3), g(0, 'bat', 14, 0.4, 3), g(1, 'raider', 8, 0.8, 8)), hpMul: 1.03 },
+      { ...w(g(0, 'scorpion', 8, 1.2), g(1, 'wraith', 5, 1.3, 4), g(0, 'adept', 3, 2, 9)), hpMul: 1.06 },
+      { ...w(g(1, 'troll', 1, 1), g(0, 'werewolf', 3, 2.4, 3), g(1, 'bat', 16, 0.35, 8)), hpMul: 1.1 },
+      { ...w(g(0, 'griffin', 6, 1.2), g(1, 'scorpion', 8, 1.1, 3), g(0, 'wraith', 5, 1.2, 9)), hpMul: 1.13 },
+      { ...w(g(1, 'blackguard', 4, 2.5), g(0, 'rider', 7, 1.1, 3), g(1, 'werewolf', 3, 2.2, 9)), hpMul: 1.17 },
+      { ...w(g(0, 'scorpion', 9, 1), g(1, 'scorpion', 9, 1, 3), g(0, 'necromancer', 3, 2.5, 9)), hpMul: 1.2 },
+      { ...w(g(1, 'demon', 6, 1.2), g(0, 'wraith', 8, 0.9, 3), g(1, 'assassin', 8, 1, 9)), hpMul: 1.24 },
+      { ...w(g(0, 'troll', 2, 5), g(1, 'werewolf', 5, 1.6, 3), g(0, 'bat', 24, 0.3, 10)), gap: 30, hpMul: 1.28 },
+      { ...w(g(1, 'blackguard', 6, 2), g(0, 'scorpion', 12, 0.8, 3), g(1, 'wraith', 8, 0.8, 9), g(0, 'rider', 8, 0.9, 14)), hpMul: 1.31 },
+      { ...w(g(1, 'wyrm', 1, 1, 3), g(0, 'wraith', 8, 0.7, 0), g(1, 'werewolf', 4, 1.6, 8), g(0, 'scorpion', 10, 0.8, 14), g(1, 'demon', 6, 1, 22)), hpMul: 1.35 },
+    ],
+  },
+  {
+    ...sameMapAs('l16'),
+    id: 'l24',
+    index: 23,
+    bonus: true,
+    night: true,
+    bgm: 'night',
+    mapLink: 'l16',
+    wisps: { tint: 0xff8a3a, size: 12 },
+    name: { zh: '餘燼之夜', en: 'Night of Embers' },
+    desc: {
+      zh: '夜之番外：火山的夜裡只剩熔岩池的紅光，炎魔伊格尼斯的餘燼又聚成了形，帶著狼人和怨靈從火山口湧出。熔岩池旁的塔看得最遠！',
+      en: 'Night extra: on the volcano at night, only the lava pools glow red. The embers of Ignis have taken shape again and pour out of the crater with werewolves and wraiths. Towers beside the lava pools see the farthest!',
+    },
+    seed: 2402,
+    startGold: 2100,
+    lives: 20,
+    mapPos: { x: 0.57, y: 0.09 },
+    waves: [
+      w(g(0, 'magma_imp', 8, 0.8), g(1, 'bat', 10, 0.5, 3)),
+      w(g(1, 'wraith', 4, 1.5), g(0, 'magma_imp', 10, 0.7, 3)),
+      w(g(0, 'lava_golem', 1, 1), g(1, 'werewolf', 2, 3, 3), g(0, 'bat', 12, 0.4, 7)),
+      { ...w(g(1, 'demon', 4, 1.5), g(0, 'wraith', 5, 1.3, 3), g(1, 'magma_imp', 10, 0.6, 9)), hpMul: 1.03 },
+      { ...w(g(0, 'lava_golem', 2, 5), g(1, 'werewolf', 3, 2.4, 3), g(0, 'assassin', 6, 1.3, 9)), hpMul: 1.06 },
+      { ...w(g(1, 'necromancer', 3, 3), g(0, 'magma_imp', 14, 0.5, 2), g(1, 'wraith', 6, 1.1, 8)), hpMul: 1.1 },
+      { ...w(g(0, 'lava_golem', 2, 5), g(1, 'lava_golem', 1, 1, 4), g(0, 'werewolf', 4, 2, 8)), hpMul: 1.13 },
+      { ...w(g(0, 'bat', 20, 0.35), g(1, 'magma_imp', 14, 0.45, 2), g(0, 'demon', 5, 1.2, 8)), hpMul: 1.17 },
+      { ...w(g(1, 'blackguard', 5, 2.2), g(0, 'wraith', 8, 0.9, 3), g(1, 'necromancer', 2, 3, 9)), hpMul: 1.2 },
+      { ...w(g(0, 'lava_golem', 3, 4), g(1, 'werewolf', 5, 1.6, 3), g(0, 'magma_imp', 12, 0.5, 10)), hpMul: 1.24 },
+      { ...w(g(1, 'troll', 2, 5), g(0, 'demon', 6, 1, 3), g(1, 'wraith', 8, 0.8, 8), g(0, 'bat', 20, 0.3, 12)), gap: 30, hpMul: 1.28 },
+      { ...w(g(0, 'lava_golem', 2, 5), g(1, 'lava_golem', 2, 5, 3), g(0, 'werewolf', 5, 1.5, 6), g(1, 'magma_imp', 16, 0.45, 12)), hpMul: 1.31 },
+      { ...w(g(0, 'fire_lord', 1, 1, 3), g(1, 'wraith', 8, 0.7, 0), g(1, 'lava_golem', 2, 7, 10), g(0, 'werewolf', 5, 1.4, 16), g(1, 'demon', 6, 1, 24)), hpMul: 1.35 },
+    ],
+  },
+);
+
 export function getLevel(id: string): LevelDef | undefined {
   return LEVELS.find((l) => l.id === id);
 }
