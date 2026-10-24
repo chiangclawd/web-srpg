@@ -44,6 +44,8 @@ export class MapScene extends Phaser.Scene {
   private heroPick: Phaser.GameObjects.Container | null = null;
   private heroHud: Button | null = null;
   private hud: Phaser.GameObjects.GameObject[] = [];
+  /** 底部按鈕列（商店、成就、升級、英雄、圖鑑）：關卡面板蓋到的先藏起來 */
+  private barBtns: Button[] = [];
   private focus?: string;
 
   constructor() {
@@ -409,6 +411,7 @@ export class MapScene extends Phaser.Scene {
     const ach = new Button(this, -630, -42, 140, 56, T('achievements'), () => this.leave('Achievements'), { color: 'wood', icon: 'ic_crown', iconSize: 34, text: { size: 20 } });
     const shop = new Button(this, -790, -42, 140, 56, T('shop'), () => this.leave('Shop'), { color: 'red', icon: 'ic_gem', iconSize: 32, text: { size: 20 } });
     bottomRight.add([up, hb, enc, ach, shop]);
+    this.barBtns = [up, hb, enc, ach, shop];
     this.heroHud = hb;
     if (avail > 0) {
       const badge = this.add.circle(-410, -68, 14, 0xc0392b).setStrokeStyle(2, 0xffffff);
@@ -515,8 +518,7 @@ export class MapScene extends Phaser.Scene {
       this.infoPanel?.destroy();
       this.infoPanel = null;
     }));
-    popIn(this, c, 0, { w: pw, h: ph }, 0.85, 220);
-    this.infoPanel = c;
+    this.openPanel(c, pw, ph);
   }
 
   /** 每日挑戰面板：今天的關卡、兩個修正、今日最佳 */
@@ -573,8 +575,7 @@ export class MapScene extends Phaser.Scene {
       this.infoPanel?.destroy();
       this.infoPanel = null;
     }));
-    popIn(this, c, 0, { w: pw, h: ph }, 0.85, 220);
-    this.infoPanel = c;
+    this.openPanel(c, pw, ph);
   }
 
   /** 地圖首次提示：有星星可用 → 指向升級；打贏過一場 → 指向每日任務；寶石夠買道具 → 指向商店 */
@@ -764,8 +765,24 @@ export class MapScene extends Phaser.Scene {
       this.infoPanel = null;
     }));
     this.tweens.add({ targets: go, scale: 1.05, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    popIn(this, c, 0, { w: pw, h: ph }, 0.85, 220);
+    this.openPanel(c, pw, ph);
+  }
+
+  /** 彈出右側面板。畫面較窄（16:9、iPhone 讓出瀏海）時面板會蓋住底部按鈕的一半：蓋到的先藏起來，面板關掉再出現 */
+  private openPanel(c: Phaser.GameObjects.Container, pw: number, ph: number): void {
+    const z = popIn(this, c, 0, { w: pw, h: ph }, 0.85, 220);
     this.infoPanel = c;
+    const box = new Phaser.Geom.Rectangle(c.x - (pw / 2) * z, c.y - (ph / 2) * z, pw * z, ph * z);
+    // 只碰到邊不算：被蓋住兩成以上才藏
+    const covered = this.barBtns.filter((b) => {
+      const bb = b.getBounds();
+      const hit = Phaser.Geom.Rectangle.Intersection(box, bb);
+      return b.visible && hit.width * hit.height > 0.2 * bb.width * bb.height;
+    });
+    for (const b of covered) b.setVisible(false);
+    c.once('destroy', () => {
+      for (const b of covered) if (b.scene) b.setVisible(true);
+    });
   }
 
   /** 關卡面板裡的英雄快選：兩排頭像蓋在難度列上，點了就換出戰英雄並喊一聲 */
