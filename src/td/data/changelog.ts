@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 86,
+    date: '2026-10-24',
+    title: { zh: '更清楚的 3D 怪物', en: 'Sharper 3D Monsters' },
+    items: [
+      { zh: '高解析度螢幕的手機、平板與電腦，怪物和士兵改用 2 倍解析度的 3D 圖，細節更清楚（省電畫質維持原本的版本）', en: 'On high-resolution phones, tablets and computers, monsters and soldiers now use 2x-resolution 3D art for sharper detail (Power Saver keeps the regular version)' },
+      { zh: '修正：手機上世界地圖第 20～22 關被下方按鈕蓋住；第 6、7、14 關也挪開一點，不再碰到上方的按鈕', en: 'Fixed: on phones, levels 20–22 on the world map were hidden behind the bottom buttons; levels 6, 7 and 14 also moved clear of the top buttons' },
+    ],
+  },
+  {
     id: 85,
     date: '2026-10-24',
     title: { zh: '新敵人卡片', en: 'New Enemy Cards' },

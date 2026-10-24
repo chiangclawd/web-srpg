@@ -23,6 +23,21 @@ test('every level wave references a known enemy and a valid path', () => {
   }
 });
 
+test('world map nodes stay clear of the map buttons on phones', () => {
+  // 16:9 手機（最窄的版面，地圖 1280×720 剛好佔滿畫面），按鈕放大 1.4 倍時：
+  // 底部按鈕列從 y≈620 起；左上星數與寶石到 x≈544、y≈92；右上每日挑戰與任務從 x≈984 起、到 y≈172。
+  // 節點的旗子往上 34、往右 28，星星往下約 30、左右各約 20。
+  const px = LEVELS.map((l) => ({ id: l.id, x: l.mapPos.x * 1280, y: l.mapPos.y * 720 }));
+  for (const n of px) {
+    assert.ok(n.x >= 50 && n.x + 28 <= 1250, `${n.id} inside the map`);
+    assert.ok(n.y + 30 <= 620, `${n.id} above the bottom button bar`);
+    if (n.x - 20 < 544) assert.ok(n.y - 34 >= 92, `${n.id} below the star / gem counters`);
+    if (n.x + 30 > 984) assert.ok(n.y - 34 >= 172, `${n.id} below the daily / quest buttons`);
+  }
+  for (let i = 0; i < px.length; i++)
+    for (let j = i + 1; j < px.length; j++) assert.ok(Math.hypot(px[i].x - px[j].x, px[i].y - px[j].y) >= 80, `${px[i].id} and ${px[j].id} too close`);
+});
+
 test('level ids, indices and map order are consistent', () => {
   LEVELS.forEach((l, i) => {
     assert.equal(l.index, i);
@@ -287,32 +302,37 @@ test('every tower skill describes what each level does', async () => {
         }
 });
 
-test('3D unit sheets have every frame the game asks for', async () => {
-  const { UNIT_SHEETS, SHEET_ANIMS, SHEET_DIRS, sheetFrame } = await import('../../src/td/view/Sheets');
+test('3D unit sheets have every frame the game asks for (normal and 2x)', async () => {
+  const { UNIT_SHEETS, SHEET_ANIMS, SHEET_DIRS, sheetFrame, setHdSheets } = await import('../../src/td/view/Sheets');
   const fs = await import('node:fs');
   const sharp = (await import('sharp')).default;
   const sprites = new Set([...Object.values(ENEMIES).map((e) => e.sprite), ...Object.values(HEROES).map((h) => h.sprite), ...Object.values(TOWERS).flatMap((t) => [...t.levels, ...t.branches].flatMap((l) => (l.soldier ? [l.soldier.sprite] : [])))]);
-  for (const [tex, s] of Object.entries(UNIT_SHEETS)) {
-    assert.ok(sprites.has(tex), `${tex} is an enemy, hero or soldier sprite`);
-    const img = `public/assets/m3d/${s.file}.webp`;
-    const json = `public/assets/m3d/${s.file}.json`;
-    assert.ok(fs.existsSync(img) && fs.existsSync(json), `${s.file} atlas exists (scripts/art/m3d/render.mjs)`);
-    const atlas = JSON.parse(fs.readFileSync(json, 'utf8')) as { frames: Record<string, { frame: { x: number; y: number; w: number; h: number }; sourceSize: { w: number; h: number } }> };
-    const meta = await sharp(img).metadata();
-    for (const dir of SHEET_DIRS)
-      for (const anim of SHEET_ANIMS) {
-        // 背面倒地用側面的格子
-        if (dir === 'back' && anim === 'death') continue;
-        assert.ok(s.anims[anim].frames > 0 && s.anims[anim].dur > 0, `${s.file} ${anim} timing`);
-        for (let i = 0; i < s.anims[anim].frames; i++) {
-          const f = atlas.frames[String(sheetFrame(s, dir, anim, i))];
-          assert.ok(f, `${s.file} ${dir} ${anim} #${i}`);
-          assert.equal(f.sourceSize.w, s.size, `${s.file} cell size`);
-          assert.ok(f.frame.x + f.frame.w <= meta.width! && f.frame.y + f.frame.h <= meta.height!, `${s.file} ${dir} ${anim} #${i} inside atlas`);
+  // 高畫質裝置改用 2 倍解析度的 _hd 圖表（setHdSheets）：兩種都要齊全
+  for (const hd of [false, true]) {
+    setHdSheets(hd);
+    for (const [tex, s] of Object.entries(UNIT_SHEETS)) {
+      assert.ok(sprites.has(tex), `${tex} is an enemy, hero or soldier sprite`);
+      const img = `public/assets/m3d/${s.file}.webp`;
+      const json = `public/assets/m3d/${s.file}.json`;
+      assert.ok(fs.existsSync(img) && fs.existsSync(json), `${s.file} atlas exists (scripts/art/m3d/render.mjs)`);
+      const atlas = JSON.parse(fs.readFileSync(json, 'utf8')) as { frames: Record<string, { frame: { x: number; y: number; w: number; h: number }; sourceSize: { w: number; h: number } }> };
+      const meta = await sharp(img).metadata();
+      for (const dir of SHEET_DIRS)
+        for (const anim of SHEET_ANIMS) {
+          // 背面倒地用側面的格子
+          if (dir === 'back' && anim === 'death') continue;
+          assert.ok(s.anims[anim].frames > 0 && s.anims[anim].dur > 0, `${s.file} ${anim} timing`);
+          for (let i = 0; i < s.anims[anim].frames; i++) {
+            const f = atlas.frames[String(sheetFrame(s, dir, anim, i))];
+            assert.ok(f, `${s.file} ${dir} ${anim} #${i}`);
+            assert.equal(f.sourceSize.w, s.size, `${s.file} cell size`);
+            assert.ok(f.frame.x + f.frame.w <= meta.width! && f.frame.y + f.frame.h <= meta.height!, `${s.file} ${dir} ${anim} #${i} inside atlas`);
+          }
         }
-      }
-    assert.ok(s.footAt > 0.5 && s.footAt < 1 && s.unitPx > 0 && s.cycle > 0, `${s.file} metrics`);
+      assert.ok(s.footAt > 0.5 && s.footAt < 1 && s.unitPx > 0 && s.cycle > 0, `${s.file} metrics`);
+    }
   }
+  setHdSheets(false);
 });
 
 test('3D sheet download URLs carry the current content fingerprint', async () => {
@@ -323,4 +343,23 @@ test('3D sheet download URLs carry the current content fingerprint', async () =>
   // 圖改了卻沒更新指紋，手機的離線快取會拿舊圖配新座標（角色變成閃爍的碎片）
   assert.deepEqual(SHEET_REV, sheetRevs(), 'run: node scripts/art/m3d/rev.mjs');
   for (const s of Object.values(UNIT_SHEETS)) assert.ok(SHEET_REV[s.file], `${s.file} has a fingerprint`);
+});
+
+test('2x sheets swap in for regular characters only, and switch back', async () => {
+  const { UNIT_SHEETS, setHdSheets } = await import('../../src/td/view/Sheets');
+  const { SHEET_REV } = await import('../../src/td/view/sheetRev');
+  const before = Object.fromEntries(Object.entries(UNIT_SHEETS).map(([k, s]) => [k, { file: s.file, size: s.size, unitPx: s.unitPx }]));
+  setHdSheets(true);
+  for (const [k, s] of Object.entries(UNIT_SHEETS)) {
+    const b = before[k];
+    const hd = b.size < 288 && SHEET_REV[`${b.file}_hd`] !== undefined;
+    assert.equal(s.file, hd ? `${b.file}_hd` : b.file, `${k} file`);
+    assert.equal(s.size, hd ? b.size * 2 : b.size, `${k} size`);
+    // 身高像素跟著放大，遊戲裡顯示的大小不變
+    assert.equal(s.unitPx / s.size, b.unitPx / b.size, `${k} scale`);
+  }
+  // 英雄本來就是 2 倍解析度
+  assert.equal(UNIT_SHEETS.sp_arthur.file, 'arthur');
+  setHdSheets(false);
+  for (const [k, s] of Object.entries(UNIT_SHEETS)) assert.deepEqual({ file: s.file, size: s.size, unitPx: s.unitPx }, before[k], `${k} restored`);
 });

@@ -5,6 +5,8 @@
  * 圖表排法：每個方向一組列，組內依 ANIMS 順序一個動作一列，欄是格數。
  * 側面朝右（朝左時鏡像）、正面（往下走）、背面（往上走）。
  */
+import { SHEET_REV } from './sheetRev';
+
 export type SheetAnim = 'idle' | 'walk' | 'attack' | 'hit' | 'death';
 export type SheetDir = 'side' | 'front' | 'back';
 
@@ -98,6 +100,24 @@ export const UNIT_SHEETS: Record<string, UnitSheet> = {
 };
 
 export const sheetKey = (s: UnitSheet): string => `m3d_${s.file}`;
+
+/** 每張圖表原本（一般解析度）的檔名、格子大小、身高像素 */
+const BASE = new Map<UnitSheet, { file: string; size: number; unitPx: number }>();
+
+/**
+ * 一般角色（144 格）另外渲染了 2 倍解析度版 <file>_hd（288 格，scripts/art/m3d 同一組模型與設定）。
+ * 開遊戲時依畫質決定用哪一版（main.ts）；有沒有 _hd 版看 sheetRev.ts 有沒有那個檔。
+ */
+export function setHdSheets(on: boolean): void {
+  for (const s of Object.values(UNIT_SHEETS)) {
+    if (!BASE.has(s)) BASE.set(s, { file: s.file, size: s.size, unitPx: s.unitPx });
+    const b = BASE.get(s)!;
+    const hd = on && b.size < HERO && SHEET_REV[`${b.file}_hd`] !== undefined;
+    s.file = hd ? `${b.file}_hd` : b.file;
+    s.size = hd ? b.size * 2 : b.size;
+    s.unitPx = hd ? b.unitPx * 2 : b.unitPx;
+  }
+}
 
 /** 某方向某動作第 i 格在圖表裡的索引 */
 export function sheetFrame(s: UnitSheet, dir: SheetDir, anim: SheetAnim, i: number): number {

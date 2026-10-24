@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import '@fontsource/luckiest-guy/400.css';
-import { RS, VIEW_H, applyQuality, computeViewW, isTouchDevice, refreshTextScale, setUiBoost } from './config';
+import { RS, VIEW_H, applyQuality, computeViewW, isTouchDevice, refreshTextScale, setUiBoost, wantHdSheets } from './config';
+import { setHdSheets } from './view/Sheets';
 import { SAVE_KEY, loadSave, persist } from './save';
 import { initBackButton, isNativeApp, restoreNativeSaves } from './native';
 import { getLang } from './i18n';
@@ -29,12 +30,12 @@ await restoreNativeSaves([SAVE_KEY]);
     for (const el of document.querySelectorAll<HTMLElement>('#rotate-prompt .title, #rotate-prompt .desc')) el.innerHTML = toHans(el.innerHTML);
   }
   setUiBoost(sv.settings.uiScale ?? 1);
-  applyQuality(
-    crashGuard(sv.settings.quality ?? 'auto', () => {
-      sv.settings.quality = 'low';
-      persist();
-    }),
-  );
+  const quality = crashGuard(sv.settings.quality ?? 'auto', () => {
+    sv.settings.quality = 'low';
+    persist();
+  });
+  applyQuality(quality);
+  setHdSheets(wantHdSheets(quality));
 }
 
 const game = new Phaser.Game({
