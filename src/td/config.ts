@@ -80,8 +80,9 @@ export function setupCamera(scene: Phaser.Scene): Phaser.Cameras.Scene2D.Camera 
   return cam;
 }
 
-export const FONT_DISPLAY = '"Luckiest Guy", "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", "Heiti TC", sans-serif';
-export const FONT_BODY = '"Trebuchet MS", "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", "Heiti TC", sans-serif';
+// 簡體字在繁體字型裡缺字時，接著找簡體字型
+export const FONT_DISPLAY = '"Luckiest Guy", "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", "Heiti TC", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif';
+export const FONT_BODY = '"Trebuchet MS", "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", "Heiti TC", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif';
 
 export interface TextOpts {
   size?: number;

@@ -7,7 +7,7 @@ import { LEVELS } from '../data/levels';
 import { Button } from '../ui/widgets';
 import { playDialog } from '../ui/dialog';
 import { loadStoryArt } from '../ui/cinema';
-import { L, T, getLang } from '../i18n';
+import { L, T, isZh } from '../i18n';
 import { save, totalStars, STARS_PER_LEVEL } from '../save';
 import { sfx } from '../audio';
 import { MENU_LEVEL } from './MenuScene';
@@ -170,7 +170,7 @@ export class EndingScene extends Phaser.Scene {
     };
     c.add(addText(this, 0, y, T('title'), { size: 64, display: true, color: '#ffd36b', strokeW: 10, stroke: '#3a1a04' }).setOrigin(0.5));
     y += 56;
-    line(getLang() === 'zh' ? 'KINGDOM BASTION' : '王國防線', 22);
+    line(isZh() ? 'KINGDOM BASTION' : '王國防線', 22);
     y += 20;
     head('你的旅程', 'Your Journey');
     line(`${L({ zh: '星數', en: 'Stars' })}  ${totalStars()} / ${maxStars}`);

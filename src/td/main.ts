@@ -3,6 +3,8 @@ import '@fontsource/luckiest-guy/400.css';
 import { RS, VIEW_H, applyQuality, computeViewW, isTouchDevice, refreshTextScale, setUiBoost } from './config';
 import { SAVE_KEY, loadSave, persist } from './save';
 import { isNativeApp, restoreNativeSaves } from './native';
+import { getLang } from './i18n';
+import { toHans } from './hans';
 import { crashGuard } from './crashGuard';
 import { PreloadScene } from './scenes/PreloadScene';
 import { BootScene } from './scenes/BootScene';
@@ -22,6 +24,10 @@ await restoreNativeSaves([SAVE_KEY]);
 
 {
   const sv = loadSave();
+  // 「請橫向」提示寫在 td.html 裡（遊戲還沒載入就要顯示）：跟著語言換成簡體
+  if (getLang() === 'zhs') {
+    for (const el of document.querySelectorAll<HTMLElement>('#rotate-prompt .title, #rotate-prompt .desc')) el.innerHTML = toHans(el.innerHTML);
+  }
   setUiBoost(sv.settings.uiScale ?? 1);
   applyQuality(
     crashGuard(sv.settings.quality ?? 'auto', () => {

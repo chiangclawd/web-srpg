@@ -8,7 +8,7 @@ import { mkCanvas } from '../art/paint';
 import { HEROES } from '../data/heroes';
 import { STORY_PORTRAITS } from '../data/story';
 import { LOADING_TIPS } from '../data/tips';
-import { L, getLang } from '../i18n';
+import { L, isZh } from '../i18n';
 
 const SPRITES = [
   'aria', 'arthur', 'baron', 'carl', 'cult_leader', 'elena', 'enemy_archer', 'enemy_cavalry', 'enemy_flier', 'enemy_lance',
@@ -53,7 +53,7 @@ export class BootScene extends Phaser.Scene {
       g.fillRect(0, VIEW_H - 220, w, 220);
     }
     const ty = art ? 150 : VIEW_H / 2 - 60;
-    const zh = getLang() === 'zh';
+    const zh = isZh();
     addText(this, w / 2, ty, zh ? '王國防線' : 'KINGDOM BASTION', { size: zh ? 72 : 64, display: true, color: '#ffd36b', strokeW: 10, stroke: '#3a1a04' }).setOrigin(0.5);
     addText(this, w / 2, ty + 58, zh ? 'KINGDOM BASTION' : '王國防線', { size: 24, display: true, color: '#f4e2b8', strokeW: 5 }).setOrigin(0.5);
     const by = art ? VIEW_H - 120 : VIEW_H / 2 + 40;
