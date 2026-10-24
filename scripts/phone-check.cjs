@@ -17,7 +17,7 @@ const DEVICES = [
   { name: 'phone-notch', w: 844, h: 390, dpr: 3, inset: 47 },
   { name: 'tablet-4x3', w: 1024, h: 768, dpr: 2 },
 ];
-const IDS = Array.from({ length: 22 }, (_, i) => 'l' + (i + 1));
+const IDS = Array.from({ length: 24 }, (_, i) => 'l' + (i + 1));
 const TIPS = ['build', 'hero', 'spell', 'ult', 'item', 'speed', 'wave', 'upgrade', 'branch', 'map', 'daily', 'spells', 'items', 'zoom', 'hazard', 'hazard_keg', 'elite', 'train', 'night', 'upgrades', 'quests', 'shop'];
 
 function fullSave() {

@@ -41,7 +41,8 @@ export class NightLayer {
       .setDepth(0);
     this.layer.add(this.rt);
     this.brush = scene.make.image({ key: 'fx_soft', add: false });
-    // 固定光源：營火、民房窗戶、城堡、祭壇
+    // 固定光源：營火、民房窗戶、城堡、祭壇；火山的熔岩池
+    const lava = world.level.theme === 'volcano';
     for (const d of decor) {
       const flicker = d.kind === 'camp' ? 1 : d.kind === 'altar' ? 0.6 : 0.3;
       let f: { x: number; y: number; r: number } | null = null;
@@ -50,10 +51,11 @@ export class NightLayer {
       else if (d.kind === 'house') f = { x: d.x, y: d.y, r: 120 };
       else if (d.kind === 'castle') f = { x: d.x, y: d.y, r: 165 };
       else if (d.kind === 'altar') f = { x: d.x, y: d.y, r: 140 };
+      else if (d.kind === 'lake' && lava) f = { x: d.x, y: d.y, r: d.rx + 92 };
       if (!f) continue;
       this.fixed.push(f);
-      // 營火、窗戶的暖色光暈（ADD 疊在夜幕上，搖曳用 tween，不必重畫夜幕）
-      const g = this.adopt(scene.add.image(f.x, f.y, 'fx_soft').setTint(0xffb050).setBlendMode('ADD').setDepth(1));
+      // 營火、窗戶的暖色光暈（ADD 疊在夜幕上，搖曳用 tween，不必重畫夜幕）；熔岩偏紅
+      const g = this.adopt(scene.add.image(f.x, f.y, 'fx_soft').setTint(d.kind === 'lake' ? 0xff6a2a : 0xffb050).setBlendMode('ADD').setDepth(1));
       g.setDisplaySize(f.r * 1.1, f.r * 0.85).setAlpha(0.2 + flicker * 0.12);
       if (flicker > 0.5) scene.tweens.add({ targets: g, alpha: 0.18, duration: 180, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }

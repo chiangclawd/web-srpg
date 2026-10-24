@@ -1817,10 +1817,11 @@ export class World {
     return !!(this.level.night || this.level.rules?.night || this.level.waves[this.waveIndex]?.night);
   }
 
-  /** 夜裡被營火、民房、城堡、祭壇照亮的地方（蓋在這裡的塔不受夜戰射程懲罰） */
+  /** 夜裡被營火、民房、城堡、祭壇（火山上還有熔岩池）照亮的地方（蓋在這裡的塔不受夜戰射程懲罰） */
   litAt(x: number, y: number): boolean {
+    const lava = this.level.theme === 'volcano';
     return (this.level.decor ?? []).some((d) => {
-      const r = d.kind === 'camp' ? 150 : d.kind === 'castle' ? 140 : d.kind === 'altar' ? 120 : d.kind === 'house' ? 100 : 0;
+      const r = d.kind === 'camp' ? 150 : d.kind === 'castle' ? 140 : d.kind === 'altar' ? 120 : d.kind === 'house' ? 100 : d.kind === 'lake' && lava ? d.rx + 70 : 0;
       return r > 0 && 'x' in d && Math.hypot(d.x - x, (d.y - y) * 1.15) <= r;
     });
   }
