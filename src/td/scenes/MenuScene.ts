@@ -277,6 +277,14 @@ export class MenuScene extends Phaser.Scene {
     popIn(this, c, 0, { w: 640, h: 560 }, 0.8, 200);
   }
 
+  /** Android 返回鍵：先關掉最上面開著的視窗（設定、更新內容、繼續戰鬥提示）；都沒開才讓 App 縮到背景 */
+  onBack(): boolean {
+    const top = this.children.list.filter((o): o is Phaser.GameObjects.Container => o instanceof Phaser.GameObjects.Container && o.depth >= 5000).pop();
+    if (!top) return false;
+    top.destroy();
+    return true;
+  }
+
   private go(): void {
     sfx.play('horn', 0.6);
     this.cameras.main.fadeOut(350, 0, 0, 0);
