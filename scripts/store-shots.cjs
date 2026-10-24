@@ -42,7 +42,8 @@ function saveFor(hero) {
 
 async function shot(page, file) {
   await page.waitForTimeout(400);
-  await page.screenshot({ path: file });
+  // 軟體繪圖（沒有 GPU 的環境）一張大圖要畫很久
+  await page.screenshot({ path: file, timeout: 240000 });
   console.log('saved', path.relative(process.cwd(), file));
 }
 
@@ -98,6 +99,8 @@ async function battle(browser, size, b, dir) {
     const ui = g.scene.getScene('LevelUI');
     try { while (ui.modal) ui.closeModal(); } catch {}
     for (let i = 0; i < 2; i++) { now += 1000 / 60; g.step(now, 1000 / 60); }
+    // 擺好之後讓遊戲照常跑：截圖要等瀏覽器畫出新的一幀
+    g.loop.wake();
   });
   await shot(page, path.join(dir, `${b.id}.png`));
   await page.close();
