@@ -1,6 +1,7 @@
 // npm run build:app 的最後一步：把 dist-app 整理成 Capacitor App 用的網頁資料夾
 // - Capacitor 從 index.html 開啟 App：寫一個轉到 td.html 的入口（遊戲內的連結、隱私權政策頁都照舊用 td.html）
 // - 拿掉只有戰術 SRPG 用到的素材（CG、地圖格、SRPG 配樂、SRPG 的 PWA 設定），App 小將近 20 MB
+// - 網站用的介紹頁與宣傳圖也不用放進 App
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -16,7 +17,7 @@ fs.writeFileSync(
     '<style>html{background:#120d08}</style><script>location.replace("td.html")</script></head><body></body></html>\n',
 );
 
-const drop = ['assets/cg', 'assets/tiles', 'manifest.json'];
+const drop = ['assets/cg', 'assets/tiles', 'manifest.json', 'kingdom-bastion.html', 'assets/promo'];
 for (const f of fs.readdirSync(path.join(dir, 'assets/audio'))) if (/^bgm_.*\.mp3$/.test(f)) drop.push(`assets/audio/${f}`);
 let saved = 0;
 const size = (p) => (fs.statSync(p).isDirectory() ? fs.readdirSync(p).reduce((s, f) => s + size(path.join(p, f)), 0) : fs.statSync(p).size);

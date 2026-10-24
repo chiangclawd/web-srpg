@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>王國防線 Kingdom Bastion｜塔防策略遊戲</title>
+    <meta name="description" content="Kingdom Rush 風格的塔防策略遊戲：建塔、升級特化、指揮 8 位英雄，守住王國的 22 關戰役。手機與電腦瀏覽器免安裝直接玩，沒有廣告、沒有內購。" />
+    <meta name="theme-color" content="#1b130b" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="王國防線 Kingdom Bastion" />
+    <meta property="og:description" content="建塔、升級特化、指揮英雄，守住王國！22 關戰役、8 位英雄、挑戰與無盡模式，免安裝直接玩。" />
+    <meta property="og:url" content="https://chiangclawd.github.io/web-srpg/kingdom-bastion.html" />
+    <meta property="og:image" content="https://chiangclawd.github.io/web-srpg/td-og.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" sizes="192x192" href="td-icon-192.png" />
+    <link rel="apple-touch-icon" href="td-icon-180.png" />
+    <style>
+      :root {
+        --bg: #120d08;
+        --panel: #1f170e;
+        --rule: #4a3a24;
+        --ink: #f3e6c8;
+        --muted: #c8b18c;
+        --gold: #ffc35c;
+        --gold-deep: #d07a10;
+        --green: #4fa33a;
+        --font: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", "Trebuchet MS", system-ui, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      html { background: var(--bg); }
+      body {
+        margin: 0;
+        color: var(--ink);
+        font: 16px/1.7 var(--font);
+        -webkit-font-smoothing: antialiased;
+      }
+      a { color: var(--gold); }
+      .wrap {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding-left: max(18px, env(safe-area-inset-left));
+        padding-right: max(18px, env(safe-area-inset-right));
+      }
+      /* 主視覺 */
+      .hero {
+        position: relative;
+        min-height: min(88vh, 720px);
+        display: flex;
+        align-items: flex-end;
+        background: url('assets/keyart.webp') center 35% / cover no-repeat;
+      }
+      .hero::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(18, 13, 8, 0.05) 30%, rgba(18, 13, 8, 0.75) 72%, var(--bg) 100%);
+      }
+      .hero .wrap { position: relative; z-index: 1; padding-block: 40px 48px; width: 100%; }
+      .logo {
+        margin: 0;
+        font-size: clamp(2.6rem, 9vw, 5rem);
+        line-height: 1.05;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+        background: linear-gradient(180deg, #fff3b0 15%, #ffc040 60%, var(--gold-deep));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        -webkit-text-stroke: 1px #3a1a04;
+        filter: drop-shadow(0 4px 0 #3a1a04) drop-shadow(0 8px 18px rgba(0, 0, 0, 0.6));
+      }
+      .sub { margin: 6px 0 0; font-weight: 800; letter-spacing: 0.32em; color: var(--ink); text-shadow: 0 2px 6px #000; }
+      .tagline { margin: 14px 0 0; max-width: 36em; font-size: 1.1rem; text-shadow: 0 2px 8px #000; }
+      .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 22px;
+        border-radius: 12px;
+        font-weight: 800;
+        font-size: 1.05rem;
+        text-decoration: none;
+        border: 2px solid #2a1a0a;
+        box-shadow: 0 4px 0 #2a1a0a;
+      }
+      .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #2a1a0a; }
+      .btn.play { background: linear-gradient(180deg, #7fd05f, var(--green)); color: #10260a; }
+      .btn.apk { background: linear-gradient(180deg, #e9d3a8, #c79c5c); color: #2a1a0a; }
+      .note { margin-top: 12px; color: var(--muted); font-size: 0.92rem; text-shadow: 0 1px 4px #000; }
+      section { padding-block: 44px 8px; }
+      h2 { margin: 0 0 18px; font-size: 1.6rem; color: var(--gold); }
+      h2 small { display: block; font-size: 0.85rem; color: var(--muted); letter-spacing: 0.12em; font-weight: 600; }
+      /* 特色 */
+      .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+      .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 14px; padding: 16px 18px; }
+      .card h3 { margin: 0 0 6px; font-size: 1.1rem; }
+      .card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+      .card .en { margin-top: 6px; font-size: 0.85rem; opacity: 0.8; }
+      /* 截圖 */
+      .shots { display: grid; grid-auto-flow: column; grid-auto-columns: min(86%, 640px); gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 10px; }
+      .shots img { width: 100%; aspect-ratio: 1280 / 592; object-fit: cover; border-radius: 12px; border: 1px solid var(--rule); scroll-snap-align: start; background: var(--panel); }
+      footer { margin-top: 48px; padding-block: 24px 40px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 0.9rem; }
+      footer nav { display: flex; flex-wrap: wrap; gap: 18px; margin-bottom: 8px; }
+    </style>
+  </head>
+  <body>
+    <header class="hero">
+      <div class="wrap">
+        <h1 class="logo">王國防線</h1>
+        <p class="sub">KINGDOM BASTION</p>
+        <p class="tagline">黑暗大軍壓境，王國只剩最後一道防線。建造防禦塔、升級特化、指揮英雄，擋下每一波進攻！<br /><span style="opacity: 0.85">Build towers, command heroes and hold the line against the dark army.</span></p>
+        <div class="cta">
+          <a class="btn play" href="td.html">▶ 立即遊玩 Play now</a>
+          <a class="btn apk" href="https://github.com/chiangclawd/web-srpg/releases/tag/android-test" rel="noopener">Android 測試版 APK</a>
+        </div>
+        <p class="note">手機、電腦瀏覽器免安裝直接玩・沒有廣告・沒有內購・可離線遊玩<br />No install needed · No ads · No in-app purchases · Plays offline</p>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section>
+        <h2>遊戲特色<small>FEATURES</small></h2>
+        <div class="features">
+          <div class="card">
+            <h3>🏰 四種防禦塔，八種特化</h3>
+            <p>弓箭塔、法師塔、兵營、砲塔，各有兩條升級路線。士兵擋路、法術支援，每一關都要想好怎麼擺。</p>
+            <p class="en">Four towers, each with two specializations.</p>
+          </div>
+          <div class="card">
+            <h3>⚔️ 8 位英雄</h3>
+            <p>騎士、遊俠、法師、刺客、聖職者……每位英雄都有獨特技能與大招，還會一路升級。</p>
+            <p class="en">Eight heroes with their own skills and ultimates.</p>
+          </div>
+          <div class="card">
+            <h3>🗺️ 22 關與 12 名首領</h3>
+            <p>草原、森林、雪山、荒原、沙漠、火山、海灣，還有月夜突襲；英雄挑戰、鋼鐵挑戰、無盡模式、首領連戰、每日挑戰。</p>
+            <p class="en">22 levels, 12 bosses, challenges, endless mode and daily puzzles.</p>
+          </div>
+          <div class="card">
+            <h3>✨ 3D 角色・手繪戰場</h3>
+            <p>英雄與怪物用 3D 動作重新演出：獅鷲拍翅、騎兵衝鋒、巨魔掄棍。也可以切回手繪版。</p>
+            <p class="en">3D animated heroes and monsters on hand-painted battlefields.</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>遊戲畫面<small>SCREENSHOTS</small></h2>
+        <div class="shots">
+          <img src="assets/promo/forest.webp" alt="森林關卡：四種防禦塔擋住狼群與巨魔" loading="lazy" />
+          <img src="assets/promo/snow.webp" alt="雪山關卡：獅鷲騎手與騎兵來襲" loading="lazy" />
+          <img src="assets/promo/night.webp" alt="月夜突襲：狼人、蝙蝠與死靈法師" loading="lazy" />
+          <img src="assets/promo/volcano.webp" alt="火山關卡：惡魔與熔岩魔像" loading="lazy" />
+          <img src="assets/promo/map.webp" alt="世界地圖" loading="lazy" />
+          <img src="assets/promo/heroes.webp" alt="英雄選擇" loading="lazy" />
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <nav>
+          <a href="td.html">開始遊戲</a>
+          <a href="td-privacy.html">隱私權政策 Privacy Policy</a>
+          <a href="https://github.com/chiangclawd/web-srpg/issues" rel="noopener">意見回饋 Feedback</a>
+        </nav>
+        <div>© 2026 王國防線 Kingdom Bastion・美術、音樂與語音以 AI 工具輔助製作</div>
+      </div>
+    </footer>
+  </body>
+</html>
