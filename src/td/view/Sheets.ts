@@ -91,9 +91,11 @@ export const UNIT_SHEETS: Record<string, UnitSheet> = {
   mon_bat: sheet('bat', 0.89, { fill: 1, span: 2.6 }),
   sp_enemy_archer: sheet('hunter', 0.688, { attack: 0.8 }),
   sp_enemy_mage: sheet('adept', 0.555, { attack: 0.9 }),
-  // 英雄（艾莉亞騎獅鷲還是手繪）
+  // 英雄
   // 雷恩：敵方騎兵的模型換色（scripts/art/m3d/rain.json 的 recolor：騎士紅甲 → 銀甲、黑馬 → 栗色馬，保留紅色馬鎧）
   sp_rain: sheet('rain', 0.716, { fill: 1, size: HERO }),
+  // 艾莉亞：敵方獅鷲騎手的模型換色（aria.json：灰甲 → 白甲、面罩 → 臉、金髮、金色獅鷲），劍剪掉換成綁綠緞帶的長矛
+  sp_aria: sheet('aria', 0.42, { attack: 0.8, fill: 1, size: HERO }),
   sp_elena: sheet('elena', 0.817, { attack: 0.8, fill: 1, size: HERO }),
   sp_lila: sheet('lila', 0.846, { attack: 0.9, fill: 1, size: HERO }),
   sp_sharon: sheet('sharon', 0.577, { attack: 0.9, size: HERO }),

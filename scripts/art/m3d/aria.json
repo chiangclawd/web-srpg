@@ -1,0 +1,249 @@
+{
+ "yaws": [
+  45,
+  15,
+  165
+ ],
+ "dirs": {
+  "side": 45,
+  "front": 15,
+  "back": 165
+ },
+ "size": 288,
+ "ss": 3,
+ "span": 1.8,
+ "elev": 12,
+ "ramp": [
+  185,
+  230,
+  255
+ ],
+ "rim": 2.2,
+ "anims": [
+  {
+   "url": "/models/flier_rig.glb",
+   "clip": "idle",
+   "name": "idle",
+   "frames": 8,
+   "loop": true
+  },
+  {
+   "url": "/models/flier_rig.glb",
+   "clip": "walk",
+   "name": "walk",
+   "frames": 10,
+   "loop": true,
+   "measure": true
+  },
+  {
+   "url": "/models/flier_rig.glb",
+   "clip": "attack",
+   "name": "attack",
+   "frames": 10,
+   "loop": false
+  },
+  {
+   "url": "/models/flier_rig.glb",
+   "clip": "hit",
+   "name": "hit",
+   "frames": 5,
+   "loop": false
+  },
+  {
+   "url": "/models/flier_rig.glb",
+   "clip": "death",
+   "name": "death",
+   "frames": 10,
+   "loop": false
+  }
+ ],
+ "sharpen": [
+  1.2,
+  70
+ ],
+ "cut": [
+  {
+   "a": [
+    -0.36,
+    -0.12,
+    0.29
+   ],
+   "b": [
+    -0.5,
+    -0.34,
+    0.82
+   ],
+   "r": 0.065
+  }
+ ],
+ "props": [
+  {
+   "type": "spear",
+   "bone": "Rider",
+   "reach": 0,
+   "offset": [
+    -0.37,
+    -0.21,
+    0.19
+   ],
+   "dir": [
+    -0.15,
+    0.75,
+    1
+   ],
+   "length": 0.8,
+   "back": 0.3,
+   "thick": 0.012,
+   "shaft": 8014374,
+   "blade": 14212838,
+   "guard": 11569722,
+   "ribbon": 3842122
+  }
+ ],
+ "recolor": {
+  "rider": [
+   {
+    "hue": [
+     330,
+     25
+    ],
+    "sat": [
+     0.35,
+     1
+    ],
+    "set": {
+     "h": 24,
+     "s": 0.34,
+     "v": 0.93
+    }
+   },
+   {
+    "hue": [
+     8,
+     40
+    ],
+    "sat": [
+     0.15,
+     1
+    ],
+    "val": [
+     0.15,
+     0.6
+    ],
+    "set": {
+     "h": 38,
+     "s": 0.66
+    },
+    "mul": {
+     "v": 2.2
+    }
+   },
+   {
+    "hue": [
+     170,
+     270
+    ],
+    "val": [
+     0,
+     0.75
+    ],
+    "set": {
+     "h": 38,
+     "s": 0.14
+    },
+    "mul": {
+     "v": 2.0
+    }
+   },
+   {
+    "sat": [
+     0,
+     0.18
+    ],
+    "set": {
+     "h": 38,
+     "s": 0.14
+    },
+    "mul": {
+     "v": 1.9
+    }
+   }
+  ],
+  "mount": [
+   {
+    "hue": [
+     170,
+     270
+    ],
+    "sat": [
+     0,
+     0.5
+    ],
+    "val": [
+     0.1,
+     0.75
+    ],
+    "set": {
+     "h": 38,
+     "s": 0.14
+    },
+    "mul": {
+     "v": 2.0
+    }
+   },
+   {
+    "sat": [
+     0,
+     0.12
+    ],
+    "val": [
+     0.15,
+     0.62
+    ],
+    "set": {
+     "h": 38,
+     "s": 0.14
+    },
+    "mul": {
+     "v": 1.9
+    }
+   },
+   {
+    "hue": [
+     5,
+     45
+    ],
+    "sat": [
+     0.3,
+     1
+    ],
+    "val": [
+     0,
+     0.55
+    ],
+    "set": {
+     "h": 36
+    },
+    "mul": {
+     "v": 1.6
+    }
+   },
+   {
+    "hue": [
+     5,
+     45
+    ],
+    "sat": [
+     0.3,
+     1
+    ],
+    "set": {
+     "h": 37
+    },
+    "mul": {
+     "v": 1.22
+    }
+   }
+  ]
+ }
+}

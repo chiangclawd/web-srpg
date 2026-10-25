@@ -2,6 +2,7 @@
 export const SHEET_REV: Record<string, string> = {
   adept: 'a655f012b8',
   adept_hd: '910ce40275',
+  aria: '3d1a51097e',
   arthur: 'e1e800fbd8',
   bat: '16c6886dc5',
   bat_hd: '209250d003',
