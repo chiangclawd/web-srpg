@@ -140,6 +140,15 @@ function makePole(spec, ramp) {
     collar.rotation.x = Math.PI / 2;
     collar.position.z = tipZ;
     g.add(collar);
+    if (spec.ribbon) {
+      // 矛頭下綁的布條（艾莉亞的綠緞帶）：兩條往後垂的細長片
+      for (const [dx, len] of [[0.012, 0.16], [-0.012, 0.12]]) {
+        const tail = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.035, len), toon(spec.ribbon, ramp));
+        tail.position.set(dx, -0.02, tipZ - 0.02 - len / 2);
+        tail.rotation.x = -0.35;
+        g.add(tail);
+      }
+    }
   } else {
     const gem = new THREE.Mesh(new THREE.IcosahedronGeometry(spec.gemSize ?? 0.05, 0), toon(spec.gem ?? 0xd03030, ramp));
     gem.position.z = tipZ + 0.04;

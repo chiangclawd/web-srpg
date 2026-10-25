@@ -11,6 +11,14 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 91,
+    date: '2026-10-25',
+    title: { zh: '艾莉雅的 3D 造型', en: 'Aria in 3D' },
+    items: [
+      { zh: '英雄艾莉雅也有 3D 了：白甲金髮的騎士騎著金色獅鷲，手持綁著綠緞帶的長矛 —— 8 位英雄全部都有 3D 版（暫停選單可切回手繪版）', en: 'Aria now has a 3D look too: a fair-haired knight in white armor on a golden griffin, holding a spear tied with a green ribbon — all 8 heroes now have 3D versions (switch back to the hand-drawn art in the pause menu)' },
+    ],
+  },
+  {
     id: 90,
     date: '2026-10-24',
     title: { zh: '夜之番外：兩個新關卡', en: 'Night Extras: Two New Levels' },
