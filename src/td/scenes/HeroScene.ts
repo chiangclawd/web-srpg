@@ -5,7 +5,11 @@ import { LEVELS } from '../data/levels';
 import { heroStats } from '../sim/World';
 import { Button, IconButton, panel } from '../ui/widgets';
 import { L, T } from '../i18n';
-import { save, persist } from '../save';
+import { save, persist, type HeroSave } from '../save';
+import { HERO_GEAR, MAX_RANK, RANK_COST, ULT, heroGear, rankLevel, rankOf, rankUpBlock, resolveRanks, skillPoints, spentPoints } from '../data/heroBuild';
+import type { HeroDef } from '../sim/defs';
+
+type Add = <T extends Phaser.GameObjects.GameObject>(o: T) => T;
 import { sfx } from '../audio';
 import { armorWord } from './LevelScene';
 import { showTipBubble } from '../ui/tip';
@@ -19,6 +23,8 @@ export function heroUnlocked(id: string): boolean {
 export class HeroScene extends Phaser.Scene {
   private objs: Phaser.GameObjects.GameObject[] = [];
   private viewing = 'arthur';
+  /** 右下分頁：技能加點 / 專屬裝備 */
+  private tab: 'skills' | 'gear' = 'skills';
 
   constructor() {
     super('Hero');
@@ -34,9 +40,19 @@ export class HeroScene extends Phaser.Scene {
     this.trainTip();
   }
 
-  /** 第一次有足夠寶石進英雄室：指向「訓練」鈕 */
+  /** 第一次有足夠寶石進英雄室：指向「訓練」鈕；技能加點上線後第一次進來：先說明加點規則 */
   private trainTip(): void {
     const sv = save();
+    if (!sv.tipsSeen.includes('heroRanks') && heroUnlocked(this.viewing)) {
+      sv.tipsSeen.push('heroRanks');
+      persist();
+      this.time.delayedCall(700, () => {
+        if (!this.sys.isActive()) return;
+        const px = Math.max(620, viewW(this) / 2 + 80);
+        showTipBubble(this, px - 110 + 236, 392, T('rankHint'), () => {}, 2000);
+      });
+      return;
+    }
     const xp = sv.heroes[this.viewing]?.xp ?? 0;
     if (sv.tipsSeen.includes('train') || sv.gems < TRAIN_PRICE || !heroUnlocked(this.viewing) || trainXp(xp) <= 0) return;
     sv.tipsSeen.push('train');
@@ -92,7 +108,12 @@ export class HeroScene extends Phaser.Scene {
     // 已解鎖英雄的語音都先載好（每句約 10KB），點頭像時才有聲音
     for (const id of HERO_ORDER) if (heroUnlocked(id)) sfx.preloadVoice(id);
     const px = Math.max(620, w / 2 + 80);
-    add(panel(this, px, 370, Math.min(w - 220, 1000), 560));
+    // 手機上字會放大：列距跟著實際字高，名稱貼在圖示中線上方、說明貼在下方，兩行才不會疊在一起；
+    // 四列放不進原本的面板時，面板往下長一點（最多到畫面底 50px 內）
+    const pitch = Math.max(50, fontPx(18) + fontPx(16) + 12);
+    const row0 = 444;
+    const bottom = Math.min(670, Math.max(650, Math.ceil(row0 + 3 * pitch + 2 + fontPx(16) * 1.35 + 14)));
+    add(panel(this, px, (90 + bottom) / 2, Math.min(w - 220, 1000), bottom - 90));
     const portrait = add(this.add.image(px - 300, 610, `pt_${h.id}`).setOrigin(0.5, 1));
     portrait.setScale(470 / portrait.frame.height);
     if (!unlocked) portrait.setTint(0x222222);
@@ -102,14 +123,15 @@ export class HeroScene extends Phaser.Scene {
     add(addText(this, tx, 204, L(h.desc), { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false, wrap: 480 }));
     const xp = sv.heroes[h.id]?.xp ?? 0;
     const lv = heroLevelForXp(xp);
-    const st = heroStats(h, lv);
+    const gear = heroGear(h, sv.heroes[h.id]);
+    const st = heroStats(h, lv, gear);
     const stats: [string, string][] = [
       [T('level'), `${lv} / ${HERO_MAX_LEVEL}`],
       [T('hp'), String(st.hp)],
       [T('damage'), `${Math.round(st.dmg[0])}-${Math.round(st.dmg[1])}`],
-      [T('armor'), armorWord(h.armor)],
-      [T('range'), h.ranged ? String(h.ranged.range) : T('none')],
-      [T('speed'), h.speed >= 80 ? T('fast') : T('medium')],
+      [T('armor'), armorWord(h.armor + (gear?.mods.armor ?? 0))],
+      [T('range'), h.ranged ? String(Math.round(h.ranged.range * (gear?.mods.range ?? 1))) : T('none')],
+      [T('speed'), h.speed * (gear?.mods.speed ?? 1) >= 80 ? T('fast') : T('medium')],
     ];
     stats.forEach(([k, v], i) => {
       const sx = tx + (i % 2) * 240;
@@ -137,7 +159,7 @@ export class HeroScene extends Phaser.Scene {
             return;
           }
           sv.gems -= TRAIN_PRICE;
-          sv.heroes[h.id] = { xp: xp + gain };
+          sv.heroes[h.id] = { ...sv.heroes[h.id], xp: xp + gain };
           persist();
           const up = heroLevelForXp(xp + gain) > lv;
           sfx.play(up ? 'levelup' : 'coin');
@@ -146,34 +168,22 @@ export class HeroScene extends Phaser.Scene {
           this.flashText(bx, 318, up ? T('heroLevelUp') : `+${gain} XP`, up ? '#ffe066' : '#3a8a1a');
         }, { color: 'gold', icon: 'ic_gem', iconSize: 24, text: { size: 16 } }),
       );
-      add(fitText(addText(this, bx, 390, `+${gain} XP · ${T('gems')} ${sv.gems}`, { size: 12, color: '#5a3a1a', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0.5), 140));
+      // 靠訓練鈕右緣對齊，左邊留給「推薦」鈕
+      add(fitText(addText(this, bx + 64, 390, `+${gain} XP · ${T('gems')} ${sv.gems}`, { size: 12, color: '#5a3a1a', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(1, 0.5), 120));
     }
-    // 技能
-    add(addText(this, tx, 372, T('skills'), { size: 20, display: true, color: '#7a4a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }));
-    // 手機上字會放大：列距跟著實際字高，名稱貼在圖示中線上方、說明貼在下方，兩行才不會疊在一起
-    const pitch = Math.max(50, fontPx(18) + fontPx(16) + 12);
-    h.skills.forEach((sk, i) => {
-      const sy = 424 + i * pitch;
-      const ok = lv >= sk.unlockLevel;
-      const ib = add(this.add.image(tx + 24, sy, 'ui_badge_blue').setDisplaySize(48, 48));
-      const ic = add(this.add.image(tx + 24, sy, `sk_${sk.id}`).setDisplaySize(30, 30));
-      if (!ok) {
-        ib.setTint(0x666666);
-        ic.setTint(0x666666);
-      }
-      add(addText(this, tx + 58, sy + 2, `${L(sk.name)}  (LV${sk.unlockLevel})`, { size: 18, display: true, color: ok ? '#4a2a10' : '#8a7a6a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 1));
-      add(fitText(addText(this, tx + 58, sy + 2, L(sk.desc), { size: 16, color: ok ? '#3a2412' : '#8a7a6a', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0, 0), px + Math.min(w - 220, 1000) / 2 - 24 - (tx + 58)));
+    // 技能加點 / 專屬裝備（分頁）
+    const right = px + Math.min(w - 220, 1000) / 2;
+    const tabY = 392;
+    (['skills', 'gear'] as const).forEach((tab, i) => {
+      const on = this.tab === tab;
+      add(new Button(this, tx + 46 + i * 98, tabY, 92, 36, T(tab === 'skills' ? 'skills' : 'heroGear'), () => {
+        if (this.tab === tab) return;
+        this.tab = tab;
+        this.build();
+      }, { color: on ? 'gold' : 'wood', text: { size: 16 } }));
     });
-    // 絕招（手動施放）
-    {
-      const sy = 424 + h.skills.length * pitch;
-      add(this.add.image(tx + 24, sy, 'ui_badge_gold').setDisplaySize(48, 48));
-      add(this.add.image(tx + 24, sy, h.ult.icon).setDisplaySize(30, 30));
-      add(addText(this, tx + 58, sy + 2, `${L(h.ult.name)}  (${T('ultimate')})`, { size: 18, display: true, color: '#8a4a00', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 1));
-      // 一行放不下就縮小
-      const room = px + Math.min(w - 220, 1000) / 2 - 24 - (tx + 58);
-      add(fitText(addText(this, tx + 58, sy + 2, L(h.ult.desc), { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0, 0), room));
-    }
+    if (this.tab === 'skills') this.skillRows(h, lv, unlocked, tx, right, tabY, row0, pitch, add);
+    else this.gearRows(h, unlocked, tx, right, tabY, row0, pitch, add);
     if (unlocked) {
       const selected = sv.selectedHero === h.id;
       add(
@@ -191,6 +201,116 @@ export class HeroScene extends Phaser.Scene {
     }
     // 手機上關閉鈕放大（以左上角為錨點）
     add(new IconButton(this, 12 + 30 * uiZoom(), 10 + 30 * uiZoom(), 60, 'ic_close', () => this.back()).setBaseScale(uiZoom()));
+  }
+
+  /** 技能分頁：每個技能（和絕招）一列，右邊是階數圓點和升階鈕 */
+  private skillRows(h: HeroDef, lv: number, unlocked: boolean, tx: number, right: number, tabY: number, row0: number, pitch: number, add: Add): void {
+    const sv = save();
+    const hs: HeroSave = sv.heroes[h.id] ?? { xp: 0 };
+    const ranks = resolveRanks(h, lv, hs);
+    const free = skillPoints(lv) - spentPoints(h, ranks);
+    add(fitText(addText(this, tx + 194, tabY, T('skillPointsLeft', free), { size: 16, display: true, color: free > 0 ? '#2a7a1a' : '#7a4a1a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5), 110));
+    if (unlocked) {
+      // 重置：全部清空自己點；推薦：交給遊戲自動配點（升級時也會自動加）
+      add(new Button(this, tx + 344, tabY, 70, 32, T('reset'), () => {
+        sv.heroes[h.id] = { ...hs, ranks: {} };
+        persist();
+        sfx.play('click');
+        this.build();
+      }, { color: 'grey', text: { size: 14 } }));
+      add(new Button(this, tx + 420, tabY, 76, 32, T('recommended'), () => {
+        const next = { ...hs };
+        delete next.ranks;
+        sv.heroes[h.id] = next;
+        persist();
+        sfx.play('upgrade');
+        this.build();
+      }, { color: hs.ranks ? 'blue' : 'grey', text: { size: 14 }, disabled: !hs.ranks }));
+    }
+    const rows = [
+      ...h.skills.map((sk) => ({ id: sk.id, name: L(sk.name), desc: L(sk.desc), icon: `sk_${sk.id}`, badge: 'ui_badge_blue' })),
+      { id: ULT, name: `${L(h.ult.name)}  (${T('ultimate')})`, desc: L(h.ult.desc), icon: h.ult.icon, badge: 'ui_badge_gold' },
+    ];
+    rows.forEach((r, i) => {
+      const sy = row0 + i * pitch;
+      const rank = rankOf(ranks, r.id);
+      const on = rank > 0;
+      const ib = add(this.add.image(tx + 24, sy, r.badge).setDisplaySize(48, 48));
+      const ic = add(this.add.image(tx + 24, sy, r.icon).setDisplaySize(30, 30));
+      if (!on) {
+        ib.setTint(0x666666);
+        ic.setTint(0x666666);
+      }
+      const ult = r.id === ULT;
+      add(fitText(addText(this, tx + 58, sy + 2, r.name, { size: 18, display: true, color: !on ? '#8a7a6a' : ult ? '#8a4a00' : '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 1), right - 150 - (tx + 58)));
+      add(fitText(addText(this, tx + 58, sy + 2, r.desc, { size: 16, color: on ? '#3a2412' : '#8a7a6a', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0, 0), right - 150 - (tx + 58)));
+      // 階數圓點
+      for (let k = 0; k < MAX_RANK; k++) add(this.add.circle(right - 136 + k * 16, sy, 6, k < rank ? 0xffc83a : 0x3a2a1a).setStrokeStyle(2, 0x2a1608));
+      const block = rankUpBlock(h, lv, ranks, r.id);
+      const bx = right - 56;
+      if (block === 'max') {
+        add(addText(this, bx, sy, 'MAX', { size: 16, display: true, color: '#b07a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0.5));
+      } else if (block === 'level') {
+        add(addText(this, bx, sy, `LV${rankLevel(h, r.id, rank + 1)}`, { size: 15, display: true, color: '#8a7a6a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0.5));
+      } else if (unlocked) {
+        add(new Button(this, bx, sy, 64, 36, String(RANK_COST[rank + 1]), () => {
+          if (block === 'points') {
+            sfx.play('error');
+            this.flashText(bx, sy - 30, T('notEnoughPoints'), '#c0392b');
+            return;
+          }
+          // 第一次手動加點：從目前（推薦）的配點接著加
+          sv.heroes[h.id] = { ...hs, ranks: { ...ranks, [r.id]: rank + 1 } };
+          persist();
+          sfx.play('upgrade');
+          this.build();
+        }, { color: block ? 'grey' : 'green', icon: 'ic_upgrade', iconSize: 20, text: { size: 15 } }));
+      }
+    });
+  }
+
+  /** 裝備分頁：兩件專屬裝備，買過的可以隨時換（一次只能裝一件） */
+  private gearRows(h: HeroDef, unlocked: boolean, tx: number, right: number, tabY: number, row0: number, pitch: number, add: Add): void {
+    const sv = save();
+    const hs: HeroSave = sv.heroes[h.id] ?? { xp: 0 };
+    add(fitText(addText(this, tx + 194, tabY, `${T('gems')} ${sv.gems}`, { size: 16, display: true, color: '#6a2a8a', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 0.5), 160));
+    const gp = pitch + 14;
+    HERO_GEAR[h.id].forEach((g, i) => {
+      const sy = row0 + 6 + i * gp;
+      const owned = hs.owned?.includes(g.id) ?? false;
+      const worn = hs.gear === g.id;
+      add(this.add.image(tx + 24, sy, worn ? 'ui_badge_gold' : 'ui_badge').setDisplaySize(52, 52));
+      add(this.add.image(tx + 24, sy, g.icon).setDisplaySize(32, 32));
+      add(fitText(addText(this, tx + 58, sy + 2, L(g.name), { size: 18, display: true, color: '#4a2a10', stroke: '#f4e2b8', strokeW: 2, shadow: false }).setOrigin(0, 1), right - 170 - (tx + 58)));
+      add(fitText(addText(this, tx + 58, sy + 2, L(g.desc), { size: 16, color: '#3a2412', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0, 0), right - 170 - (tx + 58)));
+      const bx = right - 84;
+      if (!unlocked) return;
+      if (owned) {
+        add(new Button(this, bx, sy, 132, 42, worn ? T('equipped') : T('equip'), () => {
+          sv.heroes[h.id] = { ...hs, gear: worn ? undefined : g.id };
+          persist();
+          sfx.play(worn ? 'click' : 'upgrade');
+          this.build();
+        }, { color: worn ? 'grey' : 'green', text: { size: 16 } }));
+      } else {
+        add(new Button(this, bx, sy, 132, 42, String(g.price), () => {
+          if (sv.gems < g.price) {
+            sfx.play('error');
+            this.flashText(bx, sy - 34, T('notEnoughGems', sv.gems), '#c0392b');
+            return;
+          }
+          sv.gems -= g.price;
+          // 買了就直接裝上
+          sv.heroes[h.id] = { ...hs, owned: [...(hs.owned ?? []), g.id], gear: g.id };
+          persist();
+          sfx.play('coin');
+          sfx.play('upgrade');
+          this.build();
+        }, { color: 'gold', icon: 'ic_gem', iconSize: 22, text: { size: 16 } }));
+      }
+    });
+    const hintY = row0 + 6 + 2 * gp - 6;
+    if (hintY < 636) add(fitText(addText(this, tx, hintY, T('gearHint'), { size: 13, color: '#6a4a2a', stroke: '#f4e2b8', strokeW: 0, shadow: false }).setOrigin(0, 0.5), right - 24 - tx));
   }
 
   /** 按鈕上方飄出一行字（訓練結果、寶石不足） */

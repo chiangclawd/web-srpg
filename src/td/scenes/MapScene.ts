@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { PLAY_W, PLAY_X0, VIEW_H, WORLD_W, bgScale, addText, fitText, fontPx, setupCamera, uiZoom, viewW } from '../config';
 import { LEVELS } from '../data/levels';
 import { UPGRADE_COLUMNS } from '../data/upgrades';
-import { HEROES, HERO_ORDER } from '../data/heroes';
+import { HEROES, HERO_ORDER, heroLevelForXp } from '../data/heroes';
+import { pointsToSpend } from '../data/heroBuild';
 import { heroUnlocked } from './HeroScene';
 import { mapRoads, paintWorldMap, type MapNode } from '../art/worldmap';
 import { showTipBubble } from '../ui/tip';
@@ -413,9 +414,12 @@ export class MapScene extends Phaser.Scene {
     bottomRight.add([up, hb, enc, ach, shop]);
     this.barBtns = [up, hb, enc, ach, shop];
     this.heroHud = hb;
-    if (avail > 0) {
-      const badge = this.add.circle(-410, -68, 14, 0xc0392b).setStrokeStyle(2, 0xffffff);
-      const bt = addText(this, -410, -68, String(avail), { size: 14, display: true }).setOrigin(0.5);
+    // 紅點：還有星星可升級、出戰英雄還有技能點沒配
+    const heroPts = pointsToSpend(hero, heroLevelForXp(save().heroes[hero.id]?.xp ?? 0), save().heroes[hero.id]);
+    for (const [n, bx] of [[avail, -410], [heroPts, -250]] as const) {
+      if (n <= 0) continue;
+      const badge = this.add.circle(bx, -68, 14, 0xc0392b).setStrokeStyle(2, 0xffffff);
+      const bt = addText(this, bx, -68, String(n), { size: 14, display: true }).setOrigin(0.5);
       this.tweens.add({ targets: [badge, bt], scale: 1.2, duration: 500, yoyo: true, repeat: -1 });
       bottomRight.add([badge, bt]);
     }
@@ -583,9 +587,10 @@ export class MapScene extends Phaser.Scene {
   /** 地圖首次提示：有星星可用 → 指向升級；打贏過一場 → 指向每日任務；寶石夠買道具 → 指向商店 */
   private mapTip(): void {
     const sv = save();
-    let id: 'upgrades' | 'shop' | 'quests' | null = null;
+    let id: 'upgrades' | 'shop' | 'quests' | 'heroBuild' | null = null;
     if (!sv.tipsSeen.includes('upgrades') && starsAvailable() > 0) id = 'upgrades';
     else if (!sv.tipsSeen.includes('quests') && sv.stats.victories > 0) id = 'quests';
+    else if (!sv.tipsSeen.includes('heroBuild') && sv.stats.victories >= 2) id = 'heroBuild';
     else if (!sv.tipsSeen.includes('shop') && (sv.gems ?? 0) >= 40) id = 'shop';
     if (!id) return;
     const tip = id;
@@ -602,7 +607,8 @@ export class MapScene extends Phaser.Scene {
       if (tip === 'quests') showTipBubble(this, w - 104 * z, 92 * z, T('tipQuests'), () => {}, 2000);
       else {
         const zb = this.barZoom();
-        showTipBubble(this, w - (tip === 'upgrades' ? 470 : 790) * zb, VIEW_H - 42 * zb, T(tip === 'upgrades' ? 'tipUpgrades' : 'tipShop'), () => {}, 2000);
+        const bx = tip === 'upgrades' ? 470 : tip === 'heroBuild' ? 310 : 790;
+        showTipBubble(this, w - bx * zb, VIEW_H - 42 * zb, T(tip === 'upgrades' ? 'tipUpgrades' : tip === 'heroBuild' ? 'tipHeroBuild' : 'tipShop'), () => {}, 2000);
       }
     });
   }

@@ -1,3 +1,4 @@
+import type { GearDef } from '../data/heroBuild';
 import type { DamageKind, EliteAffix, EnemyDef, HeroDef, Range2, TowerLevelDef, TowerType } from './defs';
 import type { Path } from './Path';
 
@@ -94,6 +95,11 @@ export interface HeroRuntime {
   skillCd: Record<string, number>;
   moveTo: { x: number; y: number } | null;
   respawnAt: number;
+  /** 技能與絕招的階數（data/heroBuild.ts）；auto = 推薦配點，升級時自動加點 */
+  ranks: Record<string, number>;
+  auto: boolean;
+  /** 裝著的專屬裝備 */
+  gear?: GearDef;
 }
 
 export type SoldierKind = 'barracks' | 'hero' | 'militia' | 'golem';

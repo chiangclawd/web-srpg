@@ -11,6 +11,15 @@ export interface ChangeEntry {
 /** 更新內容（最新在前）。每次部署新功能就在最前面加一筆。 */
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: 92,
+    date: '2026-10-26',
+    title: { zh: '英雄技能加點與專屬裝備', en: 'Hero skill points and exclusive gear' },
+    items: [
+      { zh: '英雄每升一級得 2 個技能點，在英雄房分給三個技能和絕招：每升一階效果 +20%、冷卻 -10%（2 階要 3 級、3 階要 6 級）。10 級只有 20 點，點滿要 23 點，得自己取捨；不想配就按「推薦」', en: 'Heroes earn 2 skill points per level to spend in the Hero Room on their three skills and ultimate: each rank adds +20% effect and -10% cooldown (rank 2 needs level 3, rank 3 needs level 6). Level 10 gives 20 points but maxing everything costs 23, so choose; tap Auto to let the game decide' },
+      { zh: '每位英雄有兩件專屬裝備（120 / 200 寶石），例如亞瑟的獅心盾、艾蓮娜的精靈長弓；一次裝一件，買過的隨時可以換', en: 'Each hero has two exclusive gear pieces (120 / 200 gems), such as Arthur\'s Lionheart Shield and Elena\'s Elven Longbow; equip one at a time and swap freely once bought' },
+    ],
+  },
+  {
     id: 91,
     date: '2026-10-25',
     title: { zh: '艾莉雅的 3D 造型', en: 'Aria in 3D' },
