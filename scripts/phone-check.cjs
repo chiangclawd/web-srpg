@@ -18,7 +18,7 @@ const DEVICES = [
   { name: 'tablet-4x3', w: 1024, h: 768, dpr: 2 },
 ];
 const IDS = Array.from({ length: 24 }, (_, i) => 'l' + (i + 1));
-const TIPS = ['build', 'hero', 'spell', 'ult', 'item', 'speed', 'wave', 'upgrade', 'branch', 'map', 'daily', 'spells', 'items', 'zoom', 'hazard', 'hazard_keg', 'elite', 'train', 'night', 'upgrades', 'quests', 'shop'];
+const TIPS = ['build', 'hero', 'spell', 'ult', 'item', 'speed', 'wave', 'upgrade', 'branch', 'map', 'daily', 'spells', 'items', 'zoom', 'hazard', 'hazard_keg', 'elite', 'train', 'night', 'upgrades', 'quests', 'shop', 'heroBuild', 'heroRanks'];
 
 function fullSave() {
   const stars = {};
@@ -35,6 +35,8 @@ function fullSave() {
     tipsSeen: TIPS,
     tutorialDone: true,
     heroesSeen: ['arthur', 'elena', 'lila', 'rain', 'aria', 'sharon', 'viktor', 'shadow'],
+    // 英雄房：手動配點（有升階鈕）、買過一件裝備
+    heroes: { arthur: { xp: 6200, ranks: { bash: 2, rally: 1 }, owned: ['lionheart'], gear: 'lionheart' } },
   };
 }
 
@@ -151,6 +153,15 @@ function quietSave(sv) {
     await page.evaluate(() => window.__td.scene.getScene('Map').showLevel(0));
     await page.waitForTimeout(800);
     await step('map-panel', 'Map');
+    await go('Hero');
+    await step('hero', 'Hero');
+    await page.evaluate(() => {
+      const h = window.__td.scene.getScene('Hero');
+      h.tab = 'gear';
+      h.build();
+    });
+    await page.waitForTimeout(500);
+    await step('hero-gear', 'Hero');
     await go('Level', { levelId: 'l2', difficulty: 'normal', mode: 'campaign' });
     await page.waitForFunction(() => window.__td.scene.getScene('Level').world, null, { timeout: 120000 });
     await page.evaluate(() => {

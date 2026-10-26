@@ -10,12 +10,14 @@ import {
   Tower,
   newId,
   type DamageSourceKind,
+  type HeroRuntime,
   type ProjKind,
   type Zone,
 } from './entities';
 import { ENEMIES } from '../data/enemies';
 import { TOWERS } from '../data/towers';
 import { heroLevelForXp, HERO_MAX_LEVEL } from '../data/heroes';
+import { RANK_CD, RANK_POWER, ULT, autoRanks, heroGear, rankOf, resolveRanks, type GearDef, type HeroBuild } from '../data/heroBuild';
 import { baseMods, type Mods } from '../data/upgrades';
 
 export const PLAY_W = 1280;
@@ -109,7 +111,7 @@ export interface BuildSpot {
 export interface WorldOptions {
   level: LevelDef;
   mods?: Mods;
-  hero?: { def: HeroDef; xp: number } | null;
+  hero?: { def: HeroDef; xp: number; build?: HeroBuild } | null;
   difficulty?: Difficulty;
   seed?: number;
 }
@@ -178,7 +180,7 @@ export class World {
     this.reinfCdMax = REINF_BASE_CD * this.mods.reinfCd;
     this.meteorCd = this.meteorCdMax * 0.5;
     this.reinfCd = 0;
-    if (opts.hero) this.spawnHero(opts.hero.def, opts.hero.xp);
+    if (opts.hero) this.spawnHero(opts.hero.def, opts.hero.xp, opts.hero.build);
     const um = opts.level.rules?.heroUltCdMul;
     if (um && this.hero) {
       this.heroUltCdMax *= um;
@@ -407,20 +409,23 @@ export class World {
 
   // ═════════════════════════ 英雄 ═════════════════════════
 
-  private spawnHero(def: HeroDef, xp: number): void {
+  private spawnHero(def: HeroDef, xp: number, build?: HeroBuild): void {
     const lv = heroLevelForXp(xp);
-    const st = heroStats(def, lv);
+    const gear = heroGear(def, build);
+    const st = heroStats(def, lv, gear);
     const p = this.level.heroStart;
-    const s = new Soldier('hero', def.sprite, def.height, p.x, p.y, st.hp, def.armor, st.dmg, def.cd, def.regen);
-    s.speed = def.speed;
-    s.engageR = def.ranged ? def.ranged.range : 95;
+    const range = def.ranged ? def.ranged.range * (gear?.mods.range ?? 1) : 0;
+    const cd = def.cd / (gear?.mods.atkSpeed ?? 1);
+    const s = new Soldier('hero', def.sprite, def.height, p.x, p.y, st.hp, Math.min(0.85, def.armor + (gear?.mods.armor ?? 0)), st.dmg, cd, def.regen);
+    s.speed = def.speed * (gear?.mods.speed ?? 1);
+    s.engageR = def.ranged ? range : 95;
     if (def.ranged) {
-      s.ranged = { range: def.ranged.range, dmg: st.dmg, cd: def.cd, kind: def.ranged.kind === 'magic' ? 'magic' : 'arrow', dmgKind: def.ranged.dmgKind };
+      s.ranged = { range, dmg: st.dmg, cd, kind: def.ranged.kind === 'magic' ? 'magic' : 'arrow', dmgKind: def.ranged.dmgKind };
     }
-    s.hero = { def, level: lv, xp, startXp: xp, skillCd: {}, moveTo: null, respawnAt: 0 };
+    s.hero = { def, level: lv, xp, startXp: xp, skillCd: {}, moveTo: null, respawnAt: 0, ranks: resolveRanks(def, lv, build), auto: !build?.ranks, gear };
     for (const sk of def.skills) s.hero.skillCd[sk.id] = 2;
-    this.heroUltCdMax = def.ult.cd;
-    this.heroUltCd = def.ult.cd * 0.4;
+    this.heroUltCdMax = def.ult.cd * this.abilityCdMul(s.hero, ULT);
+    this.heroUltCd = this.heroUltCdMax * 0.4;
     this.hero = s;
     this.soldiers.push(s);
     this.emit({ type: 'soldierSpawn', s });
@@ -447,7 +452,9 @@ export class World {
     const lv = heroLevelForXp(hr.xp);
     if (lv > hr.level) {
       hr.level = lv;
-      const st = heroStats(hr.def, lv);
+      // 推薦配點：新點數自動加上去（手動配點的留給英雄室）
+      if (hr.auto) hr.ranks = autoRanks(hr.def, lv);
+      const st = heroStats(hr.def, lv, hr.gear);
       const ratio = h.hp / h.maxHp;
       h.maxHp = st.hp;
       h.hp = Math.min(st.hp, st.hp * ratio + st.hp * 0.3);
@@ -524,6 +531,8 @@ export class World {
     const hr = this.hero?.hero;
     if (!hr || !this.canHeroUlt()) return false;
     const lv = hr.level;
+    // 絕招的階數與裝備加成
+    const pu = this.abilityPower(hr, ULT);
     const near = (r: number, ground = false) => this.enemies.filter((e) => e.alive && (!ground || !e.flying) && inEllipse(x, y, e.x, e.y, r));
     let r = 100;
     switch (hr.def.id) {
@@ -531,7 +540,7 @@ export class World {
         // 兩名聖騎士守住道路
         for (let i = 0; i < 2; i++) {
           const o = FORMATION[i];
-          const s = new Soldier('militia', 'sp_player_sword', 46, x + o.x, y + o.y, 220 + 30 * lv, 0.5, [10 + 2 * lv, 16 + 3 * lv], 1, 8);
+          const s = new Soldier('militia', 'sp_player_sword', 46, x + o.x, y + o.y, (220 + 30 * lv) * pu, 0.5, [(10 + 2 * lv) * pu, (16 + 3 * lv) * pu], 1, 8);
           s.expireAt = this.time + 18;
           s.engageR = 90;
           this.soldiers.push(s);
@@ -545,7 +554,7 @@ export class World {
         for (let i = 0; i < 26; i++) {
           const tx = x + this.rng.range(-r, r) * 0.9;
           const ty = y + this.rng.range(-r, r) * 0.6;
-          const p = new Projectile('heroArrow', tx - 40, ty - 440, tx, ty, 0.35 + i * 0.06, 0, null, 20 + 5 * lv, 'physical', 'hero', this.hero);
+          const p = new Projectile('heroArrow', tx - 40, ty - 440, tx, ty, 0.35 + i * 0.06, 0, null, (20 + 5 * lv) * pu, 'physical', 'hero', this.hero);
           p.splash = 26;
           p.hitsAir = true;
           this.addProjectile(p);
@@ -555,7 +564,7 @@ export class World {
       case 'lila': {
         r = 105;
         for (const e of near(r)) {
-          this.damageEnemy(e, 50 + 12 * lv, 'magic', 'hero');
+          this.damageEnemy(e, (50 + 12 * lv) * pu, 'magic', 'hero');
           if (!e.alive || e.burrowed) continue;
           const dur = e.def.boss ? 0.9 : 3;
           e.stunUntil = Math.max(e.stunUntil, this.time + dur);
@@ -567,7 +576,7 @@ export class World {
       case 'rain': {
         r = 100;
         for (const e of near(r, true)) {
-          this.damageEnemy(e, 90 + 18 * lv, 'physical', 'hero');
+          this.damageEnemy(e, (90 + 18 * lv) * pu, 'physical', 'hero');
           if (e.alive) this.applyStun(e, 1.5);
         }
         this.emit({ type: 'beam', x1: x - r, y1: y - 10, x2: x + r, y2: y - 10, kind: 'charge' });
@@ -580,7 +589,7 @@ export class World {
         for (let k = 0; k < 8 && list.length; k++) {
           const e = list[k % list.length];
           if (!e.alive) continue;
-          this.damageEnemy(e, 55 + 12 * lv, 'magic', 'hero');
+          this.damageEnemy(e, (55 + 12 * lv) * pu, 'magic', 'hero');
           if (e.alive) this.applyStun(e, 0.5);
           this.emit({ type: 'lightning', pts: [{ x: e.x + this.rng.range(-20, 20), y: e.y - 300 }, { x: e.x, y: e.y - e.def.height * 0.5 }] });
         }
@@ -590,7 +599,7 @@ export class World {
         r = 110;
         for (const o of this.soldiers) {
           if (!o.alive || !inEllipse(x, y, o.x, o.y, r)) continue;
-          o.hp = Math.min(o.maxHp, o.hp + 80 + 15 * lv);
+          o.hp = Math.min(o.maxHp, o.hp + (80 + 15 * lv) * pu);
           this.emit({ type: 'heal', x: o.x, y: o.y });
         }
         for (const e of near(r)) {
@@ -604,13 +613,13 @@ export class World {
       case 'viktor': {
         r = 85;
         for (const e of near(r, true)) {
-          this.damageEnemy(e, 60 + 12 * lv, 'physical', 'hero');
+          this.damageEnemy(e, (60 + 12 * lv) * pu, 'physical', 'hero');
           if (e.alive) this.applyStun(e, e.def.boss ? 0.6 : 1.4);
         }
         // 三名重甲槍兵排成一列擋路
         for (let i = 0; i < 3; i++) {
           const o = FORMATION[i % FORMATION.length];
-          const s = new Soldier('militia', 'sp_player_lancer', 46, x + o.x, y + o.y, 170 + 25 * lv, 0.65, [9 + 2 * lv, 14 + 3 * lv], 1.1, 6);
+          const s = new Soldier('militia', 'sp_player_lancer', 46, x + o.x, y + o.y, (170 + 25 * lv) * pu, 0.65, [(9 + 2 * lv) * pu, (14 + 3 * lv) * pu], 1.1, 6);
           s.expireAt = this.time + 20;
           s.engageR = 85;
           this.soldiers.push(s);
@@ -626,13 +635,13 @@ export class World {
         for (let k = 0; k < 12 && list.length; k++) {
           const e = list[k % list.length];
           if (!e.alive) continue;
-          this.damageEnemy(e, 30 + 8 * lv, 'true', 'hero');
+          this.damageEnemy(e, (30 + 8 * lv) * pu, 'true', 'hero');
           if (k < list.length) this.emit({ type: 'melee', x: e.x, y: e.y - 16, heavy: false });
         }
         // 兩個影分身
         for (let i = 0; i < 2; i++) {
           const o = FORMATION[i];
-          const s = new Soldier('militia', 'sp_shadow', 50, x + o.x, y + o.y, 140 + 20 * lv, 0.2, [10 + 2 * lv, 16 + 3 * lv], 0.7, 6);
+          const s = new Soldier('militia', 'sp_shadow', 50, x + o.x, y + o.y, (140 + 20 * lv) * pu, 0.2, [(10 + 2 * lv) * pu, (16 + 3 * lv) * pu], 0.7, 6);
           s.expireAt = this.time + 15;
           s.engageR = 95;
           s.speed = 92;
@@ -1446,16 +1455,23 @@ export class World {
   }
 
   // ───────── 英雄技能 ─────────
+  /** 技能（或絕招）的效果倍率：階數 × 裝備 */
+  private abilityPower(hr: HeroRuntime, id: string): number {
+    return RANK_POWER[rankOf(hr.ranks, id)] * (hr.gear?.mods.power?.[id] ?? 1);
+  }
+
+  private abilityCdMul(hr: HeroRuntime, id: string): number {
+    return RANK_CD[rankOf(hr.ranks, id)] * (hr.gear?.mods.cd?.[id] ?? 1);
+  }
+
   private heroSkills(h: Soldier, _dt: number): void {
     const hr = h.hero!;
     const lv = hr.level;
-    const ready = (id: string) => {
-      const sk = hr.def.skills.find((k) => k.id === id);
-      return !!sk && lv >= sk.unlockLevel && hr.skillCd[id] <= 0;
-    };
+    const ready = (id: string) => rankOf(hr.ranks, id) > 0 && hr.skillCd[id] <= 0;
+    const pw = (id: string) => this.abilityPower(hr, id);
     const use = (id: string) => {
       const sk = hr.def.skills.find((k) => k.id === id)!;
-      hr.skillCd[id] = sk.cd;
+      hr.skillCd[id] = sk.cd * this.abilityCdMul(hr, id);
       h.lastAttackAt = this.time;
       this.emit({ type: 'heroSkill', skill: id, x: h.x, y: h.y });
     };
@@ -1464,7 +1480,7 @@ export class World {
       case 'arthur': {
         if (ready('bash') && t && t.alive && dist(h.x, h.y, t.x, t.y) < 50) {
           use('bash');
-          this.damageEnemy(t, 20 + 7 * lv, 'true', 'hero');
+          this.damageEnemy(t, (20 + 7 * lv) * pw('bash'), 'true', 'hero');
           if (t.alive) this.applyStun(t, 1.6);
           this.emit({ type: 'melee', x: t.x, y: t.y - 16, heavy: true });
         }
@@ -1473,7 +1489,7 @@ export class World {
           if (allies.some((o) => o.hp < o.maxHp * 0.6)) {
             use('rally');
             for (const o of allies) {
-              o.hp = Math.min(o.maxHp, o.hp + o.maxHp * 0.35);
+              o.hp = Math.min(o.maxHp, o.hp + o.maxHp * 0.35 * pw('rally'));
               o.armorBuff = 0.25;
               o.armorBuffUntil = this.time + 6;
               this.emit({ type: 'heal', x: o.x, y: o.y });
@@ -1484,7 +1500,7 @@ export class World {
           const near = this.enemies.filter((e) => e.alive && !e.flying && dist(e.x, e.y, h.x, h.y) < 75);
           if (near.length >= 2 || (near.length && near[0].def.boss)) {
             use('holyblade');
-            for (const e of near) this.damageEnemy(e, 55 + 12 * lv, 'magic', 'hero');
+            for (const e of near) this.damageEnemy(e, (55 + 12 * lv) * pw('holyblade'), 'magic', 'hero');
             this.emit({ type: 'explosion', x: h.x, y: h.y, r: 75, kind: 'holy' });
           }
         }
@@ -1498,7 +1514,7 @@ export class World {
           inRange.sort((a, b) => a.remaining - b.remaining);
           for (let i = 0; i < n; i++) {
             const e = inRange[i % inRange.length];
-            this.soldierShoot(h, e, this.rng.range(h.dmg[0], h.dmg[1]) * 1.2, 'physical');
+            this.soldierShoot(h, e, this.rng.range(h.dmg[0], h.dmg[1]) * 1.2 * pw('multishot'), 'physical');
           }
         }
         if (ready('pierce') && inRange.length) {
@@ -1506,7 +1522,7 @@ export class World {
           if (e.hp > 80) {
             use('pierce');
             const d = dist(h.x, h.y, e.x, e.y);
-            const p = new Projectile('snipe', h.x, h.y - 30, e.x, e.y - 20, 0.12 + d / 1400, 0, e, 80 + 16 * lv, 'true', 'hero', h);
+            const p = new Projectile('snipe', h.x, h.y - 30, e.x, e.y - 20, 0.12 + d / 1400, 0, e, (80 + 16 * lv) * pw('pierce'), 'true', 'hero', h);
             this.addProjectile(p);
           }
         }
@@ -1516,7 +1532,7 @@ export class World {
           for (let i = 0; i < 10; i++) {
             const tx = c.x + this.rng.range(-55, 55);
             const ty = c.y + this.rng.range(-38, 38);
-            const p = new Projectile('heroArrow', tx - 40, ty - 420, tx, ty, 0.5 + i * 0.07, 0, null, 18 + 4 * lv, 'physical', 'hero', h);
+            const p = new Projectile('heroArrow', tx - 40, ty - 420, tx, ty, 0.5 + i * 0.07, 0, null, (18 + 4 * lv) * pw('hail'), 'physical', 'hero', h);
             p.splash = 22;
             p.hitsAir = false;
             this.addProjectile(p);
@@ -1529,7 +1545,7 @@ export class World {
         if (ready('frostnova') && near.length >= 1 && (near.length >= 2 || near[0].hp > 150)) {
           use('frostnova');
           for (const e of near) {
-            this.damageEnemy(e, 22 + 6 * lv, 'magic', 'hero');
+            this.damageEnemy(e, (22 + 6 * lv) * pw('frostnova'), 'magic', 'hero');
             if (e.alive) this.applySlow(e, 0.4, 3);
           }
           this.emit({ type: 'explosion', x: h.x, y: h.y, r: 95, kind: 'nova' });
@@ -1551,14 +1567,14 @@ export class World {
             const along = px * ux + py * uy;
             if (along < 0 || along > len) continue;
             const perp = Math.abs(px * uy - py * ux);
-            if (perp < 26) this.damageEnemy(e, 70 + 14 * lv, 'magic', 'hero');
+            if (perp < 26) this.damageEnemy(e, (70 + 14 * lv) * pw('icelance'), 'magic', 'hero');
           }
           this.emit({ type: 'beam', x1: h.x, y1: h.y - 30, x2: h.x + ux * len, y2: h.y - 20 + uy * len, kind: 'ice' });
         }
         if (ready('blizzard') && inRange.length >= 3) {
           const c = this.densest(inRange, 70) ?? inRange[0];
           use('blizzard');
-          this.addZone({ kind: 'blizzard', x: c.x, y: c.y, r: 80, dps: 22 + 5 * lv, slow: 0.35, until: this.time + 5, source: 'hero' });
+          this.addZone({ kind: 'blizzard', x: c.x, y: c.y, r: 80, dps: (22 + 5 * lv) * pw('blizzard'), slow: 0.35, until: this.time + 5, source: 'hero' });
         }
         break;
       }
@@ -1578,7 +1594,7 @@ export class World {
               const along = px * ux + py * uy;
               if (along < -10 || along > d + 20) continue;
               if (Math.abs(px * uy - py * ux) < 30) {
-                this.damageEnemy(e, 30 + 9 * lv, 'physical', 'hero');
+                this.damageEnemy(e, (30 + 9 * lv) * pw('charge'), 'physical', 'hero');
                 if (e.alive) this.applyStun(e, 0.8);
               }
             }
@@ -1592,7 +1608,7 @@ export class World {
           if (near.length >= 2) {
             use('trample');
             for (const e of near) {
-              this.damageEnemy(e, 40 + 9 * lv, 'physical', 'hero');
+              this.damageEnemy(e, (40 + 9 * lv) * pw('trample'), 'physical', 'hero');
               if (e.alive) this.applyStun(e, 1.3);
             }
             this.emit({ type: 'explosion', x: h.x, y: h.y, r: 70, kind: 'bomblet' });
@@ -1600,7 +1616,7 @@ export class World {
         }
         if (ready('lance') && t && t.alive && t.hp > 200 && dist(h.x, h.y, t.x, t.y) < 60) {
           use('lance');
-          this.damageEnemy(t, 150 + 28 * lv, 'true', 'hero');
+          this.damageEnemy(t, (150 + 28 * lv) * pw('lance'), 'true', 'hero');
           this.emit({ type: 'melee', x: t.x, y: t.y - 20, heavy: true });
         }
         break;
@@ -1609,7 +1625,7 @@ export class World {
         const inRange = this.enemies.filter((e) => e.alive && inEllipse(h.x, h.y, e.x, e.y, h.ranged!.range));
         if (ready('dive') && t && t.alive && inRange.includes(t)) {
           use('dive');
-          this.damageEnemy(t, 60 + 13 * lv, 'physical', 'hero');
+          this.damageEnemy(t, (60 + 13 * lv) * pw('dive'), 'physical', 'hero');
           if (t.alive) this.applyStun(t, 1.2);
           this.emit({ type: 'beam', x1: h.x, y1: h.y - 60, x2: t.x, y2: t.y - 20, kind: 'charge' });
           this.emit({ type: 'explosion', x: t.x, y: t.y, r: 40, kind: 'holy' });
@@ -1622,7 +1638,7 @@ export class World {
             this.releaseEngagers(e);
             e.d = Math.max(0, e.d - 85);
             e.path.posAt(e.d, e.lane, e);
-            this.damageEnemy(e, 20 + 4 * lv, 'physical', 'hero');
+            this.damageEnemy(e, (20 + 4 * lv) * pw('gale'), 'physical', 'hero');
             this.emit({ type: 'status', e, kind: 'teleport' });
           }
         }
@@ -1631,7 +1647,7 @@ export class World {
           for (let k = 0; k < 6; k++) {
             const e = inRange[Math.floor(this.rng.next() * inRange.length)];
             if (!e.alive) continue;
-            this.damageEnemy(e, 40 + 9 * lv, 'magic', 'hero');
+            this.damageEnemy(e, (40 + 9 * lv) * pw('storm'), 'magic', 'hero');
             this.emit({ type: 'lightning', pts: [{ x: e.x + this.rng.range(-20, 20), y: e.y - 260 }, { x: e.x, y: e.y - e.def.height * 0.5 }] });
           }
         }
@@ -1650,7 +1666,7 @@ export class World {
             const py = e.y - h.y;
             const along = px * ux + py * uy;
             if (along < 0 || along > d + 70 || Math.abs(px * uy - py * ux) > 26) continue;
-            this.damageEnemy(e, (e === t ? 1 : 0.7) * (26 + 8 * lv), 'physical', 'hero');
+            this.damageEnemy(e, (e === t ? 1 : 0.7) * (26 + 8 * lv) * pw('thrust'), 'physical', 'hero');
           }
           this.emit({ type: 'beam', x1: h.x, y1: h.y - 22, x2: t.x + ux * 60, y2: t.y + uy * 60 - 20, kind: 'charge' });
         }
@@ -1658,11 +1674,11 @@ export class World {
           const foes = this.enemies.filter((e) => e.alive && !e.flying && dist(e.x, e.y, h.x, h.y) < 110);
           if (foes.length >= 3 || foes.some((e) => e.def.boss)) {
             use('phalanx');
-            for (const e of foes) this.applySlow(e, 0.6, 4);
+            for (const e of foes) this.applySlow(e, 0.6, 4 * pw('phalanx'));
             for (const o of this.soldiers) {
               if (!o.alive || dist(o.x, o.y, h.x, h.y) > 150) continue;
               o.armorBuff = 0.35;
-              o.armorBuffUntil = this.time + 8;
+              o.armorBuffUntil = this.time + 8 * pw('phalanx');
             }
           }
         }
@@ -1671,7 +1687,7 @@ export class World {
           const big = near.length ? near.reduce((a, b) => (b.hp > a.hp ? b : a)) : null;
           if (big && big.hp > 300) {
             use('sunder');
-            this.damageEnemy(big, 60 + 14 * lv, 'physical', 'hero');
+            this.damageEnemy(big, (60 + 14 * lv) * pw('sunder'), 'physical', 'hero');
             if (big.alive) big.vulnUntil = Math.max(big.vulnUntil, this.time + 6);
             this.emit({ type: 'melee', x: big.x, y: big.y - 16, heavy: true });
           }
@@ -1688,7 +1704,7 @@ export class World {
             const back = pick.d > 20 ? this.paths[pick.pathIndex].posAt(pick.d - 18, pick.lane) : { x: pick.x - 16, y: pick.y };
             h.x = back.x;
             h.y = back.y;
-            this.damageEnemy(pick, 34 + 10 * lv, 'true', 'hero');
+            this.damageEnemy(pick, (34 + 10 * lv) * pw('shadowstep'), 'true', 'hero');
             this.emit({ type: 'melee', x: pick.x, y: pick.y - 16, heavy: true });
           }
         }
@@ -1700,7 +1716,7 @@ export class World {
               this.applyStun(e, 0.8);
               this.applySlow(e, 0.5, 4);
             }
-            h.hp = Math.min(h.maxHp, h.hp + h.maxHp * 0.2);
+            h.hp = Math.min(h.maxHp, h.hp + h.maxHp * 0.2 * pw('smokebomb'));
             this.emit({ type: 'heal', x: h.x, y: h.y });
           }
         }
@@ -1711,7 +1727,7 @@ export class World {
           if (weak || boss) {
             use('execute');
             const v = (weak ?? boss)!;
-            this.damageEnemy(v, weak ? v.hp + 1 : 90 + 20 * lv, 'true', 'hero');
+            this.damageEnemy(v, weak ? v.hp + 1 : (90 + 20 * lv) * pw('execute'), 'true', 'hero');
             this.emit({ type: 'melee', x: v.x, y: v.y - 16, heavy: true });
           }
         }
@@ -1723,7 +1739,7 @@ export class World {
           if (allies.some((o) => o.hp < o.maxHp * 0.75)) {
             use('sanctuary');
             for (const o of allies) {
-              o.hp = Math.min(o.maxHp, o.hp + 40 + 9 * lv);
+              o.hp = Math.min(o.maxHp, o.hp + (40 + 9 * lv) * pw('sanctuary'));
               this.emit({ type: 'heal', x: o.x, y: o.y });
             }
           }
@@ -1732,7 +1748,7 @@ export class World {
         if (ready('smite') && inRange.length) {
           const e = inRange.reduce((a, b) => (b.hp > a.hp ? b : a));
           use('smite');
-          this.damageEnemy(e, 55 + 13 * lv, 'true', 'hero');
+          this.damageEnemy(e, (55 + 13 * lv) * pw('smite'), 'true', 'hero');
           if (e.alive) this.applySlow(e, 0.6, 2);
           this.emit({ type: 'explosion', x: e.x, y: e.y, r: 30, kind: 'holy' });
         }
@@ -1741,7 +1757,7 @@ export class World {
           if (near.length >= 2) {
             use('aegis');
             for (const t of near) {
-              t.hasteUntil = this.time + 6;
+              t.hasteUntil = this.time + 6 * pw('aegis');
               this.emit({ type: 'heal', x: t.x, y: t.y - 30, big: true });
             }
           }
@@ -2272,10 +2288,12 @@ export const FORMATION: Vec[] = [
   { x: 0, y: 22 },
 ];
 
-export function heroStats(def: HeroDef, lv: number): { hp: number; dmg: Range2 } {
+export function heroStats(def: HeroDef, lv: number, gear?: GearDef): { hp: number; dmg: Range2 } {
+  const hm = gear?.mods.hp ?? 1;
+  const dm = gear?.mods.dmg ?? 1;
   return {
-    hp: Math.round(def.hp + def.hpPerLevel * (lv - 1)),
-    dmg: [def.dmg[0] + def.dmgPerLevel * (lv - 1), def.dmg[1] + def.dmgPerLevel * (lv - 1)],
+    hp: Math.round((def.hp + def.hpPerLevel * (lv - 1)) * hm),
+    dmg: [(def.dmg[0] + def.dmgPerLevel * (lv - 1)) * dm, (def.dmg[1] + def.dmgPerLevel * (lv - 1)) * dm],
   };
 }
 

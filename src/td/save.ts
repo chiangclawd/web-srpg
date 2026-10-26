@@ -7,13 +7,21 @@ import { mirrorNativeSave } from './native';
 /** localStorage 的存檔 key（App 版另外同步到原生儲存） */
 export const SAVE_KEY = 'kb_td_save_v1';
 
+/** 一位英雄的養成：經驗、技能配點（沒寫 = 推薦配點）、買過的專屬裝備與裝著的那件 */
+export interface HeroSave {
+  xp: number;
+  ranks?: Record<string, number>;
+  owned?: string[];
+  gear?: string;
+}
+
 export interface SaveData {
   version: 1;
   /** 每關最佳星數 */
   stars: Record<string, number>;
   /** 星數升級（每欄已購買階數） */
   upgrades: Record<string, number>;
-  heroes: Record<string, { xp: number }>;
+  heroes: Record<string, HeroSave>;
   selectedHero: string;
   seenEnemies: string[];
   /** 已播放過解鎖動畫的關卡 */

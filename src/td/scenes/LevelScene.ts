@@ -219,7 +219,7 @@ export class LevelScene extends Phaser.Scene {
     this.world = new World({
       level: this.level,
       mods: computeMods(sv.upgrades),
-      hero: { def: heroDef, xp: cp?.hero?.xp ?? sv.heroes[heroDef.id]?.xp ?? 0 },
+      hero: { def: heroDef, xp: cp?.hero?.xp ?? sv.heroes[heroDef.id]?.xp ?? 0, build: sv.heroes[heroDef.id] },
       difficulty: this.difficulty,
       seed: (Date.now() & 0xffff) + 1,
     });
@@ -2103,7 +2103,7 @@ export class LevelScene extends Phaser.Scene {
     if (hero) {
       // 失敗也保留一半經驗，避免挫折
       const gained = hero.xp - hero.startXp;
-      sv.heroes[hero.def.id] = { xp: Math.round(hero.startXp + (victory ? gained : gained * 0.5)) };
+      sv.heroes[hero.def.id] = { ...sv.heroes[hero.def.id], xp: Math.round(hero.startXp + (victory ? gained : gained * 0.5)) };
     }
     let newStars = 0;
     const prevCampaignStars = sv.stars[this.level.id] ?? 0;
