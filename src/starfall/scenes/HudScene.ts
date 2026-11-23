@@ -111,8 +111,11 @@ export class HudScene extends Phaser.Scene {
       this.bl.add(im);
       x = 8 + im.displayWidth + 6;
     } else if (SHEETS[d.sprite]) {
-      const im = this.add.image(58, -18, `sf_${d.sprite}`, frameName(SHEETS[d.sprite], 'idle', false, 0)).setOrigin(0.5, 0.82);
-      im.setScale(Math.min(1.1, 96 / (SHEETS[d.sprite].unitPx * 1.1)) * (d.scale && d.scale > 1 ? 1 : 1));
+      // 圖表的格子四周有透明邊：以實際有圖的範圍置中、縮到卡片左側放得下
+      const im = this.add.image(60, -H / 2, `sf_${d.sprite}`, frameName(SHEETS[d.sprite], 'idle', false, 0));
+      const fr = im.frame;
+      im.setOrigin((fr.x + fr.width / 2) / fr.realWidth, (fr.y + fr.height / 2) / fr.realHeight);
+      im.setScale(Math.min(100 / fr.width, (H - 20) / fr.height));
       if (d.tint) im.setTint(d.tint);
       this.bl.add(im);
       x = 118;
