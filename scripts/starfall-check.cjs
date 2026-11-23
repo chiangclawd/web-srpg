@@ -1,6 +1,7 @@
 // 《星墜殘響》瀏覽器檢查：
 //   1. 用手機尺寸 + 觸控實際點一遍第一關（選取、移動、退回、攻擊預估與確認、警戒、結束回合、選單）
-//   2. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
+//   2. 機庫：用零件買強化和專屬改造，確認存檔、餘額和開戰時的數值
+//   3. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
 // 用法：先 npx vite build && npx vite preview --port 4173，再 node scripts/starfall-check.cjs [截圖資料夾]
 // （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址）
 const path = require('node:path');
@@ -33,28 +34,12 @@ async function open(browser, view, save) {
 
 const idle = (page, timeout = 60000) => page.waitForFunction(() => window.__sf.scene.getScene('SfBattle').mode !== 'busy', null, { timeout });
 
-/** 實際點擊：標題 → 任務列表 → 第一關的第 1 回合 */
-async function clickThrough(browser) {
-  const view = { w: 844, h: 390, dpr: 2, touch: true };
-  const { ctx, page } = await open(browser, view, {});
+/** 觸控點擊與「用按鈕上的文字找按鈕」 */
+function ui(page) {
   const tap = async (p) => {
     await page.touchscreen.tap(p[0], p[1]);
     await page.waitForTimeout(350);
   };
-  // 地圖格子 → 網頁座標
-  const tile = (x, y, up = 0) =>
-    page.evaluate(
-      ([x, y, up]) => {
-        const g = window.__sf;
-        const s = g.scene.getScene('SfBattle');
-        const cam = s.cameras.main;
-        const wx = (x - y) * 48;
-        const wy = (x + y) * 24 - s.battle.heightAt(x, y) * 24 - up;
-        const c = g.canvas.getBoundingClientRect();
-        return [c.left + (((wx - cam.midPoint.x) * cam.zoom + cam.width / 2) * c.width) / g.canvas.width, c.top + (((wy - cam.midPoint.y) * cam.zoom + cam.height / 2) * c.height) / g.canvas.height];
-      },
-      [x, y, up],
-    );
   // 介面按鈕（用上面的文字找）→ 網頁座標
   const button = (scene, label) =>
     page.evaluate(
@@ -83,6 +68,28 @@ async function clickThrough(browser) {
     ok(!!p, `找得到「${label}」按鈕`);
     if (p) await tap(p);
   };
+  return { tap, button, press };
+}
+
+/** 實際點擊：標題 → 任務列表 → 第一關的第 1 回合 */
+async function clickThrough(browser) {
+  const view = { w: 844, h: 390, dpr: 2, touch: true };
+  const { ctx, page } = await open(browser, view, {});
+  const { tap, press } = ui(page);
+  // 地圖格子 → 網頁座標
+  const tile = (x, y, up = 0) =>
+    page.evaluate(
+      ([x, y, up]) => {
+        const g = window.__sf;
+        const s = g.scene.getScene('SfBattle');
+        const cam = s.cameras.main;
+        const wx = (x - y) * 48;
+        const wy = (x + y) * 24 - s.battle.heightAt(x, y) * 24 - up;
+        const c = g.canvas.getBoundingClientRect();
+        return [c.left + (((wx - cam.midPoint.x) * cam.zoom + cam.width / 2) * c.width) / g.canvas.width, c.top + (((wy - cam.midPoint.y) * cam.zoom + cam.height / 2) * c.height) / g.canvas.height];
+      },
+      [x, y, up],
+    );
   const state = () =>
     page.evaluate(() => {
       const s = window.__sf.scene.getScene('SfBattle');
@@ -167,6 +174,91 @@ async function clickThrough(browser) {
   await ctx.close();
 }
 
+/** 機庫：手機尺寸實際點一遍 —— 進機庫、買一級裝甲、零件扣掉、回任務列表、開戰時數值真的變了 */
+async function hangarCheck(browser) {
+  const view = { w: 667, h: 375, dpr: 2, touch: true };
+  const { ctx, page } = await open(browser, view, { stars: { m1: 3 }, tips: TIPS });
+  const { tap, press } = ui(page);
+  const saved = () => page.evaluate(() => JSON.parse(localStorage.getItem('starfall_save_v1')).upgrades ?? {});
+  // 第 n 顆「購買」按鈕的網頁座標（按鈕上只有價格，用名字找比較穩）
+  const buy = async (n) => {
+    const pos = await page.evaluate((n) => {
+      const g = window.__sf;
+      const b = g.scene.getScene('SfHangar').root.list.filter((o) => o.name === 'buy')[n];
+      if (!b) return null;
+      const m = b.getWorldTransformMatrix();
+      const c = g.canvas.getBoundingClientRect();
+      const k = c.height / 720;
+      return [c.left + m.tx * k, c.top + m.ty * k];
+    }, n);
+    ok(!!pos, `找得到第 ${n + 1} 顆購買按鈕`);
+    if (pos) await tap(pos);
+  };
+  await press('SfTitle', '開始作戰');
+  await page.waitForFunction(() => window.__sf.scene.isActive('SfMissions'));
+  await page.waitForTimeout(400);
+  await press('SfMissions', '機庫  120');
+  await page.waitForFunction(() => window.__sf.scene.isActive('SfHangar'));
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: path.join(OUT, 'hangar-1.png') });
+  // 每顆按鈕都要完整留在畫面裡（手機上整個畫面會放大，最容易超出去）
+  const out = await page.evaluate(() => {
+    const g = window.__sf;
+    const s = g.scene.getScene('SfHangar');
+    const w = g.scale.width / s.cameras.main.zoom;
+    const bad = [];
+    const walk = (o) => {
+      if (o.type === 'Rectangle' && o.input?.enabled) {
+        const m = o.getWorldTransformMatrix();
+        const hw = (o.width * m.scaleX) / 2;
+        const hh = (o.height * m.scaleY) / 2;
+        if (m.tx - hw < -1 || m.ty - hh < -1 || m.tx + hw > w + 1 || m.ty + hh > 721) bad.push([Math.round(m.tx), Math.round(m.ty), Math.round(hw * 2), Math.round(hh * 2)]);
+      }
+      o.list?.forEach(walk);
+    };
+    s.children.list.forEach(walk);
+    return bad;
+  });
+  ok(out.length === 0, '機庫的按鈕都在畫面裡', out);
+  await buy(0);
+  let up = await saved();
+  ok(up.kai?.plating === 1, '買了一級複合裝甲', up);
+  await page.screenshot({ path: path.join(OUT, 'hangar-2.png') });
+  // 換一台機體，裝專屬改造（剩 90，剛好一個）
+  const tab = await page.evaluate(() => {
+    const g = window.__sf;
+    const s = g.scene.getScene('SfHangar');
+    const t = s.root.list.find((o) => o.type === 'Text' && o.text === '鐵砧');
+    const m = t.getWorldTransformMatrix();
+    const c = g.canvas.getBoundingClientRect();
+    const k = c.height / 720;
+    return [c.left + m.tx * k, c.top + m.ty * k];
+  });
+  await tap(tab);
+  ok((await page.evaluate(() => window.__sf.scene.getScene('SfHangar').frame)) === 'bruno', '點列表換到鐵砧');
+  await buy(2);
+  up = await saved();
+  ok(up.bruno?.mods?.length === 1, '裝了一個專屬改造', up);
+  ok((await page.evaluate(() => window.__sf.scene.getScene('SfHangar').root.list.filter((o) => o.name === 'buy' && o.enabled).length)) === 0, '零件用完，剩下的都買不起');
+  await page.screenshot({ path: path.join(OUT, 'hangar-3.png') });
+  await press('SfHangar', '返回');
+  await page.waitForFunction(() => window.__sf.scene.isActive('SfMissions'));
+  await page.waitForTimeout(400);
+  await press('SfMissions', '機庫  0');
+  await page.waitForFunction(() => window.__sf.scene.isActive('SfHangar'));
+  await page.waitForTimeout(400);
+  // 開戰：凱的耐久 100 → 110，布魯諾帶著改造
+  await page.evaluate(() => {
+    const g = window.__sf;
+    g.scene.stop('SfHangar');
+    g.scene.start('SfBattle', { missionId: 'm1' });
+  });
+  await page.waitForFunction(() => window.__sf.scene.isActive('SfDialogue'), null, { timeout: 30000 });
+  const hp = await page.evaluate(() => window.__sf.scene.getScene('SfBattle').battle.units.find((u) => u.def.id === 'kai').maxHp);
+  ok(hp === 110, '開戰時凱的耐久是改造後的 110', { hp });
+  await ctx.close();
+}
+
 /** 自動對戰：整關照正常流程演出一次 */
 async function autoPlay(browser, mission) {
   const { ctx, page } = await open(browser, { w: 1280, h: 720, dpr: 1 }, { stars: { m1: 1, m2: 1 }, tips: TIPS });
@@ -199,6 +291,7 @@ async function autoPlay(browser, mission) {
   fs.mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   await clickThrough(browser);
+  await hangarCheck(browser);
   for (const m of ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9']) await autoPlay(browser, m);
   await browser.close();
   console.log(failed ? `${failed} 個問題（截圖在 ${OUT}）` : `全部通過（截圖在 ${OUT}）`);

@@ -133,6 +133,20 @@ const STR = {
   tip_rally: { zh: '海爾少校的「督戰令」可以讓一台已經行動過的友軍再動一次 —— 留給火力最強的人', en: "Major Hale's Rally Order lets an ally that has already acted act again. Save it for your hardest hitter" },
   tip_forecast: { zh: '傷害是固定的：出手前看到的預估數字就是實際結果', en: 'Damage is fixed: the forecast you see before firing is exactly what happens' },
   rotate: { zh: '請將裝置橫向使用', en: 'Please rotate your device' },
+  hangar: { zh: '機庫', en: 'Hangar' },
+  parts: { zh: '零件', en: 'Parts' },
+  partsGain: { zh: '獲得零件 +{0}', en: 'Parts earned +{0}' },
+  partsNone: { zh: '這一關的零件都拿過了（拿到新的星才有）', en: 'No new parts: you already earned these stars' },
+  partsHint: { zh: '零件來自每一關第一次拿到的星。改造可以隨時拆除，全額退還', en: 'Parts come from each star you earn for the first time. Upgrades can be removed for a full refund' },
+  upMax: { zh: '已滿級', en: 'Maxed' },
+  upOwned: { zh: '已安裝', en: 'Installed' },
+  upReset: { zh: '拆除全部（退還 {0}）', en: 'Remove all (refund {0})' },
+  upLocked: { zh: '尚未加入小隊', en: 'Not in the squad yet' },
+  statHp: { zh: '耐久', en: 'HP' },
+  statArmor: { zh: '裝甲', en: 'Armor' },
+  statMove: { zh: '移動', en: 'Move' },
+  statDmg: { zh: '傷害', en: 'Damage' },
+  statRange: { zh: '射程', en: 'Range' },
 } satisfies Record<string, L10n>;
 
 export type StrKey = keyof typeof STR;

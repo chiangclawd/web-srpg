@@ -6,6 +6,7 @@ import { L, T } from '../i18n';
 import type { StrKey } from '../i18n';
 import { save } from '../save';
 import { MISSIONS } from '../data/missions';
+import { FRAMES, canAffordAny, frameUnlocked, missionOpen as openWith, partsLeft } from '../data/upgrades';
 import { Button, drawPanel } from '../view/ui';
 
 const CHAPTERS = [1, 2, 3];
@@ -13,7 +14,7 @@ const CHAPTER_BG = ['bg_ice', 'bg_bay', 'bg_reactor'];
 
 /** 這一關開放了沒：第一關一定開，其他要前一關拿過星 */
 export function missionOpen(index: number): boolean {
-  return index === 0 || (save().stars[MISSIONS[index - 1].id] ?? 0) > 0;
+  return openWith(index, save().stars);
 }
 
 export class MissionScene extends Phaser.Scene {
@@ -38,6 +39,16 @@ export class MissionScene extends Phaser.Scene {
     bg.setScale(Math.max(w / bg.width, VIEW_H / bg.height));
     this.add.rectangle(w / 2, VIEW_H / 2, w, VIEW_H, 0x040a14, 0.45);
     new Button(this, 16 + 60 * z, 14 + 24 * z, 120, 48, T('back'), () => this.scene.start('SfTitle'), { color: 0x8fb0c8 }).setScale(z);
+    // 右上：機庫（顯示手上的零件；買得起東西時亮一顆點）
+    const sv0 = save();
+    const parts = partsLeft(sv0.stars, sv0.upgrades);
+    const hx = w - 16 - 86 * z;
+    const hy = 14 + 24 * z;
+    new Button(this, hx, hy, 172, 48, `${T('hangar')}  ${parts}`, () => this.scene.start('SfHangar', { chapter: this.chapter }), { color: 0xffd75a, icon: 'ic_parts' }).setScale(z);
+    if (FRAMES.some((f) => frameUnlocked(f, sv0.stars) && canAffordAny(sv0.stars, sv0.upgrades, f))) {
+      const dot = this.add.circle(hx + 80 * z, hy - 20 * z, 6 * z, 0xff9a3c).setStrokeStyle(2, 0x06101c);
+      this.tweens.add({ targets: dot, scale: 1.25, duration: 600, yoyo: true, repeat: -1 });
+    }
     // 章節分頁
     const tabW = 150 * Math.min(z, 1.2);
     CHAPTERS.forEach((c, i) => {

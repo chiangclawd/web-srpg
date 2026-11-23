@@ -4,7 +4,7 @@
 
 - 入口：`starfall.html` → `src/starfall/main.ts`
 - 線上版：https://chiangclawd.github.io/web-srpg/starfall.html
-- 目前內容：主線三章共 9 個任務（已完結）、6 台我方機體、14 種敵人與設施、配樂 4 首、中英文、一般 / 輕鬆兩種難度
+- 目前內容：主線三章共 9 個任務（已完結）、6 台我方機體、14 種敵人與設施、機庫改造（零件獎勵）、配樂 4 首、中英文、一般 / 輕鬆兩種難度
 
 ## 故事
 
@@ -41,6 +41,18 @@
 - **星數**：過關、沒有機體被擊破、在標準回合數內（防守關：保護目標剩一半以上耐久）。
 - **難度**：選單或失敗畫面可以切到「輕鬆」（敵方傷害 ×0.75、耐久 ×0.85）。
 
+## 獎勵與機庫
+
+- **零件**：每一關第一次拿到的星會發零件（第一、二、三顆星 60 / 30 / 30，第二章 ×1.5、第三章 ×2）。重打已經拿過的星不會再發。
+  零件餘額不另外存，從「每關拿過幾顆星」減掉「已經花在改造上的」算出來，所以舊存檔會自動補發。主線全三星共 1620。
+- **機庫**（任務列表右上角，結算畫面也能直接進去）：每台機體有四項改造
+  - 複合裝甲：耐久上限每級 +10%，三級（30 / 50 / 80）
+  - 武器校準：武器傷害每級 +8%，三級（40 / 60 / 90）
+  - 兩個專屬改造（各 90），例如獵犬的「指揮鏈路」（隊長光環 2 格）、雨燕的「加力推進器」（躍進距離 +1、冷卻 -1）
+- 六台全部改滿要 3180，拿不滿，要取捨；任何時候都能把一台機體的改造全部拆掉、全額退還。
+- 機體要加入小隊之後才能改造。改造只影響我方機體（開戰時套用），敵方同型機不受影響。
+- 資料與計算都在 `src/starfall/data/upgrades.ts`，畫面在 `scenes/HangarScene.ts`。
+
 ## 程式結構
 
 ```
@@ -50,17 +62,21 @@ src/starfall/
 │   ├── ai.ts       敵方 AI；autoPlay() 讓雙方都用 AI 打完一關
 │   ├── terrain.ts  地形
 │   └── types.ts
-├── data/           units.ts（機體）、missions.ts（關卡，ASCII 地圖）、story.ts（對話）
+├── data/           units.ts（機體）、missions.ts（關卡，ASCII 地圖）、story.ts（對話）、upgrades.ts（零件與改造）
 ├── view/           iso.ts（等角投影）、textures.ts（程序繪圖的地塊與圖示）、sheets.ts（3D 圖表）、UnitView.ts、ui.ts
-└── scenes/         Boot / Title / Mission / Battle（戰場）/ Hud（介面）/ Dialogue
+└── scenes/         Boot / Title / Mission / Hangar（機庫）/ Battle（戰場）/ Hud（介面）/ Dialogue
 ```
 
 ```bash
-npm run test:starfall                 # 規則測試（36 項）
+npm run test:starfall                 # 規則測試（49 項）
 npx tsx scripts/starfall-sim.ts       # 自動對戰：每關打不打得過、幾回合
 npx tsx scripts/starfall-sim.ts m3 -v # 逐步列出某一關的過程（加 --easy 用輕鬆難度）
-node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍第一關 + 九關自動對戰（要先 build 並開 preview）
+npx tsx scripts/starfall-sim.ts --lv=2 --cautious  # 強化線都升到 2 級、用謹慎打法；--max 是全部改滿
+node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍第一關和機庫 + 九關自動對戰（要先 build 並開 preview）
 ```
+
+自動對戰的機器人不是最佳解，只是一套固定的判斷，數值稍微一動走法就可能整個不同。
+所以「改造後每一關仍然打得過」是用兩種打法（預設、謹慎）各打一次來驗證，有一種贏就算（`tests/starfall/upgrades.test.ts`）。
 
 ## 美術流程
 
@@ -77,5 +93,4 @@ node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍�
 ## 接下來
 
 - 大型關卡（更大的地圖、更多可操作的機體）、外傳或挑戰模式
-- 機體升級 / 武器改裝、任務間的整備畫面
 - 日文、戰鬥中存檔、堡壘的塔盾模型

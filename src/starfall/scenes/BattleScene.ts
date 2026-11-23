@@ -14,6 +14,7 @@ import type { BattleEvent, Dir, Forecast, MissionDef, Pos, SkillDef, Unit } from
 import { MISSIONS, missionById } from '../data/missions';
 import { STORY } from '../data/story';
 import { UNITS } from '../data/units';
+import { loadoutDefs, missionParts } from '../data/upgrades';
 import { EH, TH, TOP_PAD, TW, isoX, isoY, tileDepth } from '../view/iso';
 import { TILE_TEX_H, TILE_VARIANTS, tileKey } from '../view/textures';
 import { SHEETS, SHEET_FOOT, frameName } from '../view/sheets';
@@ -72,7 +73,7 @@ export class BattleScene extends Phaser.Scene {
 
   init(data: { missionId: string }): void {
     this.mission = missionById(data.missionId);
-    this.battle = new Battle(this.mission, UNITS, save().easy);
+    this.battle = new Battle(this.mission, loadoutDefs(UNITS, save().upgrades), save().easy);
     this.views = new Map();
     this.marks = { move: [], target: [], aim: [], select: [], threat: [], zone: [], line: [] };
     this.mode = 'busy';
@@ -1028,17 +1029,21 @@ export class BattleScene extends Phaser.Scene {
     this.clearMarks();
     this.hud.refresh();
     await this.wait(500);
+    // 零件只發「這次新拿到的星」：重打同一關不會重複領
+    let parts = 0;
     if (result === 'win') {
       sfx('win');
       if (this.mission.outro) await this.say(this.mission.outro);
       const stars = this.battle.stars();
       const sv = save();
-      sv.stars[this.mission.id] = Math.max(sv.stars[this.mission.id] ?? 0, stars);
+      const before = sv.stars[this.mission.id] ?? 0;
+      sv.stars[this.mission.id] = Math.max(before, stars);
+      parts = missionParts(this.mission, sv.stars[this.mission.id]) - missionParts(this.mission, before);
       persist();
     } else {
       sfx('lose');
     }
-    this.hud.showResult(result, reason);
+    this.hud.showResult(result, reason, parts);
   }
 
   /**
@@ -1077,11 +1082,12 @@ export class BattleScene extends Phaser.Scene {
     this.scene.restart({ missionId: this.mission.id });
   }
 
-  leave(to: 'missions' | 'next'): void {
+  leave(to: 'missions' | 'next' | 'hangar'): void {
     const next = to === 'next' ? this.nextMission() : null;
     this.scene.stop('SfHud');
     this.scene.stop('SfDialogue');
     if (next) this.scene.restart({ missionId: next });
+    else if (to === 'hangar') this.scene.start('SfHangar', { chapter: this.mission.chapter });
     else this.scene.start('SfMissions', { chapter: this.mission.chapter });
   }
 

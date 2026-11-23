@@ -1,3 +1,5 @@
+import type { Loadout } from './data/upgrades';
+
 export const SAVE_KEY = 'starfall_save_v1';
 
 export interface SaveData {
@@ -13,6 +15,8 @@ export interface SaveData {
   music: number;
   /** 輕鬆難度：敵方傷害與耐久降低 */
   easy: boolean;
+  /** 機庫的改造（零件餘額不存，從星數和這裡算出來） */
+  upgrades: Loadout;
 }
 
 let cache: SaveData | null = null;
@@ -25,7 +29,10 @@ export function save(): SaveData {
   } catch {
     // 存檔壞掉或瀏覽器不給用：從頭開始
   }
-  cache = { sfx: 0.7, stars: {}, tips: [], fast: false, music: 0.5, easy: false, ...raw };
+  cache = { sfx: 0.7, stars: {}, tips: [], fast: false, music: 0.5, easy: false, upgrades: {}, ...raw };
+  // 舊存檔或壞掉的欄位：補成空的
+  if (!cache.upgrades || typeof cache.upgrades !== 'object') cache.upgrades = {};
+  if (!cache.stars || typeof cache.stars !== 'object') cache.stars = {};
   return cache;
 }
 
