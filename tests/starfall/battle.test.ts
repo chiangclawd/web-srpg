@@ -362,6 +362,12 @@ test('側襲（雨燕）：側擊與背襲的加成加倍', () => {
   assert.equal(dmg(2, 2), 24 - 2, 'front');
   assert.equal(dmg(3, 1), Math.round(24 * 1.3) - 2, 'side is +30% instead of +15%');
   assert.equal(dmg(4, 2), Math.round(24 * 1.6) - 2, 'rear is +60% instead of +30%');
+  // 標籤看方位，不看數值：雨燕的側擊是 +30%，但仍然是「側擊」
+  const b = mk(OPEN, [P('sparrow', 3, 1), P('kai', 5, 2), E('sentry', 3, 2, { dir: 2, ai: 'hold' })]);
+  const side = b.forecast(u(b, 'sparrow'), u(b, 'sentry')).mods.find((m) => m.kind === 'flank');
+  assert.deepEqual([side?.value, side?.rear], [30, false]);
+  const rear = b.forecast(u(b, 'kai'), u(b, 'sentry')).mods.find((m) => m.kind === 'flank');
+  assert.deepEqual([rear?.value, rear?.rear], [30, true]);
 });
 
 test('噴射躍進：跳過裂谷、不觸發警戒、跳完還能攻擊，但取代這回合的移動', () => {
@@ -412,13 +418,15 @@ test('紀律（槍騎兵）反擊不打折；獵殺（獵手）對半血以下�
   assert.equal(c.forecast(h, k).dmg, Math.round(22 * 1.3) - 2);
 });
 
-test('中繼節點替合唱體分擔一半傷害，拆掉之後恢復；不保護其他敵人', () => {
-  const b = mk(OPEN, [P('kai', 1, 2), E('choir', 3, 2, { dir: 2, ai: 'hold' }), E('relay', 6, 0), E('sentry', 3, 4, { dir: 2, ai: 'hold' })]);
+test('中繼節點各替合唱體分擔 25% 傷害（兩座疊加），拆一座少一份；不保護其他敵人', () => {
+  const b = mk(OPEN, [P('kai', 1, 2), E('choir', 3, 2, { dir: 2, ai: 'hold' }), E('relay', 6, 0), E('relay', 6, 4), E('sentry', 3, 4, { dir: 2, ai: 'hold' })]);
   const k = u(b, 'kai');
   const c = u(b, 'choir');
-  assert.equal(b.forecast(k, c).dmg, Math.round(30 * 0.5) - 4);
+  assert.equal(b.forecast(k, c).dmg, Math.round(30 * 0.5) - 4, 'two nodes: half');
   assert.equal(b.forecast(k, u(b, 'sentry'), { x: 1, y: 4 }).dmg, 30 - 2, 'ordinary drones are not shielded');
-  u(b, 'relay').alive = false;
+  u(b, 'relay', 0).alive = false;
+  assert.equal(b.forecast(k, c).dmg, Math.round(30 * 0.75) - 4, 'one node left: a quarter');
+  u(b, 'relay', 1).alive = false;
   assert.equal(b.forecast(k, c).dmg, 30 - 4);
 });
 

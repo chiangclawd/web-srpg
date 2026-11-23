@@ -195,6 +195,8 @@ export interface Mod {
   kind: ModKind;
   /** 百分比（+15 / -25）；armor 是固定值 */
   value: number;
+  /** flank 專用：true = 從背後打（背襲），不然是側擊 */
+  rear?: boolean;
 }
 
 export interface Forecast {

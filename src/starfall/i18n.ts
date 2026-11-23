@@ -48,6 +48,7 @@ const STR = {
   confirm: { zh: '確定', en: 'Confirm' },
   undo: { zh: '退回', en: 'Undo' },
   cooldown: { zh: '冷卻 {0}', en: 'CD {0}' },
+  afterMove: { zh: '已移動', en: 'Moved' },
   noTarget: { zh: '沒有目標', en: 'No target' },
   pickTarget: { zh: '選擇目標', en: 'Choose a target' },
   pickDir: { zh: '選擇方向', en: 'Choose a direction' },

@@ -871,7 +871,7 @@ export class BattleScene extends Phaser.Scene {
     const flank = e.mods.find((m) => m.kind === 'flank');
     const height = e.mods.find((m) => m.kind === 'height' && m.value > 0);
     const cover = e.mods.find((m) => m.kind === 'cover');
-    const label = flank ? (flank.value >= 30 ? T('mod_flank_back') : T('mod_flank_side')) : height ? T('mod_height') : cover ? T('mod_cover') : '';
+    const label = flank ? (flank.rear ? T('mod_flank_back') : T('mod_flank_side')) : height ? T('mod_height') : cover ? T('mod_cover') : '';
     if (!label) return;
     const c = v.center();
     const t = addText(this, c.x, c.y - v.tall * 0.5 - 44, label, { size: 15, raw: true, color: cover && !flank && !height ? '#9fb4c8' : '#ffa53a' })

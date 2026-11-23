@@ -270,7 +270,7 @@ export const MISSIONS: MissionDef[] = [
     id: 'm6',
     chapter: 2,
     name: { zh: '領唱者', en: 'The Cantor' },
-    brief: { zh: '議會軍退了，整個艙段的機群醒了。兩側的中繼節點替合唱體分擔傷害 —— 先拆節點，再打本體。', en: 'The Directorate is gone and the whole bay has woken. Relay nodes on both sides absorb damage for the Choir: break the nodes, then the body.' },
+    brief: { zh: '議會軍退了，整個艙段的機群醒了。兩側的中繼節點各替合唱體分擔 25% 的傷害 —— 先拆節點，再打本體。', en: 'The Directorate is gone and the whole bay has woken. Each relay node absorbs 25% of the damage dealt to the Choir: break the nodes, then the body.' },
     tiles: [
       '~~.........~~',
       '~...........~',

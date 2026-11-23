@@ -172,7 +172,9 @@ export class HudScene extends Phaser.Scene {
         for (const s of u.def.skills) {
           const cd = u.cds[s.id] ?? 0;
           const ok = b.skillReady(u, s) && b.skillTargets(u, s).length > 0;
-          add(L(s.name), () => bs.beginTarget({ kind: 'skill', skill: s }), { icon: s.icon, color: 0xffe45a, disabled: !ok, note: cd > 0 ? T('cooldown', cd) : undefined });
+          // 變灰的原因寫在按鈕上：冷卻中，或是躍進這種「走過就不能用」的技能
+          const note = cd > 0 ? T('cooldown', cd) : s.effect.type === 'leap' && u.moved ? T('afterMove') : undefined;
+          add(L(s.name), () => bs.beginTarget({ kind: 'skill', skill: s }), { icon: s.icon, color: 0xffe45a, disabled: !ok, note });
         }
         if (u.def.weapon.kind !== 'indirect') add(T('overwatch'), () => void bs.doOverwatch(), { icon: 'ic_overwatch' });
         add(T('wait'), () => void bs.doWait(), { icon: 'ic_wait', color: 0x8fb0c8 });
@@ -190,7 +192,7 @@ export class HudScene extends Phaser.Scene {
   private modText(m: Mod): string {
     if (m.kind === 'armor') return `${T('mod_armor')} ${m.value}`;
     if (m.kind === 'collide') return `${T('mod_collide')} +${m.value}`;
-    const name = m.kind === 'flank' ? (m.value >= 30 ? T('mod_flank_back') : T('mod_flank_side')) : T(`mod_${m.kind}` as StrKey);
+    const name = m.kind === 'flank' ? (m.rear ? T('mod_flank_back') : T('mod_flank_side')) : T(`mod_${m.kind}` as StrKey);
     return `${name} ${m.value > 0 ? '+' : ''}${m.value}%`;
   }
 

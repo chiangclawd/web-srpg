@@ -12,7 +12,7 @@ export const SPEAKERS: Record<Speaker, { name: L10n; portrait?: string; color: n
   bruno: { name: { zh: '布魯諾', en: 'Bruno' }, portrait: 'pt_bruno', color: 0xe8b93a },
   echo: { name: { zh: '艾可', en: 'Echo' }, portrait: 'pt_echo', color: 0x5fe3ff },
   vey: { name: { zh: '薇', en: 'Vey' }, portrait: 'pt_vey', color: 0x8fa8ff },
-  sparrow: { name: { zh: '紗羅', en: 'Sparrow' }, portrait: 'pt_sparrow', color: 0xff6a5a },
+  sparrow: { name: { zh: '紗羅', en: 'Sara' }, portrait: 'pt_sparrow', color: 0xff6a5a },
   hale: { name: { zh: '海爾少校', en: 'Major Hale' }, portrait: 'pt_hale', color: 0xf0d27a },
   tomas: { name: { zh: '湯瑪', en: 'Tomas' }, portrait: 'pt_tomas', color: 0xb8d4e8 },
   cantor: { name: { zh: '領唱者', en: 'The Cantor' }, portrait: 'pt_cantor', color: 0xff5a5a },
@@ -106,11 +106,11 @@ export const STORY: Record<string, Line[]> = {
     { who: 'bruno', zh: '是個小鬼的聲音。', en: "That's a kid's voice." },
     { who: 'echo', zh: '訊號來源：對面月台的一台輕型骨架。型號沒有登記，駕駛員的名字也沒有登記。', en: 'Signal source: a light frame on the far platform. Model unregistered. Pilot name unregistered.' },
     { who: 'kai', zh: '又一個在這裡出生的。布魯諾、薇，掩護她過來。', en: 'Another one born here. Bruno, Vey, cover her across.' },
-    { who: 'sparrow', zh: '我叫紗羅！大家都叫我雨燕！名字晚點再說，它們來了！', en: "I'm Sara! Everyone calls me Sparrow! Names later, here they come!" },
+    { who: 'sparrow', zh: '我叫紗羅！大家都叫我雨燕！名字晚點再說，它們來了！', en: "I'm Sara! Everyone calls me Swift! Names later, here they come!" },
   ],
   m4_t3: [
     { who: 'sparrow', zh: '還有？！我發誓我只踢了其中一隻！', en: 'More of them?! I swear I only kicked one!' },
-    { who: 'echo', zh: '獵手型。它們會優先撲向受損的目標，請不要落單。', en: 'Hunter type. They go for damaged targets first. Please do not get separated.' },
+    { who: 'echo', zh: '獵手型。它們對受損的目標下手特別重，請不要落單。', en: 'Hunter type. They hit damaged targets much harder. Please do not get separated.' },
   ],
   m4_outro: [
     { who: 'sparrow', zh: '呼 —— 謝啦。你們是要去 C-7 吧？這條線只有我知道怎麼繞。', en: "Phew. Thanks. You're headed to C-7, right? I'm the only one who knows the way around this line." },
@@ -152,7 +152,7 @@ export const STORY: Record<string, Line[]> = {
     { who: 'echo', zh: '我沒有帶回任何人。他們是自己走進來的，等一下也會自己走出去。', en: 'I returned no one. They walked in by themselves, and soon they will walk out by themselves.' },
     { who: 'cantor', zh: '「航行計畫裡沒有『走出去』。」', en: '"\'Walking out\' is not in the flight plan."' },
     { who: 'kai', zh: '艾可，它的護盾是怎麼回事？', en: 'Echo, what is that shield around it?' },
-    { who: 'echo', zh: '兩側的中繼節點在替它分擔傷害。先拆掉節點，它的歌就會變小聲。', en: 'The relay nodes on either side are sharing its damage. Take down the nodes and its song gets quieter.' },
+    { who: 'echo', zh: '兩側的中繼節點在替它分擔傷害，一座分擔四分之一。每拆掉一座，它的歌就小聲一點。', en: 'The relay nodes on either side are sharing its damage, a quarter each. Every node you take down makes its song quieter.' },
     { who: 'bruno', zh: '聽到沒有？先拆喇叭，再揍歌手。', en: 'You heard her. Speakers first, then the singer.' },
   ],
   m6_t4: [

@@ -37,7 +37,8 @@ export class TitleScene extends Phaser.Scene {
       T('start'),
       () => {
         unlockAudio();
-        this.scene.start('SfMissions');
+        // 要傳一個物件：Phaser 沒收到資料時會沿用上次的，任務列表就會停在上次看的那一章
+        this.scene.start('SfMissions', {});
       },
       { primary: true, size: 24 },
     ).setScale(z);

@@ -309,15 +309,19 @@ export class Battle {
     return 'side';
   }
 
+  /** 傷害加成取最大的一個；受傷減免可以疊加（上限 60%） */
   private auraNear(side: Side, self: Unit, at: Pos, kind: 'dmg' | 'guard'): number {
     let best = 0;
+    let sum = 0;
     for (const a of this.units) {
       if (!a.alive || a === self || a.side !== side || !a.def.aura) continue;
       if (a.def.aura.only && a.def.aura.only !== self.def.id) continue;
       const v = a.def.aura[kind] ?? 0;
-      if (v > best && manhattan(a.x, a.y, at.x, at.y) <= a.def.aura.range) best = v;
+      if (!v || manhattan(a.x, a.y, at.x, at.y) > a.def.aura.range) continue;
+      best = Math.max(best, v);
+      sum += v;
     }
-    return best;
+    return kind === 'guard' ? Math.min(0.6, sum) : best;
   }
 
   /** 一次攻擊的傷害與加成明細 */
@@ -336,7 +340,11 @@ export class Battle {
       add('height', hv);
     }
     const rel = this.relation(tgt, tgtPos, attPos);
-    if (kind !== 'counter') add('flank', Math.round((rel === 'back' ? 30 : rel === 'side' ? 15 : 0) * (att.def.flankMul ?? 1)));
+    if (kind !== 'counter' && rel !== 'front') {
+      const v = Math.round((rel === 'back' ? 30 : 15) * (att.def.flankMul ?? 1));
+      pct += v;
+      mods.push({ kind: 'flank', value: v, rear: rel === 'back' });
+    }
     if (att.def.execute && tgt.hp / tgt.maxHp < att.def.execute.below) add('execute', Math.round(att.def.execute.dmg * 100));
     add('aura', Math.round(this.auraNear(att.side, att, attPos, 'dmg') * 100));
     if (att.def.swarm && this.units.some((o) => o.alive && o !== att && o.side === att.side && o.def.id === att.def.id && manhattan(o.x, o.y, tgtPos.x, tgtPos.y) === 1)) add('swarm', Math.round(att.def.swarm * 100));
