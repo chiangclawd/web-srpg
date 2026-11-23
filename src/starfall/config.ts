@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { getLang } from './i18n';
+import { save } from './save';
 
 /** 邏輯高度固定 720；寬度依裝置比例 1280~1560 */
 export const VIEW_H = 720;
@@ -72,14 +73,29 @@ export function refreshTextScale(): void {
 }
 
 /** 邏輯字級 → 實際使用的字級（小螢幕放大） */
-export function fontPx(size: number): number {
-  if (size >= textMin) return size;
-  return Math.round(Math.min(textMin, size * MAX_BOOST));
+/** 設定頁的「文字大小」：標準、大、特大 */
+export const TEXT_SCALES = [1, 1.15, 1.3];
+
+export function textScale(): number {
+  const k = save().textScale;
+  return TEXT_SCALES.includes(k) ? k : 1;
 }
+
+export function fontPx(size: number): number {
+  const base = size >= textMin ? size : Math.round(Math.min(textMin, size * MAX_BOOST));
+  // 大標題不跟著「文字大小」放大
+  if (size > 32) return base;
+  // 內文再乘上玩家選的倍率。上限跟手機的放大上限一樣：版面是照那個上限排的，再大就會擠出框
+  return Math.round(Math.min(base * textScale(), Math.max(base, size * MAX_BOOST)));
+}
+
+/** 畫在戰場上的字（傷害數字、機體頭上的耐久）不在介面的容器裡，直接乘上文字大小的倍率 */
+export const worldPx = (size: number): number => Math.round(size * textScale());
 
 /** 手機上按鈕、面板整體放大的倍率：52px 的按鈕在手機上約 44 CSS px */
 export function uiZoom(): number {
-  return Phaser.Math.Clamp(0.84 / screenScale(), 1, 1.5);
+  // 「文字大小」選大的時候，按鈕和面板整組跟著放大（裡面的字一起變大）；最多 1.5 倍，跟手機一樣
+  return Phaser.Math.Clamp(Math.max(1, 0.84 / screenScale()) * textScale(), 1, 1.5);
 }
 
 export interface TextOpts {
@@ -164,4 +180,31 @@ export const COL = {
   yellow: '#ffd75a',
   player: 0x3fd6ff,
   enemy: 0xff5a5a,
+  // 下面幾個連同 enemy、red 會跟著「色盲配色」換（applyPalette）：
+  /** 可以攻擊的格子、敵方的威脅範圍 */
+  target: 0xff3a2a,
+  threat: 0xff5a4a,
+  /** 敵方的彈道 */
+  enemyShot: 0xff6a5a,
+  /** 我方被打中的傷害數字 */
+  hurt: '#ff6a5a',
+  /** 我方耐久偏低時的耐久條 */
+  low: 0xffb03a,
 };
+
+/**
+ * 敵我的顏色。預設是青對紅；色盲配色改成青對橘黃（紅綠色盲分得出藍和黃，紅色在深色背景上則會變得很暗）。
+ * 我方耐久偏低原本用橘色，會跟橘黃的敵方混在一起，所以改成白色。
+ */
+const TEAM = {
+  normal: { enemy: 0xff5a5a, red: '#ff5a5a', target: 0xff3a2a, threat: 0xff5a4a, enemyShot: 0xff6a5a, hurt: '#ff6a5a', low: 0xffb03a },
+  safe: { enemy: 0xffb000, red: '#ffb000', target: 0xffb000, threat: 0xffb000, enemyShot: 0xffc24a, hurt: '#ffb000', low: 0xf2f2f2 },
+};
+
+export const colorBlind = (): boolean => !!save().colorBlind;
+
+/** 照設定把敵我顏色換過來。已經畫好的東西要重畫才會變（設定頁關掉時會做） */
+export function applyPalette(): void {
+  Object.assign(COL, colorBlind() ? TEAM.safe : TEAM.normal);
+}
+applyPalette();

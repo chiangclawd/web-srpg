@@ -1,7 +1,7 @@
 // 戰鬥場景：畫等角地圖和單位、處理點擊操作、把模擬回傳的事件一個一個演出來。
 // 介面（按鈕、資訊卡、預估面板）在 HudScene，疊在這個場景上面。
 import Phaser from 'phaser';
-import { RS, TEX, VIEW_H, addText, uiZoom, viewW } from '../config';
+import { COL, RS, TEX, VIEW_H, addText, uiZoom, viewW, worldPx } from '../config';
 import { music, sfx } from '../audio';
 import { L, T } from '../i18n';
 import { persist, save } from '../save';
@@ -553,7 +553,8 @@ export class BattleScene extends Phaser.Scene {
 
   private mark(kind: MarkKind, x: number, y: number): void {
     const b = this.battle;
-    const [tint, alpha] = MARK_COLOR[kind];
+    // 可以攻擊的格子和威脅範圍是敵方的顏色，跟著色盲配色換
+    const [tint, alpha] = kind === 'target' ? [COL.target, 0.55] : kind === 'threat' ? [COL.threat, 0.3] : MARK_COLOR[kind];
     const tex = kind === 'select' || kind === 'aim' ? 'ov_edge' : kind === 'zone' ? 'ov_zone' : 'ov_fill';
     const h = b.heightAt(x, y) + (b.terrainAt(x, y) === 'wall' ? 2 : 0);
     const im = this.add
@@ -823,6 +824,12 @@ export class BattleScene extends Phaser.Scene {
     saveSuspend(this.battle, this.upgrades);
   }
 
+  /** 設定頁改了配色之後，把場上的單位（耐久條、腳下的陣營色）和範圍標示照新的顏色重畫 */
+  restyle(): void {
+    this.refreshViews();
+    if (this.mode === 'unit' && this.sel) this.select(this.sel);
+  }
+
   private refreshViews(): void {
     for (const v of this.views.values()) if (v.unit.alive) v.refresh();
   }
@@ -1041,7 +1048,7 @@ export class BattleScene extends Phaser.Scene {
         const y = v.root.y;
         v.root.y = y - 160;
         await this.tween({ targets: v.root, y, alpha: 1, duration: this.ms(320), ease: 'Quad.easeIn' });
-        this.ring(v.root.x, v.root.y, u.side === 'player' ? 0x5fe3ff : 0xff5a4a);
+        this.ring(v.root.x, v.root.y, u.side === 'player' ? 0x5fe3ff : COL.enemy);
         await this.wait(160);
         break;
       }
@@ -1116,7 +1123,7 @@ export class BattleScene extends Phaser.Scene {
       if (e.kind === 'overwatch') this.callout(A, T('overwatch'), 0x5fe3ff);
       const w = A.unit.def.weapon;
       const pilot = A.unit.side === 'player';
-      const color = pilot ? 0x7fe9ff : 0xff6a5a;
+      const color = pilot ? 0x7fe9ff : COL.enemyShot;
       // 貫穿射擊的光束在 skill 事件已經畫過，這裡只處理命中
       const line = e.kind === 'skill' && A.unit.def.skills.find((s) => s.id === e.skill)?.effect.type === 'line';
       if (!line) {
@@ -1158,7 +1165,7 @@ export class BattleScene extends Phaser.Scene {
     // 火花順著射擊方向噴出去
     const from = A?.center();
     this.fx.hit(at.x, at.y, from ? Phaser.Math.RadToDeg(Math.atan2(at.y - from.y, at.x - from.x)) : -90, e.dmg >= 30);
-    this.number(Tv, `-${e.dmg}`, Tv.unit.side === 'player' ? '#ff6a5a' : '#ffe45a', e.killed);
+    this.number(Tv, `-${e.dmg}`, Tv.unit.side === 'player' ? COL.hurt : '#ffe45a', e.killed);
     this.modTags(Tv, e);
     await this.wait(anim ? 380 : 220);
     if (A && anim && A.unit.alive) A.play('idle');
@@ -1172,7 +1179,7 @@ export class BattleScene extends Phaser.Scene {
     const label = flank ? (flank.rear ? T('mod_flank_back') : T('mod_flank_side')) : height ? T('mod_height') : cover ? T('mod_cover') : '';
     if (!label) return;
     const c = v.center();
-    const t = addText(this, c.x, c.y - v.tall * 0.5 - 44, label, { size: 15, raw: true, color: cover && !flank && !height ? '#9fb4c8' : '#ffa53a' })
+    const t = addText(this, c.x, c.y - v.tall * 0.5 - 44, label, { size: worldPx(15), raw: true, color: cover && !flank && !height ? '#9fb4c8' : '#ffa53a' })
       .setOrigin(0.5)
       .setDepth(FX_DEPTH + 2);
     this.tweens.add({ targets: t, y: t.y - 22, alpha: 0, duration: this.ms(900), delay: 200, onComplete: () => t.destroy() });
@@ -1180,7 +1187,7 @@ export class BattleScene extends Phaser.Scene {
 
   private number(v: UnitView, text: string, color: string, big = false): void {
     const c = v.center();
-    const t = addText(this, c.x, c.y - v.tall * 0.5 - 12, text, { size: big ? 34 : 26, raw: true, color, strokeW: 5 })
+    const t = addText(this, c.x, c.y - v.tall * 0.5 - 12, text, { size: worldPx(big ? 34 : 26), raw: true, color, strokeW: 5 })
       .setOrigin(0.5)
       .setDepth(FX_DEPTH + 3)
       .setScale(0.4);
@@ -1190,7 +1197,7 @@ export class BattleScene extends Phaser.Scene {
 
   private callout(v: UnitView, text: string, tint: number): void {
     const c = v.center();
-    const t = addText(this, c.x, c.y - v.tall * 0.5 - 30, text, { size: 18, raw: true, color: `#${tint.toString(16).padStart(6, '0')}`, strokeW: 4 })
+    const t = addText(this, c.x, c.y - v.tall * 0.5 - 30, text, { size: worldPx(18), raw: true, color: `#${tint.toString(16).padStart(6, '0')}`, strokeW: 4 })
       .setOrigin(0.5)
       .setDepth(FX_DEPTH + 2);
     this.tweens.add({ targets: t, y: t.y - 18, alpha: 0, duration: this.ms(900), delay: 380, onComplete: () => t.destroy() });

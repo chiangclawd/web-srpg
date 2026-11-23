@@ -49,6 +49,7 @@ export class HudScene extends Phaser.Scene {
   private menuOpen = false;
   /** 對話框打開時鍵盤焦點先停在哪一顆 */
   private modalFirst: Button | null = null;
+  private nav: KeyNav | null = null;
 
   constructor() {
     super('SfHud');
@@ -81,7 +82,7 @@ export class HudScene extends Phaser.Scene {
     if (this.battle.big) this.buildMini();
     this.tr.add(new Button(this, -28, 28, 56, 56, '', () => this.openMenu(), { icon: 'ic_menu', key: 'Esc' }));
     // 鍵盤：對話框（選單、結算）開著的時候，方向鍵在裡面的按鈕之間移動；沒開的時候由戰場自己處理按鍵
-    new KeyNav(this, {
+    this.nav = new KeyNav(this, {
       scope: () => this.modal,
       enabled: () => !!this.modal && !this.scene.isActive('SfSettings'),
       onBack: () => {
@@ -90,6 +91,17 @@ export class HudScene extends Phaser.Scene {
       first: () => this.modalFirst,
     });
     void this.battle.hudReady(this);
+  }
+
+  /** 設定頁關掉之後：照新的文字大小重設四個角的縮放，照新的語言和配色重畫，場上的單位也重畫 */
+  relayout(): void {
+    this.z = Math.min(uiZoom(), 1.4);
+    const z = this.z;
+    for (const c of [this.tl, this.tr, this.bl, this.br, this.tipBox]) c.setScale(z);
+    this.tc.setScale(Math.min(z, 1.25));
+    this.ml.setPosition(12, 10 + 118 * z).setScale(Math.min(z, 1.15));
+    this.refresh();
+    this.battle.restyle();
   }
 
   setVisible(v: boolean): void {
@@ -253,7 +265,7 @@ export class HudScene extends Phaser.Scene {
     const k = Phaser.Math.Clamp(u.hp / u.maxHp, 0, 1);
     const bar = this.add.graphics();
     bar.fillStyle(0x06101c, 1).fillRect(x, -H + 42, bw, 12);
-    bar.fillStyle(enemy ? COL.enemy : k > 0.35 ? COL.player : 0xffb03a, 1).fillRect(x + 1, -H + 43, (bw - 2) * k, 10);
+    bar.fillStyle(enemy ? COL.enemy : k > 0.35 ? COL.player : COL.low, 1).fillRect(x + 1, -H + 43, (bw - 2) * k, 10);
     const hp = addText(this, x + bw + 8, -H + 39, `${u.hp}/${u.maxHp}`, { size: 15, raw: true, strokeW: 0 });
     const wpn = d.weapon;
     const stats = d.structure
@@ -507,6 +519,8 @@ export class HudScene extends Phaser.Scene {
   private closeModal(): void {
     this.modal?.destroy();
     this.modal = null;
+    // 對話框關掉就把鍵盤焦點忘掉：不然下次打開選單，焦點會從上次停的位置接下去，按兩下「下」就不是原本那一顆了
+    this.nav?.blur();
     this.menuOpen = false;
     this.modalFirst = null;
   }
@@ -624,8 +638,8 @@ export class HudScene extends Phaser.Scene {
         T('settings'),
         () => {
           this.closeModal();
-          // 設定頁關掉之後重畫一次：語言、難度的標示可能變了
-          this.scene.launch('SfSettings', { onClose: () => this.refresh() });
+          // 設定頁關掉之後整個重排重畫：語言、難度、文字大小、配色都可能變了
+          this.scene.launch('SfSettings', { onClose: () => this.relayout() });
         },
       ],
       [T('restart'), () => bs.restart(), 0xff9a3c],

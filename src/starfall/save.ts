@@ -19,6 +19,10 @@ export interface SaveData {
   upgrades: Loadout;
   /** 技能特寫：用技能時劃過畫面的頭像橫帶 */
   cutIn: boolean;
+  /** 文字大小的倍率（1、1.15、1.3；見 config.ts 的 TEXT_SCALES） */
+  textScale: number;
+  /** 色盲配色：敵方從紅色改成橘黃色，耐久數字前面多一個 ▼ */
+  colorBlind: boolean;
 }
 
 let cache: SaveData | null = null;
@@ -31,7 +35,7 @@ export function save(): SaveData {
   } catch {
     // 存檔壞掉或瀏覽器不給用：從頭開始
   }
-  cache = { sfx: 0.7, stars: {}, tips: [], fast: false, music: 0.5, easy: false, upgrades: {}, cutIn: true, ...raw };
+  cache = { sfx: 0.7, stars: {}, tips: [], fast: false, music: 0.5, easy: false, upgrades: {}, cutIn: true, textScale: 1, colorBlind: false, ...raw };
   // 舊存檔或壞掉的欄位：補成空的
   if (!cache.upgrades || typeof cache.upgrades !== 'object' || Array.isArray(cache.upgrades)) cache.upgrades = {};
   if (!cache.stars || typeof cache.stars !== 'object' || Array.isArray(cache.stars)) cache.stars = {};

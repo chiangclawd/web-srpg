@@ -1,6 +1,6 @@
 // 戰場上的一個單位：影子、圖像（3D 預先渲染的圖表）、耐久條、狀態圖示
 import Phaser from 'phaser';
-import { COL, TEX, addText } from '../config';
+import { COL, TEX, addText, colorBlind, worldPx } from '../config';
 import { EH, isoX, isoY, tileDepth } from './iso';
 import { SHEETS, SHEET_FOOT, animKey, facing, frameName } from './sheets';
 import type { Anim, SheetDef } from './sheets';
@@ -66,7 +66,7 @@ export class UnitView {
     }
     if (def.tint) this.sprite.setTint(def.tint);
     this.bar = scene.add.graphics();
-    this.hpText = addText(scene, 0, -this.tall - 15, '', { size: 12, raw: true, strokeW: 3 }).setOrigin(0.5, 1);
+    this.hpText = addText(scene, 0, -this.tall - 15, '', { size: worldPx(12), raw: true, strokeW: 3 }).setOrigin(0.5, 1);
     this.status = scene.add
       .image(BAR_W / 2 + 12, -this.tall - 10, 'ic_overwatch')
       .setScale(18 / 64 / TEX)
@@ -140,9 +140,14 @@ export class UnitView {
     g.clear();
     g.fillStyle(0x06101c, 0.9);
     g.fillRect(-BAR_W / 2 - 1.5, y - 1.5, BAR_W + 3, 8);
-    g.fillStyle(u.side === 'player' ? (k > 0.35 ? COL.player : 0xffb03a) : COL.enemy, 1);
+    g.fillStyle(u.side === 'player' ? (k > 0.35 ? COL.player : COL.low) : COL.enemy, 1);
     g.fillRect(-BAR_W / 2, y, BAR_W * k, 5);
-    this.hpText.setText(String(Math.max(0, Math.round(hp))));
+    // 色盲配色：敵方的數字前面多一個 ▼，不靠顏色也分得出敵我
+    this.hpText.setText(`${u.side === 'enemy' && colorBlind() ? '▼' : ''}${Math.max(0, Math.round(hp))}`);
+    // 陣營色每次重畫都重新套：設定頁可能剛換過配色
+    const team = u.side === 'player' ? COL.player : COL.enemy;
+    this.base.setTint(team);
+    this.arrow.setTint(team);
     // 已經行動完的我方單位變暗（敵方不變暗：它們的回合不需要玩家分辨誰動過）
     const done = u.acted && u.side === 'player' && !u.def.structure;
     const base = u.def.tint ?? 0xffffff;

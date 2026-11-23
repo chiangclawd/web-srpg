@@ -175,6 +175,14 @@ const STR = {
   sortieNew: { zh: '重新出擊', en: 'Start over' },
   resumed: { zh: '接續第 {0} 回合', en: 'Resumed at turn {0}' },
   menuSaveNote: { zh: '戰鬥會自動保存。離開之後可以從標題畫面或任務列表接著打', en: 'The battle is saved automatically. You can resume it from the title screen or the mission list' },
+  setTextSize: { zh: '文字大小', en: 'Text size' },
+  textSize0: { zh: '標準', en: 'Standard' },
+  textSize1: { zh: '大', en: 'Large' },
+  textSize2: { zh: '特大', en: 'Extra large' },
+  setColorBlind: { zh: '色盲配色', en: 'Colour-blind palette' },
+  swatchPlayer: { zh: '我方', en: 'Yours' },
+  swatchEnemy: { zh: '敵方', en: 'Enemy' },
+  colorBlindNote: { zh: '色盲配色：敵方從紅色改成橘黃色，敵方的耐久數字前面多一個 ▼', en: 'Colour-blind palette: enemies turn from red to amber, and their HP numbers get a ▼ in front' },
 } satisfies Record<string, L10n>;
 
 export type StrKey = keyof typeof STR;
