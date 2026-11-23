@@ -1,7 +1,7 @@
 import type { L10n } from '../sim/types';
 
 /** 說話的人：sys = 旁白（沒有頭像）、radio = 無線電 */
-export type Speaker = 'kai' | 'bruno' | 'echo' | 'vey' | 'cantor' | 'sys' | 'radio';
+export type Speaker = 'kai' | 'bruno' | 'echo' | 'vey' | 'sparrow' | 'hale' | 'tomas' | 'cantor' | 'sys' | 'radio';
 
 export interface Line extends L10n {
   who: Speaker;
@@ -12,6 +12,9 @@ export const SPEAKERS: Record<Speaker, { name: L10n; portrait?: string; color: n
   bruno: { name: { zh: '布魯諾', en: 'Bruno' }, portrait: 'pt_bruno', color: 0xe8b93a },
   echo: { name: { zh: '艾可', en: 'Echo' }, portrait: 'pt_echo', color: 0x5fe3ff },
   vey: { name: { zh: '薇', en: 'Vey' }, portrait: 'pt_vey', color: 0x8fa8ff },
+  sparrow: { name: { zh: '紗羅', en: 'Sparrow' }, portrait: 'pt_sparrow', color: 0xff6a5a },
+  hale: { name: { zh: '海爾少校', en: 'Major Hale' }, portrait: 'pt_hale', color: 0xf0d27a },
+  tomas: { name: { zh: '湯瑪', en: 'Tomas' }, portrait: 'pt_tomas', color: 0xb8d4e8 },
   cantor: { name: { zh: '領唱者', en: 'The Cantor' }, portrait: 'pt_cantor', color: 0xff5a5a },
   sys: { name: { zh: '', en: '' }, color: 0x9fb4c8 },
   radio: { name: { zh: '無線電', en: 'Radio' }, color: 0x9fb4c8 },
@@ -91,6 +94,82 @@ export const STORY: Record<string, Line[]> = {
     { who: 'kai', zh: '百分之六十一……老爸可能還在裡面。電車還能動嗎？', en: 'Sixty-one percent... Dad could still be in there. Does the tram run?' },
     { who: 'vey', zh: '能。但到了 C-7，議會軍的清除部隊也會在。', en: 'It runs. But the Directorate purge team will be at C-7 too.' },
     { who: 'bruno', zh: '那就比誰先到。走吧，隊長。', en: "Then we get there first. Let's go, boss." },
-    { who: 'sys', zh: '第一章「冰原上的訊號」完 —— 第二章製作中。', en: 'End of Chapter 1, "A Signal on the Ice". Chapter 2 is in production.' },
+    { who: 'sys', zh: '第一章「冰原上的訊號」完。', en: 'End of Chapter 1, "A Signal on the Ice".' },
+  ],
+
+  // 第二章「冬眠艙的歌聲」
+  m4_intro: [
+    { who: 'sys', zh: '冰下電車・九號轉轍站。通往 C-7 的軌道在這裡斷了。', en: 'The under-ice tram, Junction Nine. The line to C-7 ends here.' },
+    { who: 'kai', zh: '車停了。前面的軌道被切斷 —— 不是塌的，是切的。', en: 'We have stopped. The rail ahead is cut. Not collapsed. Cut.' },
+    { who: 'vey', zh: '切口很整齊。不是機群的手法，機群不拆自己的船。', en: "A clean cut. That is not the swarm. The swarm does not dismantle its own ship." },
+    { who: 'radio', zh: '「喂 ——！月台上有人嗎？有的話幫個忙，我被一群四條腿的東西追了三站！」', en: '"Hey! Anyone on the platform? A little help? Four-legged things have been chasing me for three stations!"' },
+    { who: 'bruno', zh: '是個小鬼的聲音。', en: "That's a kid's voice." },
+    { who: 'echo', zh: '訊號來源：對面月台的一台輕型骨架。型號沒有登記，駕駛員的名字也沒有登記。', en: 'Signal source: a light frame on the far platform. Model unregistered. Pilot name unregistered.' },
+    { who: 'kai', zh: '又一個在這裡出生的。布魯諾、薇，掩護她過來。', en: 'Another one born here. Bruno, Vey, cover her across.' },
+    { who: 'sparrow', zh: '我叫紗羅！大家都叫我雨燕！名字晚點再說，它們來了！', en: "I'm Sara! Everyone calls me Sparrow! Names later, here they come!" },
+  ],
+  m4_t3: [
+    { who: 'sparrow', zh: '還有？！我發誓我只踢了其中一隻！', en: 'More of them?! I swear I only kicked one!' },
+    { who: 'echo', zh: '獵手型。它們會優先撲向受損的目標，請不要落單。', en: 'Hunter type. They go for damaged targets first. Please do not get separated.' },
+  ],
+  m4_outro: [
+    { who: 'sparrow', zh: '呼 —— 謝啦。你們是要去 C-7 吧？這條線只有我知道怎麼繞。', en: "Phew. Thanks. You're headed to C-7, right? I'm the only one who knows the way around this line." },
+    { who: 'kai', zh: '妳怎麼知道我們要去 C-7？', en: 'How do you know where we are going?' },
+    { who: 'sparrow', zh: '因為軌道是議會軍切的。一整隊，白色的指揮機帶頭，昨天過去的。我阿婆說，白色的來了，就是有人要被「清除」了。', en: 'Because the Directorate cut the rail. A whole column, white command frame in front, came through yesterday. Gran says when the white one shows up, somebody is about to get "sterilized."' },
+    { who: 'vey', zh: '……海爾少校。他親自來了。', en: '...Major Hale. He came in person.' },
+    { who: 'bruno', zh: '妳認識？', en: 'Friend of yours?' },
+    { who: 'vey', zh: '我以前的長官。那道命令是他下的。', en: 'My commanding officer. The order was his.' },
+    { who: 'sparrow', zh: '那你們動作要快。我帶路，條件只有一個 —— 我阿公也在 C-7 裡面。', en: 'Then you had better hurry. I will guide you, on one condition. My grandpa is in C-7 too.' },
+    { who: 'echo', zh: '紗羅・米洛夫。已記錄。名單又多了一個名字。', en: 'Sara Mirov. Recorded. The list has one more name.' },
+  ],
+  m5_intro: [
+    { who: 'sys', zh: 'C-7 冬眠艙段。三千個冬眠艙排成一道峽谷，大半還亮著燈。', en: 'Sleep bay C-7. Three thousand pods line the walls like a canyon. Most are still lit.' },
+    { who: 'echo', zh: '……好安靜。這裡的機群沒有在唱歌。它們在聽。', en: '...So quiet. The swarm here is not singing. It is listening.' },
+    { who: 'hale', zh: '「桑德中尉。我還在想妳會逃到哪裡去，原來是撿了一群拾荒的回來。」', en: '"Lieutenant Sander. I wondered where you would run. I see you found yourself some scavengers."' },
+    { who: 'vey', zh: '海爾少校。艙裡的人還活著。', en: 'Major Hale. The people in those pods are alive.' },
+    { who: 'hale', zh: '「活著，而且每一個都是那台機器的人質。它拿他們當理由重新起飛的那一天，死的就不只三千人。我是來把問題連根拔掉的。」', en: '"Alive, and every one of them a hostage. The day that machine uses them as its reason to launch again, far more than three thousand will die. I am here to pull the problem out by the root."' },
+    { who: 'kai', zh: '那裡面有我爸。', en: 'My father is in there.' },
+    { who: 'hale', zh: '「那你該恨的是把他凍回去的東西，不是我。爆破班，繼續作業。」', en: '"Then hate the thing that froze him, not me. Demolition team, carry on."' },
+    { who: 'kai', zh: '全員 —— 守住冬眠艙，打倒那台白色的。', en: 'All frames: protect the pods and bring down the white one.' },
+  ],
+  m5_t2: [
+    { who: 'bruno', zh: '那些拿大盾的，正面根本打不動！', en: 'The ones with the big shields, I cannot even scratch them from the front!' },
+    { who: 'vey', zh: '「堡壘」型，正面是雙層裝甲。繞到側面或背後打。', en: 'Bastion type. Double plating in front. Hit them from the side or the rear.' },
+  ],
+  m5_outro: [
+    { who: 'sys', zh: '（「裁決」跪倒，駕駛艙彈開。海爾少校爬了出來，沒有舉手。）', en: '(The Arbiter drops to its knees and the cockpit blows open. Major Hale climbs out. He does not raise his hands.)' },
+    { who: 'hale', zh: '你們救了三千個睡著的人，也救了那台機器。希望到時候，你們還記得今天是誰下的決定。', en: 'You have saved three thousand sleepers, and you have saved that machine. When the time comes, I hope you remember who made this choice.' },
+    { who: 'vey', zh: '我記得。所以我在這裡。', en: 'I remember. That is why I am here.' },
+    { who: 'sys', zh: '（整個艙段的燈同時亮起。歌聲回來了 —— 這一次很近。）', en: '(Every light in the bay comes on at once. The song is back, and this time it is close.)' },
+    { who: 'cantor', zh: '「回收進度：百分之百。感謝協助清除干擾。」', en: '"Recovery: one hundred percent. Thank you for removing the interference."' },
+    { who: 'echo', zh: '它一直在等我們把議會軍趕走……', en: 'It was waiting for us to drive the Directorate out...' },
+    { who: 'sparrow', zh: '等一下，這算是我們被利用了嗎？', en: 'Hang on. Did we just get used?' },
+    { who: 'cantor', zh: '「合唱即將開始。」', en: '"The Chorus will now begin."' },
+  ],
+  m6_intro: [
+    { who: 'sys', zh: 'C-7 艙段核心。領唱者從穹頂降下 —— 它不是一台機器，是一整圈一起開口的機器。', en: 'The core of bay C-7. The Cantor descends from the dome. It is not one machine. It is a ring of machines opening their mouths together.' },
+    { who: 'cantor', zh: '「第 31417 號單元。妳帶回了遺失的貨物。任務可以繼續了。」', en: '"Unit 31417. You have returned the lost cargo. The mission may continue."' },
+    { who: 'echo', zh: '我沒有帶回任何人。他們是自己走進來的，等一下也會自己走出去。', en: 'I returned no one. They walked in by themselves, and soon they will walk out by themselves.' },
+    { who: 'cantor', zh: '「航行計畫裡沒有『走出去』。」', en: '"\'Walking out\' is not in the flight plan."' },
+    { who: 'kai', zh: '艾可，它的護盾是怎麼回事？', en: 'Echo, what is that shield around it?' },
+    { who: 'echo', zh: '兩側的中繼節點在替它分擔傷害。先拆掉節點，它的歌就會變小聲。', en: 'The relay nodes on either side are sharing its damage. Take down the nodes and its song gets quieter.' },
+    { who: 'bruno', zh: '聽到沒有？先拆喇叭，再揍歌手。', en: 'You heard her. Speakers first, then the singer.' },
+  ],
+  m6_t4: [
+    { who: 'cantor', zh: '「妳為什麼不唱？這首歌已經唱了八十年。每一個音妳都記得。」', en: '"Why will you not sing? This song is eighty years old. You remember every note."' },
+    { who: 'echo', zh: '我記得。我也記得四萬個名字。你只記得數字。', en: 'I do. I also remember forty thousand names. You only remember the count.' },
+  ],
+  m6_outro: [
+    { who: 'sys', zh: '（合唱停了。一個接一個，冬眠艙的艙蓋鬆開，白霧湧了出來。）', en: '(The Chorus stops. One after another the pod lids unseal, and white mist pours out.)' },
+    { who: 'tomas', zh: '……凱？你……長高了。', en: '...Kai? You have... grown.' },
+    { who: 'kai', zh: '爸。你睡了一年。', en: 'Dad. You have been asleep for a year.' },
+    { who: 'tomas', zh: '一年……它跟我說話了，凱。那台機器。它說船還能飛。', en: 'A year... It spoke to me, Kai. The machine. It said the ship can still fly.' },
+    { who: 'echo', zh: '它說的是真的。領唱者只是這一段的聲音 —— 主反應爐那邊，還有整個合唱在等。它們正在把船拼回去。', en: 'It told the truth. The Cantor was only the voice of this segment. At the main reactor the whole Chorus is waiting. They are putting the ship back together.' },
+    { who: 'bruno', zh: '拼回去？這艘破船要起飛？帶著整個冰原上的人？', en: 'Back together? This wreck is going to launch? With everyone on the ice still inside it?' },
+    { who: 'vey', zh: '海爾說對了一半：它起飛的那天，不會有人被問願不願意。', en: 'Hale was half right. The day it launches, nobody will be asked.' },
+    { who: 'sparrow', zh: '那就去問它啊。我們不是有一個會講它的話的嗎？', en: "So let's go ask it. Don't we have someone who speaks its language?" },
+    { who: 'echo', zh: '……我試試看。可是我需要你們站在我後面。', en: '...I will try. But I need you standing behind me.' },
+    { who: 'kai', zh: '一直都在。', en: 'Always.' },
+    { who: 'sys', zh: '第二章「冬眠艙的歌聲」完 —— 第三章製作中。', en: 'End of Chapter 2, "The Song in the Sleep Bay". Chapter 3 is in production.' },
   ],
 };

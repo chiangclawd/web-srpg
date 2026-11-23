@@ -10,7 +10,7 @@ import { TERRAIN_CHARS } from '../../src/starfall/sim/terrain';
 import type { MissionDef, SpawnDef, Unit, WinCondition } from '../../src/starfall/sim/types';
 
 /** 測試用小地圖：rows 是地形、heights 省略就是全平地 */
-function mk(rows: string[], units: SpawnDef[], extra: Partial<MissionDef> = {}): Battle {
+function mk(rows: string[], units: SpawnDef[], extra: Partial<MissionDef> = {}, easy = false): Battle {
   const m: MissionDef = {
     id: 'test',
     name: { zh: '測試', en: 'Test' },
@@ -23,7 +23,7 @@ function mk(rows: string[], units: SpawnDef[], extra: Partial<MissionDef> = {}):
     par: 5,
     ...extra,
   };
-  const b = new Battle(m, UNITS);
+  const b = new Battle(m, UNITS, easy);
   b.start();
   return b;
 }
@@ -289,7 +289,7 @@ test('防守關：撐過指定回合就贏；保護目標被摧毀就輸；第�
   }
   assert.equal(b.result, 'win');
   assert.equal(b.stars(), 3);
-  const c = mk(OPEN, [P('kai', 0, 0), P('generator', 3, 2, { tag: 'gen' }), E('worker', 4, 2, { dir: 2 })], { win, protect: ['gen'] });
+  const c = mk(OPEN, [P('kai', 0, 0), P('generator', 3, 2, { tag: 'gen' }), E('worker', 4, 2, { dir: 2, prey: 'gen' })], { win, protect: ['gen'] });
   c.byTag('gen')!.hp = 10;
   c.endPlayerPhase();
   while (c.stepEnemy(aiTakeTurn)) {
@@ -315,7 +315,7 @@ test('AI：守備單位在敵人靠近前不動；主動單位會靠近並攻擊
   }
 });
 
-test('三個任務：資料完整，自動對戰（雙方都是 AI）打得過', () => {
+test('每個任務：資料完整，自動對戰（雙方都是 AI）打得過', () => {
   for (const m of MISSIONS) {
     const b = new Battle(m, UNITS);
     const seen = new Set<string>();
@@ -350,4 +350,120 @@ test('文字：每個名稱、說明、對話都有中文和英文', () => {
   check(UNITS, 'UNITS');
   check(MISSIONS, 'MISSIONS');
   check(STORY, 'STORY');
+});
+
+// ───────── 第二章的新規則 ─────────
+
+test('側襲（雨燕）：側擊與背襲的加成加倍', () => {
+  const dmg = (sx: number, sy: number): number => {
+    const b = mk(OPEN, [P('sparrow', sx, sy), E('sentry', 3, 2, { dir: 2, ai: 'hold' })]);
+    return b.forecast(u(b, 'sparrow'), u(b, 'sentry')).dmg;
+  };
+  assert.equal(dmg(2, 2), 24 - 2, 'front');
+  assert.equal(dmg(3, 1), Math.round(24 * 1.3) - 2, 'side is +30% instead of +15%');
+  assert.equal(dmg(4, 2), Math.round(24 * 1.6) - 2, 'rear is +60% instead of +30%');
+});
+
+test('噴射躍進：跳過裂谷、不觸發警戒、跳完還能攻擊，但取代這回合的移動', () => {
+  const b = mk(['..~~...', '..~~...'], [P('sparrow', 1, 0), E('sentry', 6, 1, { dir: 2 })]);
+  const s = u(b, 'sparrow');
+  const foe = u(b, 'sentry');
+  foe.overwatch = true;
+  const leap = s.def.skills[0];
+  const spots = b.skillTargets(s, leap);
+  assert.ok(spots.some((p) => p.x === 4 && p.y === 0), 'can land across the chasm');
+  assert.ok(!spots.some((p) => p.x === 2 || p.x === 3), 'cannot land in the chasm');
+  assert.ok(!spots.some((p) => p.x === 6 && p.y === 1), 'cannot land on a unit');
+  const ev = b.useSkill(s, 'leap', { x: 4, y: 1 });
+  assert.deepEqual([s.x, s.y], [4, 1]);
+  assert.ok(!ev.some((e) => e.t === 'attack'), 'overwatch does not fire at a leaping unit');
+  assert.ok(foe.overwatch, 'and stays armed');
+  assert.ok(s.moved && !s.acted && b.canAct(s));
+  assert.deepEqual(b.move(s, 5, 0), [], 'no walking after the leap');
+  assert.ok(b.attack(s, foe).length > 0, 'but it can still attack');
+  // 先走路就不能再跳
+  const c = mk(OPEN, [P('sparrow', 0, 0), E('sentry', 6, 4, { ai: 'hold' })]);
+  const s2 = u(c, 'sparrow');
+  c.move(s2, 1, 0);
+  assert.ok(!c.skillReady(s2, leap));
+  assert.deepEqual(c.useSkill(s2, 'leap', { x: 3, y: 0 }), []);
+});
+
+test('塔盾（堡壘）：正面傷害減半，側面和背後照常；反擊打它也算正面', () => {
+  const b = mk(OPEN, [P('kai', 1, 2), E('bastion', 3, 2, { dir: 2, ai: 'hold' })]);
+  const k = u(b, 'kai');
+  const t = u(b, 'bastion');
+  assert.equal(b.forecast(k, t).dmg, Math.round(30 * 0.5) - 4);
+  assert.equal(b.forecast(k, t, { x: 3, y: 0 }).dmg, Math.round(30 * 1.15) - 4, 'from the side: no shield');
+  assert.equal(b.forecast(k, t, { x: 5, y: 2 }).dmg, Math.round(30 * 1.3) - 4, 'from the rear: no shield');
+  // 堡壘打凱，凱反擊：反擊時堡壘正對著凱
+  const f = b.forecast(t, k);
+  assert.equal(f.counter?.dmg, Math.max(1, Math.round(30 * 0.6 * 0.5) - 4));
+});
+
+test('紀律（槍騎兵）反擊不打折；獵殺（獵手）對半血以下的目標 +30%', () => {
+  const b = mk(OPEN, [P('kai', 1, 2), E('lancer', 3, 2, { dir: 2, ai: 'hold' })]);
+  assert.equal(b.forecast(u(b, 'kai'), u(b, 'lancer')).counter?.dmg, 24 - 2, 'full damage, minus armor');
+  const c = mk(OPEN, [P('kai', 1, 2), E('hunter', 2, 2, { dir: 2 })]);
+  const k = u(c, 'kai');
+  const h = u(c, 'hunter');
+  assert.equal(c.forecast(h, k).dmg, 22 - 2);
+  k.hp = 49;
+  assert.equal(c.forecast(h, k).dmg, Math.round(22 * 1.3) - 2);
+});
+
+test('中繼節點替合唱體分擔一半傷害，拆掉之後恢復；不保護其他敵人', () => {
+  const b = mk(OPEN, [P('kai', 1, 2), E('choir', 3, 2, { dir: 2, ai: 'hold' }), E('relay', 6, 0), E('sentry', 3, 4, { dir: 2, ai: 'hold' })]);
+  const k = u(b, 'kai');
+  const c = u(b, 'choir');
+  assert.equal(b.forecast(k, c).dmg, Math.round(30 * 0.5) - 4);
+  assert.equal(b.forecast(k, u(b, 'sentry'), { x: 1, y: 4 }).dmg, 30 - 2, 'ordinary drones are not shielded');
+  u(b, 'relay').alive = false;
+  assert.equal(b.forecast(k, c).dmg, 30 - 4);
+});
+
+test('保護目標可以設定「毀掉幾個才失敗」', () => {
+  const b = mk(OPEN, [P('kai', 0, 0), P('pods', 2, 2, { tag: 'a' }), P('pods', 2, 4, { tag: 'b' }), E('lancer', 4, 2, { dir: 2, prey: 'a' }), E('lancer', 4, 4, { dir: 2, prey: 'b' })], {
+    protect: ['a', 'b'],
+    protectLose: 2,
+    win: { type: 'survive', turns: 9 },
+  });
+  b.byTag('a')!.hp = 5;
+  b.endPlayerPhase();
+  while (b.stepEnemy(aiTakeTurn)) {
+    // 槍騎兵拆冬眠艙
+  }
+  assert.ok(!b.byTag('a')!.alive);
+  assert.equal(b.result, null, 'one lost is not yet a defeat');
+  b.beginPlayerPhase();
+  b.byTag('b')!.hp = 5;
+  b.endPlayerPhase();
+  while (b.stepEnemy(aiTakeTurn)) {
+    // 第二座也被拆掉
+  }
+  assert.equal(b.result, 'lose');
+});
+
+test('敵人只有被指定的才會打設施；輕鬆難度下敵方傷害 ×0.75、耐久 ×0.85', () => {
+  const b = mk(OPEN, [P('kai', 0, 0), P('generator', 3, 2, { tag: 'gen' }), E('sentry', 4, 2, { dir: 2 })]);
+  b.endPlayerPhase();
+  while (b.stepEnemy(aiTakeTurn)) {
+    // 哨兵沒有被指定去拆發電機
+  }
+  assert.equal(b.byTag('gen')!.hp, 110);
+  const easy = mk(OPEN, [P('kai', 1, 2), E('sentry', 3, 2, { dir: 2, ai: 'hold' })], {}, true);
+  const s = u(easy, 'sentry');
+  const k = u(easy, 'kai');
+  assert.equal(s.maxHp, Math.round(60 * 0.85));
+  assert.equal(k.maxHp, 100, 'player frames are unchanged');
+  assert.equal(easy.forecast(s, k).dmg, Math.round(22 * 0.75) - 2);
+  assert.equal(easy.forecast(k, s).dmg, 30 - 2, 'player damage is unchanged');
+});
+
+test('輕鬆難度：機器人六關全部無損通關', () => {
+  for (const m of MISSIONS) {
+    const r = autoPlay(new Battle(m, UNITS, true));
+    assert.equal(r.result, 'win', `${m.id} on easy: ${r.result} on turn ${r.turns}`);
+    assert.equal(r.lost, 0, `${m.id} on easy lost ${r.lost} frame(s)`);
+  }
 });

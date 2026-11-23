@@ -21,6 +21,7 @@ function ac(): AudioContext | null {
 /** 瀏覽器要有使用者操作才能出聲：第一次點擊時呼叫 */
 export function unlockAudio(): void {
   ac();
+  refreshMusic();
 }
 
 function tone(type: OscillatorType, f0: number, f1: number, dur: number, vol: number, delay = 0): void {
@@ -129,4 +130,54 @@ export function sfx(name: Sfx): void {
       tone('sine', 640, 600, 0.03, 0.05);
       break;
   }
+}
+
+// ───────── 音樂 ─────────
+// 用 <audio> 串流播放（每首 2 MB 多，不放進開機載入）；換曲時舊的淡出、新的淡入
+
+export type Track = 'title' | 'battle' | 'boss';
+
+let current: { name: Track; el: HTMLAudioElement } | null = null;
+let wanted: Track | null = null;
+
+function fade(el: HTMLAudioElement, to: number, ms: number, done?: () => void): void {
+  const from = el.volume;
+  const t0 = performance.now();
+  const step = (): void => {
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    el.volume = Math.max(0, Math.min(1, from + (to - from) * k));
+    if (k < 1) requestAnimationFrame(step);
+    else done?.();
+  };
+  step();
+}
+
+/** 播放某一首（已經在播就不動）；null = 停止。音樂關掉時只記住想播哪首 */
+export function music(name: Track | null): void {
+  wanted = name;
+  if (typeof Audio === 'undefined') return;
+  const vol = save().music;
+  if (current && (current.name !== name || vol <= 0)) {
+    const old = current.el;
+    current = null;
+    fade(old, 0, 500, () => old.pause());
+  }
+  if (!name || vol <= 0 || current) return;
+  const el = new Audio(`assets/starfall/music/${name}.mp3`);
+  el.loop = true;
+  el.volume = 0;
+  current = { name, el };
+  // 還沒有使用者操作時瀏覽器會拒絕播放：下一次點擊（unlockAudio）再試
+  el.play().then(
+    () => fade(el, vol * 0.6, 900),
+    () => {
+      if (current?.el === el) current = null;
+    },
+  );
+}
+
+/** 設定改了音量、或第一次點擊之後，重新套用目前想播的曲子 */
+export function refreshMusic(): void {
+  if (current && save().music > 0) current.el.volume = save().music * 0.6;
+  else music(wanted);
 }

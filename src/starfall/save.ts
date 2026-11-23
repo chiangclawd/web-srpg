@@ -9,6 +9,10 @@ export interface SaveData {
   tips: string[];
   /** 戰鬥演出速度 */
   fast: boolean;
+  /** 音樂音量（0 = 關） */
+  music: number;
+  /** 輕鬆難度：敵方傷害與耐久降低 */
+  easy: boolean;
 }
 
 let cache: SaveData | null = null;
@@ -21,7 +25,7 @@ export function save(): SaveData {
   } catch {
     // 存檔壞掉或瀏覽器不給用：從頭開始
   }
-  cache = { sfx: 0.7, stars: {}, tips: [], fast: false, ...raw };
+  cache = { sfx: 0.7, stars: {}, tips: [], fast: false, music: 0.5, easy: false, ...raw };
   return cache;
 }
 

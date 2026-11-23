@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { COL, VIEW_H, addText, setupCamera, uiZoom, viewW } from '../config';
-import { unlockAudio } from '../audio';
+import { music, unlockAudio } from '../audio';
 import { T, getLang, setLang } from '../i18n';
 import { Button } from '../view/ui';
 
@@ -11,6 +11,9 @@ export class TitleScene extends Phaser.Scene {
 
   create(): void {
     setupCamera(this);
+    // 瀏覽器要等第一次點擊才肯出聲：先登記想播的曲子，點了任何地方就開始
+    music('title');
+    this.input.once('pointerdown', () => unlockAudio());
     const w = viewW(this);
     const z = uiZoom();
     const bg = this.add.image(w / 2, VIEW_H / 2, 'title');

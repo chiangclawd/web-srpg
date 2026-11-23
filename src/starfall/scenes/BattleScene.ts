@@ -2,7 +2,7 @@
 // 介面（按鈕、資訊卡、預估面板）在 HudScene，疊在這個場景上面。
 import Phaser from 'phaser';
 import { RS, TEX, VIEW_H, addText, uiZoom, viewW } from '../config';
-import { sfx } from '../audio';
+import { music, sfx } from '../audio';
 import { L, T } from '../i18n';
 import { persist, save } from '../save';
 import { Battle } from '../sim/Battle';
@@ -71,7 +71,7 @@ export class BattleScene extends Phaser.Scene {
 
   init(data: { missionId: string }): void {
     this.mission = missionById(data.missionId);
-    this.battle = new Battle(this.mission, UNITS);
+    this.battle = new Battle(this.mission, UNITS, save().easy);
     this.views = new Map();
     this.marks = { move: [], target: [], aim: [], select: [], threat: [], zone: [], line: [] };
     this.mode = 'busy';
@@ -87,8 +87,10 @@ export class BattleScene extends Phaser.Scene {
 
   create(): void {
     const b = this.battle;
+    // 有首領的關卡換一首比較兇的曲子
+    music(this.battle.units.some((u) => u.def.boss) ? 'boss' : 'battle');
     this.bg = this.add
-      .image(0, 0, this.mission.theme === 'ice' ? 'bg_ice' : 'bg_hull')
+      .image(0, 0, this.mission.theme === 'ice' ? 'bg_ice' : this.mission.theme === 'bay' ? 'bg_bay' : 'bg_hull')
       .setScrollFactor(0)
       .setDepth(-1000);
     // 地塊：每格一張「柱狀」圖（頂面 + 往下延伸的側面），靠前的蓋住靠後的
@@ -413,8 +415,10 @@ export class BattleScene extends Phaser.Scene {
     this.aim = null;
     this.mode = 'target';
     this.clearMarks('move', 'target', 'aim', 'line');
+    if (p.kind === 'skill' && p.skill.id === 'leap') this.hud.showTip('tip_leap');
     const list = this.validTargets();
-    for (const t of list) this.mark('target', t.x, t.y);
+    const tile = p.kind === 'skill' && p.skill.target === 'tile';
+    for (const t of list) this.mark(tile ? 'move' : 'target', t.x, t.y);
     if (list.length === 1) this.aimAt(list[0]);
     else this.hud.refresh();
     this.hud.showTip('tip_forecast');
@@ -453,11 +457,15 @@ export class BattleScene extends Phaser.Scene {
     const a = this.aim;
     if (!u || !p) return null;
     const title = p.kind === 'attack' ? L(u.def.weapon.name) : L(p.skill.name);
-    if (!a) return { title, target: null, forecast: null, note: p.kind === 'skill' && p.skill.target === 'dir' ? T('pickDir') : T('pickTarget') };
+    if (!a) {
+      const how = p.kind === 'skill' && p.skill.target === 'dir' ? T('pickDir') : p.kind === 'skill' && p.skill.target === 'tile' ? T('pickTile') : T('pickTarget');
+      return { title, target: null, forecast: null, note: p.kind === 'skill' ? `${L(p.skill.desc)}\n${how}` : how };
+    }
     const b = this.battle;
     const tgt = b.unitAt(a.x, a.y) ?? null;
     if (p.kind === 'attack') return { title, target: tgt, forecast: tgt ? b.forecast(u, tgt) : null, note: '' };
     const e = p.skill.effect;
+    if (e.type === 'leap') return { title, target: null, forecast: null, note: T('leapHere') };
     if (e.type === 'heal' && tgt) return { title, target: tgt, forecast: null, note: `${T('heal')} +${Math.min(e.amount, tgt.maxHp - tgt.hp)}` };
     if (e.type === 'stun' && tgt) return { title, target: tgt, forecast: null, note: T('stunned') };
     if (e.type === 'line') {
@@ -549,6 +557,8 @@ export class BattleScene extends Phaser.Scene {
   private turnTips(): void {
     if (this.mission.id !== 'm1') {
       if (this.mission.id === 'm2' && this.battle.turn === 1) this.hud.showTip('tip_cover');
+      if (this.mission.id === 'm4' && this.battle.turn === 1) this.hud.showTip('tip_leap');
+      if (this.mission.id === 'm5' && this.battle.turn === 2) this.hud.showTip('tip_shield');
       return;
     }
     const tip = ({ 1: 'tip_move', 2: 'tip_flank', 3: 'tip_overwatch', 4: 'tip_cover' } as const)[this.battle.turn as 1 | 2 | 3 | 4];
@@ -629,7 +639,7 @@ export class BattleScene extends Phaser.Scene {
           sfx('rail');
           await this.beam(v.muzzle(), new Phaser.Math.Vector2(isoX(last.x, last.y), isoY(last.x, last.y, b.heightAt(last.x, last.y)) - 36), 0xffa53a, 9);
           v.play('idle');
-        } else {
+        } else if (def.effect.type !== 'leap') {
           await this.wait(240);
         }
         break;
@@ -680,6 +690,39 @@ export class BattleScene extends Phaser.Scene {
         } else {
           v.place(e.to.x, e.to.y);
         }
+        break;
+      }
+      case 'leap': {
+        const v = this.views.get(e.uid);
+        if (!v) break;
+        await this.focus(e.to.x, e.to.y);
+        sfx('rail');
+        this.ring(v.root.x, v.root.y, 0xffa53a);
+        const x0 = v.root.x;
+        const y0 = v.root.y;
+        const tx = isoX(e.to.x, e.to.y);
+        const ty = isoY(e.to.x, e.to.y, b.heightAt(e.to.x, e.to.y));
+        const peak = Math.min(y0, ty) - 110;
+        v.root.setDepth(FX_DEPTH - 1);
+        await new Promise<void>((ok) => {
+          this.tweens.addCounter({
+            from: 0,
+            to: 1,
+            duration: this.ms(420),
+            ease: 'Sine.easeInOut',
+            onUpdate: (tw) => {
+              const k = tw.getValue() ?? 0;
+              v.root.x = Phaser.Math.Linear(x0, tx, k);
+              v.root.y = (1 - k) * (1 - k) * y0 + 2 * (1 - k) * k * peak + k * k * ty;
+              if (Math.random() < 0.5) this.blast(v.root.x, v.root.y - 10, 0xffa53a, 0.3);
+            },
+            onComplete: () => ok(),
+          });
+        });
+        v.place(e.to.x, e.to.y);
+        v.setDir(v.unit.dir);
+        this.ring(tx, ty, 0xffa53a);
+        sfx('step');
         break;
       }
       case 'death': {
@@ -1004,7 +1047,7 @@ export class BattleScene extends Phaser.Scene {
     this.scene.stop('SfHud');
     this.scene.stop('SfDialogue');
     if (next) this.scene.restart({ missionId: next });
-    else this.scene.start('SfMissions');
+    else this.scene.start('SfMissions', { chapter: this.mission.chapter });
   }
 
   /** 地形說明（資訊卡用）：掩體等級與高度 */

@@ -1,6 +1,6 @@
 // 《星墜殘響》瀏覽器檢查：
 //   1. 用手機尺寸 + 觸控實際點一遍第一關（選取、移動、退回、攻擊預估與確認、警戒、結束回合、選單）
-//   2. 三個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
+//   2. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
 // 用法：先 npx vite build && npx vite preview --port 4173，再 node scripts/starfall-check.cjs [截圖資料夾]
 // （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址）
 const path = require('node:path');
@@ -25,7 +25,7 @@ async function open(browser, view, save) {
   const ctx = await browser.newContext({ viewport: { width: view.w, height: view.h }, deviceScaleFactor: view.dpr, isMobile: !!view.touch, hasTouch: !!view.touch });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => ok(false, `程式錯誤：${e.message}`));
-  await page.addInitScript((s) => localStorage.setItem('starfall_save_v1', JSON.stringify(s)), { lang: 'zh', sfx: 0, stars: {}, tips: [], fast: true, ...save });
+  await page.addInitScript((s) => localStorage.setItem('starfall_save_v1', JSON.stringify(s)), { lang: 'zh', sfx: 0, music: 0, stars: {}, tips: [], fast: true, ...save });
   await page.goto(URL);
   await page.waitForFunction(() => window.__sf && window.__sf.scene.isActive('SfTitle'), null, { timeout: 120000 });
   return { ctx, page };
@@ -199,7 +199,7 @@ async function autoPlay(browser, mission) {
   fs.mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   await clickThrough(browser);
-  for (const m of ['m1', 'm2', 'm3']) await autoPlay(browser, m);
+  for (const m of ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']) await autoPlay(browser, m);
   await browser.close();
   console.log(failed ? `${failed} 個問題（截圖在 ${OUT}）` : `全部通過（截圖在 ${OUT}）`);
   process.exit(failed ? 1 : 0);

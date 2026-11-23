@@ -464,6 +464,20 @@ const ICONS: Record<string, IconFn> = {
     g.fill();
     for (const x of [16, 30]) line(g, [x, 16], [x, 48], '#fff', 3);
   },
+  sk_leap: (g) => {
+    stroke(g, 5);
+    g.beginPath();
+    g.moveTo(8, 52);
+    g.quadraticCurveTo(30, -6, 50, 34);
+    g.stroke();
+    g.beginPath();
+    g.moveTo(40, 30);
+    g.lineTo(52, 44);
+    g.lineTo(58, 26);
+    g.closePath();
+    g.fill();
+    line(g, [6, 58], [22, 58], '#fff', 4);
+  },
   sk_repair: (g) => {
     stroke(g, 5);
     g.fillRect(25, 8, 14, 48);
