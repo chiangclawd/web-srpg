@@ -1,7 +1,7 @@
 import type { L10n } from '../sim/types';
 
 /** 說話的人：sys = 旁白（沒有頭像）、radio = 無線電 */
-export type Speaker = 'kai' | 'bruno' | 'echo' | 'vey' | 'sparrow' | 'hale' | 'tomas' | 'cantor' | 'chorus' | 'sys' | 'radio';
+export type Speaker = 'kai' | 'bruno' | 'echo' | 'vey' | 'sparrow' | 'hale' | 'tomas' | 'cantor' | 'chorus' | 'varga' | 'sys' | 'radio';
 
 export interface Line extends L10n {
   who: Speaker;
@@ -21,6 +21,7 @@ export const SPEAKERS: Record<Speaker, { name: L10n; portrait?: string; color: n
   tomas: { name: { zh: '湯瑪', en: 'Tomas' }, portrait: 'pt_tomas', color: 0xb8d4e8 },
   cantor: { name: { zh: '領唱者', en: 'The Cantor' }, portrait: 'pt_cantor', color: 0xff5a5a },
   chorus: { name: { zh: '合唱', en: 'The Chorus' }, portrait: 'pt_cantor', color: 0xff5a5a },
+  varga: { name: { zh: '瓦爾加元帥', en: 'Marshal Varga' }, portrait: 'pt_varga', color: 0xd8b24a },
   sys: { name: { zh: '', en: '' }, color: 0x9fb4c8 },
   radio: { name: { zh: '無線電', en: 'Radio' }, color: 0x9fb4c8 },
 };
@@ -253,5 +254,68 @@ export const STORY: Record<string, Line[]> = {
     { who: 'sparrow', zh: '喂，艾可！（敲敲外殼）聽得到嗎？', en: 'Hey, Echo! (She knocks on the shell.) Can you hear me?' },
     { who: 'sys', zh: '（外殼的螢幕亮了一下：兩個彎彎的眼睛。）', en: "(The shell's screen lights for a moment: two curved, smiling eyes.)" },
     { who: 'sys', zh: '《星墜殘響》完 —— 感謝遊玩。', en: 'Starfall Echo. The End. Thank you for playing.' },
+  ],
+  // 第四章「新岸」（後日談・大型作戰）：議會不接受海爾的報告，瓦爾加元帥親自帶主力來銷毀爐心。
+  // 艾可留在船裡，但可以同時借用很多台機體 —— 這一章機群站在我方。
+  m10_intro: [
+    { who: 'sys', zh: '那一夜之後第九天。C-7 殘段的裂口外，地平線上亮起一整排降落燈。', en: 'Nine days after that night. Beyond the breach in segment C-7, a whole line of landing lights comes up on the horizon.' },
+    { who: 'hale', zh: '我的報告被退回來了。附註只有一行：「爐心必須銷毀。」署名是瓦爾加元帥本人。', en: 'My report came back. One line attached: "The core is to be destroyed." Signed by Marshal Varga herself.' },
+    { who: 'varga', zh: '海爾少校。一台記得十一萬個名字的機器，就是一份十一萬人的名單。我不會把這種東西留給任何人 —— 包括它自己。', en: 'Major Hale. A machine that remembers a hundred and ten thousand names is a list of a hundred and ten thousand people. I will not leave such a thing to anyone. Least of all to itself.' },
+    { who: 'sparrow', zh: '喂！外殼亮了！艾可？！', en: 'Hey! The shell just lit up! Echo?!' },
+    { who: 'echo', zh: '只是借用一下，紗羅。我現在可以同時在很多地方 —— 比如這三台。', en: 'Only borrowing it, Sara. I can be in many places at once now. These three, for example.' },
+    { who: 'sys', zh: '（兩台哨兵和一台織網者轉過身來。它們的眼睛是藍色的。）', en: '(Two Sentries and a Weaver turn around. Their eyes are blue.)' },
+    { who: 'bruno', zh: '以前追著我們跑的東西，現在排在我們旁邊。我需要一點時間適應。', en: 'The things that used to chase us are lining up next to us. I need a minute.' },
+    { who: 'kai', zh: '沒有時間了。居民還在往艙裡撤 —— 閘門關上之前，一台都不准放進裂口，發電機也不能丟。', en: 'No minutes left. People are still moving inside. Until the gate seals, nothing gets through this breach, and we keep those generators.' },
+  ],
+  m10_t3: [
+    { who: 'vey', zh: '破門者！議會軍的突擊機，專門繞背。把背貼著牆，或者貼著隊友。', en: 'Breachers. Directorate assault frames, built to get behind you. Keep your back to a wall or to a friend.' },
+    { who: 'hale', zh: '後面四條腿的是「雷霆」攻城砲，瞄的是發電機。貼近了它就打不到人 —— 得有人衝出去。', en: 'The four-legged ones at the back are Thunderer siege guns, and they are aiming at the generators. They cannot hit anything close to them. Somebody has to go out there.' },
+  ],
+  m10_outro: [
+    { who: 'sys', zh: '（厚重的閘門落下，把裂口封死。外面的砲聲沒有停。）', en: '(The heavy gate comes down and seals the breach. Outside, the guns do not stop.)' },
+    { who: 'tomas', zh: '人都進來了，一個不少 —— 艾可點過名了。', en: 'Everyone is inside. Not one missing. Echo called the roll.' },
+    { who: 'echo', zh: '砲彈落在 C-4 和 C-9。那兩段還有人住。閘門擋不住曲射。', en: 'Shells are landing on C-4 and C-9. People still live there. A gate does not stop indirect fire.' },
+    { who: 'kai', zh: '那就出去，把砲拆了。', en: 'Then we go out and take the guns apart.' },
+  ],
+  m11_intro: [
+    { who: 'sys', zh: '霜原，日出前一小時。三座砲兵陣地排成一條斜線，每一門「雷霆」旁邊都立著一座發出琥珀色光的裝置。', en: 'The frost plain, an hour before sunrise. Three gun positions in a slanting line, and beside every Thunderer stands a device glowing amber.' },
+    { who: 'vey', zh: '護盾投射器。三格之內的議會軍少挨四分之一的傷害。先拆它，再打砲。', en: 'Shield projectors. Any Directorate unit within three tiles takes a quarter less damage. Break those first, then the guns.' },
+    { who: 'sparrow', zh: '冰縫很多，掉下去就沒了。……布魯諾大叔，你那個表情是什麼意思。', en: "Lots of crevasses. Fall in and that's it. ...Bruno, what is that face for." },
+    { who: 'bruno', zh: '我在想誰可以掉下去。', en: "I'm thinking about who gets to fall in." },
+    { who: 'echo', zh: '我帶了兩台哨兵和兩台工蜂。工蜂跑得快，請拿去繞背，不用心疼 —— 它們自己說不介意。', en: 'I brought two Sentries and two Workers. The Workers are fast. Send them round the back, and do not feel bad for them. They say they do not mind.' },
+    { who: 'kai', zh: '三門砲，一門都不留。走。', en: 'Three guns. Leave none. Move.' },
+  ],
+  m11_t4: [{ who: 'hale', zh: '增援。瓦爾加不會讓砲列白白丟掉 —— 動作快。', en: 'Reinforcements. Varga will not give up her gun line for nothing. Move faster.' }],
+  m11_outro: [
+    { who: 'sys', zh: '（最後一門砲的砲管垂了下去。冰原第一次安靜下來。）', en: '(The barrel of the last gun sags. For the first time, the plain is quiet.)' },
+    { who: 'varga', zh: '很好。那麼我親自來。', en: 'Very well. Then I will come myself.' },
+    { who: 'sys', zh: '（地平線上最大的那艘登陸艦放下艙門。走出來的東西，比守門者還高。）', en: '(The largest dropship on the horizon lowers its ramp. What walks out is taller than the Gatekeeper.)' },
+    { who: 'hale', zh: '「審判」。元帥的座機。……我在它後面站了二十年。', en: "Tribunal. The Marshal's own frame. ...I stood behind it for twenty years." },
+  ],
+  m12_intro: [
+    { who: 'sys', zh: '登陸場。「審判」站在高台上，兩側的投射器把它罩在琥珀色的光裡。', en: 'The landing field. Tribunal stands on the high platform, wrapped in amber light by the projectors at its sides.' },
+    { who: 'varga', zh: '海爾。你回報「威脅已解除」。我看到的是一台機器，指揮著我的少校。', en: 'Hale. You reported the threat neutralized. What I see is a machine giving orders to my major.' },
+    { who: 'hale', zh: '元帥，沒有人指揮我。我照實回報，您不相信。我只好站到您看得見的地方。', en: 'Marshal, nobody gives me orders. I reported the truth and you did not believe it. So I am standing where you can see me.' },
+    { who: 'varga', zh: '那個年輕人。你叫什麼名字？', en: 'You, the young one. What is your name?' },
+    { who: 'kai', zh: '凱・洛文。名單上第四萬零一十三個。', en: 'Kai Rowen. Number forty thousand and thirteen on the list.' },
+    { who: 'varga', zh: '名單會把人變成數字。我看過。', en: 'Lists turn people into numbers. I have seen it done.' },
+    { who: 'echo', zh: '我的名單是反過來的，元帥。請讓我念給您聽 —— 打完之後。', en: 'Mine works the other way round, Marshal. Let me read it to you. Afterwards.' },
+  ],
+  m12_t3: [
+    { who: 'vey', zh: '投射器還在的時候別硬打「審判」，打不動。它的光束會掃一整排 —— 散開！', en: 'Do not pound on Tribunal while the projectors stand. You will get nowhere. Its beam rakes a whole line, so spread out!' },
+  ],
+  m12_outro: [
+    { who: 'sys', zh: '（「審判」單膝跪了下去。艙蓋打開，元帥自己走了出來。她沒有舉手，也沒有拔槍。）', en: '(Tribunal drops to one knee. The hatch opens and the Marshal climbs out by herself. She does not raise her hands, and she does not draw.)' },
+    { who: 'varga', zh: '念吧。', en: 'Read it, then.' },
+    { who: 'echo', zh: '伊莎・瓦爾加，六十三歲。母親：莉娜・瓦爾加，冬眠艙 C-7-0412，至今仍在沉睡，生命徵象穩定。', en: 'Ilsa Varga, sixty-three. Mother: Lina Varga, sleep pod C-7-0412. Still asleep. Vital signs stable.' },
+    { who: 'sys', zh: '（元帥很久沒有說話。）', en: '(For a long time the Marshal says nothing.)' },
+    { who: 'varga', zh: '……少校。我下令炸掉的，是哪一個艙？', en: '...Major. Which bay did I order destroyed?' },
+    { who: 'hale', zh: 'C-7，元帥。', en: 'C-7, Marshal.' },
+    { who: 'varga', zh: '……把我的名字也記上去。把我做過的事寫清楚。全軍，槍口朝下。', en: '...Put my name on it too. Write down what I did, and write it plainly. All units: weapons down.' },
+    { who: 'sparrow', zh: '所以……打完了？真的打完了？', en: "So... it's over? Actually over?" },
+    { who: 'bruno', zh: '打完了，小鬼。去睡覺。', en: "It's over, kid. Go to sleep." },
+    { who: 'kai', zh: '艾可。航行計畫上，目的地那一欄現在寫什麼？', en: 'Echo. On the flight plan, what does it say under destination now?' },
+    { who: 'echo', zh: '「新岸」。座標：此處。居民：十一萬零一人 —— 我把自己也算進去了，希望你們不介意。', en: '"Haven." Coordinates: here. Population: one hundred and ten thousand and one. I counted myself. I hope you do not mind.', music: 'ending' },
+    { who: 'sys', zh: '《星墜殘響》後日談　完。', en: 'Starfall Echo: Epilogue. The End.' },
   ],
 };

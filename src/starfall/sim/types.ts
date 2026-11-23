@@ -158,6 +158,8 @@ export type WinCondition =
   | { type: 'survive'; turns: number }
   | { type: 'reach'; zone: Pos[]; who?: string }
   | { type: 'kill'; tag: string }
+  /** 這些 tag 的單位全部摧毀（順序不拘） */
+  | { type: 'killAll'; tags: string[] }
   /** 指定的機體站在區域裡、連續撐過幾個敵方回合（離開就重算） */
   | { type: 'hold'; zone: Pos[]; who: string; turns: number };
 
@@ -192,7 +194,7 @@ export interface MissionDef {
   intro?: string;
   outro?: string;
   /** 背景色調 */
-  theme?: 'ice' | 'hull' | 'bay' | 'reactor';
+  theme?: 'ice' | 'hull' | 'bay' | 'reactor' | 'field';
   /** 場景擺設（只有外觀；要擋路的話地圖那格用 o） */
   props?: { sprite: string; x: number; y: number; scale?: number }[];
 }

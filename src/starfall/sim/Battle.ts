@@ -405,7 +405,8 @@ export class Battle {
     u.alive = false;
     u.hp = 0;
     u.overwatch = false;
-    if (u.side === 'player' && !u.def.structure) this.lost++;
+    // 「沒有機體被擊破」只算有駕駛員的機體：艾可借來的機群是消耗品，不算
+    if (u.side === 'player' && !u.def.structure && u.def.pilot) this.lost++;
     ev.push({ t: 'death', uid: u.uid });
   }
 
@@ -809,10 +810,19 @@ export class Battle {
     } else if (win.type === 'kill') {
       const t = this.byTag(win.tag);
       if (t && !t.alive) this.finish(ev, 'win', 'kill');
+    } else if (win.type === 'killAll') {
+      if (this.killed() >= win.tags.length) this.finish(ev, 'win', 'kill');
     } else if (win.type === 'reach') {
       const ok = this.alive('player').some((u) => !u.def.structure && (!win.who || u.def.id === win.who) && win.zone.some((p) => p.x === u.x && p.y === u.y));
       if (ok) this.finish(ev, 'win', 'reach');
     }
+  }
+
+  /** 「全部摧毀」的目標已經摧毀了幾個（介面顯示進度用；其他目標回傳 0） */
+  killed(): number {
+    const win = this.mission.win;
+    if (win.type !== 'killAll') return 0;
+    return win.tags.filter((tag) => this.byTag(tag) && !this.byTag(tag)!.alive).length;
   }
 
   /** 第三顆星的條件：一般關卡是在標準回合數內過關；防守關是保護目標剩一半以上耐久 */

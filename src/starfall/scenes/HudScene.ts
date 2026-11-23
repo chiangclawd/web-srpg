@@ -10,6 +10,7 @@ import { SPEAKERS } from '../data/story';
 import type { Speaker } from '../data/story';
 import type { Mod, Side } from '../sim/types';
 import { SHEETS, frameName } from '../view/sheets';
+import { TH, TW, isoX, isoY } from '../view/iso';
 import { Button, drawPanel } from '../view/ui';
 import type { BattleScene } from './BattleScene';
 
@@ -18,6 +19,10 @@ type Box = Phaser.GameObjects.Container;
 const BTN_W = 208;
 const BTN_H = 50;
 const GAP = 8;
+/** 小地圖（大地圖才有）：面板大小與內距 */
+const MINI_W = 176;
+const MINI_H = 92;
+const MINI_PAD = 8;
 
 export class HudScene extends Phaser.Scene {
   private battle!: BattleScene;
@@ -27,6 +32,12 @@ export class HudScene extends Phaser.Scene {
   private br!: Box;
   private tc!: Box;
   private tipBox!: Box;
+  /** 小地圖：左上任務面板下面。miniS 是世界座標 → 小地圖的縮放，miniO 是位移 */
+  private ml!: Box;
+  private miniDyn: Phaser.GameObjects.Graphics | null = null;
+  private miniBtn: Button | null = null;
+  private miniS = 0;
+  private miniO = new Phaser.Math.Vector2();
   private modal: Box | null = null;
   private w = 1280;
   private z = 1;
@@ -40,6 +51,8 @@ export class HudScene extends Phaser.Scene {
     this.battle = data.battle;
     this.modal = null;
     this.tipKey = null;
+    this.miniDyn = null;
+    this.miniBtn = null;
   }
 
   create(): void {
@@ -54,12 +67,14 @@ export class HudScene extends Phaser.Scene {
     this.br = this.add.container(this.w - 12, VIEW_H - 10).setScale(z);
     this.tc = this.add.container(this.w / 2, 10).setScale(Math.min(z, 1.25));
     this.tipBox = this.add.container(this.w / 2, VIEW_H - 14).setScale(z).setDepth(40);
+    this.ml = this.add.container(12, 10 + 118 * z).setScale(Math.min(z, 1.15));
+    if (this.battle.big) this.buildMini();
     this.tr.add(new Button(this, -28, 28, 56, 56, '', () => this.openMenu(), { icon: 'ic_menu' }));
     void this.battle.hudReady(this);
   }
 
   setVisible(v: boolean): void {
-    for (const c of [this.tl, this.tr, this.bl, this.br, this.tc, this.tipBox]) c.setVisible(v);
+    for (const c of [this.tl, this.tr, this.bl, this.br, this.tc, this.tipBox, this.ml]) c.setVisible(v);
   }
 
   // ───────── 每次狀態改變重畫 ─────────
@@ -70,6 +85,84 @@ export class HudScene extends Phaser.Scene {
     this.drawCard();
     this.drawActions();
     this.drawForecast();
+    this.drawMiniButton();
+  }
+
+  // ───────── 小地圖（大地圖才有）─────────
+
+  /** 底圖只畫一次：每格一個小菱形，高的格子比較亮，不能走的比較暗 */
+  private buildMini(): void {
+    const bs = this.battle;
+    const b = bs.battle;
+    const r = bs.mapBounds;
+    const s = Math.min((MINI_W - MINI_PAD * 2) / r.width, (MINI_H - MINI_PAD * 2) / r.height);
+    this.miniS = s;
+    this.miniO.set((MINI_W - r.width * s) / 2 - r.left * s, (MINI_H - r.height * s) / 2 - r.top * s);
+    const g = this.add.graphics();
+    drawPanel(g, 0, 0, MINI_W, MINI_H, { alpha: 0.82, cut: 8 });
+    const hw = (TW / 2) * s;
+    const hh = (TH / 2) * s;
+    for (let y = 0; y < b.h; y++) {
+      for (let x = 0; x < b.w; x++) {
+        const id = b.terrainAt(x, y);
+        if (id === 'chasm') continue;
+        const h = b.heightAt(x, y);
+        const cx = this.miniO.x + isoX(x, y) * s;
+        const cy = this.miniO.y + isoY(x, y, h) * s;
+        g.fillStyle(id === 'wall' || id === 'machine' ? 0x1a2634 : h >= 2 ? 0x7088a0 : h === 1 ? 0x586c82 : 0x425468, 1);
+        g.fillPoints([new Phaser.Math.Vector2(cx, cy - hh), new Phaser.Math.Vector2(cx + hw, cy), new Phaser.Math.Vector2(cx, cy + hh), new Phaser.Math.Vector2(cx - hw, cy)], true);
+      }
+    }
+    this.miniDyn = this.add.graphics();
+    // 點或拖小地圖：鏡頭移到那個位置
+    const zone = this.add.rectangle(0, 0, MINI_W, MINI_H, 0, 0).setOrigin(0).setInteractive({ useHandCursor: true });
+    const jump = (lx: number, ly: number): void => bs.lookAt((lx - this.miniO.x) / s, (ly - this.miniO.y) / s);
+    zone.on('pointerdown', (_p: Phaser.Input.Pointer, lx: number, ly: number) => jump(lx, ly));
+    zone.on('pointermove', (p: Phaser.Input.Pointer, lx: number, ly: number) => {
+      if (p.isDown) jump(lx, ly);
+    });
+    this.ml.add([g, this.miniDyn, zone]);
+  }
+
+  /** 小地圖上會動的東西每格重畫：單位的點、目前畫面的框 */
+  override update(): void {
+    const d = this.miniDyn;
+    if (!d || !this.ml.visible) return;
+    const bs = this.battle;
+    const b = bs.battle;
+    const s = this.miniS;
+    d.clear();
+    const win = b.mission.win;
+    const goals = win.type === 'killAll' ? win.tags : win.type === 'kill' ? [win.tag] : [];
+    for (const u of b.units) {
+      if (!u.alive) continue;
+      const cx = this.miniO.x + isoX(u.x, u.y) * s;
+      const cy = this.miniO.y + isoY(u.x, u.y, b.heightAt(u.x, u.y)) * s - 1;
+      const mine = u.side === 'player';
+      // 已經行動完的我方機體變淡，一眼看得出還有誰沒動
+      d.fillStyle(mine ? COL.player : COL.enemy, mine && !u.def.structure && b.phase === 'player' && !b.canAct(u) ? 0.4 : 1);
+      d.fillCircle(cx, cy, u.def.structure ? 2 : 2.7);
+      if (u.tag && goals.includes(u.tag)) d.lineStyle(1.2, 0xffd75a, 1).strokeCircle(cx, cy, 4.4);
+      if (bs.sel === u) d.lineStyle(1.2, 0xffffff, 1).strokeCircle(cx, cy, 4.4);
+    }
+    const v = bs.cameras.main.worldView;
+    const x0 = Phaser.Math.Clamp(this.miniO.x + v.x * s, 1, MINI_W - 1);
+    const y0 = Phaser.Math.Clamp(this.miniO.y + v.y * s, 1, MINI_H - 1);
+    const x1 = Phaser.Math.Clamp(this.miniO.x + v.right * s, 1, MINI_W - 1);
+    const y1 = Phaser.Math.Clamp(this.miniO.y + v.bottom * s, 1, MINI_H - 1);
+    d.lineStyle(1.2, 0xffffff, 0.85).strokeRect(x0, y0, x1 - x0, y1 - y0);
+  }
+
+  /** 小地圖下面的「下一台」：跳到還沒行動的我方機體 */
+  private drawMiniButton(): void {
+    if (!this.battle.big) return;
+    this.miniBtn?.destroy();
+    const bs = this.battle;
+    const b = bs.battle;
+    const n = bs.readyCount();
+    const off = n === 0 || bs.mode === 'busy' || bs.mode === 'target' || b.phase !== 'player' || !!b.result;
+    this.miniBtn = new Button(this, MINI_W / 2, MINI_H + 8 + 19, MINI_W, 38, T('nextUnit', n), () => bs.nextUnit(), { size: 16, disabled: off, color: 0x8fb0c8 });
+    this.ml.add(this.miniBtn);
   }
 
   private drawTop(): void {
@@ -78,7 +171,14 @@ export class HudScene extends Phaser.Scene {
     this.tl.removeAll(true);
     const g = this.add.graphics();
     const name = addText(this, 16, 10, L(m.name), { size: 20, raw: true, strokeW: 0 });
-    const turn = m.win.type === 'survive' ? T('turnOf', b.turn, m.win.turns) : m.win.type === 'hold' ? `${T('turn', b.turn)}　${T('holdProgress', b.held, m.win.turns)}` : T('turn', b.turn);
+    const turn =
+      m.win.type === 'survive'
+        ? T('turnOf', b.turn, m.win.turns)
+        : m.win.type === 'hold'
+          ? `${T('turn', b.turn)}　${T('holdProgress', b.held, m.win.turns)}`
+          : m.win.type === 'killAll'
+            ? `${T('turn', b.turn)}　${T('killProgress', b.killed(), m.win.tags.length)}`
+            : T('turn', b.turn);
     const obj = addText(this, 16, 38, `${T('objective')}：${L(m.objective)}`, { size: 15, raw: true, strokeW: 0, color: COL.cyan });
     // 失敗條件：隊長機、保護目標
     // 「毀掉幾個才失敗」的關卡，條件已經寫在目標那一行，這裡只提隊長機
