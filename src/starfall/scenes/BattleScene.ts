@@ -20,6 +20,7 @@ import { TILE_TEX_H, tileKey, tileVariant } from '../view/textures';
 import { SHEETS, SHEET_FOOT, frameName } from '../view/sheets';
 import { UnitView } from '../view/UnitView';
 import { BattleFx, FX_DEPTH } from '../view/fx';
+import { RECOIL, Shots } from '../view/shots';
 import type { HudScene } from './HudScene';
 
 type Mode = 'idle' | 'unit' | 'target' | 'busy';
@@ -71,6 +72,9 @@ export class BattleScene extends Phaser.Scene {
   /** 進行中的鏡頭移動結束時要呼叫的函式（見 stopFocus） */
   private focusDone: (() => void) | null = null;
   private fx!: BattleFx;
+  private shots!: Shots;
+  /** 技能特寫時鏡頭往前推了一點：這裡記著原本的倍率，這一串演出播完再退回去 */
+  private zoomBack: number | null = null;
 
   constructor() {
     super('SfBattle');
@@ -89,6 +93,7 @@ export class BattleScene extends Phaser.Scene {
     this.drag = null;
     this.endArmed = false;
     this.focusDone = null;
+    this.zoomBack = null;
   }
 
   // ───────── 建立 ─────────
@@ -127,6 +132,7 @@ export class BattleScene extends Phaser.Scene {
     this.bounds.setTo(minX, minY, maxX - minX, maxY - minY);
     // 氣氛：高低差的陰影、導管的光、底部的霧、環境粒子、四角壓暗
     this.fx = new BattleFx(this, (n) => this.ms(n));
+    this.shots = new Shots(this, this.fx, (n) => this.ms(n));
     this.fx.ground({
       w: b.w,
       h: b.h,
@@ -697,6 +703,11 @@ export class BattleScene extends Phaser.Scene {
     const prev = this.mode;
     this.mode = 'busy';
     for (const e of events) await this.playOne(e);
+    if (this.zoomBack !== null) {
+      const z = this.zoomBack;
+      this.zoomBack = null;
+      this.tweens.add({ targets: this, zoom: z, duration: this.ms(260), ease: 'Quad.easeInOut', onUpdate: () => this.applyCamera() });
+    }
     if (!this.battle.result) this.mode = prev;
     this.hud?.refresh();
   }
@@ -724,14 +735,18 @@ export class BattleScene extends Phaser.Scene {
         const def = v?.unit.def.skills.find((s) => s.id === e.skill);
         if (!v || !def) break;
         await this.focus(v.unit.x, v.unit.y);
+        // 技能特寫：我方每次都有；敵方只有首領有，免得敵方回合拖太久
+        if (v.unit.side === 'player' || v.unit.def.boss) {
+          this.punchIn();
+          await this.hud.cutIn(v.unit, L(def.name));
+        }
         this.callout(v, L(def.name), 0xffe45a);
         if (def.effect.type === 'line') {
           const tiles = b.lineTiles(v.unit, e.at, def);
           const last = tiles[tiles.length - 1] ?? e.at;
           v.play('attack');
           await this.wait(260);
-          sfx('rail');
-          await this.beam(v.muzzle(), new Phaser.Math.Vector2(isoX(last.x, last.y), isoY(last.x, last.y, b.heightAt(last.x, last.y)) - 36), 0xffa53a, 9);
+          await this.shots.fire('rail', v.muzzle(), new Phaser.Math.Vector2(isoX(last.x, last.y), isoY(last.x, last.y, b.heightAt(last.x, last.y)) - 36), { color: 0xffa53a, power: true });
           v.play('idle');
         } else if (def.effect.type !== 'leap') {
           await this.wait(240);
@@ -762,9 +777,9 @@ export class BattleScene extends Phaser.Scene {
       case 'stun': {
         const v = this.views.get(e.target);
         if (!v) break;
-        sfx('stun');
         const from = this.views.get(e.uid);
-        if (from) await this.beam(from.center(), v.center(), 0xffe45a, 3);
+        if (from) await this.shots.fire('arc', from.center(), v.center(), { color: 0xffe45a, power: true });
+        else sfx('stun');
         this.number(v, T('stunned'), '#ffe45a');
         v.flash();
         v.refresh(v.hp);
@@ -959,10 +974,19 @@ export class BattleScene extends Phaser.Scene {
           sfx('mortar');
           await this.lob(A.muzzle(), Tv.center());
           this.blast(Tv.root.x, Tv.root.y - 20, 0xffa53a, 1.1);
+          this.fx.fire(Tv.root.x, Tv.root.y - 14, 8);
+          this.fx.smoke(Tv.root.x, Tv.root.y - 14, 3);
+          this.fx.ring(Tv.root.x, Tv.root.y, 0xffc46a, 0.9);
+          this.cameras.main.shake(this.ms(120), 0.0026);
         } else {
           await this.wait(A.frames('attack') > 1 ? 230 : 90);
-          sfx(w.dmg >= 40 ? 'rail' : w.dmg >= 34 ? 'cannon' : 'laser');
-          await this.beam(A.muzzle(), Tv.center(), color, w.dmg >= 36 ? 7 : 4);
+          const kind = w.shot ?? 'pulse';
+          const m = A.muzzle();
+          const to = Tv.center();
+          // 後座力：機體往射擊的反方向頓一下
+          const back = RECOIL[kind] * (to.x >= m.x ? -1 : 1);
+          if (back) this.tweens.add({ targets: A.sprite, x: { from: back, to: 0 }, duration: this.ms(220), ease: 'Quad.easeOut' });
+          await this.shots.fire(kind, m, to, { color, power: e.kind === 'skill' });
         }
       }
     }
@@ -1013,33 +1037,18 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: t, y: t.y - 18, alpha: 0, duration: this.ms(900), delay: 380, onComplete: () => t.destroy() });
   }
 
-  private beam(a: Phaser.Math.Vector2, c: Phaser.Math.Vector2, color: number, width: number): Promise<void> {
-    const g = this.add.graphics().setDepth(FX_DEPTH);
-    g.lineStyle(width + 6, color, 0.25);
-    g.lineBetween(a.x, a.y, c.x, c.y);
-    g.lineStyle(width, color, 0.95);
-    g.lineBetween(a.x, a.y, c.x, c.y);
-    g.lineStyle(Math.max(1.5, width * 0.35), 0xffffff, 1);
-    g.lineBetween(a.x, a.y, c.x, c.y);
-    this.blast(a.x, a.y, color, 0.35);
-    return new Promise((ok) => {
-      this.tweens.add({
-        targets: g,
-        alpha: 0,
-        duration: this.ms(200),
-        delay: this.ms(70),
-        onComplete: () => {
-          g.destroy();
-          ok();
-        },
-      });
-    });
+  /** 技能特寫時鏡頭往前推一點；這一串演出播完再退回來（見 play） */
+  private punchIn(): void {
+    if (this.zoomBack !== null) return;
+    this.zoomBack = this.zoom;
+    this.tweens.add({ targets: this, zoom: Math.min(1.8, this.zoom * 1.14), duration: this.ms(200), ease: 'Quad.easeOut', onUpdate: () => this.applyCamera() });
   }
 
   /** 曲射：砲彈走拋物線 */
   private lob(a: Phaser.Math.Vector2, c: Phaser.Math.Vector2): Promise<void> {
     const s = this.add.image(a.x, a.y, 'glow').setTint(0xffa53a).setScale(0.3).setDepth(FX_DEPTH);
     const peak = Math.min(a.y, c.y) - 150;
+    let puff = 0;
     return new Promise((ok) => {
       this.tweens.addCounter({
         from: 0,
@@ -1049,6 +1058,7 @@ export class BattleScene extends Phaser.Scene {
           const k = tw.getValue() ?? 0;
           s.x = Phaser.Math.Linear(a.x, c.x, k);
           s.y = (1 - k) * (1 - k) * a.y + 2 * (1 - k) * k * peak + k * k * c.y;
+          if (++puff % 3 === 0) this.fx.trail(s.x, s.y);
         },
         onComplete: () => {
           s.destroy();
@@ -1058,14 +1068,21 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
+  /** 近戰：兩道弧形的爪痕 */
   private slash(v: UnitView): void {
     const c = v.center();
-    const g = this.add.graphics().setDepth(FX_DEPTH);
-    g.lineStyle(5, 0xffffff, 1);
-    g.lineBetween(c.x - 22, c.y - 20, c.x + 22, c.y + 20);
-    g.lineStyle(3, 0xff6a5a, 1);
-    g.lineBetween(c.x - 14, c.y - 26, c.x + 28, c.y + 12);
-    this.tweens.add({ targets: g, alpha: 0, duration: this.ms(240), onComplete: () => g.destroy() });
+    const g = this.add.graphics().setDepth(FX_DEPTH).setBlendMode(Phaser.BlendModes.ADD);
+    for (const [r, w, color, from] of [
+      [30, 6, 0xffffff, -2.5],
+      [21, 4, 0xff6a5a, -2.3],
+    ]) {
+      g.lineStyle(w, color, 1);
+      g.beginPath();
+      g.arc(c.x - 6, c.y + 8, r, from, from + 1.9);
+      g.strokePath();
+    }
+    this.fx.sparks(c.x, c.y, 45, 0xffd27a, 6, 60);
+    this.tweens.add({ targets: g, alpha: 0, duration: this.ms(260), onComplete: () => g.destroy() });
   }
 
   private blast(x: number, y: number, tint: number, size: number): void {

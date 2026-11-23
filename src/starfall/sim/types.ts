@@ -35,6 +35,8 @@ export interface TerrainDef {
 }
 
 export type WeaponKind = 'melee' | 'direct' | 'indirect';
+/** 直射武器的彈道演出（只影響畫面，見 view/shots.ts） */
+export type ShotKind = 'pulse' | 'smg' | 'scatter' | 'cannon' | 'rail' | 'beam' | 'arc' | 'wave';
 
 export interface WeaponDef {
   name: L10n;
@@ -44,6 +46,8 @@ export interface WeaponDef {
   kind: WeaponKind;
   /** 濺射：目標四周相鄰格也受到這個比例的傷害（曲射砲） */
   splash?: number;
+  /** 直射武器開火時的樣子（沒寫就是點放）。不影響傷害 */
+  shot?: ShotKind;
 }
 
 export type SkillEffect =

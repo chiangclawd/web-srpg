@@ -9,7 +9,7 @@ import { persist, save } from '../save';
 import { missionById } from '../data/missions';
 import { SPEAKERS } from '../data/story';
 import type { Speaker } from '../data/story';
-import type { Mod, Side } from '../sim/types';
+import type { Mod, Side, Unit } from '../sim/types';
 import { SHEETS, frameName } from '../view/sheets';
 import { TH, TW, isoX, isoY } from '../view/iso';
 import { Button, drawPanel } from '../view/ui';
@@ -364,6 +364,70 @@ export class HudScene extends Phaser.Scene {
   }
 
   /** 畫面上方短暫出現的訊息 */
+  /**
+   * 技能特寫：一條略斜的橫帶劃過畫面，駕駛員的頭像從一邊滑進來，另一邊是技能名稱。
+   * 沒有頭像的機體（無人機）只有名稱。演完自己收掉。
+   */
+  cutIn(u: Unit, name: string): Promise<void> {
+    const mine = u.side === 'player';
+    const color = mine ? COL.player : COL.enemy;
+    const fast = save().fast ? 0.5 : 1;
+    const w = this.w;
+    const cy = VIEW_H * 0.37;
+    const bh = 150;
+    const tilt = -0.045;
+    const side = mine ? -1 : 1;
+    const box = this.add.container(w / 2, cy).setDepth(32).setRotation(tilt);
+    box.add(this.add.rectangle(0, 0, w + 260, bh, 0x040a14, 0.88));
+    box.add(this.add.rectangle(0, -bh / 2, w + 260, 3, color));
+    box.add(this.add.rectangle(0, bh / 2, w + 260, 3, color));
+    // 速度線：往頭像的反方向掃過去
+    for (let i = 0; i < 9; i++) {
+      const line = this.add.rectangle(Phaser.Math.Between(-w / 2, w / 2), Phaser.Math.Between(-bh / 2 + 10, bh / 2 - 10), Phaser.Math.Between(120, 380), 2, 0xffffff, Phaser.Math.FloatBetween(0.06, 0.2));
+      box.add(line);
+      this.tweens.add({ targets: line, x: line.x - side * Phaser.Math.Between(260, 520), duration: 900 * fast });
+    }
+    const pilot = u.def.pilot ? SPEAKERS[u.def.pilot as Speaker] : undefined;
+    const slide: { o: Phaser.GameObjects.Image | Phaser.GameObjects.Text; x: number; from: number }[] = [];
+    let mask: Phaser.GameObjects.Graphics | null = null;
+    if (pilot?.portrait) {
+      // 頭像比橫帶高：用跟橫帶一樣的範圍當遮罩，只露出臉那一段
+      const im = this.add.image(side * w * 0.29, 0, pilot.portrait).setOrigin(0.5, 0.25).setFlipX(!mine);
+      im.setScale(360 / im.height);
+      mask = this.make.graphics({}, false);
+      mask.setPosition(w / 2, cy).setRotation(tilt);
+      mask.fillStyle(0xffffff).fillRect(-w / 2 - 130, -bh / 2 + 3, w + 260, bh - 6);
+      im.setMask(mask.createGeometryMask());
+      box.add(im);
+      slide.push({ o: im, x: im.x, from: im.x + side * 180 });
+    }
+    const tx = pilot?.portrait ? -side * w * 0.08 : 0;
+    const who = addText(this, tx, -40, pilot?.portrait ? `${L(pilot.name)}　${L(u.def.name)}` : L(u.def.name), { size: 22, raw: true, color: COL.dim, strokeW: 4 }).setOrigin(0.5);
+    const title = fitText(addText(this, tx, 12, name, { size: 54, raw: true, color: mine ? COL.cyan : COL.red, strokeW: 7 }).setOrigin(0.5), w * 0.5);
+    box.add([who, title]);
+    slide.push({ o: who, x: tx, from: tx - side * 140 }, { o: title, x: tx, from: tx - side * 140 });
+    sfx('select');
+    box.setAlpha(0).setScale(1, 0.1);
+    for (const p of slide) p.o.x = p.from;
+    return new Promise((ok) => {
+      this.tweens.add({ targets: box, alpha: 1, scaleY: 1, duration: 120 * fast, ease: 'Quad.easeOut' });
+      for (const p of slide) this.tweens.add({ targets: p.o, x: p.x, duration: 240 * fast, ease: 'Cubic.easeOut' });
+      this.tweens.add({
+        targets: box,
+        alpha: 0,
+        scaleY: 0.3,
+        duration: 150 * fast,
+        delay: 700 * fast,
+        ease: 'Quad.easeIn',
+        onComplete: () => {
+          box.destroy(true);
+          mask?.destroy();
+          ok();
+        },
+      });
+    });
+  }
+
   toast(text: string): void {
     const t = addText(this, this.w / 2, 150, text, { size: 22, color: COL.yellow, strokeW: 5, align: 'center' })
       .setOrigin(0.5)

@@ -358,6 +358,11 @@ export class BattleFx {
     this.smokeE.explode(n, x, y);
   }
 
+  /** 砲彈拖的一縷煙 */
+  trail(x: number, y: number): void {
+    this.wispE.explode(1, x, y);
+  }
+
   /** 一閃：加亮的光球，放大同時淡出 */
   flash(x: number, y: number, tint: number, size: number): void {
     const im = this.scene.add

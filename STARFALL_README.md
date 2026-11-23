@@ -68,7 +68,7 @@ src/starfall/
 │   ├── terrain.ts  地形
 │   └── types.ts
 ├── data/           units.ts（機體）、missions.ts（關卡，ASCII 地圖）、story.ts（對話）、upgrades.ts（零件與改造）
-├── view/           iso.ts（等角投影）、textures.ts（程序繪圖的地塊與圖示）、sheets.ts（3D 圖表）、UnitView.ts、ui.ts、fx.ts（陰影、霧、粒子、擊破演出）
+├── view/           iso.ts（等角投影）、textures.ts（程序繪圖的地塊與圖示）、sheets.ts（3D 圖表）、UnitView.ts、ui.ts、fx.ts（陰影、霧、粒子、擊破演出）、shots.ts（各種武器的彈道）
 └── scenes/         Boot / Title / Mission / Hangar（機庫）/ Battle（戰場）/ Hud（介面）/ Dialogue
 ```
 
