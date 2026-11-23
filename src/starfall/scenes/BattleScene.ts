@@ -15,6 +15,8 @@ import { MISSIONS, missionById } from '../data/missions';
 import { STORY } from '../data/story';
 import { UNITS } from '../data/units';
 import { loadoutDefs, missionParts } from '../data/upgrades';
+import type { Loadout } from '../data/upgrades';
+import { clearSuspend, loadSuspend, saveSuspend } from '../suspend';
 import { EH, TH, TOP_PAD, TW, isoX, isoY, tileDepth } from '../view/iso';
 import { TILE_TEX_H, tileKey, tileVariant } from '../view/textures';
 import { SHEETS, SHEET_FOOT, frameName } from '../view/sheets';
@@ -73,6 +75,10 @@ export class BattleScene extends Phaser.Scene {
   /** 進行中的鏡頭移動結束時要呼叫的函式（見 stopFocus） */
   private focusDone: (() => void) | null = null;
   private fx!: BattleFx;
+  /** 這場是接著上次沒打完的打（不重播開場對話、不重新開始第一回合） */
+  private resumed = false;
+  /** 開戰時的改造：存檔要連這個一起存，接著打才會用同一套數值 */
+  private upgrades: Loadout = {};
   private shots!: Shots;
   /** 技能特寫時鏡頭往前推了一點：這裡記著原本的倍率，這一串演出播完再退回去 */
   private zoomBack: number | null = null;
@@ -84,9 +90,19 @@ export class BattleScene extends Phaser.Scene {
     super('SfBattle');
   }
 
-  init(data: { missionId: string }): void {
+  init(data: { missionId: string; resume?: boolean }): void {
     this.mission = missionById(data.missionId);
-    this.battle = new Battle(this.mission, loadoutDefs(UNITS, save().upgrades), save().easy);
+    // 接著打：存檔要對得上這一關才用；對不上、或是重新出擊，就把舊的存檔清掉、從頭開始
+    const sus = data.resume ? loadSuspend() : null;
+    this.resumed = !!sus && sus.battle.mission.id === this.mission.id;
+    if (sus && this.resumed) {
+      this.battle = sus.battle;
+      this.upgrades = sus.upgrades;
+    } else {
+      clearSuspend();
+      this.upgrades = JSON.parse(JSON.stringify(save().upgrades)) as Loadout;
+      this.battle = new Battle(this.mission, loadoutDefs(UNITS, this.upgrades), save().easy);
+    }
     this.views = new Map();
     this.marks = { move: [], target: [], aim: [], select: [], threat: [], zone: [], line: [] };
     this.mode = 'busy';
@@ -159,7 +175,8 @@ export class BattleScene extends Phaser.Scene {
         .setScale((sheet.h * (p.scale ?? 1)) / sheet.unitPx)
         .setDepth(tileDepth(p.x, p.y) + 4);
     }
-    for (const u of b.units) this.addView(u);
+    // 接著打的時候，已經被擊破的單位不用再擺出來
+    for (const u of b.units) if (u.alive) this.addView(u);
 
     // 鏡頭：整張地圖放得進畫面（留位置給上下的介面），最多放大到 1.5 倍
     // 右邊一整排是行動按鈕：地圖放在它左邊的空間裡
@@ -196,6 +213,12 @@ export class BattleScene extends Phaser.Scene {
   /** HudScene 建好之後呼叫：開場對話 → 第一回合 */
   async hudReady(hud: HudScene): Promise<void> {
     this.hud = hud;
+    if (this.resumed) {
+      this.refreshViews();
+      this.toIdle();
+      this.hud.toast(T('resumed', this.battle.turn));
+      return;
+    }
     if (this.mission.intro) await this.say(this.mission.intro);
     await this.play(this.battle.start());
     this.toIdle();
@@ -622,6 +645,7 @@ export class BattleScene extends Phaser.Scene {
     v?.place(u.x, u.y);
     v?.setDir(u.dir);
     this.select(u);
+    this.autosave();
   }
 
   /** 按了「攻擊」或某個技能：進入選目標 */
@@ -791,6 +815,14 @@ export class BattleScene extends Phaser.Scene {
     if (tip) this.hud.showTip(tip);
   }
 
+  /**
+   * 把這場戰鬥存下來，關掉分頁或離開任務之後可以接著打。我方回合每做完一個動作、每次退回移動都存一次；
+   * 敵方回合和已經結束的戰鬥不存（Battle.snapshot 會回傳 null）。
+   */
+  private autosave(): void {
+    saveSuspend(this.battle, this.upgrades);
+  }
+
   private refreshViews(): void {
     for (const v of this.views.values()) if (v.unit.alive) v.refresh();
   }
@@ -836,6 +868,7 @@ export class BattleScene extends Phaser.Scene {
     }
     if (!this.battle.result) this.mode = prev;
     this.hud?.refresh();
+    this.autosave();
   }
 
   private async playOne(e: BattleEvent): Promise<void> {
@@ -1230,6 +1263,8 @@ export class BattleScene extends Phaser.Scene {
 
   private async finish(result: 'win' | 'lose', reason: string): Promise<void> {
     this.mode = 'busy';
+    // 打完了：沒有可以接著打的東西
+    clearSuspend();
     this.clearMarks();
     this.hud.refresh();
     await this.wait(500);

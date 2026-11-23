@@ -614,7 +614,7 @@ export class HudScene extends Phaser.Scene {
     if (this.modal) return;
     const bs = this.battle;
     const W = 380;
-    const H = 380;
+    const H = 436;
     const box = this.openModal(W, H, COL.line);
     this.menuOpen = true;
     box.add(addText(this, 0, -H / 2 + 36, T('menu'), { size: 26, raw: true, strokeW: 0 }).setOrigin(0.5));
@@ -636,5 +636,6 @@ export class HudScene extends Phaser.Scene {
       if (n === 0) this.modalFirst = btn;
       box.add(btn);
     });
+    box.add(addText(this, 0, H / 2 - 22, T('menuSaveNote'), { size: 13, raw: true, strokeW: 0, color: COL.dim, bold: false, wrap: W - 50, align: 'center' }).setOrigin(0.5, 1));
   }
 }

@@ -3,7 +3,7 @@
 // 不依賴 Phaser；畫面層呼叫這裡的動作函式，再照回傳的事件依序演出。
 import { COVER_REDUCTION, TERRAIN, TERRAIN_CHARS } from './terrain';
 import { DIR_VEC } from './types';
-import type { AttackKind, BattleEvent, Dir, Forecast, MissionDef, Mod, Pos, Side, SkillDef, SpawnDef, TerrainId, Unit, UnitDef, WeaponDef } from './types';
+import type { AttackKind, BattleEvent, BattleSnap, Dir, Forecast, MissionDef, Mod, Pos, Side, SkillDef, SpawnDef, TerrainId, Unit, UnitDef, UnitSnap, WeaponDef } from './types';
 
 /** 一步的爬升 / 下降多 1 層就多 1 點移動力 */
 const CLIMB_COST = 1;
@@ -841,5 +841,105 @@ export class Battle {
     if (!u.alive || u.def.structure) return out;
     for (const p of this.reachable(u)) for (const t of this.weaponTiles(u, p)) out.add(this.key(t.x, t.y));
     return out;
+  }
+
+  // ───────── 戰鬥中存檔 ─────────
+
+  /** 任務內容的指紋（地圖、開場單位、事件、勝利條件）：這些改過的話，舊的存檔接下去會對不上 */
+  static signature(m: MissionDef): string {
+    const s = JSON.stringify([m.tiles, m.heights, m.units, m.events ?? [], m.win, m.protect ?? []]);
+    let h = 5381;
+    for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+    return (h >>> 0).toString(36);
+  }
+
+  /**
+   * 把現在的狀態存下來。只在我方回合、戰鬥還沒結束時有東西可存（敵方行動到一半不存：
+   * 規則沒有亂數，從我方回合開頭接下去，結果跟沒中斷過一樣）。
+   */
+  snapshot(): BattleSnap | null {
+    if (this.result || this.phase !== 'player') return null;
+    return {
+      v: 1,
+      mission: this.mission.id,
+      sig: Battle.signature(this.mission),
+      easy: this.easy,
+      turn: this.turn,
+      lost: this.lost,
+      held: this.held,
+      nextUid: this.nextUid,
+      fired: [...this.fired],
+      units: this.units.map((u) => ({ ...u, def: u.def.id, cds: { ...u.cds }, undo: u.undo ? { ...u.undo } : undefined })),
+    };
+  }
+
+  /**
+   * 從存檔還原一場戰鬥。資料對不上就回傳 null（任務改過、機型不存在、內容壞掉或被亂改），
+   * 呼叫的人應該把那份存檔丟掉、從頭開始這一關。
+   */
+  static restore(mission: MissionDef, defs: Record<string, UnitDef>, raw: unknown): Battle | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const s = raw as Partial<BattleSnap>;
+    if (s.v !== 1 || s.mission !== mission.id || s.sig !== Battle.signature(mission)) return null;
+    const int = (v: unknown, lo: number, hi: number): v is number => Number.isInteger(v) && (v as number) >= lo && (v as number) <= hi;
+    if (!int(s.turn, 1, 9999) || !int(s.lost, 0, 999) || !int(s.held, 0, 999) || !int(s.nextUid, 1, 99999)) return null;
+    if (!Array.isArray(s.fired) || !Array.isArray(s.units) || !s.units.length) return null;
+    const b = new Battle(mission, defs, !!s.easy);
+    const units: Unit[] = [];
+    const seen = new Set<number>();
+    for (const r of s.units as Partial<UnitSnap>[]) {
+      if (!r || typeof r !== 'object') return null;
+      const def = typeof r.def === 'string' ? defs[r.def] : undefined;
+      if (!def) return null;
+      if (!int(r.uid, 1, s.nextUid - 1) || seen.has(r.uid)) return null;
+      seen.add(r.uid);
+      if (!int(r.x, 0, b.w - 1) || !int(r.y, 0, b.h - 1) || !int(r.dir, 0, 3)) return null;
+      if (r.side !== 'player' && r.side !== 'enemy') return null;
+      if (typeof r.hp !== 'number' || typeof r.maxHp !== 'number' || !(r.maxHp > 0) || !(r.hp <= r.maxHp)) return null;
+      if (typeof r.power !== 'number' || !(r.power > 0) || !int(r.stun, 0, 99)) return null;
+      const cds: Record<string, number> = {};
+      for (const [k, v] of Object.entries(r.cds ?? {})) if (def.skills.some((sk) => sk.id === k) && int(v, 0, 99)) cds[k] = v;
+      const un = r.undo;
+      units.push({
+        uid: r.uid,
+        def,
+        side: r.side,
+        x: r.x,
+        y: r.y,
+        dir: r.dir as Dir,
+        hp: r.hp,
+        maxHp: r.maxHp,
+        power: r.power,
+        moved: !!r.moved,
+        acted: !!r.acted,
+        cds,
+        stun: r.stun,
+        overwatch: !!r.overwatch,
+        alive: !!r.alive && r.hp > 0,
+        ai: r.ai === 'guard' || r.ai === 'hold' ? r.ai : 'aggressive',
+        tag: typeof r.tag === 'string' ? r.tag : undefined,
+        prey: typeof r.prey === 'string' ? r.prey : undefined,
+        undo: un && int(un.x, 0, b.w - 1) && int(un.y, 0, b.h - 1) && int(un.dir, 0, 3) ? { x: un.x, y: un.y, dir: un.dir as Dir } : undefined,
+      });
+    }
+    // 活著的單位不能疊在同一格、也不能站在裂谷或艙壁裡
+    const taken = new Set<number>();
+    for (const u of units) {
+      if (!u.alive) continue;
+      const k = b.key(u.x, u.y);
+      const t = b.terrainAt(u.x, u.y);
+      if (taken.has(k) || t === 'chasm' || t === 'wall') return null;
+      taken.add(k);
+    }
+    b.units = units;
+    b.turn = s.turn;
+    b.lost = s.lost;
+    b.held = s.held;
+    b.nextUid = s.nextUid;
+    b.fired = new Set(s.fired.filter((i) => int(i, 0, (mission.events ?? []).length - 1)));
+    b.phase = 'player';
+    b.queue = [];
+    b.result = null;
+    return b;
   }
 }

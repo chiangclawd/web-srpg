@@ -170,6 +170,11 @@ const STR = {
     zh: '方向鍵：移動游標、切換目標　　Enter / 空白鍵：選取、確定　　Esc：取消、選單\nTab：下一台　A：攻擊　1 2：技能　O：警戒　W：待機　Z：退回　E：結束回合　＋ －：縮放',
     en: 'Arrows: move the cursor, switch target   Enter / Space: select, confirm   Esc: cancel, menu\nTab: next unit   A: attack   1 2: skills   O: overwatch   W: wait   Z: undo   E: end turn   + -: zoom',
   },
+  continueBattle: { zh: '接續戰鬥', en: 'Continue battle' },
+  resumeTurn: { zh: '接著打（第 {0} 回合）', en: 'Resume (turn {0})' },
+  sortieNew: { zh: '重新出擊', en: 'Start over' },
+  resumed: { zh: '接續第 {0} 回合', en: 'Resumed at turn {0}' },
+  menuSaveNote: { zh: '戰鬥會自動保存。離開之後可以從標題畫面或任務列表接著打', en: 'The battle is saved automatically. You can resume it from the title screen or the mission list' },
 } satisfies Record<string, L10n>;
 
 export type StrKey = keyof typeof STR;

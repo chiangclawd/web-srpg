@@ -241,3 +241,22 @@ export type BattleEvent =
   | { t: 'phase'; side: Side; turn: number }
   | { t: 'say'; id: string }
   | { t: 'end'; result: 'win' | 'lose'; reason: string };
+
+/** 戰鬥中存檔裡的一個單位：Unit 去掉機型定義，只存機型編號（讀檔時再接回來） */
+export type UnitSnap = Omit<Unit, 'def'> & { def: string };
+
+/** 戰鬥中存檔：模擬裡會變的狀態。地圖和機型不存，從任務和機型資料重建 */
+export interface BattleSnap {
+  v: 1;
+  mission: string;
+  /** 任務內容的指紋：任務資料改過，舊存檔就不能接著打 */
+  sig: string;
+  easy: boolean;
+  turn: number;
+  lost: number;
+  held: number;
+  nextUid: number;
+  /** 已經觸發過的劇本事件（mission.events 的索引） */
+  fired: number[];
+  units: UnitSnap[];
+}
