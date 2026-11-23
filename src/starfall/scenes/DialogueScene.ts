@@ -1,0 +1,119 @@
+// 對話演出：立繪 + 對話框，逐字顯示；點一下顯示整句 / 下一句，右上角可以跳過
+import Phaser from 'phaser';
+import { COL, VIEW_H, addText, setupCamera, uiZoom, viewW } from '../config';
+import { sfx } from '../audio';
+import { L, T } from '../i18n';
+import { SPEAKERS } from '../data/story';
+import type { Line } from '../data/story';
+import { Button, drawPanel } from '../view/ui';
+
+export class DialogueScene extends Phaser.Scene {
+  private lines: Line[] = [];
+  private onDone: () => void = () => undefined;
+  private i = 0;
+  private text!: Phaser.GameObjects.Text;
+  private nameText!: Phaser.GameObjects.Text;
+  private namePlate!: Phaser.GameObjects.Graphics;
+  private portrait: Phaser.GameObjects.Image | null = null;
+  private full = '';
+  private shown = 0;
+  private timer: Phaser.Time.TimerEvent | null = null;
+  private w = 1280;
+  private boxH = 170;
+  private boxW = 900;
+
+  constructor() {
+    super('SfDialogue');
+  }
+
+  init(data: { lines: Line[]; onDone: () => void }): void {
+    this.lines = data.lines;
+    this.onDone = data.onDone;
+    this.i = 0;
+    this.portrait = null;
+    this.timer = null;
+  }
+
+  create(): void {
+    setupCamera(this);
+    this.scene.bringToTop();
+    this.w = viewW(this);
+    const z = uiZoom();
+    this.boxH = 150 * Math.min(z, 1.25) + 20;
+    this.boxW = Math.min(this.w - 60, 1040);
+    const dim = this.add.rectangle(this.w / 2, VIEW_H / 2, this.w, VIEW_H, 0x02060c, 0.55).setInteractive();
+    dim.on('pointerup', () => this.advance());
+    const g = this.add.graphics().setDepth(2);
+    const x0 = (this.w - this.boxW) / 2;
+    const y0 = VIEW_H - this.boxH - 14;
+    drawPanel(g, x0, y0, this.boxW, this.boxH, { alpha: 0.95, cut: 16 });
+    this.namePlate = this.add.graphics().setDepth(3);
+    this.nameText = addText(this, x0 + 34, y0 - 4, '', { size: 20, strokeW: 0 }).setOrigin(0, 0.5).setDepth(4);
+    this.text = addText(this, x0 + 30, y0 + 30, '', { size: 21, strokeW: 0, bold: false, wrap: this.boxW - 60, lineSpacing: 8 }).setDepth(4);
+    addText(this, x0 + this.boxW - 20, y0 + this.boxH - 12, `▼ ${T('tapNext')}`, { size: 13, strokeW: 0, color: COL.dim }).setOrigin(1, 1).setDepth(4);
+    const skip = new Button(this, this.w - 16 - 55 * z, 14 + 24 * z, 110, 46, T('skip'), () => this.finish(), { color: 0x8fb0c8 });
+    skip.setScale(z).setDepth(5);
+    this.input.keyboard?.on('keydown-SPACE', () => this.advance());
+    this.show();
+  }
+
+  private show(): void {
+    const line = this.lines[this.i];
+    const sp = SPEAKERS[line.who];
+    const x0 = (this.w - this.boxW) / 2;
+    const y0 = VIEW_H - this.boxH - 14;
+    // 立繪：從對話框上緣往上長，換人說話時淡入
+    this.portrait?.destroy();
+    this.portrait = null;
+    if (sp.portrait) {
+      const im = this.add.image(x0 + 150, y0 + 6, sp.portrait).setOrigin(0.5, 1).setDepth(1);
+      im.setScale(Math.min(430, y0 - 20) / im.height);
+      im.setAlpha(0);
+      this.tweens.add({ targets: im, alpha: 1, x: { from: x0 + 130, to: x0 + 150 }, duration: 180 });
+      this.portrait = im;
+    }
+    const name = L(sp.name);
+    this.nameText.setText(name).setColor(`#${sp.color.toString(16).padStart(6, '0')}`);
+    this.namePlate.clear();
+    if (name) drawPanel(this.namePlate, x0 + 18, y0 - 22, this.nameText.width + 34, 36, { fill: 0x0a1626, alpha: 1, line: sp.color, cut: 8 });
+    // 旁白用淡色斜體，跟角色說的話區分
+    const narr = line.who === 'sys';
+    this.text.setColor(narr ? COL.dim : COL.text).setFontStyle(narr ? 'italic' : 'normal');
+    this.full = L(line);
+    // 先排好整句的換行，再逐字顯示，字才不會打到一半跳行
+    this.text.setText(this.full);
+    this.full = this.text.getWrappedText(this.full).join('\n');
+    this.shown = 0;
+    this.text.setText('');
+    this.timer?.remove();
+    this.timer = this.time.addEvent({
+      delay: 22,
+      loop: true,
+      callback: () => {
+        this.shown = Math.min(this.full.length, this.shown + 1);
+        this.text.setText(this.full.slice(0, this.shown));
+        if (this.shown % 3 === 0 && !narr) sfx('talk');
+        if (this.shown >= this.full.length) this.timer?.remove();
+      },
+    });
+  }
+
+  private advance(): void {
+    if (this.shown < this.full.length) {
+      this.shown = this.full.length;
+      this.text.setText(this.full);
+      this.timer?.remove();
+      return;
+    }
+    this.i++;
+    if (this.i >= this.lines.length) this.finish();
+    else this.show();
+  }
+
+  private finish(): void {
+    this.timer?.remove();
+    const done = this.onDone;
+    this.scene.stop();
+    done();
+  }
+}

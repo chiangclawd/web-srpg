@@ -1,0 +1,34 @@
+{
+  "anims": [
+    {
+      "url": "/models/image_model_urls_glb.glb",
+      "name": "idle",
+      "frames": 1,
+      "loop": true
+    }
+  ],
+  "yaws": [
+    45,
+    135
+  ],
+  "dirs": {
+    "front": 45,
+    "back": 135
+  },
+  "elev": 30,
+  "size": 256,
+  "ss": 3,
+  "rim": 1.6,
+  "rimColor": "#0b1220",
+  "outlineColor": [
+    0.04,
+    0.07,
+    0.12
+  ],
+  "ramp": [
+    150,
+    212,
+    250
+  ],
+  "span": 2.8
+}

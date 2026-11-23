@@ -32,5 +32,8 @@ jobs:
       - name: Level geometry check
         run: npm run td:levels
 
+      - name: Starfall rules tests
+        run: npm run test:starfall
+
       - name: Build
         run: npx vite build

@@ -34,13 +34,14 @@ export default defineConfig(({ mode }) => ({
     outDir: mode === 'app' ? 'dist-app' : 'dist',
     sourcemap: mode !== 'app',
     rollupOptions: {
-      // 多頁面：index.html = 戰術 SRPG、td.html = 塔防《王國防線》
+      // 多頁面：index.html = 戰術 SRPG、td.html = 塔防《王國防線》、starfall.html = 科幻戰棋《星墜殘響》
       input:
         mode === 'app'
           ? { td: fileURLToPath(new URL('./td.html', import.meta.url)) }
           : {
               main: fileURLToPath(new URL('./index.html', import.meta.url)),
               td: fileURLToPath(new URL('./td.html', import.meta.url)),
+              starfall: fileURLToPath(new URL('./starfall.html', import.meta.url)),
             },
     },
   },
