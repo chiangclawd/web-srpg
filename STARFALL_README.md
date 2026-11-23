@@ -71,12 +71,14 @@ src/starfall/
 npm run test:starfall                 # 規則測試（49 項）
 npx tsx scripts/starfall-sim.ts       # 自動對戰：每關打不打得過、幾回合
 npx tsx scripts/starfall-sim.ts m3 -v # 逐步列出某一關的過程（加 --easy 用輕鬆難度）
-npx tsx scripts/starfall-sim.ts --lv=2 --cautious  # 強化線都升到 2 級、用謹慎打法；--max 是全部改滿
+npx tsx scripts/starfall-sim.ts --lv=2 --cautious --care=2  # 強化線都升到 2 級、謹慎打法、隊長保守；--max 是全部改滿
 node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍第一關和機庫 + 九關自動對戰（要先 build 並開 preview）
 ```
 
-自動對戰的機器人不是最佳解，只是一套固定的判斷，數值稍微一動走法就可能整個不同。
-所以「改造後每一關仍然打得過」是用兩種打法（預設、謹慎）各打一次來驗證，有一種贏就算（`tests/starfall/upgrades.test.ts`）。
+自動對戰的機器人不是最佳解，只是一套固定的判斷，數值稍微一動走法就可能整個不同
+（例如強化線都升到 2 級時，預設打法反而在第八關輸掉；輸的局幾乎都是隊長被首領打掉）。
+所以「改造沒有把關卡弄壞」只是煙霧測試：挑九種有代表性的配置，每一關用四種打法
+（預設、謹慎、隊長保守、兩者都開）依序試，有一種贏就算（`tests/starfall/upgrades.test.ts`）。它不保證所有配置。
 
 ## 美術流程
 

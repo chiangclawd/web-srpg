@@ -27,11 +27,13 @@ function foes(b: Battle, u: Unit): Unit[] {
  * 所以驗證「這一關打得過」時會拿幾種打法各打一次，有一種贏就算。
  * - 預設：估危險範圍時把場上的單位當成擋住敵人去路的牆（照現在的站位算）
  * - cautious：當作路上沒有人（隊友等一下會走開），比較保守
+ * - leaderCare：隊長和任務要保護的機體對危險的顧慮放大幾倍（預設 1）。機器人輸掉的局幾乎都是隊長被首領打掉
  */
 export interface BotStyle {
   cautious?: boolean;
+  leaderCare?: number;
 }
-export const BOT_STYLES: readonly BotStyle[] = [{}, { cautious: true }];
+export const BOT_STYLES: readonly BotStyle[] = [{}, { cautious: true }, { leaderCare: 2 }, { cautious: true, leaderCare: 2 }];
 
 /** 這個敵人下回合打得到的格子，路上的單位一律當作不存在（謹慎打法用） */
 function looseThreat(b: Battle, e: Unit): Set<number> {
@@ -66,14 +68,15 @@ function watchDmg(b: Battle, u: Unit, p: Pos, enemies: Unit[]): number {
 }
 
 /** 站在這格的好處：掩體、高度；曲射單位不想被貼身 */
-function tileScore(b: Battle, u: Unit, p: Pos, enemies: Unit[], danger: Map<number, number>): number {
+function tileScore(b: Battle, u: Unit, p: Pos, enemies: Unit[], danger: Map<number, number>, style: BotStyle): number {
   let s = TERRAIN[b.terrainAt(p.x, p.y)].cover * 4;
   const d = danger.get(b.key(p.x, p.y)) ?? 0;
   // 越脆的機體越怕被圍；估計值沒算側擊、獵殺等加成，所以抓 1.25 倍當作「可能被打掉」
   // 隊長和任務要保護的機體被打掉就輸了，更小心
   if (d) {
     const vital = u.def.id === 'kai' || (!!u.tag && (b.mission.protect ?? []).includes(u.tag));
-    s -= ((d * 40) / u.maxHp + (d * 1.25 >= u.hp ? 80 : 0)) * (vital ? 1.5 : 1);
+    const care = vital ? (style.leaderCare ?? 1) : 1;
+    s -= ((d * 40) / u.maxHp + (d * 1.25 * care >= u.hp ? 80 : 0)) * (vital ? 1.5 * care : 1);
   }
   if (u.def.weapon.kind !== 'melee') s += b.heightAt(p.x, p.y) * 2;
   if (u.def.weapon.min >= 2) for (const e of enemies) if (!e.def.structure && dist(e, p) < u.def.weapon.min) s -= 12;
@@ -93,10 +96,10 @@ function targetBonus(b: Battle, u: Unit, t: Unit): number {
   return s;
 }
 
-function options(b: Battle, u: Unit, reach: Pos[], enemies: Unit[], danger: Map<number, number>): Option[] {
+function options(b: Battle, u: Unit, reach: Pos[], enemies: Unit[], danger: Map<number, number>, style: BotStyle): Option[] {
   const out: Option[] = [];
   for (const p of reach) {
-    const base = tileScore(b, u, p, enemies, danger);
+    const base = tileScore(b, u, p, enemies, danger, style);
     for (const t of b.targets(u, p)) {
       if (u.side === 'enemy' && t.def.structure && t.tag !== u.prey) continue;
       const f = b.forecast(u, t, p);
@@ -259,7 +262,7 @@ export function aiTakeTurn(b: Battle, u: Unit, style: BotStyle = {}): BattleEven
     }
     reach = [{ x: u.x, y: u.y }];
   }
-  const opts = options(b, u, reach, enemies, danger);
+  const opts = options(b, u, reach, enemies, danger, style);
   // 分數一樣時少走幾步（不要無謂地繞路）
   opts.sort((a, c) => c.score - a.score || dist(a.at, u) - dist(c.at, u));
   // 我方機器人：每個出手的位置都太危險（分數是負的）就不硬打 ——

@@ -62,6 +62,10 @@ test('改造：買得起才買得到，滿級就不能再買，退還是全額',
   assert.deepEqual(frameUpgrades(lo, 'kai'), { plating: 2, firepower: 1, mods: [] });
   resetFrame(lo, 'kai');
   assert.equal(partsLeft(stars, lo), 120, 'a full refund');
+  // 存檔被手改成花的比賺的多：餘額當作 0，不會是負數，也買不了東西
+  const over: Loadout = { kai: { plating: 3, firepower: 3, mods: ['kai_link', 'kai_burst'] } };
+  assert.equal(partsLeft({}, over), 0);
+  assert.ok(!buyTrack({}, over, 'bruno', 'plating'));
   assert.ok(canAffordAny(stars, lo, 'kai'));
 
   const rich = allStars(3);
@@ -157,14 +161,35 @@ test('機體要加入之後才能改造', () => {
   for (const f of FRAMES) assert.ok(frameUnlocked(f, all), f);
 });
 
-test('不管升到幾級，每一關都打得過：兩種機器人打法至少有一種贏', () => {
-  const loadouts: [string, Loadout][] = [1, 2, 3].map((lv) => [`level ${lv}`, Object.fromEntries(FRAMES.map((f) => [f, { plating: lv, firepower: lv, mods: [] }]))]);
-  loadouts.push(['every upgrade', maxed()]);
+// 機器人不是最佳解，數值一動走法就可能整個不同，所以這只是煙霧測試：
+// 挑幾種有代表性的配置（平均升級、全部改滿、只升一條線、只裝專屬改造、集中改一兩台），
+// 每一關只要有一種機器人打法贏就算過。它抓得到「某個改造把關卡弄壞」，但不保證所有配置。
+test('煙霧測試：幾種代表性的改造配置下，每一關至少有一種機器人打法打得過', () => {
+  const all = (plating: number, firepower: number, mods = false): Loadout =>
+    Object.fromEntries(FRAMES.map((f) => [f, { plating, firepower, mods: mods ? modsOf(f).map((m) => m.id) : [] }]));
+  const loadouts: [string, Loadout][] = [
+    ['level 1', all(1, 1)],
+    ['level 2', all(2, 2)],
+    ['level 3', all(3, 3)],
+    ['every upgrade', maxed()],
+    ['firepower only', all(0, 3)],
+    ['plating only', all(3, 0)],
+    ['mods only', all(0, 0, true)],
+    ['Hound maxed, the rest stock', { kai: { plating: 3, firepower: 3, mods: ['kai_link', 'kai_burst'] } }],
+    [
+      'support build',
+      {
+        echo: { plating: 3, firepower: 0, mods: ['echo_nano', 'echo_relay'] },
+        hale_ally: { plating: 2, firepower: 0, mods: ['hale_net', 'hale_phalanx'] },
+        sparrow: { plating: 0, firepower: 3, mods: ['sparrow_thrust'] },
+      },
+    ],
+  ];
   for (const [label, lo] of loadouts) {
     const defs = loadoutDefs(UNITS, lo);
     for (const m of MISSIONS) {
-      const results = BOT_STYLES.map((style) => autoPlay(new Battle(m, defs), 40, undefined, style).result);
-      assert.ok(results.includes('win'), `${m.id} at ${label}: ${results.join(', ')}`);
+      const won = BOT_STYLES.some((style) => autoPlay(new Battle(m, defs), 40, undefined, style).result === 'win');
+      assert.ok(won, `${m.id} with ${label}: no bot style wins`);
     }
   }
 });

@@ -44,9 +44,10 @@ export class HangarScene extends Phaser.Scene {
     super('SfHangar');
   }
 
-  init(data: { chapter?: number; frame?: FrameId }): void {
+  init(data: { chapter?: number }): void {
     this.chapter = data.chapter;
-    this.frame = data.frame && frameUnlocked(data.frame, save().stars) ? data.frame : 'kai';
+    // 選中的機體記在場景物件上：旋轉手機或縮放視窗會重開場景，不該跳回第一台
+    if (!frameUnlocked(this.frame, save().stars)) this.frame = 'kai';
   }
 
   create(): void {

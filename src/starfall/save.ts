@@ -31,8 +31,8 @@ export function save(): SaveData {
   }
   cache = { sfx: 0.7, stars: {}, tips: [], fast: false, music: 0.5, easy: false, upgrades: {}, ...raw };
   // 舊存檔或壞掉的欄位：補成空的
-  if (!cache.upgrades || typeof cache.upgrades !== 'object') cache.upgrades = {};
-  if (!cache.stars || typeof cache.stars !== 'object') cache.stars = {};
+  if (!cache.upgrades || typeof cache.upgrades !== 'object' || Array.isArray(cache.upgrades)) cache.upgrades = {};
+  if (!cache.stars || typeof cache.stars !== 'object' || Array.isArray(cache.stars)) cache.stars = {};
   return cache;
 }
 

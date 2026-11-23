@@ -1,5 +1,5 @@
 // 自動對戰：雙方都交給 AI 打完每一關，看關卡打不打得過、要幾回合。
-// 用法：npx tsx scripts/starfall-sim.ts [missionId] [-v] [--easy] [--max | --lv=N] [--cautious]
+// 用法：npx tsx scripts/starfall-sim.ts [missionId] [-v] [--easy] [--max | --lv=N] [--cautious] [--care=N]
 //   --max：六台機體全部改滿；--lv=N：兩條強化線都升到 N 級、不裝專屬改造
 import { Battle } from '../src/starfall/sim/Battle';
 import { autoPlay } from '../src/starfall/sim/ai';
@@ -12,6 +12,7 @@ const verbose = process.argv.includes('-v');
 const easy = process.argv.includes('--easy');
 const max = process.argv.includes('--max');
 const cautious = process.argv.includes('--cautious');
+const care = Number(process.argv.find((a) => a.startsWith('--care='))?.slice(7) ?? 1);
 const lv = Number(process.argv.find((a) => a.startsWith('--lv='))?.slice(5) ?? 0);
 const defs = loadoutDefs(
   UNITS,
@@ -32,7 +33,7 @@ for (const m of MISSIONS) {
       else if (e.t === 'spawn') console.log(`   spawn ${name(e.uid)}`);
       else if (e.t === 'overwatch') console.log(`   ${name(e.uid)} overwatch`);
     }
-  } : undefined, { cautious });
+  } : undefined, { cautious, leaderCare: care });
   const left = b
     .alive('player')
     .map((u) => `${u.def.id}:${u.hp}`)

@@ -236,8 +236,9 @@ export function partsSpent(loadout: Loadout | undefined): number {
   return FRAMES.reduce((n, f) => n + frameSpent(frameUpgrades(loadout, f)), 0);
 }
 
+/** 手上還有多少零件。存檔被手改成「花的比賺的多」時當作 0，不顯示負數（也買不了東西） */
 export function partsLeft(stars: Record<string, number>, loadout: Loadout | undefined): number {
-  return partsEarned(stars) - partsSpent(loadout);
+  return Math.max(0, partsEarned(stars) - partsSpent(loadout));
 }
 
 /** 這條強化線下一級要多少零件；滿級回傳 null */

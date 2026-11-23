@@ -48,7 +48,8 @@ function ui(page) {
         let hit = null;
         const walk = (o) => {
           if (hit || !o.list) return;
-          if (o.list.some((c) => c.type === 'Text' && c.text === label) && o.list.some((c) => c.type === 'Rectangle')) {
+          const match = (t) => (label.endsWith('*') ? t.startsWith(label.slice(0, -1)) : t === label);
+          if (o.list.some((c) => c.type === 'Text' && match(c.text)) && o.list.some((c) => c.type === 'Rectangle')) {
             const m = o.getWorldTransformMatrix();
             hit = [m.tx, m.ty];
             return;
@@ -197,29 +198,36 @@ async function hangarCheck(browser) {
   await press('SfTitle', '開始作戰');
   await page.waitForFunction(() => window.__sf.scene.isActive('SfMissions'));
   await page.waitForTimeout(400);
-  await press('SfMissions', '機庫  120');
+  await press('SfMissions', '機庫*');
   await page.waitForFunction(() => window.__sf.scene.isActive('SfHangar'));
   await page.waitForTimeout(500);
   await page.screenshot({ path: path.join(OUT, 'hangar-1.png') });
-  // 每顆按鈕都要完整留在畫面裡（手機上整個畫面會放大，最容易超出去）
+  // 每一台已加入的機體都看一次：每顆按鈕都要完整留在畫面裡（手機上整個畫面會放大，最容易超出去）
   const out = await page.evaluate(() => {
     const g = window.__sf;
     const s = g.scene.getScene('SfHangar');
     const w = g.scale.width / s.cameras.main.zoom;
     const bad = [];
-    const walk = (o) => {
+    const walk = (o, f) => {
       if (o.type === 'Rectangle' && o.input?.enabled) {
         const m = o.getWorldTransformMatrix();
         const hw = (o.width * m.scaleX) / 2;
         const hh = (o.height * m.scaleY) / 2;
-        if (m.tx - hw < -1 || m.ty - hh < -1 || m.tx + hw > w + 1 || m.ty + hh > 721) bad.push([Math.round(m.tx), Math.round(m.ty), Math.round(hw * 2), Math.round(hh * 2)]);
+        if (m.tx - hw < -1 || m.ty - hh < -1 || m.tx + hw > w + 1 || m.ty + hh > 721) bad.push([f, Math.round(m.tx), Math.round(m.ty), Math.round(hw * 2), Math.round(hh * 2)]);
       }
-      o.list?.forEach(walk);
+      o.list?.forEach((c) => walk(c, f));
     };
-    s.children.list.forEach(walk);
+    const first = s.frame;
+    for (const f of ['kai', 'bruno', 'vey', 'echo', 'sparrow', 'hale_ally']) {
+      s.frame = f;
+      s.draw();
+      s.children.list.forEach((c) => walk(c, f));
+    }
+    s.frame = first;
+    s.draw();
     return bad;
   });
-  ok(out.length === 0, '機庫的按鈕都在畫面裡', out);
+  ok(out.length === 0, '機庫的按鈕都在畫面裡（六台機體都看過）', out);
   await buy(0);
   let up = await saved();
   ok(up.kai?.plating === 1, '買了一級複合裝甲', up);
@@ -241,13 +249,18 @@ async function hangarCheck(browser) {
   ok(up.bruno?.mods?.length === 1, '裝了一個專屬改造', up);
   ok((await page.evaluate(() => window.__sf.scene.getScene('SfHangar').root.list.filter((o) => o.name === 'buy' && o.enabled).length)) === 0, '零件用完，剩下的都買不起');
   await page.screenshot({ path: path.join(OUT, 'hangar-3.png') });
+  // 拆掉鐵砧的改造：90 零件全額退還，存檔裡也拿掉
+  await press('SfHangar', '拆除全部*');
+  up = await saved();
+  const left = await page.evaluate(() => window.__sf.scene.getScene('SfHangar').root.list.filter((o) => o.name === 'buy' && o.enabled).length);
+  ok(!up.bruno && left > 0, '拆除全部：改造拿掉、零件退回來又買得起了', { up, left });
   await press('SfHangar', '返回');
   await page.waitForFunction(() => window.__sf.scene.isActive('SfMissions'));
   await page.waitForTimeout(400);
-  await press('SfMissions', '機庫  0');
+  await press('SfMissions', '機庫*');
   await page.waitForFunction(() => window.__sf.scene.isActive('SfHangar'));
   await page.waitForTimeout(400);
-  // 開戰：凱的耐久 100 → 110，布魯諾帶著改造
+  // 開戰：凱的耐久 100 → 110（改造後的數值真的帶進戰鬥）
   await page.evaluate(() => {
     const g = window.__sf;
     g.scene.stop('SfHangar');
