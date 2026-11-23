@@ -581,12 +581,12 @@ export class Battle {
       this.hurt(ev, u, tgt, c.dmg, c.mods, 'skill', s.id);
       if (tgt.alive) this.push(ev, u, tgt);
     } else if (e.type === 'line') {
-      for (const p of this.lineTiles(u, at, s)) {
-        const o = this.unitAt(p.x, p.y);
-        if (!o || o.side === u.side) continue;
-        const c = this.calc(u, u, o, o, 'skill', e.mul);
-        this.hurt(ev, u, o, c.dmg, c.mods, 'skill', s.id);
-      }
+      // 先把整條線的傷害算好再結算：前面的目標倒下（連同它的光環）不會改變後面的人受到的傷害，預估才會等於結果
+      const hits = this.lineTiles(u, at, s)
+        .map((p) => this.unitAt(p.x, p.y))
+        .filter((o): o is Unit => !!o && o.side !== u.side)
+        .map((o) => ({ o, c: this.calc(u, u, o, o, 'skill', e.mul) }));
+      for (const { o, c } of hits) this.hurt(ev, u, o, c.dmg, c.mods, 'skill', s.id);
     } else if (e.type === 'heal' && tgt) {
       const amount = Math.min(e.amount, tgt.maxHp - tgt.hp);
       tgt.hp += amount;
@@ -596,9 +596,11 @@ export class Battle {
       tgt.overwatch = false;
       ev.push({ t: 'stun', uid: u.uid, target: tgt.uid });
     } else if (e.type === 'rally' && tgt) {
+      // 目標整個回合重來：警戒也解除，不然會出現「還能行動卻掛著警戒」的狀態
       tgt.acted = false;
       tgt.moved = false;
       tgt.undo = undefined;
+      tgt.overwatch = false;
       ev.push({ t: 'rally', uid: u.uid, target: tgt.uid });
     } else if (e.type === 'leap') {
       const from = { x: u.x, y: u.y };
@@ -628,7 +630,9 @@ export class Battle {
     const ny = tgt.y + dy;
     const from = { x: tgt.x, y: tgt.y };
     const other = this.inMap(nx, ny) ? this.unitAt(nx, ny) : undefined;
-    const blocked = !this.inMap(nx, ny) || this.terrainAt(nx, ny) === 'wall' || !!other || this.heightAt(nx, ny) - this.heightAt(tgt.x, tgt.y) >= 2;
+    // 艙壁、機組這類不能站的格子都算撞牆；裂谷另外處理（掉下去）
+    const solid = this.inMap(nx, ny) && TERRAIN[this.terrainAt(nx, ny)].cost === 0 && this.terrainAt(nx, ny) !== 'chasm';
+    const blocked = !this.inMap(nx, ny) || solid || !!other || this.heightAt(nx, ny) - this.heightAt(tgt.x, tgt.y) >= 2;
     if (blocked) {
       this.hurt(ev, u, tgt, COLLIDE_DMG, [{ kind: 'collide', value: COLLIDE_DMG }], 'collide');
       if (other?.alive) this.hurt(ev, u, other, BUMP_DMG, [{ kind: 'collide', value: BUMP_DMG }], 'collide');
@@ -798,6 +802,8 @@ export class Battle {
     if (down >= (this.mission.protectLose ?? 1)) return this.finish(ev, 'lose', 'protect');
     if (!this.alive('player').some((u) => !u.def.structure)) return this.finish(ev, 'lose', 'wiped');
     const win = this.mission.win;
+    // 目標要由指定機體完成（護送 / 守住）：那台沒了就不可能過關，直接判定失敗，不靠關卡資料記得把它列進保護目標
+    if ((win.type === 'reach' || win.type === 'hold') && win.who && !this.alive('player').some((u) => u.def.id === win.who)) return this.finish(ev, 'lose', 'protect');
     if (win.type === 'rout') {
       if (!this.alive('enemy').length && !this.enemySpawnsPending()) this.finish(ev, 'win', 'rout');
     } else if (win.type === 'kill') {

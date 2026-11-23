@@ -468,7 +468,7 @@ test('敵人只有被指定的才會打設施；輕鬆難度下敵方傷害 ×0.
   assert.equal(easy.forecast(k, s).dmg, 30 - 2, 'player damage is unchanged');
 });
 
-test('輕鬆難度：機器人六關全部無損通關', () => {
+test('輕鬆難度：機器人每一關都無損通關', () => {
   for (const m of MISSIONS) {
     const r = autoPlay(new Battle(m, UNITS, true));
     assert.equal(r.result, 'win', `${m.id} on easy: ${r.result} on turn ${r.turns}`);
@@ -496,17 +496,36 @@ test('守住區域：指定的機體站在區域裡，每撐過一個敵方回�
   assert.ok(b.holding());
   pass(b);
   assert.equal(b.held, 1);
-  // 凱站上去不算：要艾可本人
+  // 艾可離開、換凱站上控制台：不算，要艾可本人
+  const k = u(b, 'kai');
   b.move(e, 2, 2);
-  b.move(u(b, 'kai'), 1, 0);
+  b.move(k, 3, 2);
+  assert.deepEqual([k.x, k.y], [3, 2]);
+  assert.ok(!b.holding(), 'Kai on the console does not count');
   pass(b);
   assert.equal(b.held, 0, 'leaving resets the count');
   assert.equal(b.result, null);
+  b.move(k, 3, 1);
   b.move(e, 3, 2);
   pass(b);
+  // 被癱瘓的艾可還是站在控制台上：照算
+  e.stun = 1;
   pass(b);
   assert.equal(b.held, 2);
   assert.equal(b.result, 'win');
+});
+
+test('護送 / 守住的指定機體被擊破就失敗，就算關卡沒把它列成保護目標', () => {
+  for (const win of [
+    { type: 'hold', who: 'echo', zone: [{ x: 3, y: 2 }], turns: 2 },
+    { type: 'reach', who: 'echo', zone: [{ x: 3, y: 2 }] },
+  ] as WinCondition[]) {
+    const b = mk(OPEN, [P('kai', 0, 0), P('echo', 5, 4), E('sentry', 6, 4, { dir: 2 })], { win });
+    u(b, 'echo').hp = 1;
+    pass(b);
+    assert.ok(!u(b, 'echo').alive);
+    assert.equal(b.result, 'lose', win.type);
+  }
 });
 
 test('護送：只有指定的機體走進區域才算過關', () => {
@@ -521,7 +540,7 @@ test('護送：只有指定的機體走進區域才算過關', () => {
   assert.equal(b.result, 'win');
 });
 
-test('督戰令：讓已經行動過的友軍再動一次；還沒行動的、自己、設施都不能選', () => {
+test('督戰令：讓已經行動過的友軍再動一次；還沒行動的和自己不能選', () => {
   const b = mk(OPEN, [P('hale_ally', 1, 2), P('kai', 2, 2), P('bruno', 1, 3), P('generator', 0, 2), E('sentry', 5, 2, { dir: 2, ai: 'hold' })]);
   const h = u(b, 'hale_ally');
   const k = u(b, 'kai');
@@ -537,6 +556,24 @@ test('督戰令：讓已經行動過的友軍再動一次；還沒行動的、�
   assert.ok(b.attack(k, u(b, 'sentry')).length > 0, 'Kai attacks a second time');
 });
 
+test('督戰令：設施和被癱瘓的友軍就算「行動過」也不能選；目標的警戒會解除', () => {
+  const b = mk(OPEN, [P('hale_ally', 1, 2), P('kai', 2, 2), P('bruno', 1, 3), P('generator', 0, 2), E('sentry', 6, 0, { dir: 2, ai: 'hold' })]);
+  const h = u(b, 'hale_ally');
+  const k = u(b, 'kai');
+  const br = u(b, 'bruno');
+  const rally = h.def.skills[0];
+  u(b, 'generator').acted = true;
+  b.wait(br);
+  br.stun = 1;
+  assert.deepEqual(b.skillTargets(h, rally), [], 'a structure and a stunned ally are not valid');
+  br.stun = 0;
+  assert.deepEqual(b.skillTargets(h, rally), [{ x: 1, y: 3 }]);
+  b.setOverwatch(k);
+  assert.ok(k.overwatch && k.acted);
+  b.useSkill(h, 'rally', { x: 2, y: 2 });
+  assert.ok(!k.overwatch && b.canAct(k), 'rallied unit starts its turn over');
+});
+
 test('重量級（典獄者）推不動但照樣受傷；機組擋路不擋火線', () => {
   const b = mk(['......', '..o...'], [P('bruno', 0, 0), P('kai', 0, 1), E('warden', 1, 0, { dir: 2, ai: 'hold' }), E('sentry', 4, 1, { dir: 2, ai: 'hold' })]);
   const w = u(b, 'warden');
@@ -547,6 +584,44 @@ test('重量級（典獄者）推不動但照樣受傷；機組擋路不擋火�
   const k = u(b, 'kai');
   assert.ok(!b.moveRange(k).has(b.key(2, 1)), 'machinery cannot be entered');
   assert.ok(b.lineClear(0, 1, 4, 1), 'but shots pass over it');
+});
+
+test('震盪砲把人推向機組：算撞牆（追加傷害、不會站上去）', () => {
+  const b = mk(['...o..'], [P('bruno', 0, 0), E('sentry', 2, 0, { dir: 2, ai: 'hold' })]);
+  const s = u(b, 'sentry');
+  const f = b.forecast(u(b, 'bruno'), s, u(b, 'bruno'), u(b, 'bruno').def.skills[0]);
+  b.useSkill(u(b, 'bruno'), 'shock', { x: 2, y: 0 });
+  assert.deepEqual([s.x, s.y], [2, 0], 'not pushed onto the machinery');
+  assert.equal(s.hp, 60 - f.dmg - COLLIDE_DMG);
+});
+
+test('長針：射程 3–6，貼近（2 格內）打不到也無法反擊', () => {
+  const b = mk(['........'], [P('kai', 2, 0), E('needle', 0, 0, { dir: 0, ai: 'hold' })]);
+  const n = u(b, 'needle');
+  const k = u(b, 'kai');
+  assert.ok(!b.canHit(n, n, 2, 0), 'too close at 2 tiles');
+  assert.ok(b.canHit(n, n, 3, 0));
+  assert.ok(b.canHit(n, n, 6, 0));
+  assert.ok(!b.canHit(n, n, 7, 0));
+  assert.equal(b.forecast(k, n).counter, null, 'cannot counter inside its minimum range');
+  const hp = k.hp;
+  b.attack(k, n);
+  assert.equal(k.hp, hp);
+});
+
+test('貫穿：整條線的傷害先算好，前面的護衛光環來源倒下也不改變後面的結果（預估 = 結果）', () => {
+  // 海爾（護衛光環 -20%）殘血站在前面，哨兵站在他後面
+  const b = mk(['.......'], [P('kai', 0, 0), P('vey', 1, 0), E('hale', 3, 0, { dir: 2, ai: 'hold' }), E('sentry', 4, 0, { dir: 2, ai: 'hold' })]);
+  const v = u(b, 'vey');
+  const s = u(b, 'sentry');
+  const hale = u(b, 'hale');
+  hale.hp = 5;
+  const pierce = v.def.skills[0];
+  const f = b.forecast(v, s, v, pierce);
+  assert.ok(f.mods.some((m) => m.kind === 'guard'), 'the forecast includes Hale’s guard');
+  b.useSkill(v, 'pierce', { x: 2, y: 0 });
+  assert.ok(!hale.alive);
+  assert.equal(s.hp, 60 - f.dmg, 'the sentry takes exactly the forecast damage');
 });
 
 test('修補者會修理受傷的友軍', () => {

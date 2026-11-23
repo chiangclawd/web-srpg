@@ -177,7 +177,7 @@ export const STORY: Record<string, Line[]> = {
     { who: 'kai', zh: '一直都在。', en: 'Always.' },
     { who: 'sys', zh: '第二章「冬眠艙的歌聲」完 —— 第三章製作中。', en: 'End of Chapter 2, "The Song in the Sleep Bay". Chapter 3 is in production.' },
   ],
-  // 第三章「新的航行計畫」
+  // 第三章「點名」
   m7_intro: [
     { who: 'sys', zh: '曙光號・主龍骨。整艘船都在震動：散落冰原八十年的殘段，正一塊一塊被拖回原位。', en: "The Aurelia's main keel. The whole ship is shaking: segments scattered across the ice for eighty years are being dragged back into place, one by one." },
     { who: 'bruno', zh: '我在碼頭吊了三十年的貨，沒看過船自己把自己撿起來。', en: 'Thirty years hauling cargo on the docks, and I never saw a ship pick itself up.' },

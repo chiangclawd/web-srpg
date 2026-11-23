@@ -125,7 +125,7 @@ function options(b: Battle, u: Unit, reach: Pos[], enemies: Unit[], danger: Map<
           const [dx, dy] = DIR_VEC[Math.abs(t.x - p.x) >= Math.abs(t.y - p.y) ? (t.x >= p.x ? 0 : 2) : t.y >= p.y ? 1 : 3];
           const nx = t.x + dx;
           const ny = t.y + dy;
-          if (!t.def.boss && b.inMap(nx, ny) && b.terrainAt(nx, ny) === 'chasm' && !t.def.hover) score += 50;
+          if (!t.def.boss && !t.def.heavy && b.inMap(nx, ny) && b.terrainAt(nx, ny) === 'chasm' && !t.def.hover) score += 50;
         } else if (e.type === 'heal') {
           const healed = Math.min(e.amount, t.maxHp - t.hp);
           if (healed < 20) continue;

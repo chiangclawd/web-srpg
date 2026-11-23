@@ -480,6 +480,7 @@ export class BattleScene extends Phaser.Scene {
     if (e.type === 'leap') return { title, target: null, forecast: null, note: T('leapHere') };
     if (e.type === 'heal' && tgt) return { title, target: tgt, forecast: null, note: `${T('heal')} +${Math.min(e.amount, tgt.maxHp - tgt.hp)}` };
     if (e.type === 'stun' && tgt) return { title, target: tgt, forecast: null, note: T('stunned') };
+    if (e.type === 'rally' && tgt) return { title, target: tgt, forecast: null, note: T('rallyDone') };
     if (e.type === 'line') {
       const hits = b
         .lineTiles(u, a, p.skill)
@@ -491,7 +492,9 @@ export class BattleScene extends Phaser.Scene {
       });
       return { title, target: hits[0] ?? null, forecast: null, note: parts.length ? parts.join('　') : T('noTarget') };
     }
-    return { title, target: tgt, forecast: tgt ? b.forecast(u, tgt, u, p.skill) : null, note: '' };
+    // 只有會造成傷害的技能才有傷害預估；其他效果（或沒對到目標）不顯示數字
+    const dmg = e.type === 'shot' || e.type === 'push';
+    return { title, target: tgt, forecast: tgt && dmg ? b.forecast(u, tgt, u, p.skill) : null, note: '' };
   }
 
   cancelTarget(): void {

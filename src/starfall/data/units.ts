@@ -367,7 +367,7 @@ export const UNITS: Record<string, UnitDef> = {
       {
         id: 'mend',
         name: { zh: '搶修', en: 'Patch Up' },
-        desc: { zh: '修復 2 格內一台機群 30 點耐久', en: 'Restore 30 HP to a drone within 2 tiles' },
+        desc: { zh: '修復 2 格內一個友軍 30 點耐久', en: 'Restore 30 HP to an ally within 2 tiles' },
         cd: 1,
         target: 'ally',
         min: 1,
@@ -376,7 +376,7 @@ export const UNITS: Record<string, UnitDef> = {
         icon: 'sk_repair',
       },
     ],
-    passive: { name: { zh: '搶修', en: 'Patch Up' }, desc: { zh: '每隔一回合修復附近的機群 30 點耐久 —— 不先打掉它就打不完', en: 'Every other turn it restores 30 HP to a nearby drone. Kill it first or the fight never ends' } },
+    passive: { name: { zh: '搶修', en: 'Patch Up' }, desc: { zh: '每隔一回合修復附近一個友軍 30 點耐久，首領也修 —— 不先打掉它就打不完', en: 'Every other turn it restores 30 HP to a nearby ally, bosses included. Kill it first or the fight never ends' } },
     sprite: 'mender',
     scale: 0.9,
   },

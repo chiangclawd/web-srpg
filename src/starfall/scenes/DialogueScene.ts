@@ -55,7 +55,7 @@ export class DialogueScene extends Phaser.Scene {
     this.nameText = addText(this, x0 + 34, y0 - 4, '', { size: 20, strokeW: 0 }).setOrigin(0, 0.5).setDepth(4);
     this.text = addText(this, x0 + 30, y0 + 30, '', { size: 21, strokeW: 0, bold: false, wrap: this.boxW - 60, lineSpacing: 8 }).setDepth(4);
     addText(this, x0 + this.boxW - 20, y0 + this.boxH - 12, `▼ ${T('tapNext')}`, { size: 13, strokeW: 0, color: COL.dim }).setOrigin(1, 1).setDepth(4);
-    const skip = new Button(this, this.w - 16 - 55 * z, 14 + 24 * z, 110, 46, T('skip'), () => this.finish(), { color: 0x8fb0c8 });
+    const skip = new Button(this, this.w - 16 - 55 * z, 14 + 24 * z, 110, 46, T('skip'), () => this.skip(), { color: 0x8fb0c8 });
     skip.setScale(z).setDepth(5);
     this.input.keyboard?.on('keydown-SPACE', () => this.advance());
     this.show();
@@ -125,7 +125,27 @@ export class DialogueScene extends Phaser.Scene {
     else this.show();
   }
 
+  /** 還沒播到的句子裡最後一次換音樂（跳過時照樣要換，不然結局會配著戰鬥音樂） */
+  private pendingMusic(from: number, to: number): void {
+    const m = this.lines
+      .slice(from, to)
+      .map((l) => l.music)
+      .filter((k) => !!k)
+      .pop();
+    if (m) music(m);
+  }
+
+  /** 跳過：後面還有沒看過的全螢幕插圖就先跳到那一句（結局圖不該被一鍵略過），沒有才直接結束 */
+  private skip(): void {
+    const next = this.lines.findIndex((l, j) => j > this.i && !!l.cg && l.cg !== this.cgKey);
+    if (next < 0) return this.finish();
+    this.pendingMusic(this.i + 1, next);
+    this.i = next;
+    this.show();
+  }
+
   private finish(): void {
+    this.pendingMusic(this.i + 1, this.lines.length);
     this.timer?.remove();
     const done = this.onDone;
     this.scene.stop();
