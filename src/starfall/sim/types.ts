@@ -51,7 +51,9 @@ export type SkillEffect =
   | { type: 'push'; mul: number }
   | { type: 'line'; mul: number; len: number }
   | { type: 'heal'; amount: number }
-  | { type: 'stun'; turns: number };
+  | { type: 'stun'; turns: number }
+  /** 躍進：瞬間跳到目標格（不觸發警戒、不算行動，跳完還能攻擊） */
+  | { type: 'leap' };
 
 export interface SkillDef {
   id: string;
@@ -59,7 +61,7 @@ export interface SkillDef {
   desc: L10n;
   /** 用過之後要等幾個自己的回合 */
   cd: number;
-  target: 'enemy' | 'ally' | 'dir';
+  target: 'enemy' | 'ally' | 'dir' | 'tile';
   min: number;
   max: number;
   effect: SkillEffect;
@@ -83,8 +85,16 @@ export interface UnitDef {
   weapon: WeaponDef;
   skills: SkillDef[];
   passive?: { name: L10n; desc: L10n };
-  /** 光環：距離內的友軍傷害加成 / 受傷減免 */
-  aura?: { range: number; dmg?: number; guard?: number };
+  /** 光環：距離內的友軍傷害加成 / 受傷減免（only：只對這個編號的機型有效） */
+  aura?: { range: number; dmg?: number; guard?: number; only?: string };
+  /** 側擊 / 背襲加成的倍率（偵察機 2 倍） */
+  flankMul?: number;
+  /** 獵殺：目標耐久比例低於 below 時傷害加成 */
+  execute?: { below: number; dmg: number };
+  /** 反擊的傷害比例（預設 0.6；紀律嚴明的部隊是 1） */
+  counterMul?: number;
+  /** 塔盾：從正面來的傷害減免比例 */
+  frontShield?: number;
   /** 佔高處時額外的射程與傷害 */
   highGround?: { range: number; dmg: number };
   /** 群聚：目標旁邊有其他同型機時的傷害加成 */
@@ -110,6 +120,8 @@ export interface Unit {
   dir: Dir;
   hp: number;
   maxHp: number;
+  /** 武器傷害倍率（輕鬆難度下敵方是 0.75） */
+  power: number;
   moved: boolean;
   acted: boolean;
   /** 技能冷卻（剩幾回合） */
@@ -163,6 +175,10 @@ export interface MissionDef {
   win: WinCondition;
   /** 這些 tag 的單位被摧毀就失敗（隊長一定算） */
   protect?: string[];
+  /** 保護目標被摧毀幾個才算失敗（預設 1） */
+  protectLose?: number;
+  /** 第幾章 */
+  chapter?: number;
   objective: L10n;
   /** 幾回合內過關多一顆星 */
   par: number;
@@ -170,15 +186,17 @@ export interface MissionDef {
   intro?: string;
   outro?: string;
   /** 背景色調 */
-  theme?: 'ice' | 'hull';
+  theme?: 'ice' | 'hull' | 'bay';
 }
 
-export type ModKind = 'height' | 'flank' | 'cover' | 'aura' | 'guard' | 'swarm' | 'skill' | 'reaction' | 'armor' | 'splash' | 'collide';
+export type ModKind = 'height' | 'flank' | 'cover' | 'aura' | 'guard' | 'swarm' | 'skill' | 'reaction' | 'armor' | 'splash' | 'collide' | 'shield' | 'execute';
 
 export interface Mod {
   kind: ModKind;
   /** 百分比（+15 / -25）；armor 是固定值 */
   value: number;
+  /** flank 專用：true = 從背後打（背襲），不然是側擊 */
+  rear?: boolean;
 }
 
 export interface Forecast {
@@ -199,6 +217,7 @@ export type BattleEvent =
   | { t: 'heal'; uid: number; target: number; amount: number; hp: number }
   | { t: 'stun'; uid: number; target: number }
   | { t: 'push'; target: number; from: Pos; to: Pos; fell: boolean }
+  | { t: 'leap'; uid: number; from: Pos; to: Pos }
   | { t: 'death'; uid: number }
   | { t: 'overwatch'; uid: number }
   | { t: 'wait'; uid: number }

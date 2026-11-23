@@ -31,6 +31,16 @@ export const SHEETS: Record<string, SheetDef> = {
   worker: { ...STATIC, unitPx: 91.4, h: 44 },
   echo: { ...STATIC, unitPx: 150.6, h: 52, hover: 20 },
   weaver: { ...STATIC, unitPx: 98.5, h: 54 },
+  swift: { ...MECH, unitPx: 142.2, h: 80 },
+  lancer: { ...MECH, unitPx: 150.6, h: 86 },
+  bastion: { ...MECH, unitPx: 134.7, h: 88 },
+  arbiter: { ...MECH, unitPx: 134.7, h: 86 },
+  shepherd: { ...MECH, unitPx: 142.2, h: 82 },
+  hunter: { ...STATIC, unitPx: 85.3, h: 44 },
+  turret: { ...STATIC, unitPx: 128, h: 58 },
+  choir: { ...STATIC, unitPx: 116.4, h: 62, hover: 24 },
+  relay: { ...STATIC, unitPx: 170.7, h: 104 },
+  pods: { ...STATIC, unitPx: 128, h: 80 },
 };
 
 /** 面向 → 用正面還是背面的圖、要不要水平翻轉 */

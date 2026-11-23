@@ -31,27 +31,44 @@ function dangerMap(b: Battle, u: Unit, enemies: Unit[]): Map<number, number> {
   if (u.side !== 'player') return out;
   for (const e of enemies) {
     if (e.def.structure || e.stun > 0) continue;
-    // 還沒被驚動的守備單位只算它原地的射程
-    const tiles = e.ai === 'aggressive' ? b.threat(e) : new Set(b.weaponTiles(e).map((t) => b.key(t.x, t.y)));
+    // 離得遠、還沒被驚動的守備單位只算它原地的射程；靠近到快要驚動它的距離就當作它會動
+    const mobile = e.ai === 'aggressive' || (e.ai === 'guard' && dist(e, u) <= AGGRO_RANGE + u.def.move);
+    const tiles = mobile ? b.threat(e) : new Set(b.weaponTiles(e).map((t) => b.key(t.x, t.y)));
     for (const k of tiles) out.set(k, (out.get(k) ?? 0) + e.def.weapon.dmg);
   }
   return out;
+}
+
+/** 走到這格會挨多少警戒射擊（只看終點：路上的算不準） */
+function watchDmg(b: Battle, u: Unit, p: Pos, enemies: Unit[]): number {
+  if (p.x === u.x && p.y === u.y) return 0;
+  let sum = 0;
+  for (const e of enemies) if (e.overwatch && e.stun === 0 && b.canHit(e, e, p.x, p.y)) sum += Math.round(e.def.weapon.dmg * 0.8);
+  return sum;
 }
 
 /** 站在這格的好處：掩體、高度；曲射單位不想被貼身 */
 function tileScore(b: Battle, u: Unit, p: Pos, enemies: Unit[], danger: Map<number, number>): number {
   let s = TERRAIN[b.terrainAt(p.x, p.y)].cover * 4;
   const d = danger.get(b.key(p.x, p.y)) ?? 0;
-  // 越脆的機體越怕被圍（支援機 60 血：權重約 0.5；重裝 140 血：約 0.2）
-  if (d) s -= (d * 30) / u.maxHp + (d >= u.hp ? 40 : 0);
+  // 越脆的機體越怕被圍；估計值沒算側擊、獵殺等加成，所以抓 1.25 倍當作「可能被打掉」
+  // 隊長和任務要保護的機體被打掉就輸了，更小心
+  if (d) {
+    const vital = u.def.id === 'kai' || (!!u.tag && (b.mission.protect ?? []).includes(u.tag));
+    s -= ((d * 40) / u.maxHp + (d * 1.25 >= u.hp ? 80 : 0)) * (vital ? 1.5 : 1);
+  }
   if (u.def.weapon.kind !== 'melee') s += b.heightAt(p.x, p.y) * 2;
   if (u.def.weapon.min >= 2) for (const e of enemies) if (!e.def.structure && dist(e, p) < u.def.weapon.min) s -= 12;
   return s;
 }
 
-function targetBonus(u: Unit, t: Unit): number {
+function targetBonus(b: Battle, u: Unit, t: Unit): number {
   let s = 0;
+  // 我方機器人：正在拆保護目標的敵人優先處理（玩家看任務目標也會這樣打）
+  if (u.side === 'player' && t.prey && (b.mission.protect ?? []).includes(t.prey)) s += 25;
   if (u.prey && t.tag === u.prey) s += 10;
+  // 設施不會還手也不會跑：只有被指定要拆它的單位才會打，其他人去對付會動的
+  else if (t.def.structure) s -= 1000;
   if (t.def.id === 'kai') s += 3;
   return s;
 }
@@ -61,11 +78,18 @@ function options(b: Battle, u: Unit, reach: Pos[], enemies: Unit[], danger: Map<
   for (const p of reach) {
     const base = tileScore(b, u, p, enemies, danger);
     for (const t of b.targets(u, p)) {
+      if (u.side === 'enemy' && t.def.structure && t.tag !== u.prey) continue;
       const f = b.forecast(u, t, p);
-      let score = f.dmg + (f.kills ? 30 : 0) + targetBonus(u, t) + base;
+      let score = f.dmg + (f.kills ? 30 : 0) + targetBonus(b, u, t) + base;
       if (f.counter) score -= f.counter.dmg * 0.5 + (f.counter.kills ? 60 : 0);
       // 我方機器人：打不死對方、反擊又比自己打的還痛，這種交換不划算（支援機尤其如此）
       if (u.side === 'player' && f.counter && !f.kills && f.counter.dmg >= f.dmg) score -= 14;
+      // 走過去會先挨警戒射擊、打完再挨反擊：扣掉這些之後撐不撐得過敵方回合
+      if (u.side === 'player') {
+        const left = u.hp - (f.counter?.dmg ?? 0) - watchDmg(b, u, p, enemies);
+        const d = danger.get(b.key(p.x, p.y)) ?? 0;
+        if (left <= 0 || (d * 1.25 >= left && d * 1.25 < u.hp)) score -= 90;
+      }
       if (u.def.weapon.splash) for (const o of enemies) if (o !== t && dist(o, t) === 1) score += u.def.weapon.dmg * u.def.weapon.splash * 0.8;
       out.push({ score, at: p, act: 'attack', target: { x: t.x, y: t.y } });
     }
@@ -91,7 +115,7 @@ function options(b: Battle, u: Unit, reach: Pos[], enemies: Unit[], danger: Map<
         } else if (e.type === 'shot') {
           const f = b.forecast(u, t, p, s);
           // 沒有反擊風險、傷害又高：值得用，但別浪費在一槍就能解決的目標上
-          score += f.dmg + (f.kills ? 30 : 0) + targetBonus(u, t) + 4;
+          score += f.dmg + (f.kills ? 30 : 0) + targetBonus(b, u, t) + 4;
           if (b.canHit(u, p, t.x, t.y) && b.forecast(u, t, p).kills) score -= 20;
         } else if (e.type === 'push') {
           const f = b.forecast(u, t, p, s);
@@ -115,6 +139,24 @@ function options(b: Battle, u: Unit, reach: Pos[], enemies: Unit[], danger: Map<
   return out;
 }
 
+/** 撤退：挑最不會挨打、又離隊友近的格子 */
+function regroup(b: Battle, u: Unit, reach: Pos[], danger: Map<number, number>, enemies: Unit[]): Pos {
+  const allies = b.units.filter((a) => a.alive && a.side === u.side && a !== u && !a.def.structure);
+  let best: Pos = { x: u.x, y: u.y };
+  let top = -Infinity;
+  for (const p of reach) {
+    const d = danger.get(b.key(p.x, p.y)) ?? 0;
+    const near = allies.length ? Math.min(...allies.map((a) => dist(a, p))) : 0;
+    const watch = watchDmg(b, u, p, enemies);
+    const score = -(d * 40) / u.maxHp - (d * 1.25 >= u.hp - watch ? 80 : 0) - watch * 2 - near + TERRAIN[b.terrainAt(p.x, p.y)].cover * 3;
+    if (score > top) {
+      top = score;
+      best = p;
+    }
+  }
+  return best;
+}
+
 /** 這回合打不到任何人：往最近能開火的位置前進 */
 function advance(b: Battle, u: Unit, reach: Pos[], enemies: Unit[], danger: Map<number, number>): Pos | null {
   const far = b.moveRange(u, Infinity, true);
@@ -124,9 +166,10 @@ function advance(b: Battle, u: Unit, reach: Pos[], enemies: Unit[], danger: Map<
     const p = b.pos(k);
     if (b.terrainAt(p.x, p.y) === 'chasm') continue;
     for (const t of enemies) {
+      if (u.side === 'enemy' && t.def.structure && t.tag !== u.prey) continue;
       if (!b.canHit(u, p, t.x, t.y)) continue;
-      // 偏好的目標當作近 4 步
-      const c = r.cost - (u.prey && t.tag === u.prey ? 4 : 0);
+      // 偏好的目標當作近 4 步；我方機器人優先靠近正在拆保護目標的敵人
+      const c = r.cost - (u.prey && t.tag === u.prey ? 4 : 0) - (u.side === 'player' && t.prey && (b.mission.protect ?? []).includes(t.prey) ? 6 : 0);
       if (c < best) {
         best = c;
         goal = k;
@@ -143,7 +186,9 @@ function advance(b: Battle, u: Unit, reach: Pos[], enemies: Unit[], danger: Map<
   for (let i = 1; i < path.length; i++) {
     const k = b.key(path[i].x, path[i].y);
     if (!ok.has(k)) continue;
-    const score = i * 3 - ((danger.get(k) ?? 0) * 30) / u.maxHp;
+    const d = danger.get(k) ?? 0;
+    const watch = u.side === 'player' ? watchDmg(b, u, path[i], enemies) : 0;
+    const score = i * 3 - (d * 40) / u.maxHp - (d * 1.25 >= u.hp - watch ? 80 : 0) - watch * 2;
     if (score >= top) {
       top = score;
       pick = path[i];
@@ -164,9 +209,17 @@ export function aiTakeTurn(b: Battle, u: Unit): BattleEvent[] {
   const reach = u.ai === 'hold' ? [{ x: u.x, y: u.y }] : b.reachable(u);
   const danger = dangerMap(b, u, enemies);
   const opts = options(b, u, reach, enemies, danger);
-  if (opts.length) {
-    // 分數一樣時少走幾步（不要無謂地繞路）
-    opts.sort((a, c) => c.score - a.score || dist(a.at, u) - dist(c.at, u));
+  // 分數一樣時少走幾步（不要無謂地繞路）
+  opts.sort((a, c) => c.score - a.score || dist(a.at, u) - dist(c.at, u));
+  // 我方機器人：每個出手的位置都太危險（分數是負的）就不硬打 ——
+  // 現在站的地方會挨打就退到安全的地方跟隊友會合，不然就照「前進」的邏輯小心靠近
+  const risky = u.side === 'player' && u.ai !== 'hold' && opts.length > 0 && opts[0].score < 0;
+  if (risky && (danger.get(b.key(u.x, u.y)) ?? 0) > 0) {
+    const to = regroup(b, u, reach, danger, enemies);
+    if (to.x !== u.x || to.y !== u.y) ev.push(...b.move(u, to.x, to.y));
+    return u.alive && !b.result ? ev.concat(finish(b, u)) : ev;
+  }
+  if (opts.length && !risky) {
     const o = opts[0];
     if (o.at.x !== u.x || o.at.y !== u.y) ev.push(...b.move(u, o.at.x, o.at.y));
     if (!u.alive || b.result) return ev;
@@ -189,7 +242,7 @@ export function aiTakeTurn(b: Battle, u: Unit): BattleEvent[] {
 /** 沒事可做：敵人夠近就警戒，不然待機 */
 function finish(b: Battle, u: Unit): BattleEvent[] {
   if (!b.canAct(u)) return [];
-  const t = b.targets(u, u)[0];
+  const t = b.targets(u, u).find((x) => !(u.side === 'enemy' && x.def.structure && x.tag !== u.prey));
   if (t) return b.attack(u, t);
   const close = foes(b, u).some((e) => !e.def.structure && dist(e, u) <= u.def.weapon.max + 4);
   return close && b.canOverwatch(u) ? b.setOverwatch(u) : b.wait(u);

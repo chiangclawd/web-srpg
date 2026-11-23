@@ -1,0 +1,53 @@
+{
+  "anims": [
+    {
+      "url": "/models/anim_result_animation_glb_url.glb",
+      "clip": "Idle",
+      "name": "idle",
+      "frames": 4,
+      "loop": false,
+      "from": 0,
+      "to": 0.7
+    },
+    {
+      "url": "/models/rig_result_basic_animations_walking_glb_url.glb",
+      "name": "walk",
+      "frames": 8,
+      "loop": true,
+      "measure": true
+    },
+    {
+      "url": "/models/anim_result_animation_glb_url.glb",
+      "clip": "Punch_Forward_with_Both_Fists",
+      "name": "attack",
+      "frames": 8,
+      "loop": false,
+      "from": 0.6,
+      "to": 2.6
+    }
+  ],
+  "yaws": [
+    45,
+    135
+  ],
+  "dirs": {
+    "front": 45,
+    "back": 135
+  },
+  "elev": 30,
+  "size": 256,
+  "ss": 3,
+  "rim": 1.6,
+  "rimColor": "#0b1220",
+  "outlineColor": [
+    0.04,
+    0.07,
+    0.12
+  ],
+  "ramp": [
+    150,
+    212,
+    250
+  ],
+  "span": 1.9
+}

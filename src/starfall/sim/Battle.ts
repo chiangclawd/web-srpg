@@ -14,6 +14,9 @@ export const OVERWATCH_MUL = 0.8;
 export const COLLIDE_DMG = 12;
 export const BUMP_DMG = 8;
 export const FALL_DMG = 8;
+/** 輕鬆難度下敵方的傷害與耐久倍率 */
+export const EASY_DMG = 0.75;
+export const EASY_HP = 0.85;
 
 export interface Reach {
   cost: number;
@@ -51,6 +54,8 @@ export class Battle {
   constructor(
     readonly mission: MissionDef,
     private readonly defs: Record<string, UnitDef>,
+    /** 輕鬆難度：敵方傷害 ×0.75、耐久 ×0.85 */
+    readonly easy = false,
   ) {
     this.h = mission.tiles.length;
     this.w = mission.tiles[0].length;
@@ -116,15 +121,19 @@ export class Battle {
   spawn(s: SpawnDef): Unit {
     const def = this.defs[s.unit];
     if (!def) throw new Error(`unknown unit ${s.unit}`);
+    const side = s.side ?? 'enemy';
+    const weak = this.easy && side === 'enemy';
+    const hp = weak ? Math.round(def.hp * EASY_HP) : def.hp;
     const u: Unit = {
       uid: this.nextUid++,
       def,
-      side: s.side ?? 'enemy',
+      side,
       x: s.x,
       y: s.y,
       dir: s.dir ?? 0,
-      hp: def.hp,
-      maxHp: def.hp,
+      hp,
+      maxHp: hp,
+      power: weak ? EASY_DMG : 1,
       moved: false,
       acted: false,
       cds: {},
@@ -300,14 +309,19 @@ export class Battle {
     return 'side';
   }
 
+  /** 傷害加成取最大的一個；受傷減免可以疊加（上限 60%） */
   private auraNear(side: Side, self: Unit, at: Pos, kind: 'dmg' | 'guard'): number {
     let best = 0;
+    let sum = 0;
     for (const a of this.units) {
       if (!a.alive || a === self || a.side !== side || !a.def.aura) continue;
+      if (a.def.aura.only && a.def.aura.only !== self.def.id) continue;
       const v = a.def.aura[kind] ?? 0;
-      if (v > best && manhattan(a.x, a.y, at.x, at.y) <= a.def.aura.range) best = v;
+      if (!v || manhattan(a.x, a.y, at.x, at.y) > a.def.aura.range) continue;
+      best = Math.max(best, v);
+      sum += v;
     }
-    return best;
+    return kind === 'guard' ? Math.min(0.6, sum) : best;
   }
 
   /** 一次攻擊的傷害與加成明細 */
@@ -325,15 +339,18 @@ export class Battle {
       if (dh > 0 && att.def.highGround) hv += Math.round(att.def.highGround.dmg * 100);
       add('height', hv);
     }
-    if (kind !== 'counter') {
-      const rel = this.relation(tgt, tgtPos, attPos);
-      add('flank', rel === 'back' ? 30 : rel === 'side' ? 15 : 0);
+    const rel = this.relation(tgt, tgtPos, attPos);
+    if (kind !== 'counter' && rel !== 'front') {
+      const v = Math.round((rel === 'back' ? 30 : 15) * (att.def.flankMul ?? 1));
+      pct += v;
+      mods.push({ kind: 'flank', value: v, rear: rel === 'back' });
     }
+    if (att.def.execute && tgt.hp / tgt.maxHp < att.def.execute.below) add('execute', Math.round(att.def.execute.dmg * 100));
     add('aura', Math.round(this.auraNear(att.side, att, attPos, 'dmg') * 100));
     if (att.def.swarm && this.units.some((o) => o.alive && o !== att && o.side === att.side && o.def.id === att.def.id && manhattan(o.x, o.y, tgtPos.x, tgtPos.y) === 1)) add('swarm', Math.round(att.def.swarm * 100));
     if (mul !== 1) mods.push({ kind: 'skill', value: Math.round((mul - 1) * 100) });
-    let raw = w.dmg * mul * (1 + pct / 100);
-    const react = kind === 'counter' ? COUNTER_MUL : kind === 'overwatch' ? OVERWATCH_MUL : 1;
+    let raw = w.dmg * att.power * mul * (1 + pct / 100);
+    const react = kind === 'counter' ? (att.def.counterMul ?? COUNTER_MUL) : kind === 'overwatch' ? OVERWATCH_MUL : 1;
     if (react !== 1) {
       raw *= react;
       mods.push({ kind: 'reaction', value: Math.round((react - 1) * 100) });
@@ -342,6 +359,11 @@ export class Battle {
     if (cover && w.kind === 'direct' && manhattan(attPos.x, attPos.y, tgtPos.x, tgtPos.y) >= 2 && !tgt.def.structure) {
       raw *= 1 - COVER_REDUCTION[cover];
       mods.push({ kind: 'cover', value: -Math.round(COVER_REDUCTION[cover] * 100) });
+    }
+    // 塔盾：正面來的攻擊減半（反擊時對方已經轉過來面對，也算正面）
+    if (tgt.def.frontShield && (rel === 'front' || kind === 'counter')) {
+      raw *= 1 - tgt.def.frontShield;
+      mods.push({ kind: 'shield', value: -Math.round(tgt.def.frontShield * 100) });
     }
     const guard = this.auraNear(tgt.side, tgt, tgtPos, 'guard');
     if (guard) {
@@ -483,12 +505,24 @@ export class Battle {
   }
 
   skillReady(u: Unit, s: SkillDef): boolean {
+    // 躍進取代移動：這回合已經走過就不能再跳
+    if (s.effect.type === 'leap' && u.moved) return false;
     return (u.cds[s.id] ?? 0) === 0;
   }
 
   /** 技能可以選的目標格（方向型技能回傳四個相鄰格當作方向） */
   skillTargets(u: Unit, s: SkillDef, from: Pos = u): Pos[] {
     const out: Pos[] = [];
+    if (s.target === 'tile') {
+      for (let y = Math.max(0, from.y - s.max); y <= Math.min(this.h - 1, from.y + s.max); y++) {
+        for (let x = Math.max(0, from.x - s.max); x <= Math.min(this.w - 1, from.x + s.max); x++) {
+          const d = manhattan(from.x, from.y, x, y);
+          if (d < s.min || d > s.max || TERRAIN[this.terrainAt(x, y)].cost === 0 || this.unitAt(x, y)) continue;
+          out.push({ x, y });
+        }
+      }
+      return out;
+    }
     if (s.target === 'dir') {
       for (const [dx, dy] of DIR_VEC) if (this.inMap(from.x + dx, from.y + dy) && this.lineTiles(from, { x: from.x + dx, y: from.y + dy }, s).length) out.push({ x: from.x + dx, y: from.y + dy });
       return out;
@@ -557,6 +591,18 @@ export class Battle {
       tgt.stun = e.turns;
       tgt.overwatch = false;
       ev.push({ t: 'stun', uid: u.uid, target: tgt.uid });
+    } else if (e.type === 'leap') {
+      const from = { x: u.x, y: u.y };
+      u.x = at.x;
+      u.y = at.y;
+      ev.push({ t: 'leap', uid: u.uid, from, to: { x: at.x, y: at.y } });
+      // 躍進取代這回合的移動，但還能攻擊或用其他技能
+      u.cds[s.id] = s.cd + 1;
+      u.moved = true;
+      u.undo = undefined;
+      u.overwatch = false;
+      this.checkEnd(ev);
+      return ev;
     }
     u.cds[s.id] = s.cd + 1;
     this.spend(u);
@@ -722,7 +768,8 @@ export class Battle {
     if (this.result) return;
     const leader = this.units.find((u) => u.side === 'player' && u.def.id === 'kai');
     if (leader && !leader.alive) return this.finish(ev, 'lose', 'leader');
-    for (const tag of this.mission.protect ?? []) if (this.byTag(tag) && !this.byTag(tag)!.alive) return this.finish(ev, 'lose', 'protect');
+    const down = (this.mission.protect ?? []).filter((tag) => this.byTag(tag) && !this.byTag(tag)!.alive).length;
+    if (down >= (this.mission.protectLose ?? 1)) return this.finish(ev, 'lose', 'protect');
     if (!this.alive('player').some((u) => !u.def.structure)) return this.finish(ev, 'lose', 'wiped');
     const win = this.mission.win;
     if (win.type === 'rout') {

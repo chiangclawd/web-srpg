@@ -4,7 +4,7 @@
 
 - 入口：`starfall.html` → `src/starfall/main.ts`
 - 線上版：https://chiangclawd.github.io/web-srpg/starfall.html
-- 目前內容：第一章 3 個任務、4 台我方機體、4 種敵人、中英文
+- 目前內容：兩章共 6 個任務、5 台我方機體、10 種敵人與設施、配樂 3 首、中英文、一般 / 輕鬆兩種難度
 
 ## 故事
 
@@ -19,8 +19,15 @@
 | 布魯諾・鐸爾（47，前碼頭領班） | 鐵砧（重裝） | 高裝甲，相鄰友軍受傷 -20%；技能「震盪砲」把敵人轟退一格 |
 | 薇・桑德（29，議會軍逃兵） | 長庚（狙擊） | 射程 2–5，高處再 +1；技能「貫穿射擊」 |
 | 艾可（拒絕加入合唱的殘響） | 支援無人機 | 懸浮；「現場修復」「超載駭入」 |
+| 紗羅・米洛夫（16，電車線信差，第二章加入） | 雨燕（偵察） | 移動 6；側擊 / 背襲加成加倍；技能「噴射躍進」 |
 
-第一章「冰原上的訊號」：霜原拾荒 → 燈塔站（防守）→ 斷橋（首領「牧者」）。對話在 `src/starfall/data/story.ts`。
+- 第一章「冰原上的訊號」：霜原拾荒 → 燈塔站（防守）→ 斷橋（首領「牧者」）。
+- 第二章「冬眠艙的歌聲」：九號轉轍站（雨燕加入）→ C-7 冬眠艙（議會軍，海爾少校）→ 領唱者（先拆中繼節點再打本體）。
+
+對話在 `src/starfall/data/story.ts`。
+
+敵人：機群有工蜂（近戰、群聚）、哨兵、織網者（曲射）、獵手（高機動、獵殺殘血）、牧者、合唱體；
+議會軍有槍騎兵（反擊不打折）、堡壘（正面塔盾減半）、哨戒砲、指揮機「裁決」。
 
 ## 規則重點
 
@@ -30,6 +37,7 @@
 - **反擊**：被普通攻擊後，打得到攻擊者就反擊（60% 傷害）；技能不會被反擊。
 - **警戒**：這回合不攻擊，敵人走進射程時自動射擊一次（80% 傷害）。
 - **星數**：過關、沒有機體被擊破、在標準回合數內（防守關：保護目標剩一半以上耐久）。
+- **難度**：選單或失敗畫面可以切到「輕鬆」（敵方傷害 ×0.75、耐久 ×0.85）。
 
 ## 程式結構
 
@@ -46,9 +54,10 @@ src/starfall/
 ```
 
 ```bash
-npm run test:starfall                 # 規則測試（22 項）
+npm run test:starfall                 # 規則測試（30 項）
 npx tsx scripts/starfall-sim.ts       # 自動對戰：每關打不打得過、幾回合
-npx tsx scripts/starfall-sim.ts m3 -v # 逐步列出某一關的過程
+npx tsx scripts/starfall-sim.ts m3 -v # 逐步列出某一關的過程（加 --easy 用輕鬆難度）
+node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍第一關 + 六關自動對戰（要先 build 並開 preview）
 ```
 
 ## 美術流程
@@ -59,11 +68,12 @@ npx tsx scripts/starfall-sim.ts m3 -v # 逐步列出某一關的過程
 3. **渲染成圖表**：`node scripts/art/m3d/render.mjs scripts/art/m3d/starfall/<單位>.json <模型資料夾> public/assets/starfall/units/<單位>.webp`
    （等角視角：俯角 30°，正面 yaw 45、背面 yaw 135，另外兩個方向在遊戲裡水平翻轉）。印出來的 `unitPx` 填進 `src/starfall/view/sheets.ts`。
 4. 立繪、背景、主視覺也是 Gemini（`pt_*.txt`、`bg_*.txt`、`title.txt`），立繪用 `scripts/art/key.py` 去背。
+5. 配樂：`scripts/art/gemini-music.mjs`（Lyria）+ `music_*.txt`，再用 `scripts/art/prep_music.py` 統一響度。
 
 模型原始檔不放在這個公開 repo（在私人的 kingdom-bastion-art 的 `starfall/`）。
 
 ## 接下來
 
-- 第二章：C-7 冬眠艙段、議會軍（人類敵人）、第五位隊員「雨燕」
+- 第三章：主反應爐、整個「合唱」、船要不要起飛
 - 機體升級 / 武器改裝、任務間的整備畫面
-- 背景音樂、日文、戰鬥中存檔
+- 日文、戰鬥中存檔、堡壘的塔盾模型

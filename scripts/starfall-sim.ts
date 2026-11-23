@@ -1,5 +1,5 @@
 // 自動對戰：雙方都交給 AI 打完每一關，看關卡打不打得過、要幾回合。
-// 用法：npx tsx scripts/starfall-sim.ts [missionId] [-v]
+// 用法：npx tsx scripts/starfall-sim.ts [missionId] [-v] [--easy]
 import { Battle } from '../src/starfall/sim/Battle';
 import { autoPlay } from '../src/starfall/sim/ai';
 import { MISSIONS } from '../src/starfall/data/missions';
@@ -7,9 +7,10 @@ import { UNITS } from '../src/starfall/data/units';
 
 const only = process.argv[2] && !process.argv[2].startsWith('-') ? process.argv[2] : null;
 const verbose = process.argv.includes('-v');
+const easy = process.argv.includes('--easy');
 for (const m of MISSIONS) {
   if (only && m.id !== only) continue;
-  const b = new Battle(m, UNITS);
+  const b = new Battle(m, UNITS, easy);
   const name = (uid: number): string => `${b.unit(uid).def.id}#${uid}`;
   const r = autoPlay(b, 40, verbose ? (ev) => {
     for (const e of ev) {

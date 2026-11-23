@@ -2,7 +2,7 @@
 // 四個角各一個容器，手機上整組放大（uiZoom），文字跟著容器一起放大。
 import Phaser from 'phaser';
 import { COL, TEX, VIEW_H, addText, fitText, setupCamera, uiZoom, viewW } from '../config';
-import { sfx } from '../audio';
+import { refreshMusic, sfx } from '../audio';
 import { L, T } from '../i18n';
 import type { StrKey } from '../i18n';
 import { persist, save } from '../save';
@@ -81,9 +81,10 @@ export class HudScene extends Phaser.Scene {
     const turn = m.win.type === 'survive' ? T('turnOf', b.turn, m.win.turns) : T('turn', b.turn);
     const obj = addText(this, 16, 38, `${T('objective')}：${L(m.objective)}`, { size: 15, raw: true, strokeW: 0, color: COL.cyan });
     // 失敗條件：隊長機、保護目標
-    const guard = (m.protect ?? []).map((t) => b.byTag(t)).find((x) => x);
+    // 「毀掉幾個才失敗」的關卡，條件已經寫在目標那一行，這裡只提隊長機
+    const guard = (m.protectLose ?? 1) > 1 ? undefined : (m.protect ?? []).map((t) => b.byTag(t)).find((x) => x);
     const fail = addText(this, 16, 60, guard ? T('failProtect', L(guard.def.name)) : T('failLeader'), { size: 13, raw: true, strokeW: 0, color: '#ff8a7a', bold: false });
-    const tt = addText(this, 16, 82, turn, { size: 15, raw: true, strokeW: 0, color: COL.yellow });
+    const tt = addText(this, 16, 82, b.easy ? `${turn}　${T('easyTag')}` : turn, { size: 15, raw: true, strokeW: 0, color: COL.yellow });
     const w = Math.max(250, name.width + 32, obj.width + 32, fail.width + 32);
     drawPanel(g, 0, 0, w, 110, { alpha: 0.82 });
     this.tl.add([g, name, obj, fail, tt]);
@@ -170,8 +171,10 @@ export class HudScene extends Phaser.Scene {
         add(T('attack'), () => bs.beginTarget({ kind: 'attack' }), { icon: 'ic_attack', color: 0xff6a5a, disabled: !b.targets(u).length });
         for (const s of u.def.skills) {
           const cd = u.cds[s.id] ?? 0;
-          const ok = cd === 0 && b.skillTargets(u, s).length > 0;
-          add(L(s.name), () => bs.beginTarget({ kind: 'skill', skill: s }), { icon: s.icon, color: 0xffe45a, disabled: !ok, note: cd > 0 ? T('cooldown', cd) : undefined });
+          const ok = b.skillReady(u, s) && b.skillTargets(u, s).length > 0;
+          // 變灰的原因寫在按鈕上：冷卻中，或是躍進這種「走過就不能用」的技能
+          const note = cd > 0 ? T('cooldown', cd) : s.effect.type === 'leap' && u.moved ? T('afterMove') : undefined;
+          add(L(s.name), () => bs.beginTarget({ kind: 'skill', skill: s }), { icon: s.icon, color: 0xffe45a, disabled: !ok, note });
         }
         if (u.def.weapon.kind !== 'indirect') add(T('overwatch'), () => void bs.doOverwatch(), { icon: 'ic_overwatch' });
         add(T('wait'), () => void bs.doWait(), { icon: 'ic_wait', color: 0x8fb0c8 });
@@ -189,7 +192,7 @@ export class HudScene extends Phaser.Scene {
   private modText(m: Mod): string {
     if (m.kind === 'armor') return `${T('mod_armor')} ${m.value}`;
     if (m.kind === 'collide') return `${T('mod_collide')} +${m.value}`;
-    const name = m.kind === 'flank' ? (m.value >= 30 ? T('mod_flank_back') : T('mod_flank_side')) : T(`mod_${m.kind}` as StrKey);
+    const name = m.kind === 'flank' ? (m.rear ? T('mod_flank_back') : T('mod_flank_side')) : T(`mod_${m.kind}` as StrKey);
     return `${name} ${m.value > 0 ? '+' : ''}${m.value}%`;
   }
 
@@ -202,16 +205,17 @@ export class HudScene extends Phaser.Scene {
     if (!info) return;
     const W = 470;
     const f = info.forecast;
-    const H = f ? 128 : 84;
     const g = this.add.graphics();
-    drawPanel(g, -W / 2, 0, W, H, { line: 0xffe45a, alpha: 0.92 });
     this.tc.add(g);
     const title = info.target ? `${info.title}  →  ${L(info.target.def.name)}` : info.title;
     this.tc.add(fitText(addText(this, 0, 10, title, { size: 17, raw: true, strokeW: 0, color: COL.yellow }).setOrigin(0.5, 0), W - 30));
     if (!f || !info.target) {
-      this.tc.add(fitText(addText(this, 0, 42, info.note, { size: 18, raw: true, strokeW: 0 }).setOrigin(0.5, 0), W - 30));
+      const note = addText(this, 0, 40, info.note, { size: 15, raw: true, strokeW: 0, wrap: W - 36, align: 'center', bold: false, lineSpacing: 5 }).setOrigin(0.5, 0);
+      this.tc.add(note);
+      drawPanel(g, -W / 2, 0, W, Math.max(84, note.height + 56), { line: 0xffe45a, alpha: 0.92 });
       return;
     }
+    drawPanel(g, -W / 2, 0, W, 128, { line: 0xffe45a, alpha: 0.92 });
     const t = info.target;
     const left = addText(this, -W / 2 + 22, 38, `${T('dmg')} ${f.dmg}`, { size: 26, raw: true, strokeW: 0, color: f.kills ? COL.green : COL.text });
     const hpLine = f.kills ? T('kill') : `${T('hp')} ${t.hp} → ${t.hp - f.dmg}`;
@@ -323,15 +327,33 @@ export class HudScene extends Phaser.Scene {
     const b = bs.battle;
     const win = result === 'win';
     const W = 560;
-    const H = win ? 400 : 300;
+    const H = win ? 400 : b.easy ? 300 : 360;
     const box = this.openModal(W, H, win ? 0x6dff9a : COL.enemy);
     box.add(addText(this, 0, -H / 2 + 44, win ? T('victory') : T('defeat'), { size: 40, raw: true, color: win ? COL.green : COL.red, strokeW: 6 }).setOrigin(0.5));
     box.add(addText(this, 0, -H / 2 + 86, L(bs.mission.name), { size: 18, raw: true, strokeW: 0, color: COL.dim }).setOrigin(0.5));
     const by = H / 2 - 48;
     if (!win) {
-      box.add(addText(this, 0, -14, T(`lose_${reason}` as StrKey), { size: 20, raw: true, strokeW: 0 }).setOrigin(0.5));
+      box.add(addText(this, 0, -H / 2 + 130, T(`lose_${reason}` as StrKey), { size: 20, raw: true, strokeW: 0 }).setOrigin(0.5));
       box.add(new Button(this, -130, by, 230, 56, T('retry'), () => bs.restart(), { primary: true }));
       box.add(new Button(this, 130, by, 230, 56, T('toMissions'), () => bs.leave('missions'), { color: 0x8fb0c8 }));
+      if (!b.easy) {
+        box.add(
+          new Button(
+            this,
+            0,
+            by - 66,
+            300,
+            48,
+            T('retryEasy'),
+            () => {
+              save().easy = true;
+              persist();
+              bs.restart();
+            },
+            { color: 0x6dff9a, size: 17 },
+          ),
+        );
+      }
       return;
     }
     const got = [true, b.lost === 0, b.thirdStar()];
@@ -363,7 +385,7 @@ export class HudScene extends Phaser.Scene {
     const bs = this.battle;
     const sv = save();
     const W = 380;
-    const H = 420;
+    const H = 560;
     const box = this.openModal(W, H, COL.line);
     box.add(addText(this, 0, -H / 2 + 36, T('menu'), { size: 26, raw: true, strokeW: 0 }).setOrigin(0.5));
     const rows: [string, () => void, number?][] = [
@@ -375,6 +397,26 @@ export class HudScene extends Phaser.Scene {
           persist();
           this.closeModal();
           this.openMenu();
+        },
+      ],
+      [
+        T('music', sv.music > 0 ? T('on') : T('off')),
+        () => {
+          sv.music = sv.music > 0 ? 0 : 0.5;
+          persist();
+          refreshMusic();
+          this.closeModal();
+          this.openMenu();
+        },
+      ],
+      [
+        T('difficulty', sv.easy ? T('diffEasy') : T('diffNormal')),
+        () => {
+          sv.easy = !sv.easy;
+          persist();
+          this.closeModal();
+          this.openMenu();
+          this.toast(T('diffNote'));
         },
       ],
       [
