@@ -73,7 +73,7 @@ src/starfall/
 ```
 
 ```bash
-npm run test:starfall                 # 規則測試（55 項）
+npm run test:starfall                 # 規則測試（58 項）
 npx tsx scripts/starfall-sim.ts       # 自動對戰：每關打不打得過、幾回合
 npx tsx scripts/starfall-sim.ts m3 -v # 逐步列出某一關的過程（加 --easy 用輕鬆難度）
 npx tsx scripts/starfall-sim.ts --lv=2 --cautious --care=2  # 強化線都升到 2 級、謹慎打法、隊長保守；--max 是全部改滿

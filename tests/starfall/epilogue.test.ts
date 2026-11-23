@@ -85,6 +85,42 @@ test('護盾投射器：3 格內的友軍受到的傷害 -25%，兩座疊加；�
   assert.ok(!b.forecast(kai, far, { x: 6, y: 0 }).mods.some((m) => m.kind === 'guard'), 'out of range of both');
 });
 
+test('護盾投射器：不保護自己（另一座會保護它），三座疊起來上限 60%', () => {
+  const b = mk(OPEN, [P('kai', 0, 2), E('projector', 2, 2), E('projector', 4, 2), E('projector', 2, 4), E('lancer', 2, 3, { dir: 2, ai: 'hold' }), E('projector', 8, 0)]);
+  const kai = u(b, 'kai');
+  // 遠處單獨一座：沒有人替它減傷
+  assert.ok(!b.forecast(kai, u(b, 'projector', 3), { x: 6, y: 0 }).mods.some((m) => m.kind === 'guard'), 'a projector does not shield itself');
+  // 這一座旁邊還有兩座：受另外兩座保護（-50%），自己那一份不算
+  assert.equal(b.forecast(kai, u(b, 'projector', 0)).dmg, Math.round(30 * 0.5) - 2);
+  // 槍騎兵在三座的範圍裡：25% × 3 = 75%，但上限是 60%
+  assert.equal(b.forecast(kai, u(b, 'lancer'), { x: 0, y: 3 }).dmg, Math.round(30 * (1 - 0.6)) - 3);
+});
+
+test('波及傷害在出手當下算好：主目標（投射器）被打掉，旁邊的人照樣吃到它的減傷', () => {
+  const b = mk(['.........'], [P('weaver', 0, 0), P('kai', 1, 0), E('projector', 4, 0), E('lancer', 5, 0, { dir: 2, ai: 'hold' })]);
+  const w = u(b, 'weaver');
+  const lancer = u(b, 'lancer');
+  const proj = u(b, 'projector');
+  proj.hp = 1;
+  const guarded = b.calc(w, w, lancer, lancer, 'splash', 0.5).dmg;
+  b.attack(w, proj);
+  assert.ok(!proj.alive);
+  assert.equal(lancer.hp, 70 - guarded, 'splash uses the damage worked out before the projector fell');
+  assert.ok(guarded < b.calc(w, w, lancer, lancer, 'splash', 0.5).dmg, 'without the projector the same splash would hurt more');
+});
+
+test('我方機器人有敵人可以打的時候：先拆替敵人減傷的投射器；只保護單一目標的中繼節點則放著', () => {
+  const run = (structure: string): { s: Unit; lancer: Unit } => {
+    const b = mk(OPEN, [P('kai', 0, 2), E('lancer', 3, 2, { dir: 2, ai: 'hold' }), E(structure, 3, 1)]);
+    aiTakeTurn(b, u(b, 'kai'));
+    return { s: u(b, structure), lancer: u(b, 'lancer') };
+  };
+  const a = run('projector');
+  assert.ok(a.s.hp < a.s.maxHp && a.lancer.hp === a.lancer.maxHp, 'the bot shoots the projector first');
+  const r = run('relay');
+  assert.ok(r.s.hp === r.s.maxHp && r.lancer.hp < r.lancer.maxHp, 'with a relay next to it, the bot shoots the lancer');
+});
+
 test('雷霆攻城砲：射程 4–7、波及旁邊、3 格內打不到；推不動', () => {
   const b = mk(['..........', '..........'], [P('bruno', 3, 0), P('kai', 6, 0), P('vey', 6, 1), E('thunderer', 0, 0, { dir: 0, ai: 'hold' })]);
   const t = u(b, 'thunderer');

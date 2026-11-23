@@ -68,6 +68,8 @@ export class BattleScene extends Phaser.Scene {
   private bounds = new Phaser.Geom.Rectangle();
   private drag: { x: number; y: number; moved: boolean; pinch: number } | null = null;
   private endArmed = false;
+  /** 進行中的鏡頭移動結束時要呼叫的函式（見 stopFocus） */
+  private focusDone: (() => void) | null = null;
 
   constructor() {
     super('SfBattle');
@@ -85,6 +87,7 @@ export class BattleScene extends Phaser.Scene {
     this.range = null;
     this.drag = null;
     this.endArmed = false;
+    this.focusDone = null;
   }
 
   // ───────── 建立 ─────────
@@ -218,7 +221,14 @@ export class BattleScene extends Phaser.Scene {
     const dx = wx - this.center.x;
     const dy = wy - this.center.y;
     if (Math.abs(dx) < halfW * 0.62 && dy > -halfH * 0.55 && dy < halfH * 0.4) return Promise.resolve();
+    // 上一次的鏡頭移動還沒完：直接接手（先放行等它的人）
+    this.stopFocus();
     return new Promise((ok) => {
+      const done = (): void => {
+        if (this.focusDone === done) this.focusDone = null;
+        ok();
+      };
+      this.focusDone = done;
       this.tweens.add({
         targets: this.center,
         x: wx,
@@ -226,9 +236,21 @@ export class BattleScene extends Phaser.Scene {
         duration: this.ms(260),
         ease: 'Sine.easeInOut',
         onUpdate: () => this.applyCamera(),
-        onComplete: () => ok(),
+        onComplete: done,
       });
     });
+  }
+
+  /**
+   * 中斷進行中的鏡頭移動，並放行正在等它的演出。
+   * 演出（移動、攻擊、敵方回合）都會 await focus()；只把補間動畫砍掉的話 onComplete 不會觸發，
+   * 那個 Promise 永遠不會結束，整場戰鬥就卡在 busy。所以任何打斷鏡頭的地方都要走這裡。
+   */
+  private stopFocus(): void {
+    this.tweens.killTweensOf(this.center);
+    const done = this.focusDone;
+    this.focusDone = null;
+    done?.();
   }
 
   /** 地圖在世界座標裡佔的範圍（小地圖用） */
@@ -238,7 +260,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** 把鏡頭移到世界座標的某一點（點小地圖） */
   lookAt(wx: number, wy: number): void {
-    this.tweens.killTweensOf(this.center);
+    this.stopFocus();
     this.center.set(wx, wy);
     this.applyCamera();
   }

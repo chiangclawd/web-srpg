@@ -486,14 +486,12 @@ export class Battle {
     this.face(ev, u, tgt.x, tgt.y);
     const at = { x: tgt.x, y: tgt.y };
     const c = this.calc(u, u, tgt, tgt, 'weapon');
+    // 波及的傷害在出手當下就算好（跟貫穿一樣）：主目標倒下、連同它的光環消失，不會改變旁邊的人受到的傷害
+    const splash = w.splash
+      ? this.units.filter((o) => o.alive && o.side !== u.side && o !== tgt && manhattan(o.x, o.y, at.x, at.y) === 1).map((o) => ({ o, s: this.calc(u, u, o, o, 'splash', w.splash) }))
+      : [];
     this.hurt(ev, u, tgt, c.dmg, c.mods, 'weapon');
-    if (w.splash) {
-      for (const o of this.units) {
-        if (!o.alive || o.side === u.side || o === tgt || manhattan(o.x, o.y, at.x, at.y) !== 1) continue;
-        const s = this.calc(u, u, o, o, 'splash', w.splash);
-        this.hurt(ev, u, o, s.dmg, [{ kind: 'splash', value: Math.round((w.splash - 1) * 100) }], 'splash');
-      }
-    }
+    for (const { o, s } of splash) this.hurt(ev, u, o, s.dmg, [{ kind: 'splash', value: Math.round(((w.splash ?? 1) - 1) * 100) }], 'splash');
     if (tgt.alive) {
       this.face(ev, tgt, u.x, u.y);
       if (this.canCounter(tgt, tgt, u)) {

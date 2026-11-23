@@ -329,6 +329,33 @@ async function bigMapCheck(browser) {
   b = await st();
   ok(b.sel !== null && b.sel !== a.sel, '再按一次換下一台', { first: a.sel, second: b.sel });
   await page.screenshot({ path: path.join(OUT, 'big-2.png') });
+  // 鏡頭自動移動到一半被小地圖打斷：等鏡頭的演出要照樣往下走，不能卡住
+  const freed = await page.evaluate(async () => {
+    const s = window.__sf.scene.getScene('SfBattle');
+    s.toIdle();
+    const p = s.focus(21, 13);
+    s.lookAt(100, 100);
+    return Promise.race([p.then(() => 'resolved'), new Promise((r) => setTimeout(() => r('pending'), 1500))]);
+  });
+  ok(freed === 'resolved', '鏡頭移動被小地圖打斷後，等它的演出會繼續', { freed });
+  // 實際情境：敵方回合一邊演出一邊狂點小地圖，最後要回到我方回合
+  await page.evaluate(() => void window.__sf.scene.getScene('SfBattle').endTurn(true));
+  for (let i = 0; i < 30; i++) {
+    await page.touchscreen.tap(mini.x + mini.w * (0.2 + 0.6 * ((i * 7) % 10) / 10), mini.y + mini.h * (0.3 + 0.4 * ((i * 3) % 10) / 10));
+    await page.waitForTimeout(120);
+  }
+  const back = await page
+    .waitForFunction(
+      () => {
+        const s = window.__sf.scene.getScene('SfBattle');
+        return s.mode === 'idle' && s.battle.phase === 'player' && s.battle.turn === 2;
+      },
+      null,
+      { timeout: 90000 },
+    )
+    .then(() => true)
+    .catch(() => false);
+  ok(back, '敵方回合中狂點小地圖，戰鬥不會卡住（回到第 2 回合）', await st());
   await ctx.close();
 }
 

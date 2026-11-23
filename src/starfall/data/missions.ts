@@ -658,7 +658,7 @@ export const MISSIONS: MissionDef[] = [
     objective: { zh: '摧毀三門「雷霆」攻城砲', en: 'Destroy all three Thunderer siege guns' },
     par: 12,
     events: [
-      { turn: 5, spawn: [{ unit: 'breacher', x: 23, y: 4, dir: 2 }, { unit: 'breacher', x: 23, y: 5, dir: 2 }], say: 'm11_t4' },
+      { turn: 5, spawn: [{ unit: 'breacher', x: 23, y: 4, dir: 2 }, { unit: 'breacher', x: 23, y: 5, dir: 2 }], say: 'm11_t5' },
       { turn: 8, spawn: [{ unit: 'breacher', x: 23, y: 9, dir: 2 }, { unit: 'lancer', x: 23, y: 8, dir: 2 }] },
     ],
     intro: 'm11_intro',

@@ -285,7 +285,7 @@ export const STORY: Record<string, Line[]> = {
     { who: 'echo', zh: '我帶了兩台哨兵和兩台工蜂。工蜂跑得快，請拿去繞背，不用心疼 —— 它們自己說不介意。', en: 'I brought two Sentries and two Workers. The Workers are fast. Send them round the back, and do not feel bad for them. They say they do not mind.' },
     { who: 'kai', zh: '三門砲，一門都不留。走。', en: 'Three guns. Leave none. Move.' },
   ],
-  m11_t4: [{ who: 'hale', zh: '增援。瓦爾加不會讓砲列白白丟掉 —— 動作快。', en: 'Reinforcements. Varga will not give up her gun line for nothing. Move faster.' }],
+  m11_t5: [{ who: 'hale', zh: '增援。瓦爾加不會讓砲列白白丟掉 —— 動作快。', en: 'Reinforcements. Varga will not give up her gun line for nothing. Move faster.' }],
   m11_outro: [
     { who: 'sys', zh: '（最後一門砲的砲管垂了下去。冰原第一次安靜下來。）', en: '(The barrel of the last gun sags. For the first time, the plain is quiet.)' },
     { who: 'varga', zh: '很好。那麼我親自來。', en: 'Very well. Then I will come myself.' },
