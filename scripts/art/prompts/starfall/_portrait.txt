@@ -1,0 +1,6 @@
+
+Style: anime visual-novel character portrait for a sci-fi tactics game. Clean confident line art, cel shading with two shadow tones, slightly desaturated cold palette with one warm accent, detailed expressive face, rim light from the upper left in pale cyan. Bust shot from the chest up, facing three-quarters toward the right of the image, looking at the viewer.
+
+Requirements:
+- One character only, centered, head fully inside the frame with a little space above the hair.
+- Background: perfectly flat, uniform solid magenta (#FF00FF) everywhere around the character. No gradient, no scenery, no props, no text, no frame, no logo.

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="星墜殘響" />
+    <meta name="theme-color" content="#070d18" />
+    <title>星墜殘響 Starfall Echo</title>
+    <meta name="description" content="科幻機甲戰棋：指揮拾荒隊的機甲小隊，在墜毀殖民船的殘骸間對抗失控的無人機群。等角視角、高低差地形、固定傷害的回合制戰術。手機與電腦瀏覽器免安裝直接玩。" />
+    <!-- 分享到 LINE / Messenger / Discord 時的預覽卡片 -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="星墜殘響 Starfall Echo" />
+    <meta property="og:description" content="科幻機甲戰棋：等角視角、高低差地形、固定傷害的回合制戰術。免安裝直接玩。" />
+    <meta property="og:url" content="https://chiangclawd.github.io/web-srpg/starfall.html" />
+    <meta property="og:image" content="https://chiangclawd.github.io/web-srpg/assets/starfall/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://chiangclawd.github.io/web-srpg/assets/starfall/og.jpg" />
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #070d18;
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+        font-family: "Trebuchet MS", "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+        color: #e8f4ff;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+      }
+      /* iPhone 橫拿時瀏海 / 動態島在左右兩側：畫面讓出安全區域，HUD 和出怪點的按鈕不會被擋住（其他裝置是 0） */
+      #game {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: env(safe-area-inset-left, 0px);
+        right: env(safe-area-inset-right, 0px);
+        overflow: hidden;
+      }
+      #game canvas {
+        display: block;
+        touch-action: none;
+      }
+      #rotate-prompt { display: none; }
+      @media (max-width: 900px) and (orientation: portrait) {
+        #rotate-prompt {
+          display: flex;
+          position: fixed;
+          inset: 0;
+          background: #070d18;
+          align-items: center;
+          justify-content: center;
+          flex-direction: column;
+          gap: 20px;
+          z-index: 9999;
+          text-align: center;
+          padding: 24px;
+        }
+        #rotate-prompt .icon { font-size: 64px; animation: rot 1.6s ease-in-out infinite; }
+        #rotate-prompt .title { font-size: 22px; font-weight: bold; color: #5fe3ff; }
+        #rotate-prompt .desc { font-size: 15px; color: #8fb0c8; line-height: 1.5; }
+        #game { visibility: hidden; }
+      }
+      @keyframes rot {
+        0%, 50%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(-90deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <div id="rotate-prompt">
+      <div class="icon">📱</div>
+      <div class="title">請將裝置橫向使用</div>
+      <div class="desc">星墜殘響為橫屏遊戲<br/>Rotate your device to play</div>
+    </div>
+    <script type="module" src="/src/starfall/main.ts"></script>
+  </body>
+</html>

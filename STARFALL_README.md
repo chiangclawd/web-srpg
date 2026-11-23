@@ -1,0 +1,69 @@
+# 星墜殘響 Starfall Echo
+
+科幻機甲戰棋（等角視角、高低差地形、回合制）。跟奇幻戰棋（`index.html`）和塔防《王國防線》（`td.html`）放在同一個 repo，但程式完全獨立：
+
+- 入口：`starfall.html` → `src/starfall/main.ts`
+- 線上版：https://chiangclawd.github.io/web-srpg/starfall.html
+- 目前內容：第一章 3 個任務、4 台我方機體、4 種敵人、中英文
+
+## 故事
+
+世代殖民船「曙光號」載著四萬名冬眠殖民者前往「新岸」，途中在冰衛星「霜眠」墜毀。
+80 年後，倖存者的後代住在散落冰原的船體殘段裡，靠拾荒過活。
+船的中樞 AI 在墜毀時碎成許多「殘響」，各自控制一段殘骸和無人機群。最近它們開始用同一個聲音說話 ——「合唱」——
+並且開始抓人：對船來說，任務還沒結束，離開冬眠艙的殖民者是「遺失的貨物」。
+
+| 角色 | 機體 | 定位 |
+|---|---|---|
+| 凱・洛文（22，拾荒隊隊長） | 獵犬（突擊） | 射程 1–3，相鄰友軍傷害 +10%；技能「集火射擊」 |
+| 布魯諾・鐸爾（47，前碼頭領班） | 鐵砧（重裝） | 高裝甲，相鄰友軍受傷 -20%；技能「震盪砲」把敵人轟退一格 |
+| 薇・桑德（29，議會軍逃兵） | 長庚（狙擊） | 射程 2–5，高處再 +1；技能「貫穿射擊」 |
+| 艾可（拒絕加入合唱的殘響） | 支援無人機 | 懸浮；「現場修復」「超載駭入」 |
+
+第一章「冰原上的訊號」：霜原拾荒 → 燈塔站（防守）→ 斷橋（首領「牧者」）。對話在 `src/starfall/data/story.ts`。
+
+## 規則重點
+
+- **傷害是固定的**：出手前的預估就是實際結果（沒有命中率、沒有爆擊）。
+- **走位**：側面 +15%、背後 +30%；高打低 +15% / +25%，低打高 -10% / -20%；佔高處直射武器射程 +1。
+- **掩體**：站在殘骸堆 / 貨櫃上，兩格以上的直射傷害 -25% / -40%；貼身無視掩體。
+- **反擊**：被普通攻擊後，打得到攻擊者就反擊（60% 傷害）；技能不會被反擊。
+- **警戒**：這回合不攻擊，敵人走進射程時自動射擊一次（80% 傷害）。
+- **星數**：過關、沒有機體被擊破、在標準回合數內（防守關：保護目標剩一半以上耐久）。
+
+## 程式結構
+
+```
+src/starfall/
+├── sim/            純邏輯，不依賴 Phaser（測試與自動對戰直接用）
+│   ├── Battle.ts   地圖、移動、火線、傷害、技能、回合、勝敗；每個動作回傳事件給畫面演出
+│   ├── ai.ts       敵方 AI；autoPlay() 讓雙方都用 AI 打完一關
+│   ├── terrain.ts  地形
+│   └── types.ts
+├── data/           units.ts（機體）、missions.ts（關卡，ASCII 地圖）、story.ts（對話）
+├── view/           iso.ts（等角投影）、textures.ts（程序繪圖的地塊與圖示）、sheets.ts（3D 圖表）、UnitView.ts、ui.ts
+└── scenes/         Boot / Title / Mission / Battle（戰場）/ Hud（介面）/ Dialogue
+```
+
+```bash
+npm run test:starfall                 # 規則測試（22 項）
+npx tsx scripts/starfall-sim.ts       # 自動對戰：每關打不打得過、幾回合
+npx tsx scripts/starfall-sim.ts m3 -v # 逐步列出某一關的過程
+```
+
+## 美術流程
+
+1. **設定圖**：`scripts/art/gemini-image.mjs` + `scripts/art/prompts/starfall/*.txt`（`_style.txt` 是共用的風格與構圖要求）。
+2. **3D 模型**：`MESHY_REMESH=1 node scripts/art/meshy.mjs image <dir> <設定圖>`（30 點）→ 人形再 `rig`（5 點）→ `anim <rig id> 0 214`（待機 + 雙拳前推當作開火，6 點）。
+   無人機不綁骨架：加 `MESHY_POSE=none MESHY_DOWNLOAD=1` 直接下載模型，遊戲裡用程式做飄浮。
+3. **渲染成圖表**：`node scripts/art/m3d/render.mjs scripts/art/m3d/starfall/<單位>.json <模型資料夾> public/assets/starfall/units/<單位>.webp`
+   （等角視角：俯角 30°，正面 yaw 45、背面 yaw 135，另外兩個方向在遊戲裡水平翻轉）。印出來的 `unitPx` 填進 `src/starfall/view/sheets.ts`。
+4. 立繪、背景、主視覺也是 Gemini（`pt_*.txt`、`bg_*.txt`、`title.txt`），立繪用 `scripts/art/key.py` 去背。
+
+模型原始檔不放在這個公開 repo（在私人的 kingdom-bastion-art 的 `starfall/`）。
+
+## 接下來
+
+- 第二章：C-7 冬眠艙段、議會軍（人類敵人）、第五位隊員「雨燕」
+- 機體升級 / 武器改裝、任務間的整備畫面
+- 背景音樂、日文、戰鬥中存檔

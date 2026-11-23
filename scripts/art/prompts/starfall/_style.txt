@@ -1,0 +1,7 @@
+Concept art for a 3D game model: ONE single stylized sci-fi unit, in a clean anime mecha toy style — chunky super-deformed proportions (large torso and head unit, big forearms and big lower legs, short thighs), smooth hard-surface armor panels with a few large readable shapes, crisp dark outlines, flat cel shading with one shadow tone, very little small detail or greebles. It should look like a collectible vinyl toy of a robot.
+
+Requirements:
+- Full body, single unit, seen from the front at a slight three-quarter angle, standing upright and symmetrical in a neutral A-pose: legs slightly apart, both arms hanging away from the body at about 30 degrees, hands empty and open.
+- No hand-held weapons. Any weapon is built into the forearm or mounted on the shoulder or back, compact and close to the body.
+- Centered with generous empty margin all around; nothing cropped; no parts floating separately.
+- Background: perfectly flat uniform light grey (#D9D9D9). No ground, no cast shadow, no scenery, no text, no labels, no frame, no extra views.

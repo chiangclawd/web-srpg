@@ -18,7 +18,9 @@
     "td:sim": "tsx scripts/td-sim.ts",
     "td:levels": "tsx scripts/td-level-tool.ts",
     "td:optimize": "tsx scripts/td-optimize.ts",
-    "test:td": "tsx --test tests/td/*.test.ts"
+    "test:td": "tsx --test tests/td/*.test.ts",
+    "test:starfall": "tsx --test tests/starfall/*.test.ts",
+    "starfall:sim": "tsx scripts/starfall-sim.ts"
   },
   "dependencies": {
     "@capacitor/app": "8.1.2",

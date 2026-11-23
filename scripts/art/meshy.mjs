@@ -69,6 +69,8 @@ if (kind === 'image') {
     image_url: `data:image/png;base64,${b64}`,
     ai_model: process.env.MESHY_MODEL ?? 'latest',
     should_texture: true,
+    // MESHY_REMESH=1：直接回傳減面後的模型（省掉另外一次 remesh 任務）
+    ...(process.env.MESHY_REMESH ? { should_remesh: true } : {}),
     enable_pbr: false,
     // 人形用 A 字姿勢方便綁骨架；動物等非人形設 MESHY_POSE=none（照原圖姿勢）
     pose_mode: process.env.MESHY_POSE === 'none' ? '' : (process.env.MESHY_POSE ?? 'a-pose'),
@@ -93,4 +95,4 @@ if (kind === 'image') {
 }
 fs.writeFileSync(path.join(outDir, `${kind}.json`), JSON.stringify(task, null, 2));
 // 圖轉 3D 和減面的模型很大（數十 MB）又用不到，只下載綁好骨架和套好動作的檔
-if (kind === 'rig' || kind === 'anim') await downloadAll(task, kind);
+if (kind === 'rig' || kind === 'anim' || (kind === 'image' && process.env.MESHY_DOWNLOAD)) await downloadAll(task, kind);
