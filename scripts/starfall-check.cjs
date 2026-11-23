@@ -202,7 +202,7 @@ async function hangarCheck(browser) {
   await page.waitForFunction(() => window.__sf.scene.isActive('SfHangar'));
   await page.waitForTimeout(500);
   await page.screenshot({ path: path.join(OUT, 'hangar-1.png') });
-  // 每一台已加入的機體都看一次：每顆按鈕都要完整留在畫面裡（手機上整個畫面會放大，最容易超出去）
+  // 六台機體都看一次，還沒加入的也畫出來檢查排版：每顆按鈕都要完整留在畫面裡（手機上整個畫面會放大，最容易超出去）
   const out = await page.evaluate(() => {
     const g = window.__sf;
     const s = g.scene.getScene('SfHangar');

@@ -46,7 +46,7 @@ export class HangarScene extends Phaser.Scene {
 
   init(data: { chapter?: number }): void {
     this.chapter = data.chapter;
-    // 選中的機體記在場景物件上：旋轉手機或縮放視窗會重開場景，不該跳回第一台
+    // 選中的機體記在場景物件上：旋轉手機或縮放視窗會重開場景，不該跳回第一台（下次再進機庫也停在上次看的那台）
     if (!frameUnlocked(this.frame, save().stars)) this.frame = 'kai';
   }
 
