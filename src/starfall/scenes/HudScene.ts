@@ -6,6 +6,7 @@ import { refreshMusic, sfx } from '../audio';
 import { L, T } from '../i18n';
 import type { StrKey } from '../i18n';
 import { persist, save } from '../save';
+import { missionById } from '../data/missions';
 import { SPEAKERS } from '../data/story';
 import type { Speaker } from '../data/story';
 import type { Mod, Side } from '../sim/types';
@@ -491,12 +492,15 @@ export class HudScene extends Phaser.Scene {
     }
     const next = bs.nextMission();
     const hangar = (x: number, w: number): Button => new Button(this, x, by, w, 56, T('hangar'), () => bs.leave('hangar'), { color: 0xffd75a, icon: 'ic_parts' });
+    // 主線最後一關（下一關是後日談）和全部的最後一關，多一行完結的話
+    const storyEnd = !!next && (bs.mission.chapter ?? 1) === 3 && (missionById(next).chapter ?? 1) > 3;
+    const endNote = storyEnd ? T('chapterEnd') : next ? '' : T('epilogueEnd');
+    if (endNote) box.add(fitText(addText(this, 0, by - 50, endNote, { size: 15, raw: true, strokeW: 0, color: COL.cyan }).setOrigin(0.5), W - 40));
     if (next) {
       box.add(new Button(this, -188, by, 180, 56, T('next'), () => bs.leave('next'), { primary: true, color: 0x6dff9a }));
       box.add(hangar(0, 180));
       box.add(new Button(this, 188, by, 180, 56, T('toMissions'), () => bs.leave('missions'), { color: 0x8fb0c8 }));
     } else {
-      box.add(fitText(addText(this, 0, by - 50, T('chapterEnd'), { size: 15, raw: true, strokeW: 0, color: COL.cyan }).setOrigin(0.5), W - 40));
       box.add(hangar(-135, 250));
       box.add(new Button(this, 135, by, 250, 56, T('toMissions'), () => bs.leave('missions'), { primary: true }));
     }

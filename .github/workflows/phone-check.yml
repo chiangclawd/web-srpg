@@ -13,7 +13,7 @@ jobs:
   phone:
     # 固定在 24.04：這裡用的 Playwright 1.56.1 還不支援 ubuntu-latest 換上的 26.04（裝不了 Chromium）
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
 
