@@ -16,9 +16,10 @@ import { STORY } from '../data/story';
 import { UNITS } from '../data/units';
 import { loadoutDefs, missionParts } from '../data/upgrades';
 import { EH, TH, TOP_PAD, TW, isoX, isoY, tileDepth } from '../view/iso';
-import { TILE_TEX_H, TILE_VARIANTS, tileKey } from '../view/textures';
+import { TILE_TEX_H, tileKey, tileVariant } from '../view/textures';
 import { SHEETS, SHEET_FOOT, frameName } from '../view/sheets';
 import { UnitView } from '../view/UnitView';
+import { BattleFx, FX_DEPTH } from '../view/fx';
 import type { HudScene } from './HudScene';
 
 type Mode = 'idle' | 'unit' | 'target' | 'busy';
@@ -36,7 +37,6 @@ export interface AimInfo {
   note: string;
 }
 
-const FX_DEPTH = 100000;
 const MARK_COLOR: Record<MarkKind, [number, number]> = {
   move: [0x1f6dff, 0.5],
   target: [0xff3a2a, 0.55],
@@ -70,6 +70,7 @@ export class BattleScene extends Phaser.Scene {
   private endArmed = false;
   /** 進行中的鏡頭移動結束時要呼叫的函式（見 stopFocus） */
   private focusDone: (() => void) | null = null;
+  private fx!: BattleFx;
 
   constructor() {
     super('SfBattle');
@@ -112,7 +113,7 @@ export class BattleScene extends Phaser.Scene {
         const sy = isoY(x, y, b.heightAt(x, y));
         if (id !== 'chasm') {
           this.add
-            .image(sx, sy, tileKey(id, (x * 7 + y * 13) % TILE_VARIANTS))
+            .image(sx, sy, tileKey(id, tileVariant(id, x, y)))
             .setOrigin(0.5, (TOP_PAD + TH / 2) / TILE_TEX_H)
             .setScale(1 / TEX)
             .setDepth(tileDepth(x, y));
@@ -124,6 +125,16 @@ export class BattleScene extends Phaser.Scene {
       }
     }
     this.bounds.setTo(minX, minY, maxX - minX, maxY - minY);
+    // 氣氛：高低差的陰影、導管的光、底部的霧、環境粒子、四角壓暗
+    this.fx = new BattleFx(this, (n) => this.ms(n));
+    this.fx.ground({
+      w: b.w,
+      h: b.h,
+      top: (x, y) => (b.terrainAt(x, y) === 'chasm' ? null : b.heightAt(x, y) + (b.terrainAt(x, y) === 'wall' ? 2 : 0)),
+      glow: (x, y) => b.terrainAt(x, y) === 'grate',
+      theme: this.mission.theme ?? 'hull',
+      bounds: this.bounds,
+    });
     const win = this.mission.win;
     if (win.type === 'reach' || win.type === 'hold') for (const p of win.zone) this.mark('zone', p.x, p.y);
     // 場景擺設（爐心之類）：跟單位用同一種圖表，只是不會動
@@ -189,6 +200,7 @@ export class BattleScene extends Phaser.Scene {
 
   override update(time: number): void {
     for (const v of this.views.values()) v.update(time);
+    this.fx.update(time, this.views.values());
     // 背景固定在畫面上（不跟著縮放），只跟著鏡頭輕微平移，有一點遠近感
     const cam = this.cameras.main;
     const cover = Math.max(cam.width / this.bg.width, cam.height / this.bg.height) * 1.08;
@@ -828,7 +840,7 @@ export class BattleScene extends Phaser.Scene {
         const v = this.views.get(e.uid);
         if (!v) break;
         this.views.delete(e.uid);
-        if (v.root.alpha > 0.05) await this.explode(v);
+        if (v.root.alpha > 0.05) await this.fx.destroy(v);
         v.destroy();
         break;
       }
@@ -958,7 +970,11 @@ export class BattleScene extends Phaser.Scene {
     sfx('hit');
     Tv.flash();
     Tv.refresh(e.hp);
-    this.blast(Tv.center().x, Tv.center().y, 0xffffff, 0.45);
+    const at = Tv.center();
+    this.blast(at.x, at.y, 0xffffff, 0.45);
+    // 火花順著射擊方向噴出去
+    const from = A?.center();
+    this.fx.hit(at.x, at.y, from ? Phaser.Math.RadToDeg(Math.atan2(at.y - from.y, at.x - from.x)) : -90, e.dmg >= 30);
     this.number(Tv, `-${e.dmg}`, Tv.unit.side === 'player' ? '#ff6a5a' : '#ffe45a', e.killed);
     this.modTags(Tv, e);
     await this.wait(anim ? 380 : 220);
@@ -1065,24 +1081,6 @@ export class BattleScene extends Phaser.Scene {
   private ring(x: number, y: number, tint: number): void {
     const s = this.add.image(x, y, 'ring').setTint(tint).setScale(0.2, 0.1).setDepth(FX_DEPTH);
     this.tweens.add({ targets: s, scaleX: 1.6, scaleY: 0.8, alpha: 0, duration: this.ms(420), onComplete: () => s.destroy() });
-  }
-
-  private async explode(v: UnitView): Promise<void> {
-    sfx('boom');
-    const c = v.center();
-    this.cameras.main.shake(this.ms(180), 0.004);
-    for (let i = 0; i < 3; i++) this.time.delayedCall(this.ms(i * 70), () => this.blast(c.x + Phaser.Math.Between(-16, 16), c.y + Phaser.Math.Between(-14, 14), i === 1 ? 0xffffff : 0xffa53a, 1.3));
-    this.ring(v.root.x, v.root.y, 0xffa53a);
-    for (let i = 0; i < 10; i++) {
-      const a = (i / 10) * Math.PI * 2;
-      const p = this.add
-        .image(c.x, c.y, 'px')
-        .setTint(i % 2 ? 0xffa53a : 0x8494aa)
-        .setScale(0.6)
-        .setDepth(FX_DEPTH);
-      this.tweens.add({ targets: p, x: c.x + Math.cos(a) * 60, y: c.y + Math.sin(a) * 36 + 30, angle: 300, alpha: 0, duration: this.ms(520), ease: 'Quad.easeOut', onComplete: () => p.destroy() });
-    }
-    await this.tween({ targets: v.root, alpha: 0, duration: this.ms(260), delay: this.ms(80) });
   }
 
   // ───────── 結束 ─────────

@@ -68,7 +68,7 @@ src/starfall/
 │   ├── terrain.ts  地形
 │   └── types.ts
 ├── data/           units.ts（機體）、missions.ts（關卡，ASCII 地圖）、story.ts（對話）、upgrades.ts（零件與改造）
-├── view/           iso.ts（等角投影）、textures.ts（程序繪圖的地塊與圖示）、sheets.ts（3D 圖表）、UnitView.ts、ui.ts
+├── view/           iso.ts（等角投影）、textures.ts（程序繪圖的地塊與圖示）、sheets.ts（3D 圖表）、UnitView.ts、ui.ts、fx.ts（陰影、霧、粒子、擊破演出）
 └── scenes/         Boot / Title / Mission / Hangar（機庫）/ Battle（戰場）/ Hud（介面）/ Dialogue
 ```
 
@@ -99,6 +99,8 @@ node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍�
 模型原始檔不放在這個公開 repo（在私人的 kingdom-bastion-art 的 `starfall/`）。
 
 ## 接下來
+
+整體的規劃和進度在 [STARFALL_ROADMAP.md](STARFALL_ROADMAP.md)。
 
 - 外傳或挑戰模式、更多大地圖任務
 - 日文、戰鬥中存檔、堡壘的塔盾模型
