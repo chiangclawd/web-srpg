@@ -23,17 +23,37 @@ function foes(b: Battle, u: Unit): Unit[] {
 }
 
 /**
+ * 我方機器人的打法。機器人不是最佳解，只是一套固定的判斷，數值稍微一動（例如機體升級）走法就可能整個不同；
+ * 所以驗證「這一關打得過」時會拿幾種打法各打一次，有一種贏就算。
+ * - 預設：估危險範圍時把場上的單位當成擋住敵人去路的牆（照現在的站位算）
+ * - cautious：當作路上沒有人（隊友等一下會走開），比較保守
+ * - leaderCare：隊長和任務要保護的機體對危險的顧慮放大幾倍（預設 1）。機器人輸掉的局通常是隊長或保護目標被打掉
+ */
+export interface BotStyle {
+  cautious?: boolean;
+  leaderCare?: number;
+}
+export const BOT_STYLES: readonly BotStyle[] = [{}, { cautious: true }, { leaderCare: 2 }, { cautious: true, leaderCare: 2 }];
+
+/** 這個敵人下回合打得到的格子，路上的單位一律當作不存在（謹慎打法用） */
+function looseThreat(b: Battle, e: Unit): Set<number> {
+  const out = new Set<number>();
+  for (const k of b.moveRange(e, e.def.move, true).keys()) for (const t of b.weaponTiles(e, b.pos(k))) out.add(b.key(t.x, t.y));
+  return out;
+}
+
+/**
  * 每一格下回合可能挨多少打：會動的敵人「走得到又打得到」的格子，加上它的武器傷害。
  * 只有我方機器人會看這個（模擬玩家不會讓一台機體單獨衝進敵陣）；機群不怕死。
  */
-function dangerMap(b: Battle, u: Unit, enemies: Unit[]): Map<number, number> {
+function dangerMap(b: Battle, u: Unit, enemies: Unit[], style: BotStyle): Map<number, number> {
   const out = new Map<number, number>();
   if (u.side !== 'player') return out;
   for (const e of enemies) {
     if (e.def.structure || e.stun > 0) continue;
     // 離得遠、還沒被驚動的守備單位只算它原地的射程；靠近到快要驚動它的距離就當作它會動
     const mobile = e.ai === 'aggressive' || (e.ai === 'guard' && dist(e, u) <= AGGRO_RANGE + u.def.move);
-    const tiles = mobile ? b.threat(e) : new Set(b.weaponTiles(e).map((t) => b.key(t.x, t.y)));
+    const tiles = mobile ? (style.cautious ? looseThreat(b, e) : b.threat(e)) : new Set(b.weaponTiles(e).map((t) => b.key(t.x, t.y)));
     for (const k of tiles) out.set(k, (out.get(k) ?? 0) + e.def.weapon.dmg);
   }
   return out;
@@ -48,14 +68,15 @@ function watchDmg(b: Battle, u: Unit, p: Pos, enemies: Unit[]): number {
 }
 
 /** 站在這格的好處：掩體、高度；曲射單位不想被貼身 */
-function tileScore(b: Battle, u: Unit, p: Pos, enemies: Unit[], danger: Map<number, number>): number {
+function tileScore(b: Battle, u: Unit, p: Pos, enemies: Unit[], danger: Map<number, number>, style: BotStyle): number {
   let s = TERRAIN[b.terrainAt(p.x, p.y)].cover * 4;
   const d = danger.get(b.key(p.x, p.y)) ?? 0;
   // 越脆的機體越怕被圍；估計值沒算側擊、獵殺等加成，所以抓 1.25 倍當作「可能被打掉」
   // 隊長和任務要保護的機體被打掉就輸了，更小心
   if (d) {
     const vital = u.def.id === 'kai' || (!!u.tag && (b.mission.protect ?? []).includes(u.tag));
-    s -= ((d * 40) / u.maxHp + (d * 1.25 >= u.hp ? 80 : 0)) * (vital ? 1.5 : 1);
+    const care = vital ? (style.leaderCare ?? 1) : 1;
+    s -= ((d * 40) / u.maxHp + (d * 1.25 * care >= u.hp ? 80 : 0)) * (vital ? 1.5 * care : 1);
   }
   if (u.def.weapon.kind !== 'melee') s += b.heightAt(p.x, p.y) * 2;
   if (u.def.weapon.min >= 2) for (const e of enemies) if (!e.def.structure && dist(e, p) < u.def.weapon.min) s -= 12;
@@ -75,10 +96,10 @@ function targetBonus(b: Battle, u: Unit, t: Unit): number {
   return s;
 }
 
-function options(b: Battle, u: Unit, reach: Pos[], enemies: Unit[], danger: Map<number, number>): Option[] {
+function options(b: Battle, u: Unit, reach: Pos[], enemies: Unit[], danger: Map<number, number>, style: BotStyle): Option[] {
   const out: Option[] = [];
   for (const p of reach) {
-    const base = tileScore(b, u, p, enemies, danger);
+    const base = tileScore(b, u, p, enemies, danger, style);
     for (const t of b.targets(u, p)) {
       if (u.side === 'enemy' && t.def.structure && t.tag !== u.prey) continue;
       const f = b.forecast(u, t, p);
@@ -199,7 +220,7 @@ function advance(b: Battle, u: Unit, reach: Pos[], enemies: Unit[], danger: Map<
   return pick;
 }
 
-export function aiTakeTurn(b: Battle, u: Unit): BattleEvent[] {
+export function aiTakeTurn(b: Battle, u: Unit, style: BotStyle = {}): BattleEvent[] {
   const ev: BattleEvent[] = [];
   if (!b.canAct(u)) return ev;
   const enemies = foes(b, u);
@@ -209,7 +230,7 @@ export function aiTakeTurn(b: Battle, u: Unit): BattleEvent[] {
     else return b.canOverwatch(u) ? b.setOverwatch(u) : b.wait(u);
   }
   let reach = u.ai === 'hold' ? [{ x: u.x, y: u.y }] : b.reachable(u);
-  const danger = dangerMap(b, u, enemies);
+  const danger = dangerMap(b, u, enemies, style);
   // 我方機器人：任務要某台機體走到（或守住）一個區域時，那台機體以區域為目標，到了就不離開
   const win = b.mission.win;
   if (u.side === 'player' && (win.type === 'hold' || win.type === 'reach') && win.who === u.def.id) {
@@ -241,7 +262,7 @@ export function aiTakeTurn(b: Battle, u: Unit): BattleEvent[] {
     }
     reach = [{ x: u.x, y: u.y }];
   }
-  const opts = options(b, u, reach, enemies, danger);
+  const opts = options(b, u, reach, enemies, danger, style);
   // 分數一樣時少走幾步（不要無謂地繞路）
   opts.sort((a, c) => c.score - a.score || dist(a.at, u) - dist(c.at, u));
   // 我方機器人：每個出手的位置都太危險（分數是負的）就不硬打 ——
@@ -282,7 +303,12 @@ function finish(b: Battle, u: Unit): BattleEvent[] {
 }
 
 /** 自動打完整場（測試與平衡用）：雙方都交給 AI。回傳結果與回合數 */
-export function autoPlay(b: Battle, maxTurns = 40, log: (ev: BattleEvent[]) => void = () => undefined): { result: 'win' | 'lose' | 'timeout'; turns: number; lost: number; stars: number } {
+export function autoPlay(
+  b: Battle,
+  maxTurns = 40,
+  log: (ev: BattleEvent[]) => void = () => undefined,
+  style: BotStyle = {},
+): { result: 'win' | 'lose' | 'timeout'; turns: number; lost: number; stars: number } {
   log(b.start());
   while (!b.result && b.turn <= maxTurns) {
     // 我方：支援機最後動（先看誰受傷），其他照原本的順序
@@ -292,11 +318,12 @@ export function autoPlay(b: Battle, maxTurns = 40, log: (ev: BattleEvent[]) => v
       .sort((a, c) => Number(a.def.id === 'echo') - Number(c.def.id === 'echo'));
     for (const u of order) {
       if (b.result) break;
-      if (u.alive) log(aiTakeTurn(b, u));
+      if (u.alive) log(aiTakeTurn(b, u, style));
     }
     if (b.result) break;
     log(b.endPlayerPhase());
-    for (let ev = b.stepEnemy(aiTakeTurn); ev !== null; ev = b.stepEnemy(aiTakeTurn)) log(ev);
+    const enemy = (bb: Battle, e: Unit): BattleEvent[] => aiTakeTurn(bb, e);
+    for (let ev = b.stepEnemy(enemy); ev !== null; ev = b.stepEnemy(enemy)) log(ev);
     log(b.beginPlayerPhase());
   }
   return { result: b.result ?? 'timeout', turns: b.turn, lost: b.lost, stars: b.stars() };

@@ -435,6 +435,59 @@ const ICONS: Record<string, IconFn> = {
     g.closePath();
     g.fill();
   },
+  ic_parts: (g) => {
+    stroke(g, 6);
+    g.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      g.lineTo(32 + Math.cos(a) * 25, 32 + Math.sin(a) * 25);
+    }
+    g.closePath();
+    g.stroke();
+    g.beginPath();
+    g.arc(32, 32, 9, 0, Math.PI * 2);
+    g.stroke();
+  },
+  ic_plating: (g) => {
+    stroke(g, 5);
+    g.beginPath();
+    g.moveTo(32, 7);
+    g.lineTo(54, 15);
+    g.lineTo(54, 32);
+    g.quadraticCurveTo(54, 49, 32, 58);
+    g.quadraticCurveTo(10, 49, 10, 32);
+    g.lineTo(10, 15);
+    g.closePath();
+    g.stroke();
+    line(g, [32, 20], [32, 44], '#fff', 5);
+    line(g, [20, 32], [44, 32], '#fff', 5);
+  },
+  ic_firepower: (g) => {
+    stroke(g, 5);
+    g.beginPath();
+    g.arc(32, 32, 19, 0, Math.PI * 2);
+    g.stroke();
+    for (const [a, b] of [
+      [[32, 4], [32, 20]],
+      [[32, 44], [32, 60]],
+      [[4, 32], [20, 32]],
+      [[44, 32], [60, 32]],
+    ] as [[number, number], [number, number]][]) line(g, a, b, '#fff', 5);
+    g.beginPath();
+    g.arc(32, 32, 4, 0, Math.PI * 2);
+    g.fill();
+  },
+  ic_mod: (g) => {
+    stroke(g, 4);
+    g.strokeRect(17, 17, 30, 30);
+    g.fillRect(26, 26, 12, 12);
+    for (const k of [24, 32, 40]) {
+      line(g, [k, 6], [k, 17], '#fff', 4);
+      line(g, [k, 47], [k, 58], '#fff', 4);
+      line(g, [6, k], [17, k], '#fff', 4);
+      line(g, [47, k], [58, k], '#fff', 4);
+    }
+  },
   ic_lock: (g) => {
     stroke(g, 5);
     g.fillRect(14, 28, 36, 28);

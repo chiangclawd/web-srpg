@@ -322,27 +322,30 @@ export class HudScene extends Phaser.Scene {
     this.modal = null;
   }
 
-  showResult(result: 'win' | 'lose', reason: string): void {
+  /** parts：這次新拿到的零件（重打已經拿過的星就是 0） */
+  showResult(result: 'win' | 'lose', reason: string, parts = 0): void {
     const bs = this.battle;
     const b = bs.battle;
     const win = result === 'win';
-    const W = 560;
-    const H = win ? 400 : b.easy ? 300 : 360;
+    const W = 580;
+    const H = win ? 450 : 360;
     const box = this.openModal(W, H, win ? 0x6dff9a : COL.enemy);
     box.add(addText(this, 0, -H / 2 + 44, win ? T('victory') : T('defeat'), { size: 40, raw: true, color: win ? COL.green : COL.red, strokeW: 6 }).setOrigin(0.5));
     box.add(addText(this, 0, -H / 2 + 86, L(bs.mission.name), { size: 18, raw: true, strokeW: 0, color: COL.dim }).setOrigin(0.5));
     const by = H / 2 - 48;
     if (!win) {
       box.add(addText(this, 0, -H / 2 + 130, T(`lose_${reason}` as StrKey), { size: 20, raw: true, strokeW: 0 }).setOrigin(0.5));
-      box.add(new Button(this, -130, by, 230, 56, T('retry'), () => bs.restart(), { primary: true }));
-      box.add(new Button(this, 130, by, 230, 56, T('toMissions'), () => bs.leave('missions'), { color: 0x8fb0c8 }));
+      box.add(new Button(this, -135, by, 250, 56, T('retry'), () => bs.restart(), { primary: true }));
+      box.add(new Button(this, 135, by, 250, 56, T('toMissions'), () => bs.leave('missions'), { color: 0x8fb0c8 }));
+      // 打不過的兩條出路：去機庫改造機體，或改用輕鬆難度
+      box.add(new Button(this, b.easy ? 0 : -135, by - 66, b.easy ? 300 : 250, 48, T('hangar'), () => bs.leave('hangar'), { color: 0xffd75a, size: 17, icon: 'ic_parts' }));
       if (!b.easy) {
         box.add(
           new Button(
             this,
-            0,
+            135,
             by - 66,
-            300,
+            250,
             48,
             T('retryEasy'),
             () => {
@@ -371,13 +374,31 @@ export class HudScene extends Phaser.Scene {
       box.add(addText(this, -150, y, ok ? '★' : '☆', { size: 18, raw: true, strokeW: 0, color: ok ? COL.yellow : '#4a5a6c' }).setOrigin(0.5));
       box.add(addText(this, -130, y, labels[i], { size: 17, raw: true, strokeW: 0, color: ok ? COL.text : '#6a7c90', bold: false }).setOrigin(0, 0.5));
     });
-    const next = bs.nextMission();
-    if (next) {
-      box.add(new Button(this, -130, by, 230, 56, T('next'), () => bs.leave('next'), { primary: true, color: 0x6dff9a }));
-      box.add(new Button(this, 130, by, 230, 56, T('toMissions'), () => bs.leave('missions'), { color: 0x8fb0c8 }));
+    // 零件：這次新拿到的星才有
+    const py = -H / 2 + 318;
+    if (parts > 0) {
+      const t = addText(this, 14, py, T('partsGain', parts), { size: 22, raw: true, strokeW: 0, color: COL.yellow }).setOrigin(0.5);
+      const ic = this.add
+        .image(t.x - t.width / 2 - 20, py, 'ic_parts')
+        .setScale(26 / 64 / TEX)
+        .setTint(0xffd75a);
+      box.add([t, ic]);
+      t.setAlpha(0);
+      ic.setAlpha(0);
+      this.tweens.add({ targets: [t, ic], alpha: 1, duration: 300, delay: 900, onStart: () => sfx('select') });
     } else {
-      box.add(fitText(addText(this, 0, by - 52, T('chapterEnd'), { size: 15, raw: true, strokeW: 0, color: COL.cyan }).setOrigin(0.5), W - 40));
-      box.add(new Button(this, 0, by, 260, 56, T('toMissions'), () => bs.leave('missions'), { primary: true }));
+      box.add(fitText(addText(this, 0, py, T('partsNone'), { size: 15, raw: true, strokeW: 0, color: COL.dim, bold: false }).setOrigin(0.5), W - 40));
+    }
+    const next = bs.nextMission();
+    const hangar = (x: number, w: number): Button => new Button(this, x, by, w, 56, T('hangar'), () => bs.leave('hangar'), { color: 0xffd75a, icon: 'ic_parts' });
+    if (next) {
+      box.add(new Button(this, -188, by, 180, 56, T('next'), () => bs.leave('next'), { primary: true, color: 0x6dff9a }));
+      box.add(hangar(0, 180));
+      box.add(new Button(this, 188, by, 180, 56, T('toMissions'), () => bs.leave('missions'), { color: 0x8fb0c8 }));
+    } else {
+      box.add(fitText(addText(this, 0, by - 50, T('chapterEnd'), { size: 15, raw: true, strokeW: 0, color: COL.cyan }).setOrigin(0.5), W - 40));
+      box.add(hangar(-135, 250));
+      box.add(new Button(this, 135, by, 250, 56, T('toMissions'), () => bs.leave('missions'), { primary: true }));
     }
   }
 

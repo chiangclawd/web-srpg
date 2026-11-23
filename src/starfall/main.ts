@@ -4,6 +4,7 @@ import { T } from './i18n';
 import { BootScene } from './scenes/BootScene';
 import { TitleScene } from './scenes/TitleScene';
 import { MissionScene } from './scenes/MissionScene';
+import { HangarScene } from './scenes/HangarScene';
 import { BattleScene } from './scenes/BattleScene';
 import { HudScene } from './scenes/HudScene';
 import { DialogueScene } from './scenes/DialogueScene';
@@ -17,7 +18,7 @@ const game = new Phaser.Game({
   width: Math.round(computeViewW() * RS),
   height: Math.round(VIEW_H * RS),
   backgroundColor: '#070d18',
-  scene: [BootScene, TitleScene, MissionScene, BattleScene, HudScene, DialogueScene],
+  scene: [BootScene, TitleScene, MissionScene, HangarScene, BattleScene, HudScene, DialogueScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -45,7 +46,7 @@ window.addEventListener('resize', () => {
     game.scale.resize(w, Math.round(VIEW_H * RS));
     for (const s of game.scene.getScenes(true)) {
       const key = s.scene.key;
-      if (key === 'SfTitle' || key === 'SfMissions') s.scene.restart();
+      if (key === 'SfTitle' || key === 'SfMissions' || key === 'SfHangar') s.scene.restart();
     }
   }, 200);
 });
