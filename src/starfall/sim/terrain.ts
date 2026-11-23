@@ -9,6 +9,7 @@ export const TERRAIN: Record<TerrainId, TerrainDef> = {
   barricade: { id: 'barricade', name: { zh: '貨櫃掩體', en: 'Cargo Cover' }, cost: 1, cover: 2, blocksFire: false },
   wall: { id: 'wall', name: { zh: '艙壁', en: 'Bulkhead' }, cost: 0, cover: 0, blocksFire: true },
   chasm: { id: 'chasm', name: { zh: '裂谷', en: 'Chasm' }, cost: 0, cover: 0, blocksFire: false },
+  machine: { id: 'machine', name: { zh: '機組', en: 'Machinery' }, cost: 0, cover: 0, blocksFire: false },
 };
 
 /** 關卡地圖字元 → 地形 */
@@ -21,6 +22,7 @@ export const TERRAIN_CHARS: Record<string, TerrainId> = {
   b: 'barricade',
   '#': 'wall',
   '~': 'chasm',
+  o: 'machine',
 };
 
 export const COVER_REDUCTION = [0, 0.25, 0.4] as const;

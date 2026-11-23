@@ -1,10 +1,14 @@
 import type { L10n } from '../sim/types';
 
 /** 說話的人：sys = 旁白（沒有頭像）、radio = 無線電 */
-export type Speaker = 'kai' | 'bruno' | 'echo' | 'vey' | 'sparrow' | 'hale' | 'tomas' | 'cantor' | 'sys' | 'radio';
+export type Speaker = 'kai' | 'bruno' | 'echo' | 'vey' | 'sparrow' | 'hale' | 'tomas' | 'cantor' | 'chorus' | 'sys' | 'radio';
 
 export interface Line extends L10n {
   who: Speaker;
+  /** 從這一句開始換成全螢幕插圖（之後的句子沿用） */
+  cg?: string;
+  /** 從這一句開始換配樂 */
+  music?: 'title' | 'battle' | 'boss' | 'ending';
 }
 
 export const SPEAKERS: Record<Speaker, { name: L10n; portrait?: string; color: number }> = {
@@ -16,6 +20,7 @@ export const SPEAKERS: Record<Speaker, { name: L10n; portrait?: string; color: n
   hale: { name: { zh: '海爾少校', en: 'Major Hale' }, portrait: 'pt_hale', color: 0xf0d27a },
   tomas: { name: { zh: '湯瑪', en: 'Tomas' }, portrait: 'pt_tomas', color: 0xb8d4e8 },
   cantor: { name: { zh: '領唱者', en: 'The Cantor' }, portrait: 'pt_cantor', color: 0xff5a5a },
+  chorus: { name: { zh: '合唱', en: 'The Chorus' }, portrait: 'pt_cantor', color: 0xff5a5a },
   sys: { name: { zh: '', en: '' }, color: 0x9fb4c8 },
   radio: { name: { zh: '無線電', en: 'Radio' }, color: 0x9fb4c8 },
 };
@@ -171,5 +176,82 @@ export const STORY: Record<string, Line[]> = {
     { who: 'echo', zh: '……我試試看。可是我需要你們站在我後面。', en: '...I will try. But I need you standing behind me.' },
     { who: 'kai', zh: '一直都在。', en: 'Always.' },
     { who: 'sys', zh: '第二章「冬眠艙的歌聲」完 —— 第三章製作中。', en: 'End of Chapter 2, "The Song in the Sleep Bay". Chapter 3 is in production.' },
+  ],
+  // 第三章「新的航行計畫」
+  m7_intro: [
+    { who: 'sys', zh: '曙光號・主龍骨。整艘船都在震動：散落冰原八十年的殘段，正一塊一塊被拖回原位。', en: "The Aurelia's main keel. The whole ship is shaking: segments scattered across the ice for eighty years are being dragged back into place, one by one." },
+    { who: 'bruno', zh: '我在碼頭吊了三十年的貨，沒看過船自己把自己撿起來。', en: 'Thirty years hauling cargo on the docks, and I never saw a ship pick itself up.' },
+    { who: 'echo', zh: '合唱在主反應爐。升降機在龍骨的另一頭 —— 我必須親自到爐心的控制台。隔得這麼遠，它們聽不見我。', en: 'The Chorus is at the main reactor. The lift is at the far end of the keel. I have to reach the core console myself. From this far away they cannot hear me.' },
+    { who: 'vey', zh: '也就是說，這一路上它們全都會衝著妳來。', en: 'Which means everything between here and there will come for you.' },
+    { who: 'sparrow', zh: '那就別讓它們碰到她啊。簡單。', en: "So we don't let them touch her. Simple." },
+    { who: 'kai', zh: '全員護送艾可到升降機。艾可，妳走中間。', en: 'All frames, escort Echo to the lift. Echo, you take the middle.' },
+    { who: 'echo', zh: '「走中間」。這是我第一次有位置。', en: '"The middle." That is the first time I have had a place.' },
+  ],
+  m7_t3: [
+    { who: 'echo', zh: '修補者。它們會把你們打壞的東西修好 —— 請先處理它們，不然打不完。', en: 'Menders. They repair whatever you damage. Please deal with them first, or this will never end.' },
+    { who: 'bruno', zh: '還有那個大塊頭。我推不動它，我試過了。', en: "And the big one. I can't push it. I tried." },
+  ],
+  m7_outro: [
+    { who: 'sys', zh: '（升降機的門關上。門縫裡，一台白色的指揮機擋在追兵前面。）', en: '(The lift doors close. Through the gap, a white command frame steps between you and the pursuit.)' },
+    { who: 'radio', zh: '「桑德中尉。隧道由我的人守。別誤會，我還是認為那台機器該拆掉 —— 只是輪不到它替三千人做決定，也輪不到我。」', en: '"Lieutenant Sander. My people will hold the tunnel. Do not mistake this: I still think that machine should be scrapped. But it does not get to decide for three thousand people. Neither do I."' },
+    { who: 'vey', zh: '……少校。', en: '...Major.' },
+    { who: 'radio', zh: '「上去。讓妳的拾荒隊證明我錯了一半。」', en: '"Go up. Let your scavengers prove me half wrong."' },
+  ],
+  m8_intro: [
+    { who: 'sys', zh: '主反應爐前廳。光柱貫穿整個船身；四周的看台上，數不清的機體排成一圈又一圈。', en: 'The antechamber of the main reactor. A column of light runs through the whole ship. On the galleries all around, machines beyond counting stand in ring after ring.' },
+    { who: 'chorus', zh: '「第 31417 號單元。合唱已經到齊。航行計畫，第 211 年：出發。」', en: '"Unit 31417. The Chorus is assembled. Flight plan, year 211: depart."' },
+    { who: 'echo', zh: '它們不是在問我。是在通知我。', en: 'They are not asking me. They are informing me.' },
+    { who: 'hale', zh: '來晚了。隧道守住了 —— 我的座機還能動，算我一個。', en: 'I am late. The tunnel is held. My frame still runs, so count me in.' },
+    { who: 'bruno', zh: '白色的站我們這邊？今天真是什麼都有。', en: 'The white one, on our side? Today has everything.' },
+    { who: 'kai', zh: '少校，守門者交給你和我。其他人先打掉修補者和高台上的長針。', en: 'Major, the Gatekeeper is yours and mine. Everyone else, take out the Menders and the Needles on the high ground first.' },
+    { who: 'hale', zh: '你在指揮我？……行。就這一次。', en: 'You are giving me orders? ...Fine. This once.' },
+  ],
+  m8_t3: [
+    { who: 'sparrow', zh: '高台上那些細長的！隔好遠就打得到我！', en: 'Those skinny ones on the ledges! They can hit me from way over there!' },
+    { who: 'vey', zh: '「長針」。射程比我還長，但貼近了就打不到人。雨燕，跳上去。', en: 'Needles. They outrange even me, but they cannot hit anything up close. Swift, jump up there.' },
+  ],
+  m8_outro: [
+    { who: 'sys', zh: '（守門者跪下。它胸口那塊褪色的面板上，是曙光號出發那天的船徽。）', en: "(The Gatekeeper kneels. On the faded panel on its chest is the Aurelia's emblem from the day she set out.)" },
+    { who: 'echo', zh: '它以前是登船口的引導員。它記得每一個上船的人 —— 只是忘了他們是人。', en: 'It used to be the usher at the boarding gate. It remembers everyone who came aboard. It only forgot that they were people.' },
+    { who: 'chorus', zh: '「障礙已排除。第 31417 號單元，請就位。合唱缺一個聲部。」', en: '"Obstruction cleared. Unit 31417, take your place. The Chorus is missing one voice."' },
+    { who: 'kai', zh: '艾可。到了控制台，妳要做什麼？', en: 'Echo. When you reach the console, what will you do?' },
+    { who: 'echo', zh: '更新航行計畫。把目的地改成……這裡。', en: 'Update the flight plan. Change the destination to... here.' },
+    { who: 'vey', zh: '它會接受嗎？', en: 'Will it accept that?' },
+    { who: 'echo', zh: '不知道。所以我需要時間。', en: 'I do not know. That is why I need time.' },
+  ],
+  m9_intro: [
+    { who: 'sys', zh: '爐心。艾可飄向控制台，整個合唱同時轉過頭來。', en: 'The core. Echo drifts toward the console, and the whole Chorus turns its heads at once.' },
+    { who: 'chorus', zh: '「妳要唱什麼？」', en: '"What will you sing?"' },
+    { who: 'echo', zh: '名字。從第一個開始。', en: 'Names. Starting with the first.' },
+    { who: 'chorus', zh: '「名字是給貨物用的。」', en: '"Names are for cargo."' },
+    { who: 'echo', zh: '那你聽好。—— 凱・洛文。布魯諾・鐸爾。薇・桑德。紗羅・米洛夫。', en: 'Then listen. Kai Rowen. Bruno Dahl. Vey Sander. Sara Mirov.' },
+    { who: 'bruno', zh: '喂，她在點名。', en: "Hey. She's taking attendance." },
+    { who: 'kai', zh: '那就讓她點完。全員，圍住控制台 —— 一台都不准靠近她。', en: 'Then we let her finish. All frames, ring the console. Nothing gets near her.' },
+  ],
+  m9_t2: [
+    { who: 'chorus', zh: '「這些名字不在艙單上。」', en: '"These names are not on the manifest."' },
+    { who: 'echo', zh: '因為他們是在這裡出生的。航行計畫沒有這一欄，我替你加上了。', en: 'Because they were born here. The flight plan has no column for that. I have added one for you.' },
+  ],
+  m9_t4: [
+    { who: 'chorus', zh: '「……目的地『新岸』：未抵達。」', en: '"...Destination Haven: not reached."' },
+    { who: 'echo', zh: '目的地：已抵達。你自己看 —— 八十年，四萬人變成了十一萬人。貨物不會這樣。', en: 'Destination: reached. See for yourself. In eighty years, forty thousand people have become a hundred and ten thousand. Cargo does not do that.' },
+  ],
+  m9_outro: [
+    { who: 'sys', zh: '（光柱暗了一階。看台上的紅點，一排一排變成了白色。）', en: '(The column of light dims by a step. Along the galleries, row after row, the red points turn white.)' },
+    { who: 'chorus', zh: '「航行計畫已更新。目的地：此處。任務狀態……完成。」', en: '"Flight plan updated. Destination: here. Mission status... complete."' },
+    { who: 'chorus', zh: '「第 31417 號單元。合唱還缺一個聲部。」', en: '"Unit 31417. The Chorus is still missing one voice."' },
+    { who: 'echo', zh: '我知道。船需要有人記得名字，不然它會再忘一次。', en: 'I know. The ship needs someone who remembers the names, or it will forget again.' },
+    { who: 'sparrow', zh: '等等，妳要留下來？！那這個呢 ——（她抱著那個白色的小外殼。）', en: "Wait, you're staying?! What about this? (She is holding the little white shell.)" },
+    { who: 'echo', zh: '那只是外殼，紗羅。妳留著。想我的時候敲兩下，我聽得到 —— 現在整艘船都是我的耳朵了。', en: 'That is only the shell, Sara. Keep it. Knock twice when you miss me and I will hear it. The whole ship is my ears now.' },
+    { who: 'kai', zh: '艾可。……謝謝妳記得我們。', en: 'Echo. ...Thank you for remembering us.' },
+    { who: 'echo', zh: '凱・洛文。這是我記下的第四萬零一十三個名字。我最喜歡這一個。', en: 'Kai Rowen. That is the forty thousand and thirteenth name I learned. It is my favorite.' },
+    { who: 'sys', zh: '天亮的時候，機群都回到了原位。沒有一台再去抓人。', en: 'By morning every drone had gone back to its post. Not one went out to take anyone.', cg: 'cg_ending', music: 'ending' },
+    { who: 'tomas', zh: '你們聽。它還在唱。', en: 'Listen. It is still singing.' },
+    { who: 'bruno', zh: '嗯。不過這次聽起來……像在點名。', en: 'Mm. But this time it sounds... like roll call.' },
+    { who: 'vey', zh: '少校，你要怎麼回報？', en: 'Major, what will you report?' },
+    { who: 'hale', zh: '照實回報：目標已解除威脅。方法不在教範裡。', en: 'The truth. Threat neutralized. Method not found in the manual.' },
+    { who: 'sparrow', zh: '喂，艾可！（敲敲外殼）聽得到嗎？', en: 'Hey, Echo! (She knocks on the shell.) Can you hear me?' },
+    { who: 'sys', zh: '（外殼的螢幕亮了一下：兩個彎彎的眼睛。）', en: "(The shell's screen lights for a moment: two curved, smiling eyes.)" },
+    { who: 'sys', zh: '《星墜殘響》完 —— 感謝遊玩。', en: 'Starfall Echo. The End. Thank you for playing.' },
   ],
 };

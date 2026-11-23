@@ -47,6 +47,8 @@ export class Battle {
   result: 'win' | 'lose' | null = null;
   /** 我方被摧毀的機體數（影響星數） */
   lost = 0;
+  /** 「守住區域」關卡：已經連續守住幾個回合 */
+  held = 0;
   private nextUid = 1;
   private queue: number[] = [];
   private fired = new Set<number>();
@@ -533,6 +535,8 @@ export class Battle {
       if (d < s.min || d > s.max) continue;
       if (s.target === 'ally') {
         if (t.side !== u.side || (s.effect.type === 'heal' && t.hp >= t.maxHp)) continue;
+        // 督戰：只能指定已經行動過、還能動的友軍（不能是自己或設施）
+        if (s.effect.type === 'rally' && (t === u || t.def.structure || !t.acted || t.stun > 0)) continue;
       } else {
         if (t.side === u.side) continue;
         if (s.effect.type === 'stun' && (t.def.boss || t.def.structure || t.stun > 0)) continue;
@@ -591,6 +595,11 @@ export class Battle {
       tgt.stun = e.turns;
       tgt.overwatch = false;
       ev.push({ t: 'stun', uid: u.uid, target: tgt.uid });
+    } else if (e.type === 'rally' && tgt) {
+      tgt.acted = false;
+      tgt.moved = false;
+      tgt.undo = undefined;
+      ev.push({ t: 'rally', uid: u.uid, target: tgt.uid });
     } else if (e.type === 'leap') {
       const from = { x: u.x, y: u.y };
       u.x = at.x;
@@ -613,7 +622,7 @@ export class Battle {
 
   /** 把 tgt 從 u 的方向推開一格：撞牆、撞到別人受額外傷害；掉進裂谷直接摧毀 */
   private push(ev: BattleEvent[], u: Unit, tgt: Unit): void {
-    if (tgt.def.boss || tgt.def.structure) return;
+    if (tgt.def.boss || tgt.def.heavy || tgt.def.structure) return;
     const [dx, dy] = DIR_VEC[dirTo(u.x, u.y, tgt.x, tgt.y)];
     const nx = tgt.x + dx;
     const ny = tgt.y + dy;
@@ -716,6 +725,16 @@ export class Battle {
       this.finish(ev, 'win', 'survive');
       return ev;
     }
+    if (win.type === 'hold') {
+      // 撐過一個敵方回合還站在區域裡就算一回合；離開（或被推出去）就重算
+      const was = this.held;
+      this.held = this.holding() ? this.held + 1 : 0;
+      if (this.held !== was) ev.push({ t: 'hold', n: this.held, of: win.turns });
+      if (this.held >= win.turns) {
+        this.finish(ev, 'win', 'hold');
+        return ev;
+      }
+    }
     this.turn++;
     this.beginPhase('player');
     ev.push({ t: 'phase', side: 'player', turn: this.turn });
@@ -751,6 +770,13 @@ export class Battle {
       }
     }
     return null;
+  }
+
+  /** 「守住區域」關卡：指定的機體現在是不是站在區域裡 */
+  holding(): boolean {
+    const win = this.mission.win;
+    if (win.type !== 'hold') return false;
+    return this.alive('player').some((u) => u.def.id === win.who && win.zone.some((p) => p.x === u.x && p.y === u.y));
   }
 
   /** 之後還有沒有敵方增援（全滅條件要等增援都出完） */

@@ -23,7 +23,7 @@ export class BootScene extends Phaser.Scene {
     });
     loadSheets(this);
     for (const p of ['kai', 'bruno', 'vey', 'echo', 'cantor', 'sparrow', 'hale', 'tomas']) this.load.image(`pt_${p}`, `assets/starfall/pt_${p}.webp`);
-    for (const b of ['bg_ice', 'bg_hull', 'bg_bay', 'title']) this.load.image(b, `assets/starfall/${b}.webp`);
+    for (const b of ['bg_ice', 'bg_hull', 'bg_bay', 'bg_reactor', 'cg_ending', 'title']) this.load.image(b, `assets/starfall/${b}.webp`);
   }
 
   create(): void {

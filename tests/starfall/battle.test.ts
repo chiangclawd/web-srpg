@@ -475,3 +475,91 @@ test('輕鬆難度：機器人六關全部無損通關', () => {
     assert.equal(r.lost, 0, `${m.id} on easy lost ${r.lost} frame(s)`);
   }
 });
+
+// ───────── 第三章的新規則 ─────────
+
+/** 我方全部待機、敵方照 AI 行動，進到下一個我方回合 */
+function pass(b: Battle): void {
+  b.endPlayerPhase();
+  while (b.stepEnemy(aiTakeTurn)) {
+    // 敵方行動
+  }
+  b.beginPlayerPhase();
+}
+
+test('守住區域：指定的機體站在區域裡，每撐過一個敵方回合算一次；離開就重算；滿了就過關', () => {
+  const b = mk(OPEN, [P('kai', 0, 0), P('echo', 2, 2), E('worker', 6, 4, { ai: 'hold' })], { win: { type: 'hold', who: 'echo', zone: [{ x: 3, y: 2 }], turns: 2 } });
+  const e = u(b, 'echo');
+  pass(b);
+  assert.equal(b.held, 0, 'not on the console yet');
+  b.move(e, 3, 2);
+  assert.ok(b.holding());
+  pass(b);
+  assert.equal(b.held, 1);
+  // 凱站上去不算：要艾可本人
+  b.move(e, 2, 2);
+  b.move(u(b, 'kai'), 1, 0);
+  pass(b);
+  assert.equal(b.held, 0, 'leaving resets the count');
+  assert.equal(b.result, null);
+  b.move(e, 3, 2);
+  pass(b);
+  pass(b);
+  assert.equal(b.held, 2);
+  assert.equal(b.result, 'win');
+});
+
+test('護送：只有指定的機體走進區域才算過關', () => {
+  const b = mk(OPEN, [P('kai', 0, 2), P('echo', 0, 3), E('worker', 6, 0, { ai: 'hold' })], { win: { type: 'reach', who: 'echo', zone: [{ x: 3, y: 2 }] } });
+  b.move(u(b, 'kai'), 3, 2);
+  assert.equal(b.result, null, 'Kai on the pad does not count');
+  b.move(u(b, 'echo'), 3, 3);
+  assert.equal(b.result, null);
+  b.undoMove(u(b, 'echo'));
+  b.undoMove(u(b, 'kai'));
+  b.move(u(b, 'echo'), 3, 2);
+  assert.equal(b.result, 'win');
+});
+
+test('督戰令：讓已經行動過的友軍再動一次；還沒行動的、自己、設施都不能選', () => {
+  const b = mk(OPEN, [P('hale_ally', 1, 2), P('kai', 2, 2), P('bruno', 1, 3), P('generator', 0, 2), E('sentry', 5, 2, { dir: 2, ai: 'hold' })]);
+  const h = u(b, 'hale_ally');
+  const k = u(b, 'kai');
+  const rally = h.def.skills[0];
+  assert.deepEqual(b.skillTargets(h, rally), [], 'nobody has acted yet');
+  b.attack(k, u(b, 'sentry'));
+  assert.ok(k.acted);
+  assert.deepEqual(b.skillTargets(h, rally), [{ x: 2, y: 2 }], 'only Kai, who has acted');
+  const ev = b.useSkill(h, 'rally', { x: 2, y: 2 });
+  assert.ok(ev.some((e) => e.t === 'rally'));
+  assert.ok(!k.acted && !k.moved && b.canAct(k));
+  assert.ok(h.acted, 'the order uses up Hale’s own action');
+  assert.ok(b.attack(k, u(b, 'sentry')).length > 0, 'Kai attacks a second time');
+});
+
+test('重量級（典獄者）推不動但照樣受傷；機組擋路不擋火線', () => {
+  const b = mk(['......', '..o...'], [P('bruno', 0, 0), P('kai', 0, 1), E('warden', 1, 0, { dir: 2, ai: 'hold' }), E('sentry', 4, 1, { dir: 2, ai: 'hold' })]);
+  const w = u(b, 'warden');
+  b.useSkill(u(b, 'bruno'), 'shock', { x: 1, y: 0 });
+  assert.deepEqual([w.x, w.y], [1, 0], 'did not move');
+  // 凱站在布魯諾旁邊：隊長光環 +10%
+  assert.equal(w.hp, 130 - (Math.round(38 * 1.1) - 6));
+  const k = u(b, 'kai');
+  assert.ok(!b.moveRange(k).has(b.key(2, 1)), 'machinery cannot be entered');
+  assert.ok(b.lineClear(0, 1, 4, 1), 'but shots pass over it');
+});
+
+test('修補者會修理受傷的友軍', () => {
+  const b = mk(OPEN, [P('kai', 0, 0), E('mender', 4, 2, { dir: 2 }), E('sentry', 5, 2, { dir: 2, ai: 'hold' })]);
+  const s = u(b, 'sentry');
+  s.hp = 20;
+  b.endPlayerPhase();
+  const ev: string[] = [];
+  for (let e = b.stepEnemy(aiTakeTurn); e !== null; e = b.stepEnemy(aiTakeTurn)) ev.push(...e.map((x) => x.t));
+  assert.ok(ev.includes('heal'));
+  assert.equal(s.hp, 50);
+});
+
+test('關卡擺設用的圖都存在', () => {
+  for (const m of MISSIONS) for (const p of m.props ?? []) assert.ok(SHEETS[p.sprite], `${m.id}: no sheet for prop ${p.sprite}`);
+});

@@ -21,7 +21,7 @@ export interface Pos {
   y: number;
 }
 
-export type TerrainId = 'deck' | 'grate' | 'ice' | 'snow' | 'rubble' | 'barricade' | 'wall' | 'chasm';
+export type TerrainId = 'deck' | 'grate' | 'ice' | 'snow' | 'rubble' | 'barricade' | 'wall' | 'chasm' | 'machine';
 
 export interface TerrainDef {
   id: TerrainId;
@@ -53,7 +53,9 @@ export type SkillEffect =
   | { type: 'heal'; amount: number }
   | { type: 'stun'; turns: number }
   /** 躍進：瞬間跳到目標格（不觸發警戒、不算行動，跳完還能攻擊） */
-  | { type: 'leap' };
+  | { type: 'leap' }
+  /** 督戰：讓一個已經行動過的友軍再動一次 */
+  | { type: 'rally' };
 
 export interface SkillDef {
   id: string;
@@ -101,6 +103,8 @@ export interface UnitDef {
   swarm?: number;
   /** 首領：不會被推動、不會被癱瘓 */
   boss?: boolean;
+  /** 重量級：不會被推動（但可以被癱瘓） */
+  heavy?: boolean;
   /** 設施：不能移動、不能行動 */
   structure?: boolean;
   /** 圖像：用哪一張圖表、顯示倍率、染色 */
@@ -153,7 +157,9 @@ export type WinCondition =
   | { type: 'rout' }
   | { type: 'survive'; turns: number }
   | { type: 'reach'; zone: Pos[]; who?: string }
-  | { type: 'kill'; tag: string };
+  | { type: 'kill'; tag: string }
+  /** 指定的機體站在區域裡、連續撐過幾個敵方回合（離開就重算） */
+  | { type: 'hold'; zone: Pos[]; who: string; turns: number };
 
 export interface MissionEvent {
   /** 第幾回合的我方階段開始時觸發 */
@@ -186,7 +192,9 @@ export interface MissionDef {
   intro?: string;
   outro?: string;
   /** 背景色調 */
-  theme?: 'ice' | 'hull' | 'bay';
+  theme?: 'ice' | 'hull' | 'bay' | 'reactor';
+  /** 場景擺設（只有外觀；要擋路的話地圖那格用 o） */
+  props?: { sprite: string; x: number; y: number; scale?: number }[];
 }
 
 export type ModKind = 'height' | 'flank' | 'cover' | 'aura' | 'guard' | 'swarm' | 'skill' | 'reaction' | 'armor' | 'splash' | 'collide' | 'shield' | 'execute';
@@ -218,6 +226,8 @@ export type BattleEvent =
   | { t: 'stun'; uid: number; target: number }
   | { t: 'push'; target: number; from: Pos; to: Pos; fell: boolean }
   | { t: 'leap'; uid: number; from: Pos; to: Pos }
+  | { t: 'rally'; uid: number; target: number }
+  | { t: 'hold'; n: number; of: number }
   | { t: 'death'; uid: number }
   | { t: 'overwatch'; uid: number }
   | { t: 'wait'; uid: number }

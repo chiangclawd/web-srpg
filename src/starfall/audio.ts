@@ -135,7 +135,7 @@ export function sfx(name: Sfx): void {
 // ───────── 音樂 ─────────
 // 用 <audio> 串流播放（每首 2 MB 多，不放進開機載入）；換曲時舊的淡出、新的淡入
 
-export type Track = 'title' | 'battle' | 'boss';
+export type Track = 'title' | 'battle' | 'boss' | 'ending';
 
 let current: { name: Track; el: HTMLAudioElement } | null = null;
 let wanted: Track | null = null;

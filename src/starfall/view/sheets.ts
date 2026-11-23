@@ -41,6 +41,11 @@ export const SHEETS: Record<string, SheetDef> = {
   choir: { ...STATIC, unitPx: 116.4, h: 62, hover: 24 },
   relay: { ...STATIC, unitPx: 170.7, h: 104 },
   pods: { ...STATIC, unitPx: 128, h: 80 },
+  warden: { ...MECH, unitPx: 142.2, h: 88 },
+  gatekeeper: { ...MECH, unitPx: 134.7, h: 90 },
+  mender: { ...STATIC, unitPx: 128, h: 56, hover: 18 },
+  needle: { ...STATIC, unitPx: 98.5, h: 58 },
+  core: { ...STATIC, unitPx: 170.7, h: 132 },
 };
 
 /** 面向 → 用正面還是背面的圖、要不要水平翻轉 */

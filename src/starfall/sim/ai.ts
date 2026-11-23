@@ -70,6 +70,8 @@ function targetBonus(b: Battle, u: Unit, t: Unit): number {
   // 設施不會還手也不會跑：只有被指定要拆它的單位才會打，其他人去對付會動的
   else if (t.def.structure) s -= 1000;
   if (t.def.id === 'kai') s += 3;
+  const win = b.mission.win;
+  if (u.side === 'enemy' && (win.type === 'hold' || win.type === 'reach') && win.who === t.def.id) s += 8;
   return s;
 }
 
@@ -110,7 +112,7 @@ function options(b: Battle, u: Unit, reach: Pos[], enemies: Unit[], danger: Map<
           }
           // 只打到一個人不如留著：普通攻擊就夠了
           if (n < 2) continue;
-        } else if (!t) {
+        } else if (!t || e.type === 'rally') {
           continue;
         } else if (e.type === 'shot') {
           const f = b.forecast(u, t, p, s);
@@ -206,8 +208,39 @@ export function aiTakeTurn(b: Battle, u: Unit): BattleEvent[] {
     if (near || u.hp < u.maxHp) u.ai = 'aggressive';
     else return b.canOverwatch(u) ? b.setOverwatch(u) : b.wait(u);
   }
-  const reach = u.ai === 'hold' ? [{ x: u.x, y: u.y }] : b.reachable(u);
+  let reach = u.ai === 'hold' ? [{ x: u.x, y: u.y }] : b.reachable(u);
   const danger = dangerMap(b, u, enemies);
+  // 我方機器人：任務要某台機體走到（或守住）一個區域時，那台機體以區域為目標，到了就不離開
+  const win = b.mission.win;
+  if (u.side === 'player' && (win.type === 'hold' || win.type === 'reach') && win.who === u.def.id) {
+    const onZone = (p: Pos): boolean => win.zone.some((z) => z.x === p.x && z.y === p.y);
+    if (!onZone(u)) {
+      const far = b.moveRange(u, Infinity, true);
+      const goal = win.zone.filter((z) => far.has(b.key(z.x, z.y))).sort((a, c) => far.get(b.key(a.x, a.y))!.cost - far.get(b.key(c.x, c.y))!.cost)[0];
+      if (goal) {
+        const path = b.pathTo(far, goal.x, goal.y);
+        const ok = new Set(reach.map((p) => b.key(p.x, p.y)));
+        // 沿路往區域走，但不要跑在隊友前面（旁邊 3 格內至少要有兩台隊友）、也不要停在會被打掉的地方；
+        // 只有一步就能安全站上區域時才不管隊友
+        const allies = b.units.filter((a) => a.alive && a.side === u.side && a !== u && !a.def.structure);
+        let to: Pos | null = null;
+        for (let i = 1; i < path.length; i++) {
+          const k = b.key(path[i].x, path[i].y);
+          if (!ok.has(k)) continue;
+          const d = danger.get(k) ?? 0;
+          const safe = d * 1.4 < u.hp - watchDmg(b, u, path[i], enemies);
+          const escorted = allies.filter((a) => dist(a, path[i]) <= 3).length >= Math.min(2, allies.length);
+          // 完全沒有威脅的格子不用等隊友（敵人清光之後才走得到終點）
+          if (safe && (escorted || d === 0 || onZone(path[i]))) to = path[i];
+        }
+        // 前面沒有安全的落腳處、現在站的地方又會被集火：先退回隊友身邊
+        if (!to && (danger.get(b.key(u.x, u.y)) ?? 0) * 1.4 >= u.hp) to = regroup(b, u, reach, danger, enemies);
+        if (to) ev.push(...b.move(u, to.x, to.y));
+        if (!u.alive || b.result) return ev;
+      }
+    }
+    reach = [{ x: u.x, y: u.y }];
+  }
   const opts = options(b, u, reach, enemies, danger);
   // 分數一樣時少走幾步（不要無謂地繞路）
   opts.sort((a, c) => c.score - a.score || dist(a.at, u) - dist(c.at, u));

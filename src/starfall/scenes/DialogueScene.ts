@@ -1,7 +1,7 @@
 // 對話演出：立繪 + 對話框，逐字顯示；點一下顯示整句 / 下一句，右上角可以跳過
 import Phaser from 'phaser';
 import { COL, VIEW_H, addText, setupCamera, uiZoom, viewW } from '../config';
-import { sfx } from '../audio';
+import { music, sfx } from '../audio';
 import { L, T } from '../i18n';
 import { SPEAKERS } from '../data/story';
 import type { Line } from '../data/story';
@@ -15,6 +15,8 @@ export class DialogueScene extends Phaser.Scene {
   private nameText!: Phaser.GameObjects.Text;
   private namePlate!: Phaser.GameObjects.Graphics;
   private portrait: Phaser.GameObjects.Image | null = null;
+  private cg: Phaser.GameObjects.Image | null = null;
+  private cgKey = '';
   private full = '';
   private shown = 0;
   private timer: Phaser.Time.TimerEvent | null = null;
@@ -31,6 +33,8 @@ export class DialogueScene extends Phaser.Scene {
     this.onDone = data.onDone;
     this.i = 0;
     this.portrait = null;
+    this.cg = null;
+    this.cgKey = '';
     this.timer = null;
   }
 
@@ -60,12 +64,23 @@ export class DialogueScene extends Phaser.Scene {
   private show(): void {
     const line = this.lines[this.i];
     const sp = SPEAKERS[line.who];
+    // 全螢幕插圖：鋪在暗幕上面、對話框下面，換句子時沿用
+    if (line.cg && line.cg !== this.cgKey) {
+      this.cgKey = line.cg;
+      const old = this.cg;
+      const im = this.add.image(this.w / 2, VIEW_H / 2, line.cg).setDepth(0.5).setAlpha(0);
+      im.setScale(Math.max(this.w / im.width, VIEW_H / im.height));
+      this.tweens.add({ targets: im, alpha: 1, duration: 900, onComplete: () => old?.destroy() });
+      this.cg = im;
+    }
+    if (line.music) music(line.music);
     const x0 = (this.w - this.boxW) / 2;
     const y0 = VIEW_H - this.boxH - 14;
     // 立繪：從對話框上緣往上長，換人說話時淡入
     this.portrait?.destroy();
     this.portrait = null;
-    if (sp.portrait) {
+    // 有全螢幕插圖時不放立繪：人物已經在畫面裡了，名牌就夠分辨誰在說話
+    if (sp.portrait && !this.cg) {
       const im = this.add.image(x0 + 150, y0 + 6, sp.portrait).setOrigin(0.5, 1).setDepth(1);
       im.setScale(Math.min(430, y0 - 20) / im.height);
       im.setAlpha(0);
