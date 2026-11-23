@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { COL, VIEW_H, addText, setupCamera, uiZoom, viewW } from '../config';
 import { music, unlockAudio } from '../audio';
 import { T, getLang, setLang } from '../i18n';
-import { Button } from '../view/ui';
+import { Button, KeyNav } from '../view/ui';
 
 export class TitleScene extends Phaser.Scene {
   constructor() {
@@ -28,7 +28,7 @@ export class TitleScene extends Phaser.Scene {
     addText(this, x + 4, 182 + title.height, 'STARFALL ECHO', { size: 26, strokeW: 0, color: COL.cyan }).setLetterSpacing(10);
     addText(this, x + 4, 236 + title.height, T('tagline'), { size: 18, strokeW: 0, color: COL.dim, bold: false, wrap: 520 });
     const by = VIEW_H - 70 - 60 * z;
-    new Button(
+    const start = new Button(
       this,
       x + 130 * z,
       by,
@@ -42,11 +42,12 @@ export class TitleScene extends Phaser.Scene {
       },
       { primary: true, size: 24 },
     ).setScale(z);
+    // 下面一排兩顆半寬的：切換語言、設定
     new Button(
       this,
-      x + 130 * z,
+      x + 62 * z,
       by + 76 * z,
-      260,
+      124,
       48,
       T('language'),
       () => {
@@ -55,6 +56,8 @@ export class TitleScene extends Phaser.Scene {
       },
       { color: 0x8fb0c8, size: 17 },
     ).setScale(z);
+    new Button(this, x + 198 * z, by + 76 * z, 124, 48, T('settings'), () => this.scene.launch('SfSettings', { onClose: () => this.scene.restart() }), { color: 0x8fb0c8, size: 17 }).setScale(z);
+    new KeyNav(this, { enabled: () => !this.scene.isActive('SfSettings'), first: () => start });
     addText(this, w - 14, VIEW_H - 10, `v${__APP_VERSION__} · ${__GIT_SHA__}`, { size: 12, strokeW: 0, color: '#5a7088', bold: false }).setOrigin(1, 1);
   }
 }

@@ -19,6 +19,7 @@ import { EH, TH, TOP_PAD, TW, isoX, isoY, tileDepth } from '../view/iso';
 import { TILE_TEX_H, tileKey, tileVariant } from '../view/textures';
 import { SHEETS, SHEET_FOOT, frameName } from '../view/sheets';
 import { UnitView } from '../view/UnitView';
+import { keyUsed } from '../view/ui';
 import { BattleFx, FX_DEPTH } from '../view/fx';
 import { RECOIL, Shots } from '../view/shots';
 import type { HudScene } from './HudScene';
@@ -75,6 +76,9 @@ export class BattleScene extends Phaser.Scene {
   private shots!: Shots;
   /** 技能特寫時鏡頭往前推了一點：這裡記著原本的倍率，這一串演出播完再退回去 */
   private zoomBack: number | null = null;
+  /** 鍵盤游標停在哪一格（用過方向鍵才會出現；滑鼠或觸控一點就收起來） */
+  private cursor: Pos | null = null;
+  private cursorMarks: Phaser.GameObjects.Image[] = [];
 
   constructor() {
     super('SfBattle');
@@ -94,6 +98,8 @@ export class BattleScene extends Phaser.Scene {
     this.endArmed = false;
     this.focusDone = null;
     this.zoomBack = null;
+    this.cursor = null;
+    this.cursorMarks = [];
   }
 
   // ───────── 建立 ─────────
@@ -180,6 +186,7 @@ export class BattleScene extends Phaser.Scene {
     this.input.on('pointermove', this.onMove, this);
     this.input.on('pointerup', this.onUp, this);
     this.input.on('wheel', (_p: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) => this.setZoom(this.zoom * (dy > 0 ? 0.9 : 1.1)));
+    this.input.keyboard?.on('keydown', this.onKey, this);
     this.scale.on('resize', this.applyCamera, this);
     this.events.once('shutdown', () => this.scale.off('resize', this.applyCamera, this));
 
@@ -284,13 +291,13 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** 選下一台還沒行動的我方機體，鏡頭跟過去 */
-  nextUnit(): void {
+  nextUnit(step = 1): void {
     if (this.mode === 'busy' || this.mode === 'target') return;
     const b = this.battle;
     const list = b.units.filter((u) => u.side === 'player' && b.canAct(u));
     if (!list.length) return;
     const i = this.sel ? list.findIndex((u) => u.uid === this.sel!.uid) : -1;
-    const u = list[(i + 1) % list.length];
+    const u = list[i < 0 ? (step > 0 ? 0 : list.length - 1) : (i + step + list.length) % list.length];
     this.select(u);
     void this.focus(u.x, u.y);
   }
@@ -298,6 +305,7 @@ export class BattleScene extends Phaser.Scene {
   // ───────── 輸入 ─────────
 
   private onDown(p: Phaser.Input.Pointer): void {
+    this.hideCursor();
     // 按在介面上（按鈕、小地圖、對話框）的不算拖地圖
     if (this.hud?.input.hitTestPointer(p).length) return;
     const two = this.input.pointer1.isDown && this.input.pointer2.isDown;
@@ -370,10 +378,14 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private onTap(wx: number, wy: number): void {
+    this.actAt(this.pick(wx, wy));
+  }
+
+  /** 對某一格下指令：點擊和鍵盤的 Enter 都走這裡（null = 點到地圖外面） */
+  private actAt(t: Pos | null): void {
     if (this.mode === 'busy' || this.battle.result) return;
     this.hud.hideTip();
     const b = this.battle;
-    const t = this.pick(wx, wy);
     const u = t ? b.unitAt(t.x, t.y) : undefined;
     if (this.mode === 'target') {
       if (t && this.validTargets().some((p) => p.x === t.x && p.y === t.y)) {
@@ -398,6 +410,120 @@ export class BattleScene extends Phaser.Scene {
     }
     if (u && u !== s) this.select(u);
     else if (!u) this.toIdle();
+  }
+
+  // ───────── 鍵盤 ─────────
+
+  /**
+   * 方向鍵移動游標（選目標時在可以打的目標之間切換）、Enter / 空白鍵等於點那一格、Esc 退一步（沒東西可退就開選單）、
+   * Tab 跳到下一台還沒行動的機體；其餘的字母和數字是行動按鈕的快捷鍵（交給 HudScene 找按鈕）。
+   * 對話、設定頁、選單或結算開著的時候不處理：那些畫面有自己的按鍵。
+   */
+  private onKey(ev: KeyboardEvent): void {
+    if (!this.hud || this.hud.modalOpen || this.battle.result) return;
+    if (this.scene.isActive('SfDialogue') || this.scene.isActive('SfSettings')) return;
+    if (keyUsed.has(ev)) return;
+    keyUsed.add(ev);
+    const k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
+    if (k === '+' || k === '=') return this.setZoom(this.zoom * 1.1);
+    if (k === '-' || k === '_') return this.setZoom(this.zoom * 0.9);
+    if (this.mode === 'busy') return;
+    const dir = ({ ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] } as Record<string, [number, number] | undefined>)[k];
+    if (dir) {
+      ev.preventDefault();
+      // 選敵人或友軍：在名單裡前後切換；選落點（躍進）：游標自由移動
+      const tiles = this.pending?.kind === 'skill' && this.pending.skill.target === 'tile';
+      if (this.mode === 'target' && !tiles) this.cycleTarget(dir[0] + dir[1]);
+      else this.moveCursor(dir[0], dir[1]);
+      return;
+    }
+    if (k === 'Enter' || k === ' ') {
+      ev.preventDefault();
+      if (ev.repeat) return;
+      if (this.mode === 'target') {
+        const tiles = this.pending?.kind === 'skill' && this.pending.skill.target === 'tile';
+        const c = this.cursor;
+        const a = this.aim;
+        // 選落點：游標停在另一格可以跳的地方，就先瞄準那一格；其餘情況 Enter 就是「確定」那顆按鈕。
+        // 不能直接對游標那一格下指令：目標可能是自動瞄準或用滑鼠選的，游標還留在別的地方，那樣會變成取消
+        if (tiles && c && !(a && a.x === c.x && a.y === c.y) && this.validTargets().some((p) => p.x === c.x && p.y === c.y)) this.aimAt(c);
+        else if (a) this.hud.hotkey('enter');
+        else if (!tiles) this.cycleTarget(1);
+        return;
+      }
+      if (this.cursor) this.actAt(this.cursor);
+      return;
+    }
+    if (k === 'Escape' || k === 'Backspace') {
+      if (ev.repeat) return;
+      if (this.mode === 'target') this.cancelTarget();
+      else if (this.mode === 'unit') this.toIdle();
+      else this.hud.openMenu();
+      return;
+    }
+    if (k === 'Tab') {
+      ev.preventDefault();
+      this.nextUnit(ev.shiftKey ? -1 : 1);
+      if (this.sel) this.setCursor(this.sel.x, this.sel.y);
+      return;
+    }
+    if (ev.repeat || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    if (k === 'm') this.hud.openMenu();
+    else this.hud.hotkey(k);
+    // 按了攻擊或技能、只有一個目標時會自動瞄準：游標跟過去，看得出現在對著誰
+    if (this.mode === 'target' && this.aim && this.cursor) this.setCursor(this.aim.x, this.aim.y);
+  }
+
+  /** 游標往格子的方向走一步：右 = x+1（畫面右下）、左 = x-1、下 = y+1（畫面左下）、上 = y-1。跨過裂谷 */
+  private moveCursor(dx: number, dy: number): void {
+    const b = this.battle;
+    if (!this.cursor) {
+      // 第一次按方向鍵：游標先出現在選取中的機體（沒有就第一台我方機體）腳下，不移動
+      const u = this.sel ?? b.alive('player').find((p) => !p.def.structure);
+      this.setCursor(u?.x ?? 0, u?.y ?? 0);
+      return;
+    }
+    for (let n = 1; n < Math.max(b.w, b.h); n++) {
+      const x = this.cursor.x + dx * n;
+      const y = this.cursor.y + dy * n;
+      if (x < 0 || y < 0 || x >= b.w || y >= b.h) return;
+      if (b.terrainAt(x, y) === 'chasm') continue;
+      this.setCursor(x, y);
+      return;
+    }
+  }
+
+  private setCursor(x: number, y: number): void {
+    const b = this.battle;
+    this.cursor = { x, y };
+    if (!this.cursorMarks.length) {
+      const edge = this.add.image(0, 0, 'ov_edge').setTint(0xffffff);
+      const dot = this.add.image(0, 0, 'ov_dot').setTint(0xffffff).setScale(1 / TEX);
+      this.tweens.add({ targets: edge, scale: { from: 1 / TEX, to: 1.16 / TEX }, alpha: { from: 1, to: 0.55 }, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.cursorMarks = [edge, dot];
+    }
+    const h = b.heightAt(x, y) + (b.terrainAt(x, y) === 'wall' ? 2 : 0);
+    for (const im of this.cursorMarks)
+      im.setPosition(isoX(x, y), isoY(x, y, h))
+        .setDepth(tileDepth(x, y) + 3.5)
+        .setVisible(true);
+    void this.focus(x, y);
+  }
+
+  private hideCursor(): void {
+    this.cursor = null;
+    for (const im of this.cursorMarks) im.setVisible(false);
+  }
+
+  /** 選目標時用方向鍵在可以打的目標之間切換（照畫面由左到右排） */
+  private cycleTarget(step: number): void {
+    const list = [...this.validTargets()].sort((p, q) => isoX(p.x, p.y) - isoX(q.x, q.y) || isoY(p.x, p.y) - isoY(q.x, q.y));
+    if (!list.length) return;
+    const a = this.aim;
+    const i = a ? list.findIndex((p) => p.x === a.x && p.y === a.y) : -1;
+    const t = list[i < 0 ? (step > 0 ? 0 : list.length - 1) : (i + step + list.length) % list.length];
+    this.aimAt(t);
+    this.setCursor(t.x, t.y);
   }
 
   // ───────── 範圍標示 ─────────
@@ -736,7 +862,7 @@ export class BattleScene extends Phaser.Scene {
         if (!v || !def) break;
         await this.focus(v.unit.x, v.unit.y);
         // 技能特寫：我方每次都有；敵方只有首領有，免得敵方回合拖太久
-        if (v.unit.side === 'player' || v.unit.def.boss) {
+        if (save().cutIn && (v.unit.side === 'player' || v.unit.def.boss)) {
           this.punchIn();
           await this.hud.cutIn(v.unit, L(def.name));
         }

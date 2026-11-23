@@ -7,7 +7,7 @@ import type { StrKey } from '../i18n';
 import { save } from '../save';
 import { MISSIONS } from '../data/missions';
 import { FRAMES, canAffordAny, frameUnlocked, missionOpen as openWith, partsLeft } from '../data/upgrades';
-import { Button, drawPanel } from '../view/ui';
+import { Button, KeyNav, drawPanel } from '../view/ui';
 
 const CHAPTERS = [1, 2, 3, 4];
 const CHAPTER_BG = ['bg_ice', 'bg_bay', 'bg_reactor', 'bg_field'];
@@ -81,6 +81,7 @@ export class MissionScene extends Phaser.Scene {
     const top = 132;
     const ch = VIEW_H - top - 40;
     const x0 = w / 2 - ((n - 1) * (cw + 24)) / 2;
+    const sorties: Button[] = [];
     list.forEach(({ m, index }, i) => {
       const open = missionOpen(index);
       const cx = x0 + i * (cw + 24);
@@ -99,7 +100,7 @@ export class MissionScene extends Phaser.Scene {
       if (open) {
         addText(this, cx - cw / 2 + 22, sy + 30, L(m.brief), { size: 16, strokeW: 0, color: COL.dim, bold: false, wrap: cw - 44, lineSpacing: 6 });
         addText(this, cx - cw / 2 + 22, top + ch - 86, `${T('objective')}：${L(m.objective)}`, { size: 15, strokeW: 0, color: COL.cyan, wrap: cw - 44 }).setOrigin(0, 1);
-        new Button(this, cx, top + ch - 44, Math.min(cw - 44, 240), 56, T('sortie'), () => this.scene.start('SfBattle', { missionId: m.id }), { primary: true, size: 22 });
+        sorties.push(new Button(this, cx, top + ch - 44, Math.min(cw - 44, 240), 56, T('sortie'), () => this.scene.start('SfBattle', { missionId: m.id }), { primary: true, size: 22 }));
       } else {
         this.add
           .image(cx, top + ch / 2, 'ic_lock')
@@ -108,5 +109,7 @@ export class MissionScene extends Phaser.Scene {
         addText(this, cx, top + ch / 2 + 60, T('locked'), { size: 15, strokeW: 0, color: '#6a7c90', wrap: cw - 50, align: 'center', bold: false }).setOrigin(0.5, 0);
       }
     });
+    // 鍵盤：焦點先停在這一章打到的那一關
+    new KeyNav(this, { onBack: () => this.scene.start('SfTitle'), first: () => sorties[sorties.length - 1] });
   }
 }

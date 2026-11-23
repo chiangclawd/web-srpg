@@ -2,7 +2,7 @@
 // 四個角各一個容器，手機上整組放大（uiZoom），文字跟著容器一起放大。
 import Phaser from 'phaser';
 import { COL, TEX, VIEW_H, addText, fitText, setupCamera, uiZoom, viewW } from '../config';
-import { refreshMusic, sfx } from '../audio';
+import { sfx } from '../audio';
 import { L, T } from '../i18n';
 import type { StrKey } from '../i18n';
 import { persist, save } from '../save';
@@ -12,7 +12,7 @@ import type { Speaker } from '../data/story';
 import type { Mod, Side, Unit } from '../sim/types';
 import { SHEETS, frameName } from '../view/sheets';
 import { TH, TW, isoX, isoY } from '../view/iso';
-import { Button, drawPanel } from '../view/ui';
+import { Button, KeyNav, drawPanel } from '../view/ui';
 import type { BattleScene } from './BattleScene';
 
 type Box = Phaser.GameObjects.Container;
@@ -43,6 +43,12 @@ export class HudScene extends Phaser.Scene {
   private w = 1280;
   private z = 1;
   private tipKey: StrKey | null = null;
+  /** 快捷鍵 → 目前畫面上的行動按鈕（每次重畫都重新登記） */
+  private actions = new Map<string, Button>();
+  /** 開著的是選單（Esc 可以關掉）；結算畫面不行 */
+  private menuOpen = false;
+  /** 對話框打開時鍵盤焦點先停在哪一顆 */
+  private modalFirst: Button | null = null;
 
   constructor() {
     super('SfHud');
@@ -54,6 +60,9 @@ export class HudScene extends Phaser.Scene {
     this.tipKey = null;
     this.miniDyn = null;
     this.miniBtn = null;
+    this.actions = new Map();
+    this.menuOpen = false;
+    this.modalFirst = null;
   }
 
   create(): void {
@@ -70,7 +79,16 @@ export class HudScene extends Phaser.Scene {
     this.tipBox = this.add.container(this.w / 2, VIEW_H - 14).setScale(z).setDepth(40);
     this.ml = this.add.container(12, 10 + 118 * z).setScale(Math.min(z, 1.15));
     if (this.battle.big) this.buildMini();
-    this.tr.add(new Button(this, -28, 28, 56, 56, '', () => this.openMenu(), { icon: 'ic_menu' }));
+    this.tr.add(new Button(this, -28, 28, 56, 56, '', () => this.openMenu(), { icon: 'ic_menu', key: 'Esc' }));
+    // 鍵盤：對話框（選單、結算）開著的時候，方向鍵在裡面的按鈕之間移動；沒開的時候由戰場自己處理按鍵
+    new KeyNav(this, {
+      scope: () => this.modal,
+      enabled: () => !!this.modal && !this.scene.isActive('SfSettings'),
+      onBack: () => {
+        if (this.menuOpen) this.closeModal();
+      },
+      first: () => this.modalFirst,
+    });
     void this.battle.hudReady(this);
   }
 
@@ -255,33 +273,37 @@ export class HudScene extends Phaser.Scene {
   /** 右下：行動按鈕（由下往上疊） */
   private drawActions(): void {
     this.br.removeAll(true);
+    this.actions.clear();
     const bs = this.battle;
     const b = bs.battle;
     if (bs.mode === 'busy' || b.result || b.phase !== 'player') return;
     const list: Button[] = [];
     const x = -BTN_W / 2;
-    const add = (label: string, fn: () => void, o: ConstructorParameters<typeof Button>[7] = {}): void => {
-      list.push(new Button(this, x, 0, BTN_W, BTN_H, label, fn, o));
+    // key：快捷鍵（小寫）。戰場收到按鍵會來這裡找對應的按鈕按下去，所以按鈕不能按的時候快捷鍵也沒有作用
+    const add = (label: string, fn: () => void, o: ConstructorParameters<typeof Button>[7] = {}, key?: string): void => {
+      const btn = new Button(this, x, 0, BTN_W, BTN_H, label, fn, { key: key === 'enter' ? 'Enter' : key?.toUpperCase(), ...o });
+      if (key) this.actions.set(key, btn);
+      list.push(btn);
     };
     const u = bs.sel;
     if (bs.mode === 'target') {
-      add(T('confirm'), () => void bs.confirm(), { icon: 'ic_attack', color: 0xffe45a, disabled: !bs.aim, primary: true });
-      add(T('cancel'), () => bs.cancelTarget(), { icon: 'ic_undo', color: 0x8fb0c8 });
+      add(T('confirm'), () => void bs.confirm(), { icon: 'ic_attack', color: 0xffe45a, disabled: !bs.aim, primary: true }, 'enter');
+      add(T('cancel'), () => bs.cancelTarget(), { icon: 'ic_undo', color: 0x8fb0c8, key: 'Esc' });
     } else {
       if (u && u.side === 'player' && b.canAct(u)) {
-        add(T('attack'), () => bs.beginTarget({ kind: 'attack' }), { icon: 'ic_attack', color: 0xff6a5a, disabled: !b.targets(u).length });
-        for (const s of u.def.skills) {
+        add(T('attack'), () => bs.beginTarget({ kind: 'attack' }), { icon: 'ic_attack', color: 0xff6a5a, disabled: !b.targets(u).length }, 'a');
+        for (const [i, s] of u.def.skills.entries()) {
           const cd = u.cds[s.id] ?? 0;
           const ok = b.skillReady(u, s) && b.skillTargets(u, s).length > 0;
           // 變灰的原因寫在按鈕上：冷卻中，或是躍進這種「走過就不能用」的技能
           const note = cd > 0 ? T('cooldown', cd) : s.effect.type === 'leap' && u.moved ? T('afterMove') : undefined;
-          add(L(s.name), () => bs.beginTarget({ kind: 'skill', skill: s }), { icon: s.icon, color: 0xffe45a, disabled: !ok, note });
+          add(L(s.name), () => bs.beginTarget({ kind: 'skill', skill: s }), { icon: s.icon, color: 0xffe45a, disabled: !ok, note }, String(i + 1));
         }
-        if (u.def.weapon.kind !== 'indirect') add(T('overwatch'), () => void bs.doOverwatch(), { icon: 'ic_overwatch' });
-        add(T('wait'), () => void bs.doWait(), { icon: 'ic_wait', color: 0x8fb0c8 });
-        if (u.undo) add(T('undo'), () => bs.undoMove(), { icon: 'ic_undo', color: 0x8fb0c8 });
+        if (u.def.weapon.kind !== 'indirect') add(T('overwatch'), () => void bs.doOverwatch(), { icon: 'ic_overwatch' }, 'o');
+        add(T('wait'), () => void bs.doWait(), { icon: 'ic_wait', color: 0x8fb0c8 }, 'w');
+        if (u.undo) add(T('undo'), () => bs.undoMove(), { icon: 'ic_undo', color: 0x8fb0c8 }, 'z');
       }
-      add(T('endTurn'), () => void bs.endTurn(), { icon: 'ic_end', color: 0xff9a3c });
+      add(T('endTurn'), () => void bs.endTurn(), { icon: 'ic_end', color: 0xff9a3c }, 'e');
     }
     // 最後一顆在最下面
     list.reverse().forEach((btn, i) => {
@@ -485,6 +507,8 @@ export class HudScene extends Phaser.Scene {
   private closeModal(): void {
     this.modal?.destroy();
     this.modal = null;
+    this.menuOpen = false;
+    this.modalFirst = null;
   }
 
   /** parts：這次新拿到的零件（重打已經拿過的星就是 0） */
@@ -500,7 +524,8 @@ export class HudScene extends Phaser.Scene {
     const by = H / 2 - 48;
     if (!win) {
       box.add(addText(this, 0, -H / 2 + 130, T(`lose_${reason}` as StrKey), { size: 20, raw: true, strokeW: 0 }).setOrigin(0.5));
-      box.add(new Button(this, -135, by, 250, 56, T('retry'), () => bs.restart(), { primary: true }));
+      this.modalFirst = new Button(this, -135, by, 250, 56, T('retry'), () => bs.restart(), { primary: true });
+      box.add(this.modalFirst);
       box.add(new Button(this, 135, by, 250, 56, T('toMissions'), () => bs.leave('missions'), { color: 0x8fb0c8 }));
       // 打不過的兩條出路：去機庫改造機體，或改用輕鬆難度
       box.add(new Button(this, b.easy ? 0 : -135, by - 66, b.easy ? 300 : 250, 48, T('hangar'), () => bs.leave('hangar'), { color: 0xffd75a, size: 17, icon: 'ic_parts' }));
@@ -561,66 +586,55 @@ export class HudScene extends Phaser.Scene {
     const endNote = storyEnd ? T('chapterEnd') : next ? '' : T('epilogueEnd');
     if (endNote) box.add(fitText(addText(this, 0, by - 50, endNote, { size: 15, raw: true, strokeW: 0, color: COL.cyan }).setOrigin(0.5), W - 40));
     if (next) {
-      box.add(new Button(this, -188, by, 180, 56, T('next'), () => bs.leave('next'), { primary: true, color: 0x6dff9a }));
+      this.modalFirst = new Button(this, -188, by, 180, 56, T('next'), () => bs.leave('next'), { primary: true, color: 0x6dff9a });
+      box.add(this.modalFirst);
       box.add(hangar(0, 180));
       box.add(new Button(this, 188, by, 180, 56, T('toMissions'), () => bs.leave('missions'), { color: 0x8fb0c8 }));
     } else {
       box.add(hangar(-135, 250));
-      box.add(new Button(this, 135, by, 250, 56, T('toMissions'), () => bs.leave('missions'), { primary: true }));
+      this.modalFirst = new Button(this, 135, by, 250, 56, T('toMissions'), () => bs.leave('missions'), { primary: true });
+      box.add(this.modalFirst);
     }
   }
 
-  private openMenu(): void {
+  /** 現在有沒有對話框蓋在上面（選單、結算）：有的話戰場不處理按鍵 */
+  get modalOpen(): boolean {
+    return !!this.modal;
+  }
+
+  /** 鍵盤快捷鍵：按下對應的行動按鈕。沒有這顆就回傳 false */
+  hotkey(key: string): boolean {
+    const btn = this.actions.get(key);
+    if (!btn?.active) return false;
+    btn.click();
+    return true;
+  }
+
+  openMenu(): void {
     if (this.modal) return;
     const bs = this.battle;
-    const sv = save();
     const W = 380;
-    const H = 560;
+    const H = 380;
     const box = this.openModal(W, H, COL.line);
+    this.menuOpen = true;
     box.add(addText(this, 0, -H / 2 + 36, T('menu'), { size: 26, raw: true, strokeW: 0 }).setOrigin(0.5));
     const rows: [string, () => void, number?][] = [
       [T('resume'), () => this.closeModal()],
       [
-        T('sound', sv.sfx > 0 ? T('on') : T('off')),
+        T('settings'),
         () => {
-          sv.sfx = sv.sfx > 0 ? 0 : 0.7;
-          persist();
           this.closeModal();
-          this.openMenu();
-        },
-      ],
-      [
-        T('music', sv.music > 0 ? T('on') : T('off')),
-        () => {
-          sv.music = sv.music > 0 ? 0 : 0.5;
-          persist();
-          refreshMusic();
-          this.closeModal();
-          this.openMenu();
-        },
-      ],
-      [
-        T('difficulty', sv.easy ? T('diffEasy') : T('diffNormal')),
-        () => {
-          sv.easy = !sv.easy;
-          persist();
-          this.closeModal();
-          this.openMenu();
-          this.toast(T('diffNote'));
-        },
-      ],
-      [
-        T('speed', sv.fast ? T('fast') : T('normal')),
-        () => {
-          sv.fast = !sv.fast;
-          persist();
-          this.closeModal();
-          this.openMenu();
+          // 設定頁關掉之後重畫一次：語言、難度的標示可能變了
+          this.scene.launch('SfSettings', { onClose: () => this.refresh() });
         },
       ],
       [T('restart'), () => bs.restart(), 0xff9a3c],
       [T('quit'), () => bs.leave('missions'), 0xff6a5a],
     ];
-    rows.forEach(([label, fn, color], i) => box.add(new Button(this, 0, -H / 2 + 100 + i * 62, 300, 52, label, fn, { color })));
+    rows.forEach(([label, fn, color], n) => {
+      const btn = new Button(this, 0, -H / 2 + 100 + n * 62, 300, 52, label, fn, { color });
+      if (n === 0) this.modalFirst = btn;
+      box.add(btn);
+    });
   }
 }

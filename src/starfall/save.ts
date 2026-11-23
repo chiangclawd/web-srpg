@@ -17,6 +17,8 @@ export interface SaveData {
   easy: boolean;
   /** 機庫的改造（零件餘額不存，從星數和這裡算出來） */
   upgrades: Loadout;
+  /** 技能特寫：用技能時劃過畫面的頭像橫帶 */
+  cutIn: boolean;
 }
 
 let cache: SaveData | null = null;
@@ -29,7 +31,7 @@ export function save(): SaveData {
   } catch {
     // 存檔壞掉或瀏覽器不給用：從頭開始
   }
-  cache = { sfx: 0.7, stars: {}, tips: [], fast: false, music: 0.5, easy: false, upgrades: {}, ...raw };
+  cache = { sfx: 0.7, stars: {}, tips: [], fast: false, music: 0.5, easy: false, upgrades: {}, cutIn: true, ...raw };
   // 舊存檔或壞掉的欄位：補成空的
   if (!cache.upgrades || typeof cache.upgrades !== 'object' || Array.isArray(cache.upgrades)) cache.upgrades = {};
   if (!cache.stars || typeof cache.stars !== 'object' || Array.isArray(cache.stars)) cache.stars = {};

@@ -155,6 +155,21 @@ const STR = {
   statMove: { zh: '移動', en: 'Move' },
   statDmg: { zh: '傷害', en: 'Damage' },
   statRange: { zh: '射程', en: 'Range' },
+  settings: { zh: '設定', en: 'Settings' },
+  setSfx: { zh: '音效', en: 'Sound' },
+  setMusic: { zh: '音樂', en: 'Music' },
+  setSpeed: { zh: '演出速度', en: 'Animation speed' },
+  setCutIn: { zh: '技能特寫', en: 'Skill close-ups' },
+  setDifficulty: { zh: '難度', en: 'Difficulty' },
+  setLanguage: { zh: '語言', en: 'Language' },
+  langName: { zh: '中文', en: 'English' },
+  setFullscreen: { zh: '全螢幕', en: 'Fullscreen' },
+  close: { zh: '關閉', en: 'Close' },
+  keysTitle: { zh: '鍵盤操作', en: 'Keyboard' },
+  keysHelp: {
+    zh: '方向鍵：移動游標、切換目標　　Enter / 空白鍵：選取、確定　　Esc：取消、選單\nTab：下一台　A：攻擊　1 2：技能　O：警戒　W：待機　Z：退回　E：結束回合　＋ －：縮放',
+    en: 'Arrows: move the cursor, switch target   Enter / Space: select, confirm   Esc: cancel, menu\nTab: next unit   A: attack   1 2: skills   O: overwatch   W: wait   Z: undo   E: end turn   + -: zoom',
+  },
 } satisfies Record<string, L10n>;
 
 export type StrKey = keyof typeof STR;
