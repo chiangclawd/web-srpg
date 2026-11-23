@@ -266,7 +266,8 @@ export class BattleScene extends Phaser.Scene {
         if (id === 'chasm') continue;
         const cx = isoX(x, y);
         const cy = isoY(x, y, b.heightAt(x, y) + (id === 'wall' ? 2 : 0));
-        if (Math.abs(wx - cx) / (TW / 2) + Math.abs(wy - cy) / (TH / 2) <= 1 && tileDepth(x, y) > bestDepth) {
+        // 菱形稍微內縮：墊高的格子頂角剛好落在後面那格的正中央，點後面那格的中心不該算到前面這格
+        if (Math.abs(wx - cx) / (TW / 2) + Math.abs(wy - cy) / (TH / 2) <= 0.94 && tileDepth(x, y) > bestDepth) {
           best = { x, y };
           bestDepth = tileDepth(x, y);
         }

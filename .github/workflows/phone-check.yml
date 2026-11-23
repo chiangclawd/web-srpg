@@ -11,7 +11,8 @@ permissions:
 
 jobs:
   phone:
-    runs-on: ubuntu-latest
+    # 固定在 24.04：這裡用的 Playwright 1.56.1 還不支援 ubuntu-latest 換上的 26.04（裝不了 Chromium）
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
@@ -42,10 +43,16 @@ jobs:
       - name: Check phone layouts
         run: node scripts/phone-check.cjs phone-check
 
+      # 《星墜殘響》：手機尺寸實際點一遍第一關，再把三個任務各自動打完一次
+      - name: Starfall play-through check
+        run: node scripts/starfall-check.cjs starfall-check
+
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: phone-check
-          path: phone-check/
+          path: |
+            phone-check/
+            starfall-check/
           retention-days: 7
