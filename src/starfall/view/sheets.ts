@@ -46,6 +46,10 @@ export const SHEETS: Record<string, SheetDef> = {
   mender: { ...STATIC, unitPx: 128, h: 56, hover: 18 },
   needle: { ...STATIC, unitPx: 98.5, h: 58 },
   core: { ...STATIC, unitPx: 170.7, h: 132 },
+  breacher: { ...MECH, unitPx: 142.2, h: 84 },
+  tribunal: { ...MECH, unitPx: 134.7, h: 92 },
+  thunderer: { ...STATIC, unitPx: 128, h: 62 },
+  projector: { ...STATIC, unitPx: 94.8, h: 64 },
 };
 
 /** 面向 → 用正面還是背面的圖、要不要水平翻轉 */

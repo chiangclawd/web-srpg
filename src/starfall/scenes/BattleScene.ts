@@ -62,10 +62,14 @@ export class BattleScene extends Phaser.Scene {
   private bg!: Phaser.GameObjects.Image;
   private zoom = 1;
   private minZoom = 0.6;
+  /** 大地圖：整張放不進畫面，開場拉近到我方附近，介面多一張小地圖和「下一台」按鈕 */
+  big = false;
   private center = new Phaser.Math.Vector2();
   private bounds = new Phaser.Geom.Rectangle();
   private drag: { x: number; y: number; moved: boolean; pinch: number } | null = null;
   private endArmed = false;
+  /** 進行中的鏡頭移動結束時要呼叫的函式（見 stopFocus） */
+  private focusDone: (() => void) | null = null;
 
   constructor() {
     super('SfBattle');
@@ -83,6 +87,7 @@ export class BattleScene extends Phaser.Scene {
     this.range = null;
     this.drag = null;
     this.endArmed = false;
+    this.focusDone = null;
   }
 
   // ───────── 建立 ─────────
@@ -92,7 +97,7 @@ export class BattleScene extends Phaser.Scene {
     // 有首領的關卡換一首比較兇的曲子
     music(this.battle.units.some((u) => u.def.boss) ? 'boss' : 'battle');
     this.bg = this.add
-      .image(0, 0, { ice: 'bg_ice', hull: 'bg_hull', bay: 'bg_bay', reactor: 'bg_reactor' }[this.mission.theme ?? 'hull'])
+      .image(0, 0, { ice: 'bg_ice', hull: 'bg_hull', bay: 'bg_bay', reactor: 'bg_reactor', field: 'bg_field' }[this.mission.theme ?? 'hull'])
       .setScrollFactor(0)
       .setDepth(-1000);
     // 地塊：每格一張「柱狀」圖（頂面 + 往下延伸的側面），靠前的蓋住靠後的
@@ -139,8 +144,18 @@ export class BattleScene extends Phaser.Scene {
     const side = 236 * Math.min(uiZoom(), 1.4);
     const fit = Math.min((w - side - 60) / this.bounds.width, (VIEW_H - 130) / this.bounds.height);
     this.minZoom = Phaser.Math.Clamp(fit * 0.9, 0.45, 1);
-    this.zoom = Phaser.Math.Clamp(fit, this.minZoom, 1.25);
-    this.center.set(this.bounds.centerX + side / 2 / this.zoom, this.bounds.centerY + 10);
+    // 整張放進畫面會小到看不清楚的大地圖：開場拉近，鏡頭對著我方的機體；要看全局就縮小或用小地圖
+    this.big = fit < 0.7;
+    if (this.big) {
+      this.zoom = 0.75;
+      const mine = b.units.filter((u) => u.side === 'player' && !u.def.structure);
+      const cx = mine.reduce((n, u) => n + isoX(u.x, u.y), 0) / Math.max(1, mine.length);
+      const cy = mine.reduce((n, u) => n + isoY(u.x, u.y, b.heightAt(u.x, u.y)), 0) / Math.max(1, mine.length);
+      this.center.set(cx + side / 2 / this.zoom, cy);
+    } else {
+      this.zoom = Phaser.Math.Clamp(fit, this.minZoom, 1.25);
+      this.center.set(this.bounds.centerX + side / 2 / this.zoom, this.bounds.centerY + 10);
+    }
     this.applyCamera();
 
     this.input.addPointer(1);
@@ -206,7 +221,14 @@ export class BattleScene extends Phaser.Scene {
     const dx = wx - this.center.x;
     const dy = wy - this.center.y;
     if (Math.abs(dx) < halfW * 0.62 && dy > -halfH * 0.55 && dy < halfH * 0.4) return Promise.resolve();
+    // 上一次的鏡頭移動還沒完：直接接手（先放行等它的人）
+    this.stopFocus();
     return new Promise((ok) => {
+      const done = (): void => {
+        if (this.focusDone === done) this.focusDone = null;
+        ok();
+      };
+      this.focusDone = done;
       this.tweens.add({
         targets: this.center,
         x: wx,
@@ -214,14 +236,52 @@ export class BattleScene extends Phaser.Scene {
         duration: this.ms(260),
         ease: 'Sine.easeInOut',
         onUpdate: () => this.applyCamera(),
-        onComplete: () => ok(),
+        onComplete: done,
       });
     });
+  }
+
+  /**
+   * 中斷進行中的鏡頭移動，並放行正在等它的演出。
+   * 演出（移動、攻擊、敵方回合）都會 await focus()；只把補間動畫砍掉的話 onComplete 不會觸發，
+   * 那個 Promise 永遠不會結束，整場戰鬥就卡在 busy。所以任何打斷鏡頭的地方都要走這裡。
+   */
+  private stopFocus(): void {
+    this.tweens.killTweensOf(this.center);
+    const done = this.focusDone;
+    this.focusDone = null;
+    done?.();
+  }
+
+  /** 地圖在世界座標裡佔的範圍（小地圖用） */
+  get mapBounds(): Phaser.Geom.Rectangle {
+    return this.bounds;
+  }
+
+  /** 把鏡頭移到世界座標的某一點（點小地圖） */
+  lookAt(wx: number, wy: number): void {
+    this.stopFocus();
+    this.center.set(wx, wy);
+    this.applyCamera();
+  }
+
+  /** 選下一台還沒行動的我方機體，鏡頭跟過去 */
+  nextUnit(): void {
+    if (this.mode === 'busy' || this.mode === 'target') return;
+    const b = this.battle;
+    const list = b.units.filter((u) => u.side === 'player' && b.canAct(u));
+    if (!list.length) return;
+    const i = this.sel ? list.findIndex((u) => u.uid === this.sel!.uid) : -1;
+    const u = list[(i + 1) % list.length];
+    this.select(u);
+    void this.focus(u.x, u.y);
   }
 
   // ───────── 輸入 ─────────
 
   private onDown(p: Phaser.Input.Pointer): void {
+    // 按在介面上（按鈕、小地圖、對話框）的不算拖地圖
+    if (this.hud?.input.hitTestPointer(p).length) return;
     const two = this.input.pointer1.isDown && this.input.pointer2.isDown;
     this.drag = { x: p.x, y: p.y, moved: two, pinch: two ? Phaser.Math.Distance.Between(this.input.pointer1.x, this.input.pointer1.y, this.input.pointer2.x, this.input.pointer2.y) : 0 };
   }
@@ -578,6 +638,9 @@ export class BattleScene extends Phaser.Scene {
       if (this.mission.id === 'm7' && this.battle.turn === 3) this.hud.showTip('tip_mender');
       if (this.mission.id === 'm8' && this.battle.turn === 1) this.hud.showTip('tip_rally');
       if (this.mission.id === 'm9' && this.battle.turn === 1) this.hud.showTip('tip_hold');
+      if (this.mission.id === 'm10' && this.battle.turn === 1) this.hud.showTip('tip_drones');
+      if (this.mission.id === 'm10' && this.battle.turn === 2) this.hud.showTip('tip_thunderer');
+      if (this.mission.id === 'm11' && this.battle.turn === 1) this.hud.showTip('tip_projector');
       return;
     }
     const tip = ({ 1: 'tip_move', 2: 'tip_flank', 3: 'tip_overwatch', 4: 'tip_cover' } as const)[this.battle.turn as 1 | 2 | 3 | 4];

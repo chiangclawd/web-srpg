@@ -9,8 +9,8 @@ import { MISSIONS } from '../data/missions';
 import { FRAMES, canAffordAny, frameUnlocked, missionOpen as openWith, partsLeft } from '../data/upgrades';
 import { Button, drawPanel } from '../view/ui';
 
-const CHAPTERS = [1, 2, 3];
-const CHAPTER_BG = ['bg_ice', 'bg_bay', 'bg_reactor'];
+const CHAPTERS = [1, 2, 3, 4];
+const CHAPTER_BG = ['bg_ice', 'bg_bay', 'bg_reactor', 'bg_field'];
 
 /** 這一關開放了沒：第一關一定開，其他要前一關拿過星 */
 export function missionOpen(index: number): boolean {
@@ -49,23 +49,29 @@ export class MissionScene extends Phaser.Scene {
       const dot = this.add.circle(hx + 80 * z, hy - 20 * z, 6 * z, 0xff9a3c).setStrokeStyle(2, 0x06101c);
       this.tweens.add({ targets: dot, scale: 1.25, duration: 600, yoyo: true, repeat: -1 });
     }
-    // 章節分頁
-    const tabW = 150 * Math.min(z, 1.2);
+    // 章節分頁：排在「返回」和「機庫」兩顆按鈕中間；放不下就縮窄，並往空位的中間靠
+    const tz = Math.min(z, 1.2);
+    const n4 = CHAPTERS.length;
+    const freeL = 16 + 120 * z + 14;
+    const freeR = w - 16 - 172 * z - 14;
+    const tabW = Math.min(150 * tz, (freeR - freeL - 12 * (n4 - 1)) / n4);
+    const tabsW = n4 * tabW + 12 * (n4 - 1);
+    const tabsX = Phaser.Math.Clamp(w / 2, freeL + tabsW / 2, Math.max(freeL + tabsW / 2, freeR - tabsW / 2));
     CHAPTERS.forEach((c, i) => {
       const open = missionOpen(MISSIONS.findIndex((m) => m.chapter === c));
       const on = c === this.chapter;
       new Button(
         this,
-        w / 2 + (i - (CHAPTERS.length - 1) / 2) * (tabW + 12),
+        tabsX + (i - (n4 - 1) / 2) * (tabW + 12),
         40,
-        tabW / Math.min(z, 1.2),
+        tabW / tz,
         44,
-        T('chapterTab', c),
+        c === 4 ? T('chapterTabEpilogue') : T('chapterTab', c),
         () => {
           if (!on) this.scene.restart({ chapter: c });
         },
         { color: on ? COL.line : 0x8fb0c8, primary: on, disabled: !open, icon: open ? undefined : 'ic_lock', size: 17 },
-      ).setScale(Math.min(z, 1.2));
+      ).setScale(tz);
     });
     addText(this, w / 2, 96, T(`chapter${this.chapter}` as StrKey), { size: 26, strokeW: 5 }).setOrigin(0.5);
     const sv = save();

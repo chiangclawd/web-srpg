@@ -77,6 +77,11 @@ function tileScore(b: Battle, u: Unit, p: Pos, enemies: Unit[], danger: Map<numb
     const vital = u.def.id === 'kai' || (!!u.tag && (b.mission.protect ?? []).includes(u.tag));
     const care = vital ? (style.leaderCare ?? 1) : 1;
     s -= ((d * 40) / u.maxHp + (d * 1.25 * care >= u.hp ? 80 : 0)) * (vital ? 1.5 * care : 1);
+    // 隊長保守打法：會挨打的位置旁邊要有隊友（3 格內至少兩台），不然扣分 —— 不要一個人衝在最前面
+    if (care > 1) {
+      const near = b.units.filter((a) => a.alive && a.side === u.side && a !== u && !a.def.structure && dist(a, p) <= 3).length;
+      s -= Math.max(0, 2 - near) * 12;
+    }
   }
   if (u.def.weapon.kind !== 'melee') s += b.heightAt(p.x, p.y) * 2;
   if (u.def.weapon.min >= 2) for (const e of enemies) if (!e.def.structure && dist(e, p) < u.def.weapon.min) s -= 12;
@@ -88,10 +93,17 @@ function targetBonus(b: Battle, u: Unit, t: Unit): number {
   // 我方機器人：正在拆保護目標的敵人優先處理（玩家看任務目標也會這樣打）
   if (u.side === 'player' && t.prey && (b.mission.protect ?? []).includes(t.prey)) s += 25;
   if (u.prey && t.tag === u.prey) s += 10;
-  // 設施不會還手也不會跑：只有被指定要拆它的單位才會打，其他人去對付會動的
-  else if (t.def.structure) s -= 1000;
+  // 設施不會還手也不會跑：只有被指定要拆它的單位才會打，其他人去對付會動的。
+  // 例外是替周圍敵人減傷的設施（護盾投射器）：我方機器人會去拆，不然旁邊的東西打不動。
+  // 只保護單一目標的（中繼節點）維持原樣不打：機器人直接打本體反而比較穩
+  else if (t.def.structure) s += u.side === 'player' && t.def.aura?.guard && !t.def.aura.only ? 6 : -1000;
   if (t.def.id === 'kai') s += 3;
   const win = b.mission.win;
+  if (u.side === 'player') {
+    // 曲射砲貼近了就沒有還手之力，放著又會一直轟：優先處理。任務指定要摧毀的目標也是
+    if (t.def.weapon.kind === 'indirect') s += 8;
+    if (win.type === 'killAll' && !!t.tag && win.tags.includes(t.tag)) s += 12;
+  }
   if (u.side === 'enemy' && (win.type === 'hold' || win.type === 'reach') && win.who === t.def.id) s += 8;
   return s;
 }
@@ -183,6 +195,7 @@ function regroup(b: Battle, u: Unit, reach: Pos[], danger: Map<number, number>, 
 /** 這回合打不到任何人：往最近能開火的位置前進 */
 function advance(b: Battle, u: Unit, reach: Pos[], enemies: Unit[], danger: Map<number, number>): Pos | null {
   const far = b.moveRange(u, Infinity, true);
+  const win = b.mission.win;
   let goal = -1;
   let best = Infinity;
   for (const [k, r] of far) {
@@ -192,7 +205,8 @@ function advance(b: Battle, u: Unit, reach: Pos[], enemies: Unit[], danger: Map<
       if (u.side === 'enemy' && t.def.structure && t.tag !== u.prey) continue;
       if (!b.canHit(u, p, t.x, t.y)) continue;
       // 偏好的目標當作近 4 步；我方機器人優先靠近正在拆保護目標的敵人
-      const c = r.cost - (u.prey && t.tag === u.prey ? 4 : 0) - (u.side === 'player' && t.prey && (b.mission.protect ?? []).includes(t.prey) ? 6 : 0);
+      const objective = u.side === 'player' && win.type === 'killAll' && !!t.tag && win.tags.includes(t.tag);
+      const c = r.cost - (u.prey && t.tag === u.prey ? 4 : 0) - (u.side === 'player' && t.prey && (b.mission.protect ?? []).includes(t.prey) ? 6 : 0) - (objective ? 3 : 0);
       if (c < best) {
         best = c;
         goal = k;
