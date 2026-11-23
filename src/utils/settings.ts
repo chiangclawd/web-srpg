@@ -8,6 +8,10 @@ export interface Settings {
   muted: boolean;
   difficulty: Difficulty;
   theme: UITheme;
+  /** 無障礙（Wave 8）：剋制標示加 🔺/▼ 形狀，色盲友善。 */
+  colorblindMode: boolean;
+  /** 無障礙（Wave 8）：戰鬥開始時自動開威脅範圍疊圖，每回合自動重繪。 */
+  threatAlwaysOn: boolean;
 }
 
 const DEFAULT: Settings = {
@@ -15,6 +19,8 @@ const DEFAULT: Settings = {
   muted: false,
   difficulty: 'normal',
   theme: 'dark',
+  colorblindMode: false,
+  threatAlwaysOn: false,
 };
 
 const THEMES: Record<UITheme, {
@@ -59,8 +65,31 @@ const DIFFICULTY_ENEMY_ATK_MUL: Record<Difficulty, number> = {
   hard: 1.3,
 };
 
+/** 玩家防禦倍率（Wave 8 難度分層）：easy 玩家受傷再降一層、hard 玩家更脆。 */
+const DIFFICULTY_PLAYER_DEF_MUL: Record<Difficulty, number> = {
+  easy: 1.2,
+  normal: 1.0,
+  hard: 0.85,
+};
+
 export function getEnemyAttackMul(): number {
   return DIFFICULTY_ENEMY_ATK_MUL[_settings.difficulty];
+}
+
+export function getPlayerDefenseMul(): number {
+  return DIFFICULTY_PLAYER_DEF_MUL[_settings.difficulty];
+}
+
+export function toggleColorblind(): boolean {
+  _settings.colorblindMode = !_settings.colorblindMode;
+  saveSettings();
+  return _settings.colorblindMode;
+}
+
+export function toggleThreatAlwaysOn(): boolean {
+  _settings.threatAlwaysOn = !_settings.threatAlwaysOn;
+  saveSettings();
+  return _settings.threatAlwaysOn;
 }
 
 let _settings: Settings = { ...DEFAULT };

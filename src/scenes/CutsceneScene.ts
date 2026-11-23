@@ -3,6 +3,7 @@ import { CUTSCENES } from '../data/cutscenes';
 import { COMMANDERS } from '../data/commanders';
 import { getPortraitKey } from '../data/assetManifest';
 import { audio } from '../utils/audio';
+import { getLang } from '../utils/i18n';
 import type { DialogueLine } from '../types';
 
 export interface CutsceneNext {
@@ -188,9 +189,11 @@ export class CutsceneScene extends Phaser.Scene {
     if (bgForLine !== undefined) {
       this.applyBg(bgForLine, /*animate*/ true);
     }
-    this.speakerText.setText(line.speaker);
-    this.bodyText.setText(line.text);
-    this.updatePortrait(line.speaker);
+    // 全英化（Part B）：lang=en 時優先用 *_en，缺失 fallback 到 zh
+    const en = getLang() === 'en';
+    this.speakerText.setText(en && line.speaker_en ? line.speaker_en : line.speaker);
+    this.bodyText.setText(en && line.text_en ? line.text_en : line.text);
+    this.updatePortrait(line.speaker); // 立繪查表仍用 zh 名（避免 portrait key 改動）
     const prog = this.children.getByName('progressText') as Phaser.GameObjects.Text | null;
     if (prog) prog.setText(`${this.current + 1} / ${this.lines.length}　▶ 點擊繼續`);
   }
