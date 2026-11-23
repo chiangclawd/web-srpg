@@ -226,7 +226,19 @@ function drawTile(g: Ctx, id: TerrainId, variant: number): void {
   box(g, 0, 0, 1, 1, -DEPTH, 0, id === 'rubble' ? 0x586a82 : DECK.top, DECK.side, true);
   deckTop(g, variant, id === 'grate');
   gridEdge(g);
-  if (id === 'rubble') {
+  if (id === 'machine') {
+    // 機組的底座：一圈深色的圓盤，上面擺場景裡的大型設備
+    g.save();
+    clipTop(g);
+    g.fillStyle = 'rgba(16,24,38,0.75)';
+    g.beginPath();
+    g.ellipse(TW / 2, TOP_PAD + TH / 2, TW * 0.4, TH * 0.4, 0, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = 'rgba(95,227,255,0.7)';
+    g.lineWidth = 1.5;
+    g.stroke();
+    g.restore();
+  } else if (id === 'rubble') {
     // 殘骸堆：幾塊歪斜的鋼板和一截橘色外殼
     const r = rng(variant + 11);
     for (let i = 0; i < 6; i++) {
@@ -478,6 +490,20 @@ const ICONS: Record<string, IconFn> = {
     g.fill();
     line(g, [6, 58], [22, 58], '#fff', 4);
   },
+  sk_rally: (g) => {
+    stroke(g, 5);
+    // 旗子：督戰令
+    line(g, [16, 8], [16, 58], '#fff', 5);
+    g.beginPath();
+    g.moveTo(18, 10);
+    g.lineTo(54, 20);
+    g.lineTo(18, 34);
+    g.closePath();
+    g.fill();
+    g.beginPath();
+    g.arc(42, 48, 9, Math.PI * 0.2, Math.PI * 1.8);
+    g.stroke();
+  },
   sk_repair: (g) => {
     stroke(g, 5);
     g.fillRect(25, 8, 14, 48);
@@ -505,7 +531,7 @@ export function tileKey(id: TerrainId, variant: number): string {
 }
 
 export function makeTextures(scene: Phaser.Scene): void {
-  const ids: TerrainId[] = ['deck', 'grate', 'ice', 'snow', 'rubble', 'barricade', 'wall'];
+  const ids: TerrainId[] = ['deck', 'grate', 'ice', 'snow', 'rubble', 'barricade', 'wall', 'machine'];
   for (const id of ids) for (let v = 0; v < TILE_VARIANTS; v++) canvasTex(scene, tileKey(id, v), TW, TILE_TEX_H, (g) => drawTile(g, id, v));
   for (const k of ['fill', 'edge', 'dot', 'zone'] as const) canvasTex(scene, `ov_${k}`, TW, TH, (g) => drawOverlay(g, k));
   canvasTex(scene, 'generator', 120, 124, drawGenerator);

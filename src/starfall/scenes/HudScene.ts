@@ -78,7 +78,7 @@ export class HudScene extends Phaser.Scene {
     this.tl.removeAll(true);
     const g = this.add.graphics();
     const name = addText(this, 16, 10, L(m.name), { size: 20, raw: true, strokeW: 0 });
-    const turn = m.win.type === 'survive' ? T('turnOf', b.turn, m.win.turns) : T('turn', b.turn);
+    const turn = m.win.type === 'survive' ? T('turnOf', b.turn, m.win.turns) : m.win.type === 'hold' ? `${T('turn', b.turn)}　${T('holdProgress', b.held, m.win.turns)}` : T('turn', b.turn);
     const obj = addText(this, 16, 38, `${T('objective')}：${L(m.objective)}`, { size: 15, raw: true, strokeW: 0, color: COL.cyan });
     // 失敗條件：隊長機、保護目標
     // 「毀掉幾個才失敗」的關卡，條件已經寫在目標那一行，這裡只提隊長機
@@ -357,7 +357,8 @@ export class HudScene extends Phaser.Scene {
       return;
     }
     const got = [true, b.lost === 0, b.thirdStar()];
-    const labels = [T('star1'), T('star2'), bs.mission.win.type === 'survive' ? T('star3hp') : T('star3par', bs.mission.par)];
+    const kind = bs.mission.win.type;
+    const labels = [T('star1'), T('star2'), kind === 'survive' ? T('star3hp') : kind === 'hold' ? T('star3hold', bs.mission.par) : T('star3par', bs.mission.par)];
     got.forEach((ok, i) => {
       const x = (i - 1) * 86;
       const star = this.add

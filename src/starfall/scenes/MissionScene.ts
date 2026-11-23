@@ -8,7 +8,8 @@ import { save } from '../save';
 import { MISSIONS } from '../data/missions';
 import { Button, drawPanel } from '../view/ui';
 
-const CHAPTERS = [1, 2];
+const CHAPTERS = [1, 2, 3];
+const CHAPTER_BG = ['bg_ice', 'bg_bay', 'bg_reactor'];
 
 /** 這一關開放了沒：第一關一定開，其他要前一關拿過星 */
 export function missionOpen(index: number): boolean {
@@ -33,7 +34,7 @@ export class MissionScene extends Phaser.Scene {
     music('title');
     const w = viewW(this);
     const z = uiZoom();
-    const bg = this.add.image(w / 2, VIEW_H / 2, this.chapter === 1 ? 'bg_ice' : 'bg_bay');
+    const bg = this.add.image(w / 2, VIEW_H / 2, CHAPTER_BG[this.chapter - 1] ?? 'bg_ice');
     bg.setScale(Math.max(w / bg.width, VIEW_H / bg.height));
     this.add.rectangle(w / 2, VIEW_H / 2, w, VIEW_H, 0x040a14, 0.45);
     new Button(this, 16 + 60 * z, 14 + 24 * z, 120, 48, T('back'), () => this.scene.start('SfTitle'), { color: 0x8fb0c8 }).setScale(z);

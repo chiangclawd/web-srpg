@@ -16,6 +16,7 @@ import { STORY } from '../data/story';
 import { UNITS } from '../data/units';
 import { EH, TH, TOP_PAD, TW, isoX, isoY, tileDepth } from '../view/iso';
 import { TILE_TEX_H, TILE_VARIANTS, tileKey } from '../view/textures';
+import { SHEETS, SHEET_FOOT, frameName } from '../view/sheets';
 import { UnitView } from '../view/UnitView';
 import type { HudScene } from './HudScene';
 
@@ -90,7 +91,7 @@ export class BattleScene extends Phaser.Scene {
     // 有首領的關卡換一首比較兇的曲子
     music(this.battle.units.some((u) => u.def.boss) ? 'boss' : 'battle');
     this.bg = this.add
-      .image(0, 0, this.mission.theme === 'ice' ? 'bg_ice' : this.mission.theme === 'bay' ? 'bg_bay' : 'bg_hull')
+      .image(0, 0, { ice: 'bg_ice', hull: 'bg_hull', bay: 'bg_bay', reactor: 'bg_reactor' }[this.mission.theme ?? 'hull'])
       .setScrollFactor(0)
       .setDepth(-1000);
     // 地塊：每格一張「柱狀」圖（頂面 + 往下延伸的側面），靠前的蓋住靠後的
@@ -117,7 +118,18 @@ export class BattleScene extends Phaser.Scene {
       }
     }
     this.bounds.setTo(minX, minY, maxX - minX, maxY - minY);
-    if (this.mission.win.type === 'reach') for (const p of this.mission.win.zone) this.mark('zone', p.x, p.y);
+    const win = this.mission.win;
+    if (win.type === 'reach' || win.type === 'hold') for (const p of win.zone) this.mark('zone', p.x, p.y);
+    // 場景擺設（爐心之類）：跟單位用同一種圖表，只是不會動
+    for (const p of this.mission.props ?? []) {
+      const sheet = SHEETS[p.sprite];
+      if (!sheet) continue;
+      this.add
+        .image(isoX(p.x, p.y), isoY(p.x, p.y, b.heightAt(p.x, p.y)), `sf_${p.sprite}`, frameName(sheet, 'idle', false, 0))
+        .setOrigin(0.5, SHEET_FOOT)
+        .setScale((sheet.h * (p.scale ?? 1)) / sheet.unitPx)
+        .setDepth(tileDepth(p.x, p.y) + 4);
+    }
     for (const u of b.units) this.addView(u);
 
     // 鏡頭：整張地圖放得進畫面（留位置給上下的介面），最多放大到 1.5 倍
@@ -468,6 +480,7 @@ export class BattleScene extends Phaser.Scene {
     if (e.type === 'leap') return { title, target: null, forecast: null, note: T('leapHere') };
     if (e.type === 'heal' && tgt) return { title, target: tgt, forecast: null, note: `${T('heal')} +${Math.min(e.amount, tgt.maxHp - tgt.hp)}` };
     if (e.type === 'stun' && tgt) return { title, target: tgt, forecast: null, note: T('stunned') };
+    if (e.type === 'rally' && tgt) return { title, target: tgt, forecast: null, note: T('rallyDone') };
     if (e.type === 'line') {
       const hits = b
         .lineTiles(u, a, p.skill)
@@ -479,7 +492,9 @@ export class BattleScene extends Phaser.Scene {
       });
       return { title, target: hits[0] ?? null, forecast: null, note: parts.length ? parts.join('　') : T('noTarget') };
     }
-    return { title, target: tgt, forecast: tgt ? b.forecast(u, tgt, u, p.skill) : null, note: '' };
+    // 只有會造成傷害的技能才有傷害預估；其他效果（或沒對到目標）不顯示數字
+    const dmg = e.type === 'shot' || e.type === 'push';
+    return { title, target: tgt, forecast: tgt && dmg ? b.forecast(u, tgt, u, p.skill) : null, note: '' };
   }
 
   cancelTarget(): void {
@@ -559,6 +574,9 @@ export class BattleScene extends Phaser.Scene {
       if (this.mission.id === 'm2' && this.battle.turn === 1) this.hud.showTip('tip_cover');
       if (this.mission.id === 'm4' && this.battle.turn === 1) this.hud.showTip('tip_leap');
       if (this.mission.id === 'm5' && this.battle.turn === 2) this.hud.showTip('tip_shield');
+      if (this.mission.id === 'm7' && this.battle.turn === 3) this.hud.showTip('tip_mender');
+      if (this.mission.id === 'm8' && this.battle.turn === 1) this.hud.showTip('tip_rally');
+      if (this.mission.id === 'm9' && this.battle.turn === 1) this.hud.showTip('tip_hold');
       return;
     }
     const tip = ({ 1: 'tip_move', 2: 'tip_flank', 3: 'tip_overwatch', 4: 'tip_cover' } as const)[this.battle.turn as 1 | 2 | 3 | 4];
@@ -723,6 +741,23 @@ export class BattleScene extends Phaser.Scene {
         v.setDir(v.unit.dir);
         this.ring(tx, ty, 0xffa53a);
         sfx('step');
+        break;
+      }
+      case 'rally': {
+        const v = this.views.get(e.target);
+        if (!v) break;
+        sfx('heal');
+        this.ring(v.root.x, v.root.y, 0xffe45a);
+        this.callout(v, T('rallyDone'), 0xffe45a);
+        v.refresh();
+        await this.wait(320);
+        break;
+      }
+      case 'hold': {
+        sfx(e.n > 0 ? 'heal' : 'error');
+        this.hud.toast(e.n > 0 ? T('holdProgress', e.n, e.of) : T('holdBroken'));
+        for (const im of this.marks.zone) this.tweens.add({ targets: im, scale: { from: 1.6 / TEX, to: 1 / TEX }, duration: 420, ease: 'Quad.easeOut' });
+        await this.wait(500);
         break;
       }
       case 'death': {

@@ -199,7 +199,7 @@ async function autoPlay(browser, mission) {
   fs.mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   await clickThrough(browser);
-  for (const m of ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']) await autoPlay(browser, m);
+  for (const m of ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9']) await autoPlay(browser, m);
   await browser.close();
   console.log(failed ? `${failed} 個問題（截圖在 ${OUT}）` : `全部通過（截圖在 ${OUT}）`);
   process.exit(failed ? 1 : 0);
