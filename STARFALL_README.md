@@ -130,8 +130,15 @@ node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍�
    （等角視角：俯角 30°，正面 yaw 45、背面 yaw 135，另外兩個方向在遊戲裡水平翻轉）。印出來的 `unitPx` 填進 `src/starfall/view/sheets.ts`。
    預設用軟體渲染；有顯示卡的電腦可以在 `render.mjs` 後面加 `--gpu`（Windows 也能跑，需要的套件和環境變數寫在 `render.mjs` 開頭）。
    現有的圖表都是軟體渲染的，兩種的像素不完全相同，要換就整批重渲染。
-4. 立繪、背景、主視覺也是 Gemini（`pt_*.txt`、`bg_*.txt`、`title.txt`），立繪用 `scripts/art/key.py` 去背。
-5. 配樂：`scripts/art/gemini-music.mjs`（Lyria）+ `music_*.txt`，再用 `scripts/art/prep_music.py` 統一響度。
+   渲染設定裡的 `proc: "hit" / "down"` 是受擊和擊破前癱倒的程序動作（`render.html` 的 `PROC`：以待機的第一格為底，在世界座標軸上擺骨頭），
+   `sway` 是沒有骨架的無人機待機時的搖晃。四個方向（yaw 45 / 135 / 315 / 225）都實際渲染，遊戲裡不再水平翻轉。
+   遊戲開機只載入我方六台的圖表，其餘進戰場時才載入那一關會出現的（`BattleScene.preload`）。
+4. **地塊**：`blender -b --factory-startup -P scripts/art/tiles/starfall_tiles.py -- <資料夾>`（Cycles，投影跟單位一樣），
+   再 `py scripts/art/tiles/pack_tiles.py <資料夾> public/assets/starfall/tiles.webp` 排成一張圖。載不到這張圖時遊戲退回用 Canvas 現畫的地塊。
+5. **音效**：`py scripts/art/sfx/starfall_sfx.py public/assets/starfall/sfx`（numpy 離線合成 + ffmpeg）。戰鬥的聲音和兩段環境音是檔案，
+   第一次點擊後才下載；還沒載完或載不到時退回 Web Audio 即時合成的版本。
+6. 立繪、背景、主視覺也是 Gemini（`pt_*.txt`、`bg_*.txt`、`title.txt`），立繪用 `scripts/art/key.py` 去背。
+7. 配樂：`scripts/art/gemini-music.mjs`（Lyria）+ `music_*.txt`，再用 `scripts/art/prep_music.py` 統一響度。
 
 模型原始檔不放在這個公開 repo（在私人的 kingdom-bastion-art 的 `starfall/`）。
 

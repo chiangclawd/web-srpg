@@ -183,6 +183,7 @@ const STR = {
   swatchPlayer: { zh: '我方', en: 'Yours' },
   swatchEnemy: { zh: '敵方', en: 'Enemy' },
   colorBlindNote: { zh: '色盲配色：敵方從紅色改成橘黃色，敵方的耐久數字前面多一個 ▼', en: 'Colour-blind palette: enemies turn from red to amber, and their HP numbers get a ▼ in front' },
+  loading: { zh: '載入中…', en: 'Loading…' },
 } satisfies Record<string, L10n>;
 
 export type StrKey = keyof typeof STR;

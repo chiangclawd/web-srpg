@@ -2,7 +2,7 @@
 // 疊在別的場景上面（標題畫面或戰鬥選單開它）；關掉時呼叫 onClose，讓底下的畫面照新設定重畫。
 import Phaser from 'phaser';
 import { COL, TEXT_SCALES, VIEW_H, addText, applyPalette, refreshTextScale, setupCamera, textScale, uiZoom, viewW } from '../config';
-import { refreshMusic, sfx } from '../audio';
+import { refreshMusic, refreshSfxVolume, sfx } from '../audio';
 import { T, getLang, setLang } from '../i18n';
 import type { StrKey } from '../i18n';
 import { persist, save } from '../save';
@@ -94,6 +94,7 @@ export class SettingsScene extends Phaser.Scene {
     // ── 左欄：聲音與戰鬥 ──
     const first = slider('setSfx', sv.sfx, (v, done) => {
       sv.sfx = v;
+      refreshSfxVolume();
       if (!done) return;
       persist();
       sfx('select');

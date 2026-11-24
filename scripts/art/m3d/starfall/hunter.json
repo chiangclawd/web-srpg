@@ -3,17 +3,22 @@
     {
       "url": "/models/image_model_urls_glb.glb",
       "name": "idle",
-      "frames": 1,
-      "loop": true
+      "frames": 6,
+      "loop": true,
+      "sway": 5
     }
   ],
   "yaws": [
     45,
-    135
+    135,
+    315,
+    225
   ],
   "dirs": {
     "front": 45,
-    "back": 135
+    "back": 135,
+    "frontL": 315,
+    "backL": 225
   },
   "elev": 30,
   "size": 256,
@@ -30,5 +35,5 @@
     212,
     250
   ],
-  "span": 3.0
+  "span": 3
 }

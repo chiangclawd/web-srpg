@@ -402,9 +402,12 @@ export class BattleFx {
     const c = v.center();
     const wait = (n: number): Promise<void> => new Promise((ok) => s.time.delayedCall(this.ms(n), () => ok()));
 
+    // 有骨架的機體先癱下去（膝蓋一軟、往前倒），爆炸是從癱倒的姿勢炸開
+    const slump = v.frames('down') > 1;
+    if (slump) v.play('down');
     // 一、連環小爆：機體抖動，身上到處冒火
     const shake = s.tweens.add({ targets: sp, x: { from: -2.5, to: 2.5 }, duration: 40, yoyo: true, repeat: -1 });
-    const pops = boss ? 6 : small ? 1 : 3;
+    const pops = boss ? 6 : small ? 1 : slump ? 5 : 3;
     for (let i = 0; i < pops; i++) {
       const x = c.x + Phaser.Math.Between(-16, 16);
       const y = c.y + Phaser.Math.Between(-v.tall * 0.3, v.tall * 0.3);
