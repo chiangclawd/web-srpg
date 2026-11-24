@@ -1,7 +1,7 @@
 // 戰鬥場景：畫等角地圖和單位、處理點擊操作、把模擬回傳的事件一個一個演出來。
 // 介面（按鈕、資訊卡、預估面板）在 HudScene，疊在這個場景上面。
 import Phaser from 'phaser';
-import { COL, RS, TEX, VIEW_H, addText, hudButton, hudZoom, viewW, worldPx } from '../config';
+import { COL, RS, TEX, VIEW_H, addText, cssPx, hudButton, hudZoom, viewW, worldPx } from '../config';
 import { ambience, music, sfx } from '../audio';
 import { L, T } from '../i18n';
 import { persist, save } from '../save';
@@ -31,6 +31,17 @@ type MarkKind = 'move' | 'target' | 'aim' | 'select' | 'threat' | 'zone' | 'line
 
 /** 準備中的動作：普通攻擊或某個技能 */
 export type Pending = { kind: 'attack' } | { kind: 'skill'; skill: SkillDef };
+
+/** 點擊的結果：點到哪一格，以及它是不是被前面的單位擋住、穿過去選到的 */
+interface Hit {
+  pos: Pos;
+  through: boolean;
+}
+
+/** 被擋住的格子要點在菱形多中間才算穿過去（0 = 正中央，1 = 邊上）：太靠邊的當成是點前面那台 */
+const THROUGH_ZONE = 0.62;
+/** 連點兩下的間隔（毫秒）：第二下一律算點在最前面的東西上，不穿過去 */
+const DOUBLE_TAP = 350;
 
 /** 預估面板要顯示的內容 */
 export interface AimInfo {
@@ -85,6 +96,15 @@ export class BattleScene extends Phaser.Scene {
   /** 鍵盤游標停在哪一格（用過方向鍵才會出現；滑鼠或觸控一點就收起來） */
   private cursor: Pos | null = null;
   private cursorMarks: Phaser.GameObjects.Image[] = [];
+  /** 被前面的單位擋住的落點，點了一次：先標出來（擋住它的單位變半透明），再點一次才走過去 */
+  private peek: Pos | null = null;
+  private peekMarks: (Phaser.GameObjects.Image | Phaser.GameObjects.Text)[] = [];
+  /** 上一次點地圖的時間 */
+  private lastTap = -1e9;
+  /** 上一下是穿過單位選到後面的東西：馬上又點一下的話，先用這個把它收回去（見 onTap） */
+  private quickUndo: (() => void) | null = null;
+  /** 目前哪些格子要讓玩家看得到（算過一次就記著，狀態沒變不重算） */
+  private revealKey = '';
 
   constructor() {
     super('SfBattle');
@@ -116,6 +136,11 @@ export class BattleScene extends Phaser.Scene {
     this.zoomBack = null;
     this.cursor = null;
     this.cursorMarks = [];
+    this.peek = null;
+    this.peekMarks = [];
+    this.lastTap = -1e9;
+    this.quickUndo = null;
+    this.revealKey = '';
   }
 
   // ───────── 建立 ─────────
@@ -255,6 +280,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   override update(time: number): void {
+    this.syncGhosts();
     for (const v of this.views.values()) v.update(time);
     this.fx.update(time, this.views.values());
     // 背景固定在畫面上（不跟著縮放），只跟著鏡頭輕微平移，有一點遠近感
@@ -385,43 +411,193 @@ export class BattleScene extends Phaser.Scene {
     if (!d || d.moved) return;
     if (this.hud?.input.hitTestPointer(p).length) return;
     const wp = this.cameras.main.getWorldPoint(p.x, p.y);
-    this.onTap(wp.x, wp.y);
+    this.onTap(wp.x, wp.y, p.wasTouch, p.upTime);
   }
 
-  /** 畫面座標 → 點到哪一格（先看單位的圖，再看地塊頂面；靠前的優先） */
-  private pick(wx: number, wy: number): Pos | null {
+  /** 這一點離某一格頂面的中心多遠：0 = 正中央，1 = 菱形的邊上 */
+  private tileDist(x: number, y: number, wx: number, wy: number): number {
     const b = this.battle;
-    let best: Pos | null = null;
-    let bestDepth = -1;
-    for (const v of this.views.values()) {
-      const u = v.unit;
-      if (!u.alive) continue;
-      const dx = Math.abs(wx - v.root.x);
-      const dy = v.root.y - wy;
-      if (dx < 26 && dy > -8 && dy < v.tall + 4 && v.root.depth > bestDepth) {
-        best = { x: u.x, y: u.y };
-        bestDepth = v.root.depth;
-      }
-    }
-    if (best) return best;
+    const cy = isoY(x, y, b.heightAt(x, y) + (b.terrainAt(x, y) === 'wall' ? 2 : 0));
+    return Math.abs(wx - isoX(x, y)) / (TW / 2) + Math.abs(wy - cy) / (TH / 2);
+  }
+
+  /** 頂面蓋到這一點的格子，靠前的排前面 */
+  private tilesAt(wx: number, wy: number): Pos[] {
+    const b = this.battle;
+    const out: Pos[] = [];
     for (let y = 0; y < b.h; y++) {
       for (let x = 0; x < b.w; x++) {
-        const id = b.terrainAt(x, y);
-        if (id === 'chasm') continue;
-        const cx = isoX(x, y);
-        const cy = isoY(x, y, b.heightAt(x, y) + (id === 'wall' ? 2 : 0));
+        if (b.terrainAt(x, y) === 'chasm') continue;
         // 菱形稍微內縮：墊高的格子頂角剛好落在後面那格的正中央，點後面那格的中心不該算到前面這格
-        if (Math.abs(wx - cx) / (TW / 2) + Math.abs(wy - cy) / (TH / 2) <= 0.94 && tileDepth(x, y) > bestDepth) {
-          best = { x, y };
-          bestDepth = tileDepth(x, y);
-        }
+        if (this.tileDist(x, y, wx, wy) <= 0.94) out.push({ x, y });
       }
     }
-    return best;
+    return out.sort((p, q) => tileDepth(q.x, q.y) - tileDepth(p.x, p.y));
   }
 
-  private onTap(wx: number, wy: number): void {
-    this.actAt(this.pick(wx, wy));
+  /** 圖像蓋到這一點的單位（照圖的形狀，透明的地方不算），靠前的排前面 */
+  private unitsAt(wx: number, wy: number, pad: number): UnitView[] {
+    const out: UnitView[] = [];
+    for (const v of this.views.values()) if (v.unit.alive && v.covers(wx, wy, pad)) out.push(v);
+    return out.sort((p, q) => q.root.depth - p.root.depth);
+  }
+
+  /** 這一格現在點下去有沒有用：2 = 會做事（走過去、打它、技能的目標），1 = 改選那一台，0 = 沒有作用 */
+  private use(p: Pos): number {
+    const b = this.battle;
+    if (this.mode === 'target') return this.validTargets().some((t) => t.x === p.x && t.y === p.y) ? 2 : 0;
+    const s = this.sel;
+    const act = this.mode === 'unit' && !!s && s.side === 'player' && b.canAct(s);
+    const u = b.unitAt(p.x, p.y);
+    if (u) return u === s ? 0 : act && s && u.side !== s.side && b.canHit(s, s, u.x, u.y) ? 2 : 1;
+    return act && s && !s.moved && this.range?.has(b.key(p.x, p.y)) && b.canStop(s, p.x, p.y) ? 2 : 0;
+  }
+
+  /**
+   * 這一點點到哪一格。原則是「看得到什麼就點到什麼」：單位照圖的形狀，其餘是地塊的頂面，靠前的優先。
+   * 例外是被單位擋住、但現在比前面那台用得上的格子（走得到的落點、打得到的敵人、技能的目標、
+   * 或前面那台已經選著了）：點在那一格的中間就穿過前面的單位選到它，回傳 through。
+   * 選目標的時候前面那台反正不能選，整個菱形和目標的整張圖都算。
+   */
+  private pickAt(wx: number, wy: number, pad: number, through: boolean): Hit | null {
+    const units = this.unitsAt(wx, wy, pad);
+    const tiles = this.tilesAt(wx, wy);
+    const front = units[0];
+    if (this.mode === 'target') {
+      const vu = units.find((v) => this.use(v.unit) === 2);
+      if (vu) return { pos: { x: vu.unit.x, y: vu.unit.y }, through: vu !== front };
+      const vt = tiles.find((t) => this.use(t) === 2);
+      if (vt) return { pos: vt, through: !!front };
+    }
+    const tile = tiles[0] ?? null;
+    if (!front) return tile ? { pos: tile, through: false } : null;
+    const own = { x: front.unit.x, y: front.unit.y };
+    if (!tile || (tile.x === own.x && tile.y === own.y)) return { pos: own, through: false };
+    if (through && this.use(tile) > this.use(own) && this.tileDist(tile.x, tile.y, wx, wy) <= THROUGH_ZONE) return { pos: tile, through: true };
+    return { pos: own, through: false };
+  }
+
+  /**
+   * 畫面座標 → 點到哪一格。沒點到用得上的東西（空地、地圖外面）時往四周找一小圈，
+   * 手指點偏一點還是算到旁邊的單位或目標上；不會因此走到旁邊的格子。
+   */
+  private pick(wx: number, wy: number, touch: boolean, through: boolean): Hit | null {
+    const b = this.battle;
+    const slop = cssPx(touch ? 10 : 4) / this.zoom;
+    const hit = this.pickAt(wx, wy, slop * 0.4, through);
+    const target = this.mode === 'target';
+    const wanted = (h: Hit): boolean => {
+      const u = b.unitAt(h.pos.x, h.pos.y);
+      return target ? this.use(h.pos) === 2 : !!u && u !== this.sel;
+    };
+    if (hit && (target ? wanted(hit) : !!b.unitAt(hit.pos.x, hit.pos.y) || this.use(hit.pos) > 0)) return hit;
+    for (const k of [0.5, 1]) {
+      for (let i = 0; i < 8; i++) {
+        const a = (i * Math.PI) / 4;
+        const h = this.pickAt(wx + Math.cos(a) * slop * k, wy + Math.sin(a) * slop * k, 0, false);
+        if (h && wanted(h)) return h;
+      }
+    }
+    return hit;
+  }
+
+  /**
+   * 點了地圖上的某一點。穿過單位選到後面的東西時多一層保險：
+   * - 落點：第一次只標出來（擋住它的單位變半透明、旁邊寫「再點一次移動」），再點一次才走過去。
+   * - 馬上又點一下（連點兩下）：當成「我要的是前面這台」，把剛才穿過去的結果收回，照看得到的算。
+   */
+  private onTap(wx: number, wy: number, touch = false, at = performance.now()): void {
+    if (this.mode === 'busy' || this.battle.result) return;
+    // 用點擊事件本身的時間：畫面卡的時候兩下會擠在同一格才處理，照處理的時間算會把隔很久的兩下當成連點
+    const now = at;
+    const quick = now - this.lastTap < DOUBLE_TAP;
+    this.lastTap = now;
+    if (quick) this.quickUndo?.();
+    this.quickUndo = null;
+    // 已經在選目標（不是剛才那一下才進來的）：連點兩下是確定同一個目標，照樣可以穿過去
+    const hit = this.pick(wx, wy, touch, !quick || this.mode === 'target');
+    const t = hit?.pos ?? null;
+    const wasUnit = this.mode === 'unit';
+    if (hit?.through && wasUnit && t && !this.battle.unitAt(t.x, t.y) && !(this.peek && this.peek.x === t.x && this.peek.y === t.y)) {
+      this.hud.hideTip();
+      this.setPeek(t);
+      this.quickUndo = () => this.setPeek(null);
+      return;
+    }
+    this.setPeek(null);
+    this.actAt(t);
+    if (hit?.through && wasUnit && this.mode === 'target') this.quickUndo = () => void (this.mode === 'target' && this.cancelTarget());
+  }
+
+  /** 標出（或收起）被擋住的落點 */
+  private setPeek(t: Pos | null): void {
+    for (const o of this.peekMarks) {
+      this.tweens.killTweensOf(o);
+      o.destroy();
+    }
+    this.peekMarks = [];
+    this.peek = t;
+    if (!t) return;
+    const x = isoX(t.x, t.y);
+    const y = isoY(t.x, t.y, this.battle.heightAt(t.x, t.y));
+    const edge = this.add.image(x, y, 'ov_edge').setTint(0xffffff).setDepth(tileDepth(t.x, t.y) + 3.5);
+    this.tweens.add({ targets: edge, scale: { from: 1 / TEX, to: 1.16 / TEX }, alpha: { from: 1, to: 0.55 }, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    // 字的大小照螢幕算：手機上地圖縮得小，照世界座標的字級會小到看不清楚
+    const size = Math.max(worldPx(15), Math.round(cssPx(11.5) / this.zoom));
+    // 寫在那一格上面（不放在格子上方：那裡是擋住它的那台的耐久條）
+    const tag = addText(this, x, y - 4, T('peekMove'), { size, raw: true, strokeW: 4 })
+      .setOrigin(0.5)
+      .setDepth(FX_DEPTH + 2);
+    this.peekMarks = [edge, tag];
+    sfx('select');
+  }
+
+  /**
+   * 玩家現在需要看得到的格子：預覽的落點、瞄準的目標、鍵盤游標，還有打得到的敵人和技能可以選的單位。
+   * 圖像擋住這些格子的單位變半透明（UnitView.ghost）。半透明的單位點它身上、後面那格的位置，會選到後面。
+   */
+  private syncGhosts(): void {
+    const b = this.battle;
+    const s = this.sel;
+    const off = this.mode === 'busy' || !!b.result;
+    const at = (p: Pos | null): string => (p ? `${p.x},${p.y}` : '-');
+    const key = off
+      ? ''
+      : [this.mode, s ? `${s.uid}@${s.x},${s.y}:${s.moved}:${s.acted}` : '-', this.pending ? (this.pending.kind === 'skill' ? this.pending.skill.id : 'attack') : '-', at(this.aim), at(this.peek), at(this.cursor), b.units.filter((u) => u.alive).length].join('|');
+    if (key === this.revealKey) return;
+    this.revealKey = key;
+    for (const v of this.views.values()) v.ghost = false;
+    if (off) return;
+    const cells: Pos[] = [];
+    if (this.peek) cells.push(this.peek);
+    if (this.cursor) cells.push(this.cursor);
+    if (this.mode === 'target') {
+      if (this.aim) cells.push(this.aim);
+      for (const t of this.validTargets()) if (b.unitAt(t.x, t.y)) cells.push(t);
+    } else if (this.mode === 'unit' && s && s.side === 'player' && b.canAct(s)) {
+      for (const t of b.targets(s)) cells.push({ x: t.x, y: t.y });
+    }
+    if (!cells.length) return;
+    // 每一格取幾個點：格子的中心和左右；上面有單位就再取它身上的兩點。這些點被誰的圖蓋住，誰就變半透明
+    const keep = new Set<number>();
+    const pts: { x: number; y: number; depth: number }[] = [];
+    for (const c of cells) {
+      const x = isoX(c.x, c.y);
+      const y = isoY(c.x, c.y, b.heightAt(c.x, c.y));
+      const depth = tileDepth(c.x, c.y);
+      const u = b.unitAt(c.x, c.y);
+      const v = u ? this.views.get(u.uid) : undefined;
+      pts.push({ x, y, depth }, { x: x - 18, y, depth }, { x: x + 18, y, depth });
+      if (!u || !v) continue;
+      // 目標本身不變透明（它擋住另一個目標也一樣）
+      keep.add(u.uid);
+      pts.push({ x, y: y - v.tall * 0.4, depth }, { x, y: y - v.tall * 0.75, depth });
+    }
+    for (const v of this.views.values()) {
+      if (!v.unit.alive || keep.has(v.unit.uid)) continue;
+      const depth = tileDepth(v.unit.x, v.unit.y);
+      v.ghost = pts.some((p) => depth > p.depth && v.covers(p.x, p.y, 2));
+    }
   }
 
   /** 對某一格下指令：點擊和鍵盤的 Enter 都走這裡（null = 點到地圖外面） */
@@ -467,6 +643,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.scene.isActive('SfDialogue') || this.scene.isActive('SfSettings')) return;
     if (keyUsed.has(ev)) return;
     keyUsed.add(ev);
+    this.setPeek(null);
     const k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
     if (k === '+' || k === '=') return this.setZoom(this.zoom * 1.1);
     if (k === '-' || k === '_') return this.setZoom(this.zoom * 0.9);
@@ -588,6 +765,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private clearMarks(...kinds: MarkKind[]): void {
+    if (!kinds.length) this.setPeek(null);
     for (const k of kinds.length ? kinds : (Object.keys(this.marks) as MarkKind[])) {
       if (k === 'zone' && !kinds.length) continue;
       for (const im of this.marks[k]) {
@@ -676,6 +854,7 @@ export class BattleScene extends Phaser.Scene {
     this.pending = p;
     this.aim = null;
     this.mode = 'target';
+    this.setPeek(null);
     this.clearMarks('move', 'target', 'aim', 'line');
     if (p.kind === 'skill' && p.skill.id === 'leap') this.hud.showTip('tip_leap');
     const list = this.validTargets();

@@ -68,6 +68,9 @@ function screenScale(): number {
   return Math.min(Math.max(box.w, box.h) / computeViewW(), Math.min(box.w, box.h) / VIEW_H);
 }
 
+/** 螢幕上的 n 個 CSS 像素等於幾個邏輯像素（手指點擊的容許誤差、要在手機上看得清楚的世界座標文字用） */
+export const cssPx = (n: number): number => n / screenScale();
+
 let textMin = MIN_CSS_PX / screenScale();
 
 export function refreshTextScale(): void {
