@@ -5,8 +5,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 
-const repo = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../..');
+const self = fileURLToPath(import.meta.url);
+const repo = path.resolve(path.dirname(self), '../../..');
 const dir = path.join(repo, 'public/assets/m3d');
 
 export function sheetRevs() {
@@ -21,7 +23,7 @@ export function sheetRevs() {
   return revs;
 }
 
-if (process.argv[1] === new URL(import.meta.url).pathname) {
+if (process.argv[1] && path.resolve(process.argv[1]) === self) {
   const revs = sheetRevs();
   const body = Object.entries(revs)
     .map(([k, v]) => `  ${k}: '${v}',`)

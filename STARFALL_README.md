@@ -93,6 +93,8 @@ node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍�
    無人機不綁骨架：加 `MESHY_POSE=none MESHY_DOWNLOAD=1` 直接下載模型，遊戲裡用程式做飄浮。
 3. **渲染成圖表**：`node scripts/art/m3d/render.mjs scripts/art/m3d/starfall/<單位>.json <模型資料夾> public/assets/starfall/units/<單位>.webp`
    （等角視角：俯角 30°，正面 yaw 45、背面 yaw 135，另外兩個方向在遊戲裡水平翻轉）。印出來的 `unitPx` 填進 `src/starfall/view/sheets.ts`。
+   預設用軟體渲染；有顯示卡的電腦可以在 `render.mjs` 後面加 `--gpu`（Windows 也能跑，需要的套件和環境變數寫在 `render.mjs` 開頭）。
+   現有的圖表都是軟體渲染的，兩種的像素不完全相同，要換就整批重渲染。
 4. 立繪、背景、主視覺也是 Gemini（`pt_*.txt`、`bg_*.txt`、`title.txt`），立繪用 `scripts/art/key.py` 去背。
 5. 配樂：`scripts/art/gemini-music.mjs`（Lyria）+ `music_*.txt`，再用 `scripts/art/prep_music.py` 統一響度。
 
