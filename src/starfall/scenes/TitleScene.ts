@@ -5,6 +5,7 @@ import { L, T, getLang, setLang } from '../i18n';
 import { MISSIONS } from '../data/missions';
 import { suspendInfo } from '../suspend';
 import { Button, KeyNav } from '../view/ui';
+import { cloudAvailable, cloudSignIn, cloudState, onCloud, prepareCloud } from '../cloud/sync';
 
 export class TitleScene extends Phaser.Scene {
   constructor() {
@@ -78,6 +79,26 @@ export class TitleScene extends Phaser.Scene {
       { color: 0x8fb0c8, size: 17 },
     ).setScale(z);
     new Button(this, x + 198 * z, by + 76 * z, 124, 48, T('settings'), () => this.scene.launch('SfSettings', { onClose: () => this.scene.restart() }), { color: 0x8fb0c8, size: 17 }).setScale(z);
+    // 右上角：帳號。還沒登入是一顆「用 Google 登入」，登入後顯示名字和同步狀態（點了開設定頁，那裡可以立即同步、登出）
+    if (cloudAvailable()) {
+      // 先把登入要用的程式載好，按下去才能馬上開 Google 的視窗
+      void prepareCloud();
+      const cs = cloudState();
+      const settings = (): void => void this.scene.launch('SfSettings', { onClose: () => this.scene.restart() });
+      const bw = 300;
+      const bx = w - 20 - (bw / 2) * z;
+      const by0 = 20 + 26 * z;
+      if (cs.user) {
+        const st = T(cs.status === 'synced' ? 'cloudSynced' : cs.status === 'error' ? 'cloudErrorShort' : 'cloudSyncing');
+        new Button(this, bx, by0, bw, 52, `${cs.user.name}　${st}`, settings, { size: 17, color: cs.status === 'error' ? 0xffa53a : 0x6dff9a }).setScale(z);
+      } else {
+        new Button(this, bx, by0, bw, 52, T('cloudSignIn'), () => cloudSignIn(), { size: 18, primary: true }).setScale(z);
+        addText(this, w - 20, by0 + 34 * z, T(cs.signInFailed ? 'cloudPopup' : 'cloudHint'), { size: 13, strokeW: 3, color: cs.signInFailed ? COL.orange : '#c4d8e8', bold: false }).setOrigin(1, 0);
+      }
+      // 登入、同步的狀態變了：重畫（設定頁開著的時候由它自己重畫，關掉時這裡也會重畫）
+      const off = onCloud(() => this.scene.isActive() && !this.scene.isActive('SfSettings') && this.scene.restart());
+      this.events.once('shutdown', off);
+    }
     new KeyNav(this, { enabled: () => !this.scene.isActive('SfSettings'), first: () => resume ?? start });
     addText(this, w - 14, VIEW_H - 10, `v${__APP_VERSION__} · ${__GIT_SHA__}`, { size: 12, strokeW: 0, color: '#5a7088', bold: false }).setOrigin(1, 1);
   }

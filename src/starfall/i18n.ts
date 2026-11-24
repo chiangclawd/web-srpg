@@ -187,6 +187,8 @@ const STR = {
   cloudSignOut: { zh: '登出', en: 'Sign out' },
   cloudSyncNow: { zh: '立即同步', en: 'Sync now' },
   cloudOff: { zh: '登入後，通關進度、改造和打到一半的戰鬥會在你的各台裝置之間同步', en: 'Sign in to sync progress, upgrades and the battle in progress across your devices' },
+  cloudHint: { zh: '登入後進度會在你的各台裝置之間同步', en: 'Sign in to sync progress across your devices' },
+  cloudErrorShort: { zh: '同步失敗', en: 'Sync failed' },
   cloudSyncing: { zh: '同步中…', en: 'Syncing…' },
   cloudSynced: { zh: '已同步', en: 'Synced' },
   cloudError: { zh: '同步失敗，稍後會再試（進度仍存在這台裝置）', en: 'Sync failed, will retry (progress is still saved on this device)' },
