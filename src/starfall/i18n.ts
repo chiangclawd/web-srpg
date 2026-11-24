@@ -88,6 +88,7 @@ const STR = {
   star3hold: { zh: '{0} 回合內完成同步', en: 'Sync completed within {0} turns' },
   leapHere: { zh: '跳到這一格（之後還能攻擊）', en: 'Leap here (you can still attack)' },
   pickTile: { zh: '選擇落點', en: 'Choose a landing tile' },
+  peekMove: { zh: '再點一次移動', en: 'Tap again to move' },
   music: { zh: '音樂：{0}', en: 'Music: {0}' },
   difficulty: { zh: '難度：{0}', en: 'Difficulty: {0}' },
   diffNormal: { zh: '一般', en: 'Normal' },

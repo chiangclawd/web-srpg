@@ -7,6 +7,10 @@ import type { Anim, SheetDef } from './sheets';
 import type { Dir, Unit } from '../sim/types';
 
 const BAR_W = 44;
+/** 擋住玩家正在看的那一格時，圖像變成這個透明度 */
+const GHOST_ALPHA = 0.34;
+const TMP_M = new Phaser.GameObjects.Components.TransformMatrix();
+const TMP_V = new Phaser.Math.Vector2();
 
 export class UnitView {
   readonly root: Phaser.GameObjects.Container;
@@ -27,6 +31,8 @@ export class UnitView {
   private readonly hover: number;
   /** 顯示中的耐久（演出時跟著事件走，不直接讀模擬的最終值） */
   hp: number;
+  /** 擋住了玩家正在看的那一格（瞄準的目標、預覽的落點、游標）：圖像變半透明，腳下的色環和耐久條照舊 */
+  ghost = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -136,6 +142,29 @@ export class UnitView {
       this.sprite.y = Math.abs(Math.sin(t * 1.6 + this.phase)) * -1.5;
     }
     if (this.status.visible) this.status.setAlpha(0.7 + Math.sin(t * 5) * 0.3);
+    const a = this.ghost ? GHOST_ALPHA : 1;
+    const now = this.sprite.alpha;
+    if (now !== a) this.sprite.setAlpha(Math.abs(now - a) < 0.04 ? a : now + (a - now) * 0.3);
+  }
+
+  /**
+   * 這一點（世界座標）有沒有落在圖像不透明的地方。照圖的實際形狀算，不是外框：
+   * 機體兩腿之間、肩膀旁邊看得到後面的地方，點下去是點到後面。
+   * pad：往上下左右各多試這麼遠（世界座標），手指點偏一點、或圖的邊緣很細的時候還是算點到。
+   */
+  covers(wx: number, wy: number, pad = 0): boolean {
+    const s = this.sprite;
+    const m = s.getWorldTransformMatrix(TMP_M);
+    const p = m.applyInverse(wx, wy, TMP_V);
+    const lx = p.x + s.displayOriginX;
+    const ly = p.y + s.displayOriginY;
+    const k = pad / Math.max(0.01, Math.abs(m.scaleX));
+    const f = s.frame;
+    if (lx < -k || ly < -k || lx > f.realWidth + k || ly > f.realHeight + k) return false;
+    const tex = this.scene.textures;
+    const solid = (x: number, y: number): boolean => (tex.getPixelAlpha(Math.floor(x), Math.floor(y), s.texture.key, f.name) ?? 0) > 40;
+    if (solid(lx, ly)) return true;
+    return k > 0 && (solid(lx - k, ly) || solid(lx + k, ly) || solid(lx, ly - k) || solid(lx, ly + k));
   }
 
   /** 依單位狀態更新：耐久條、已行動變暗、警戒 / 癱瘓圖示 */

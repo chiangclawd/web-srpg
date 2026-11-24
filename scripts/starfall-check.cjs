@@ -2,9 +2,10 @@
 //   1. 用手機尺寸 + 觸控實際點一遍第一關（選取、移動、退回、攻擊預估與確認、警戒、結束回合、選單）
 //   2. 機庫：用零件買強化和專屬改造，確認存檔、餘額和開戰時的數值
 //   3. 大地圖（後日談）：小地圖點了鏡頭會移過去，「下一台」會輪流選還沒行動的機體
-//   4. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
+//   4. 被機體擋住的落點和敵人：穿過前面那台點得到，連點兩下算前面那台
+//   5. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
 // 用法：先 npx vite build && npx vite preview --port 4173，再 node scripts/starfall-check.cjs [截圖資料夾]
-// （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址；ONLY=click,hangar,big,m10 只跑其中幾段）
+// （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址；ONLY=click,hangar,big,pick,m10 只跑其中幾段）
 const path = require('node:path');
 const fs = require('node:fs');
 const { chromium } = require(process.env.PLAYWRIGHT ?? 'playwright');
@@ -360,6 +361,118 @@ async function bigMapCheck(browser) {
 }
 
 /** 自動對戰：整關照正常流程演出一次。後日談的關卡預期玩家已經有改造，用全部改滿的存檔打 */
+/**
+ * 被機體擋住的格子和敵人：手機尺寸實際點。機體比格子高，會蓋住身後那一格；
+ * 走得到的落點、打得到的敵人要能穿過前面那台點到，連點兩下則一律算前面那台。
+ */
+async function pickCheck(browser) {
+  const view = { w: 844, h: 390, dpr: 2, touch: true };
+  const { ctx, page } = await open(browser, view, { tips: ALL_TIPS });
+  await page.evaluate(() => {
+    const g = window.__sf;
+    g.scene.stop('SfTitle');
+    g.scene.start('SfBattle', { missionId: 'm1' });
+  });
+  await page.waitForFunction(() => window.__sf.scene.isActive('SfDialogue'), null, { timeout: 30000 });
+  await page.evaluate(() => window.__sf.scene.getScene('SfDialogue').skip());
+  await page.waitForFunction(() => window.__sf.scene.getScene('SfBattle').mode === 'idle', null, { timeout: 60000 });
+  await page.waitForTimeout(600);
+  // 把單位擺到指定的格子（沒提到的停到角落）、回合狀態歸零、取消選取
+  const setup = (spec) =>
+    page.evaluate((spec) => {
+      const s = window.__sf.scene.getScene('SfBattle');
+      const b = s.battle;
+      s.toIdle();
+      const used = new Set();
+      let park = 0;
+      for (const u of b.units) {
+        if (!u.alive) continue;
+        const want = spec.find((q) => q.id === u.def.id && !used.has(q));
+        if (want) {
+          used.add(want);
+          u.x = want.x;
+          u.y = want.y;
+        } else {
+          u.x = 11 - (park % 2);
+          u.y = 9 - Math.floor(park / 2);
+          park++;
+        }
+        Object.assign(u, { moved: false, acted: false, overwatch: false, stun: 0, hp: u.maxHp });
+        const v = s.view(u.uid);
+        v.place(u.x, u.y);
+        v.refresh();
+      }
+      s.lookAt(6, 216);
+    }, spec);
+  // (3,6) 的正中央：站在 (4,7) 的機體胸口的位置
+  const behind = () =>
+    page.evaluate(() => {
+      const g = window.__sf;
+      const cam = g.scene.getScene('SfBattle').cameras.main;
+      const c = g.canvas.getBoundingClientRect();
+      return [c.left + (((-144 - cam.midPoint.x) * cam.zoom + cam.width / 2) * c.width) / g.canvas.width, c.top + (((216 - cam.midPoint.y) * cam.zoom + cam.height / 2) * c.height) / g.canvas.height];
+    });
+  const tap = async (p, wait) => {
+    await page.touchscreen.tap(p[0], p[1]);
+    await page.waitForTimeout(wait);
+  };
+  const select = (id) => page.evaluate((id) => window.__sf.scene.getScene('SfBattle').select(window.__sf.scene.getScene('SfBattle').battle.units.find((u) => u.def.id === id)), id);
+  const state = () =>
+    page.evaluate(() => {
+      const s = window.__sf.scene.getScene('SfBattle');
+      const b = s.battle;
+      const u = (id) => b.units.find((v) => v.def.id === id);
+      return { mode: s.mode, sel: s.sel?.def.id ?? null, peek: s.peek ? [s.peek.x, s.peek.y] : null, aim: s.aim ? [s.aim.x, s.aim.y] : null, kai: [u('kai').x, u('kai').y], ghost: s.view(u('bruno').uid).ghost, foes: b.units.filter((v) => v.def.id === 'worker').reduce((n, v) => n + (v.alive ? v.hp : 0), 0) };
+    });
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+  // 走得到的落點在友軍身後
+  const move = [{ id: 'kai', x: 2, y: 9 }, { id: 'bruno', x: 4, y: 7 }, { id: 'echo', x: 0, y: 9 }];
+  await setup(move);
+  await select('kai');
+  await page.waitForTimeout(700);
+  const p = await behind();
+  await tap(p, 900);
+  let s = await state();
+  ok(same(s.peek, [3, 6]) && same(s.kai, [2, 9]) && s.sel === 'kai' && s.ghost, '點被友軍擋住的落點：先標出來，友軍變半透明，還沒移動', s);
+  await page.screenshot({ path: path.join(OUT, 'pick-01-peek.png') });
+  await tap(p, 300);
+  await idle(page);
+  s = await state();
+  ok(same(s.kai, [3, 6]) && s.peek === null, '再點一次：走到那一格', s);
+  await setup(move);
+  await select('kai');
+  await page.waitForTimeout(700);
+  await tap(p, 90);
+  await tap(p, 700);
+  s = await state();
+  ok(s.sel === 'bruno' && same(s.kai, [2, 9]) && s.peek === null, '在友軍身上連點兩下：改選友軍，沒有移動', s);
+
+  // 打得到的小型敵人躲在友軍身後
+  const foe = [{ id: 'kai', x: 1, y: 6 }, { id: 'bruno', x: 4, y: 7 }, { id: 'worker', x: 3, y: 6 }, { id: 'worker', x: 1, y: 4 }, { id: 'echo', x: 0, y: 9 }];
+  await setup(foe);
+  await select('kai');
+  await page.waitForTimeout(700);
+  const full = (await state()).foes;
+  await tap(p, 90);
+  await tap(p, 700);
+  s = await state();
+  ok(s.sel === 'bruno' && s.mode === 'unit' && s.foes === full, '敵人躲在友軍身後、在那裡連點兩下：改選友軍，沒有開火', s);
+  await setup(foe);
+  await select('kai');
+  await page.waitForTimeout(700);
+  s = await state();
+  ok(s.ghost, '選了打得到它的機體：擋住敵人的友軍變半透明', s);
+  await tap(p, 900);
+  s = await state();
+  ok(s.mode === 'target' && same(s.aim, [3, 6]) && s.sel === 'kai', '點被擋住的敵人：瞄準它', s);
+  await page.screenshot({ path: path.join(OUT, 'pick-02-aim.png') });
+  await tap(p, 300);
+  await idle(page);
+  s = await state();
+  ok(s.foes < full, '再點一次：開火', s);
+  await ctx.close();
+}
 async function autoPlay(browser, mission) {
   const epilogue = ['m10', 'm11', 'm12'].includes(mission);
   const { ctx, page } = await open(browser, { w: 1280, h: 720, dpr: 1 }, epilogue ? { stars: ALL_STARS, tips: ALL_TIPS, upgrades: MAXED } : { stars: { m1: 1, m2: 1 }, tips: TIPS });
@@ -397,6 +510,7 @@ async function autoPlay(browser, mission) {
   if (want('click')) await clickThrough(browser);
   if (want('hangar')) await hangarCheck(browser);
   if (want('big')) await bigMapCheck(browser);
+  if (want('pick')) await pickCheck(browser);
   for (const m of ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12']) if (want(m)) await autoPlay(browser, m);
   await browser.close();
   console.log(failed ? `${failed} 個問題（截圖在 ${OUT}）` : `全部通過（截圖在 ${OUT}）`);
