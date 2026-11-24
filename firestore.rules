@@ -1,19 +1,22 @@
 // 《星墜殘響》雲端存檔的 Firestore 安全規則。貼到 Firebase 主控台 → Firestore Database → 規則。
 // 每個 Google 帳號只能讀寫自己的那一份文件（starfall/{自己的 uid}），其他一律拒絕。
+// 文件的形狀：存檔 1 攤平在最上層；epoch（刪除或匯入過的記號）和 slots（存檔 2、3）用到了才會出現。
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /starfall/{uid} {
       allow read, delete: if request.auth != null && request.auth.uid == uid;
       allow create, update: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['v', 'stars', 'tips', 'upgrades', 'at', 'battle', 'battleAt'])
+        && request.resource.data.keys().hasOnly(['v', 'stars', 'tips', 'upgrades', 'at', 'battle', 'battleAt', 'epoch', 'slots'])
         && request.resource.data.v == 1
         && request.resource.data.stars is map && request.resource.data.stars.size() <= 100
         && request.resource.data.tips is list && request.resource.data.tips.size() <= 200
         && request.resource.data.upgrades is map && request.resource.data.upgrades.size() <= 20
         && request.resource.data.at is number
         && request.resource.data.battleAt is number
-        && (request.resource.data.battle == null || (request.resource.data.battle is string && request.resource.data.battle.size() <= 200000));
+        && (request.resource.data.battle == null || (request.resource.data.battle is string && request.resource.data.battle.size() <= 200000))
+        && (!('epoch' in request.resource.data) || request.resource.data.epoch is number)
+        && (!('slots' in request.resource.data) || (request.resource.data.slots is map && request.resource.data.slots.size() <= 2));
     }
   }
 }

@@ -1,7 +1,7 @@
 // 戰鬥介面：任務目標、單位資訊卡、行動按鈕、預估面板、回合提示、結算與選單。
 // 四個角各一個容器，手機上整組放大（uiZoom），文字跟著容器一起放大。
 import Phaser from 'phaser';
-import { COL, TEX, VIEW_H, addText, fitText, setupCamera, uiZoom, viewW } from '../config';
+import { COL, TEX, VIEW_H, addText, fitText, hudButton, hudCardW, hudZoom, setupCamera, textScale, viewW } from '../config';
 import { sfx } from '../audio';
 import { L, T } from '../i18n';
 import type { StrKey } from '../i18n';
@@ -17,9 +17,6 @@ import type { BattleScene } from './BattleScene';
 
 type Box = Phaser.GameObjects.Container;
 
-const BTN_W = 208;
-const BTN_H = 50;
-const GAP = 8;
 /** 小地圖（大地圖才有）：面板大小與內距 */
 const MINI_W = 176;
 const MINI_H = 92;
@@ -42,6 +39,8 @@ export class HudScene extends Phaser.Scene {
   private modal: Box | null = null;
   private w = 1280;
   private z = 1;
+  /** 精簡版面（手機選了比較大的文字）：見 config.ts 的 hudZoom */
+  private compact = false;
   private tipKey: StrKey | null = null;
   /** 快捷鍵 → 目前畫面上的行動按鈕（每次重畫都重新登記） */
   private actions = new Map<string, Button>();
@@ -69,14 +68,16 @@ export class HudScene extends Phaser.Scene {
   create(): void {
     setupCamera(this);
     this.w = viewW(this);
-    // 手機上整組放大，但留多一點畫面給地圖（最多 1.4 倍；預估面板 1.25 倍）
-    this.z = Math.min(uiZoom(), 1.4);
+    // 手機上整組放大，但留多一點畫面給地圖；文字選大的時候換精簡版面再放大（config.ts 的 hudZoom）
+    const hz = hudZoom();
+    this.z = hz.z;
+    this.compact = hz.compact;
     const z = this.z;
     this.tl = this.add.container(12, 10).setScale(z);
     this.tr = this.add.container(this.w - 12, 10).setScale(z);
     this.bl = this.add.container(12, VIEW_H - 10).setScale(z);
     this.br = this.add.container(this.w - 12, VIEW_H - 10).setScale(z);
-    this.tc = this.add.container(this.w / 2, 10).setScale(Math.min(z, 1.25));
+    this.tc = this.add.container(this.w / 2, 10).setScale(this.tcScale());
     this.tipBox = this.add.container(this.w / 2, VIEW_H - 14).setScale(z).setDepth(40);
     this.ml = this.add.container(12, 10 + 118 * z).setScale(Math.min(z, 1.15));
     if (this.battle.big) this.buildMini();
@@ -96,7 +97,9 @@ export class HudScene extends Phaser.Scene {
   /** 設定頁關掉、或視窗比例變了之後：照新的寬度和文字大小重排四個角，照新的語言和配色重畫，場上的單位也重畫 */
   relayout(): void {
     this.w = viewW(this);
-    this.z = Math.min(uiZoom(), 1.4);
+    const hz = hudZoom();
+    this.z = hz.z;
+    this.compact = hz.compact;
     const z = this.z;
     this.tr.setX(this.w - 12);
     this.br.setX(this.w - 12);
@@ -104,10 +107,15 @@ export class HudScene extends Phaser.Scene {
     this.tipBox.setX(this.w / 2);
     this.modal?.setX(this.w / 2);
     for (const c of [this.tl, this.tr, this.bl, this.br, this.tipBox]) c.setScale(z);
-    this.tc.setScale(Math.min(z, 1.25));
+    this.tc.setScale(this.tcScale());
     this.ml.setPosition(12, 10 + 118 * z).setScale(Math.min(z, 1.15));
     this.refresh();
     this.battle.restyle();
+  }
+
+  /** 上方中央的預估面板：標準版面最多 1.25 倍（兩邊還有面板）；精簡版面選目標時左上的面板會收起來，可以跟著文字大小放大 */
+  private tcScale(): number {
+    return Math.min(this.z, this.compact ? 1.25 * textScale() : 1.25);
   }
 
   setVisible(v: boolean): void {
@@ -206,6 +214,8 @@ export class HudScene extends Phaser.Scene {
     const b = this.battle.battle;
     const m = this.battle.mission;
     this.tl.removeAll(true);
+    // 精簡版面選目標的時候，上面那一排讓給預估面板
+    if (this.compact && this.battle.mode === 'target') return;
     const g = this.add.graphics();
     const name = addText(this, 16, 10, L(m.name), { size: 20, raw: true, strokeW: 0 });
     const turn =
@@ -217,14 +227,21 @@ export class HudScene extends Phaser.Scene {
             ? `${T('turn', b.turn)}　${T('killProgress', b.killed(), m.win.tags.length)}`
             : T('turn', b.turn);
     const obj = addText(this, 16, 38, `${T('objective')}：${L(m.objective)}`, { size: 15, raw: true, strokeW: 0, color: COL.cyan });
-    // 失敗條件：隊長機、保護目標
-    // 「毀掉幾個才失敗」的關卡，條件已經寫在目標那一行，這裡只提隊長機
-    const guard = (m.protectLose ?? 1) > 1 ? undefined : (m.protect ?? []).map((t) => b.byTag(t)).find((x) => x);
-    const fail = addText(this, 16, 60, guard ? T('failProtect', L(guard.def.name)) : T('failLeader'), { size: 13, raw: true, strokeW: 0, color: '#ff8a7a', bold: false });
-    const tt = addText(this, 16, 82, b.easy ? `${turn}　${T('easyTag')}` : turn, { size: 15, raw: true, strokeW: 0, color: COL.yellow });
-    const w = Math.max(250, name.width + 32, obj.width + 32, fail.width + 32);
-    drawPanel(g, 0, 0, w, 110, { alpha: 0.82 });
-    this.tl.add([g, name, obj, fail, tt]);
+    // 失敗條件。精簡版面這裡少一行（面板放大之後會蓋到地圖左上角的單位），失敗條件改到選單裡看
+    const slim = this.compact;
+    const fail = slim ? null : addText(this, 16, 60, this.failText(), { size: 13, raw: true, strokeW: 0, color: '#ff8a7a', bold: false });
+    const tt = addText(this, 16, slim ? 60 : 82, b.easy ? `${turn}　${T('easyTag')}` : turn, { size: 15, raw: true, strokeW: 0, color: COL.yellow });
+    const w = Math.max(250, name.width + 32, obj.width + 32, (fail?.width ?? 0) + 32);
+    drawPanel(g, 0, 0, w, slim ? 88 : 110, { alpha: 0.82 });
+    this.tl.add([g, name, obj, tt]);
+    if (fail) this.tl.add(fail);
+  }
+
+  /** 失敗條件：隊長機、保護目標。「毀掉幾個才失敗」的關卡，條件已經寫在目標那一行，這裡只提隊長機 */
+  private failText(): string {
+    const m = this.battle.mission;
+    const guard = (m.protectLose ?? 1) > 1 ? undefined : (m.protect ?? []).map((t) => this.battle.battle.byTag(t)).find((x) => x);
+    return guard ? T('failProtect', L(guard.def.name)) : T('failLeader');
   }
 
   /** 左下：選取中單位的資訊卡 */
@@ -232,8 +249,9 @@ export class HudScene extends Phaser.Scene {
     this.bl.removeAll(true);
     const u = this.battle.sel;
     if (!u || !u.alive) return;
-    const W = 400;
-    const H = 150;
+    const compact = this.compact;
+    const W = hudCardW(compact);
+    const H = compact ? 136 : 150;
     const enemy = u.side === 'enemy';
     const g = this.add.graphics();
     drawPanel(g, 0, -H, W, H, { line: enemy ? COL.enemy : COL.line, alpha: 0.9 });
@@ -243,7 +261,9 @@ export class HudScene extends Phaser.Scene {
     const d = u.def;
     let x = 14;
     const pt = d.pilot ? SPEAKERS[d.pilot as Speaker]?.portrait : undefined;
-    if (pt && !enemy) {
+    if (compact) {
+      // 精簡版面：不放立繪和機體圖，整張卡片都留給字
+    } else if (pt && !enemy) {
       const im = this.add.image(8, 0, pt).setOrigin(0, 1);
       im.setScale(176 / im.height);
       this.bl.add(im);
@@ -296,6 +316,7 @@ export class HudScene extends Phaser.Scene {
     const b = bs.battle;
     if (bs.mode === 'busy' || b.result || b.phase !== 'player') return;
     const list: Button[] = [];
+    const { w: BTN_W, h: BTN_H, gap: GAP } = hudButton(this.compact);
     const x = -BTN_W / 2;
     // key：快捷鍵（小寫）。戰場收到按鍵會來這裡找對應的按鈕按下去，所以按鈕不能按的時候快捷鍵也沒有作用
     const add = (label: string, fn: () => void, o: ConstructorParameters<typeof Button>[7] = {}, key?: string): void => {
@@ -328,6 +349,10 @@ export class HudScene extends Phaser.Scene {
       btn.y = -BTN_H / 2 - i * (BTN_H + GAP);
       this.br.add(btn);
     });
+    // 按鈕很多（兩個技能、走過還能退回，一共七顆）又放得很大的時候，這一排會頂到右上角的選單按鈕：只把這一排縮到放得下
+    const room = VIEW_H - 10 - (10 + 56 * this.z + 12);
+    const need = list.length * (BTN_H + GAP) * this.z;
+    this.br.setScale(need > room ? (this.z * room) / need : this.z);
   }
 
   private modText(m: Mod): string {
@@ -356,7 +381,8 @@ export class HudScene extends Phaser.Scene {
       drawPanel(g, -W / 2, 0, W, Math.max(84, note.height + 56), { line: 0xffe45a, alpha: 0.92 });
       return;
     }
-    drawPanel(g, -W / 2, 0, W, 128, { line: 0xffe45a, alpha: 0.92 });
+    // 精簡版面少最下面那行提示，面板矮一點（它放得比較大，太高會蓋到地圖上緣的單位）
+    drawPanel(g, -W / 2, 0, W, this.compact ? 108 : 128, { line: 0xffe45a, alpha: 0.92 });
     const t = info.target;
     const left = addText(this, -W / 2 + 22, 38, `${T('dmg')} ${f.dmg}`, { size: 26, raw: true, strokeW: 0, color: f.kills ? COL.green : COL.text });
     const hpLine = f.kills ? T('kill') : `${T('hp')} ${t.hp} → ${t.hp - f.dmg}`;
@@ -365,8 +391,8 @@ export class HudScene extends Phaser.Scene {
     const counter = addText(this, W / 2 - 22, 44, cTxt, { size: 19, raw: true, strokeW: 0, color: f.counter ? (f.counter.kills ? COL.red : COL.orange) : COL.dim }).setOrigin(1, 0);
     const mods = f.mods.map((m) => this.modText(m)).join(' · ');
     const ml = fitText(addText(this, 0, 82, mods || '—', { size: 14, raw: true, strokeW: 0, color: COL.cyan, bold: false }).setOrigin(0.5, 0), W - 30);
-    const hint = addText(this, 0, 104, T('pickTarget') === info.note ? info.note : '', { size: 13, raw: true, strokeW: 0, color: COL.dim }).setOrigin(0.5, 0);
-    this.tc.add([left, hp, counter, ml, hint]);
+    this.tc.add([left, hp, counter, ml]);
+    if (!this.compact) this.tc.add(addText(this, 0, 104, T('pickTarget') === info.note ? info.note : '', { size: 13, raw: true, strokeW: 0, color: COL.dim }).setOrigin(0.5, 0));
   }
 
   // ───────── 提示 ─────────
@@ -484,8 +510,8 @@ export class HudScene extends Phaser.Scene {
     this.hideTip();
     this.tipKey = key;
     // 放在左下資訊卡和右下按鈕之間，不要蓋到兩邊
-    const left = 12 + 412 * this.z;
-    const right = this.w - 12 - (BTN_W + 14) * this.z;
+    const left = 12 + (hudCardW(this.compact) + 12) * this.z;
+    const right = this.w - 12 - (hudButton(this.compact).w + 14) * this.z;
     this.tipBox.setX((left + right) / 2);
     const room = Math.max(260, (right - left) / this.z - 50);
     const txt = addText(this, 0, -16, T(key), { size: 16, raw: true, strokeW: 0, wrap: Math.min(520, room), align: 'center', bold: false }).setOrigin(0.5, 1);
@@ -634,10 +660,13 @@ export class HudScene extends Phaser.Scene {
     if (this.modal) return;
     const bs = this.battle;
     const W = 380;
-    const H = 436;
+    const H = 486;
     const box = this.openModal(W, H, COL.line);
     this.menuOpen = true;
     box.add(addText(this, 0, -H / 2 + 36, T('menu'), { size: 26, raw: true, strokeW: 0 }).setOrigin(0.5));
+    // 這一關的目標和失敗條件（精簡版面的左上角放不下失敗條件，在這裡看）
+    box.add(fitText(addText(this, 0, -H / 2 + 70, `${T('objective')}：${L(bs.mission.objective)}`, { size: 15, raw: true, strokeW: 0, color: COL.cyan }).setOrigin(0.5), W - 40));
+    box.add(fitText(addText(this, 0, -H / 2 + 94, this.failText(), { size: 13, raw: true, strokeW: 0, color: '#ff8a7a', bold: false }).setOrigin(0.5), W - 40));
     const rows: [string, () => void, number?][] = [
       [T('resume'), () => this.closeModal()],
       [
@@ -652,7 +681,7 @@ export class HudScene extends Phaser.Scene {
       [T('quit'), () => bs.leave('missions'), 0xff6a5a],
     ];
     rows.forEach(([label, fn, color], n) => {
-      const btn = new Button(this, 0, -H / 2 + 100 + n * 62, 300, 52, label, fn, { color });
+      const btn = new Button(this, 0, -H / 2 + 150 + n * 62, 300, 52, label, fn, { color });
       if (n === 0) this.modalFirst = btn;
       box.add(btn);
     });

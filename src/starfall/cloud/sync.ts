@@ -1,12 +1,13 @@
-// 雲端同步：用 Google 帳號登入之後，進度（星數、教學、改造、打到一半的戰鬥）在同一個人的各台裝置之間同步。
-// 做法很單純：把雲端那份讀下來 → 跟本機的合併（規則在 merge.ts）→ 兩邊都寫成合併後的結果。
+// 雲端同步：用 Google 帳號登入之後，三個存檔（星數、教學、改造、打到一半的戰鬥）在同一個人的各台裝置之間同步。
+// 做法很單純：把雲端那份讀下來 → 每個存檔各自跟本機的合併（規則在 merge.ts）→ 兩邊都寫成合併後的結果。
 // 什麼時候做：登入時、開啟遊戲時、切回分頁時；本機的進度一有變動，幾秒後也做一次。
 // 沒網路或失敗都不影響遊玩，本機存檔照常運作，下次有機會再同步。
-import { applyProgress, localProgress, onSaveChanged } from '../save';
-import { applySuspendRaw, onSuspendChanged, suspendRaw } from '../suspend';
+import { onSaveChanged } from '../save';
+import { putSlot, slotData } from '../slots';
+import { onSuspendChanged } from '../suspend';
 import { FIREBASE_CONFIG } from './firebase-config';
-import { cleanDoc, mergeProgress, mergeSuspend, progressKey } from './merge';
-import type { CloudDoc } from './merge';
+import { SLOTS, mergeSlot, readDoc, sameSlot, writeDoc } from './merge';
+import type { CloudDoc, SlotData, SlotId } from './merge';
 
 export interface CloudUser {
   uid: string;
@@ -61,7 +62,7 @@ const ls = (k: string, v?: string | null): string | null => {
   return null;
 };
 
-/** 這個版本有沒有開雲端同步（沒填 Firebase 設定就沒有，設定頁不會出現那一列） */
+/** 這個版本有沒有開雲端同步（沒填 Firebase 設定就沒有，登入的按鈕不會出現） */
 export const cloudAvailable = (): boolean => !!fake() || (!!FIREBASE_CONFIG.apiKey && !native());
 export const cloudState = (): Readonly<CloudState> => state;
 export function onCloud(cb: () => void): () => void {
@@ -78,7 +79,7 @@ function set(patch: Partial<CloudState>): void {
   for (const cb of [...listeners]) cb();
 }
 
-/** 載入後端並開始聽登入狀態。設定頁一打開就先呼叫，這樣按下登入時可以馬上開視窗（等太久瀏覽器會擋彈出視窗） */
+/** 載入後端並開始聽登入狀態。標題畫面一出現就先呼叫，這樣按下登入時可以馬上開視窗（等太久瀏覽器會擋彈出視窗） */
 export function prepareCloud(): Promise<CloudBackend | null> {
   if (!cloudAvailable()) return Promise.resolve(null);
   loading ??= (async () => {
@@ -132,32 +133,31 @@ export async function syncNow(): Promise<void> {
   set({ status: 'syncing' });
   try {
     const raw = await backend.load(user.uid);
-    const remote = raw ? cleanDoc(raw) : null;
-    const local = localProgress();
-    const localBattle = suspendRaw();
+    const remote = raw ? readDoc(raw) : null;
     // 這台裝置上次是跟別的帳號同步的（換人登入）：不要把上一個人的進度併進這個帳號，直接用這個帳號雲端上的
     const other = ls(UID_KEY);
     const foreign = !!other && other !== user.uid && !!remote;
-    const progress = remote ? (foreign ? remote : mergeProgress(local, remote)) : local;
-    const battle = remote ? (foreign ? { json: remote.battle, at: remote.battleAt } : mergeSuspend(localBattle, { json: remote.battle, at: remote.battleAt })) : localBattle;
+    const merged = {} as Record<SlotId, SlotData>;
     let touched = false;
+    let push = !remote;
     applying = true;
     try {
-      if (progressKey(progress) !== progressKey(local)) {
-        applyProgress(progress);
-        touched = true;
-      }
-      if (battle.json !== localBattle.json) {
-        applySuspendRaw(battle);
-        touched = true;
+      for (const n of SLOTS) {
+        const local = slotData(n);
+        const theirs = remote?.[n];
+        const m = theirs ? (foreign ? theirs : mergeSlot(local, theirs)) : local;
+        merged[n] = m;
+        if (!sameSlot(m, local)) {
+          putSlot(n, m);
+          touched = true;
+        }
+        if (theirs && !sameSlot(m, theirs)) push = true;
       }
     } finally {
       applying = false;
     }
     ls(UID_KEY, user.uid);
-    if (!remote || progressKey(progress) !== progressKey(remote) || battle.json !== remote.battle) {
-      await backend.store(user.uid, { v: 1, ...progress, battle: battle.json, battleAt: battle.at });
-    }
+    if (push) await backend.store(user.uid, writeDoc(merged));
     lastSync = Date.now();
     set({ status: 'synced' });
     if (touched) for (const cb of [...changed]) cb();

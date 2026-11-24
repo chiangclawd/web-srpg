@@ -1,7 +1,7 @@
 // 戰鬥場景：畫等角地圖和單位、處理點擊操作、把模擬回傳的事件一個一個演出來。
 // 介面（按鈕、資訊卡、預估面板）在 HudScene，疊在這個場景上面。
 import Phaser from 'phaser';
-import { COL, RS, TEX, VIEW_H, addText, uiZoom, viewW, worldPx } from '../config';
+import { COL, RS, TEX, VIEW_H, addText, hudButton, hudZoom, viewW, worldPx } from '../config';
 import { ambience, music, sfx } from '../audio';
 import { L, T } from '../i18n';
 import { persist, save } from '../save';
@@ -200,7 +200,8 @@ export class BattleScene extends Phaser.Scene {
     // 鏡頭：整張地圖放得進畫面（留位置給上下的介面），最多放大到 1.5 倍
     // 右邊一整排是行動按鈕：地圖放在它左邊的空間裡
     const w = viewW(this);
-    const side = 236 * Math.min(uiZoom(), 1.4);
+    const hz = hudZoom();
+    const side = (hudButton(hz.compact).w + 28) * hz.z;
     const fit = Math.min((w - side - 60) / this.bounds.width, (VIEW_H - 130) / this.bounds.height);
     this.minZoom = Phaser.Math.Clamp(fit * 0.9, 0.45, 1);
     // 整張放進畫面會小到看不清楚的大地圖：開場拉近，鏡頭對著我方的機體；要看全局就縮小或用小地圖
