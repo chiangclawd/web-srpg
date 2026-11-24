@@ -11,7 +11,7 @@ export const UNITS: Record<string, UnitDef> = {
     armor: 2,
     move: 5,
     jump: 1,
-    weapon: { name: { zh: '脈衝步槍', en: 'Pulse Rifle' }, dmg: 30, min: 1, max: 3, kind: 'direct' },
+    weapon: { name: { zh: '脈衝步槍', en: 'Pulse Rifle' }, dmg: 30, min: 1, max: 3, kind: 'direct', shot: 'pulse' },
     skills: [
       {
         id: 'focus',
@@ -38,7 +38,7 @@ export const UNITS: Record<string, UnitDef> = {
     armor: 6,
     move: 3,
     jump: 1,
-    weapon: { name: { zh: '肩部加農砲', en: 'Shoulder Cannon' }, dmg: 38, min: 1, max: 2, kind: 'direct' },
+    weapon: { name: { zh: '肩部加農砲', en: 'Shoulder Cannon' }, dmg: 38, min: 1, max: 2, kind: 'direct', shot: 'cannon' },
     skills: [
       {
         id: 'shock',
@@ -65,7 +65,7 @@ export const UNITS: Record<string, UnitDef> = {
     armor: 1,
     move: 4,
     jump: 1,
-    weapon: { name: { zh: '磁軌步槍', en: 'Railgun' }, dmg: 42, min: 2, max: 5, kind: 'direct' },
+    weapon: { name: { zh: '磁軌步槍', en: 'Railgun' }, dmg: 42, min: 2, max: 5, kind: 'direct', shot: 'rail' },
     skills: [
       {
         id: 'pierce',
@@ -93,7 +93,7 @@ export const UNITS: Record<string, UnitDef> = {
     move: 5,
     jump: 2,
     hover: true,
-    weapon: { name: { zh: '電弧脈衝', en: 'Arc Pulse' }, dmg: 16, min: 1, max: 2, kind: 'direct' },
+    weapon: { name: { zh: '電弧脈衝', en: 'Arc Pulse' }, dmg: 16, min: 1, max: 2, kind: 'direct', shot: 'arc' },
     skills: [
       {
         id: 'repair',
@@ -145,7 +145,7 @@ export const UNITS: Record<string, UnitDef> = {
     armor: 2,
     move: 4,
     jump: 1,
-    weapon: { name: { zh: '脈衝槍', en: 'Pulse Gun' }, dmg: 22, min: 1, max: 3, kind: 'direct' },
+    weapon: { name: { zh: '脈衝槍', en: 'Pulse Gun' }, dmg: 22, min: 1, max: 3, kind: 'direct', shot: 'pulse' },
     skills: [],
     sprite: 'sentry',
   },
@@ -171,7 +171,7 @@ export const UNITS: Record<string, UnitDef> = {
     armor: 4,
     move: 4,
     jump: 1,
-    weapon: { name: { zh: '聚焦光束', en: 'Focus Beam' }, dmg: 26, min: 1, max: 4, kind: 'direct' },
+    weapon: { name: { zh: '聚焦光束', en: 'Focus Beam' }, dmg: 26, min: 1, max: 4, kind: 'direct', shot: 'beam' },
     skills: [],
     passive: { name: { zh: '合唱', en: 'Chorus' }, desc: { zh: '2 格內的機群傷害 +15%；不會被推動或癱瘓', en: 'Drones within 2 tiles deal +15% damage. Cannot be pushed or disabled' } },
     aura: { range: 2, dmg: 0.15 },
@@ -188,7 +188,7 @@ export const UNITS: Record<string, UnitDef> = {
     armor: 1,
     move: 6,
     jump: 2,
-    weapon: { name: { zh: '雙管衝鋒槍', en: 'Twin SMG' }, dmg: 24, min: 1, max: 2, kind: 'direct' },
+    weapon: { name: { zh: '雙管衝鋒槍', en: 'Twin SMG' }, dmg: 24, min: 1, max: 2, kind: 'direct', shot: 'smg' },
     skills: [
       {
         id: 'leap',
@@ -229,7 +229,7 @@ export const UNITS: Record<string, UnitDef> = {
     armor: 3,
     move: 4,
     jump: 1,
-    weapon: { name: { zh: '制式步槍', en: 'Service Rifle' }, dmg: 24, min: 1, max: 3, kind: 'direct' },
+    weapon: { name: { zh: '制式步槍', en: 'Service Rifle' }, dmg: 24, min: 1, max: 3, kind: 'direct', shot: 'pulse' },
     skills: [],
     passive: { name: { zh: '紀律', en: 'Discipline' }, desc: { zh: '反擊的傷害不打折', en: 'Counterattacks deal full damage' } },
     counterMul: 1,
@@ -243,7 +243,7 @@ export const UNITS: Record<string, UnitDef> = {
     armor: 4,
     move: 3,
     jump: 1,
-    weapon: { name: { zh: '霰彈砲', en: 'Scattergun' }, dmg: 32, min: 1, max: 2, kind: 'direct' },
+    weapon: { name: { zh: '霰彈砲', en: 'Scattergun' }, dmg: 32, min: 1, max: 2, kind: 'direct', shot: 'scatter' },
     skills: [],
     passive: { name: { zh: '塔盾', en: 'Tower Shield' }, desc: { zh: '從正面來的傷害 -50%，要繞到側面或背後打', en: 'Takes 50% less damage from the front. Hit it from the side or rear' } },
     frontShield: 0.5,
@@ -258,7 +258,7 @@ export const UNITS: Record<string, UnitDef> = {
     armor: 2,
     move: 0,
     jump: 0,
-    weapon: { name: { zh: '雙管機砲', en: 'Twin Autocannon' }, dmg: 20, min: 1, max: 4, kind: 'direct' },
+    weapon: { name: { zh: '雙管機砲', en: 'Twin Autocannon' }, dmg: 20, min: 1, max: 4, kind: 'direct', shot: 'smg' },
     skills: [],
     passive: { name: { zh: '固定砲座', en: 'Emplaced' }, desc: { zh: '不能移動，射程很長', en: 'Cannot move. Very long range' } },
     sprite: 'turret',
@@ -272,7 +272,7 @@ export const UNITS: Record<string, UnitDef> = {
     armor: 5,
     move: 4,
     jump: 1,
-    weapon: { name: { zh: '長程光束砲', en: 'Long Beam' }, dmg: 28, min: 1, max: 4, kind: 'direct' },
+    weapon: { name: { zh: '長程光束砲', en: 'Long Beam' }, dmg: 28, min: 1, max: 4, kind: 'direct', shot: 'beam' },
     skills: [],
     passive: { name: { zh: '督戰', en: 'Overseer' }, desc: { zh: '2 格內的議會軍受到的傷害 -20%；不會被推動或癱瘓', en: 'Directorate units within 2 tiles take 20% less damage. Cannot be pushed or disabled' } },
     aura: { range: 2, guard: 0.2 },
@@ -290,7 +290,7 @@ export const UNITS: Record<string, UnitDef> = {
     move: 3,
     jump: 2,
     hover: true,
-    weapon: { name: { zh: '和聲衝擊', en: 'Chord Blast' }, dmg: 22, min: 1, max: 4, kind: 'direct', splash: 0.5 },
+    weapon: { name: { zh: '和聲衝擊', en: 'Chord Blast' }, dmg: 22, min: 1, max: 4, kind: 'direct', splash: 0.5, shot: 'wave' },
     skills: [],
     passive: { name: { zh: '齊唱', en: 'Unison' }, desc: { zh: '攻擊波及目標四周；場上每有一座中繼節點，受到的傷害 -25%', en: 'Attacks splash adjacent tiles. Takes 25% less damage for each Relay Node still standing' } },
     boss: true,
@@ -334,7 +334,7 @@ export const UNITS: Record<string, UnitDef> = {
     armor: 5,
     move: 4,
     jump: 1,
-    weapon: { name: { zh: '長程光束砲', en: 'Long Beam' }, dmg: 28, min: 1, max: 4, kind: 'direct' },
+    weapon: { name: { zh: '長程光束砲', en: 'Long Beam' }, dmg: 28, min: 1, max: 4, kind: 'direct', shot: 'beam' },
     skills: [
       {
         id: 'rally',
@@ -362,7 +362,7 @@ export const UNITS: Record<string, UnitDef> = {
     move: 5,
     jump: 2,
     hover: true,
-    weapon: { name: { zh: '焊槍', en: 'Arc Welder' }, dmg: 14, min: 1, max: 2, kind: 'direct' },
+    weapon: { name: { zh: '焊槍', en: 'Arc Welder' }, dmg: 14, min: 1, max: 2, kind: 'direct', shot: 'arc' },
     skills: [
       {
         id: 'mend',
@@ -388,7 +388,7 @@ export const UNITS: Record<string, UnitDef> = {
     armor: 6,
     move: 3,
     jump: 1,
-    weapon: { name: { zh: '攻城砲', en: 'Siege Cannon' }, dmg: 34, min: 1, max: 3, kind: 'direct' },
+    weapon: { name: { zh: '攻城砲', en: 'Siege Cannon' }, dmg: 34, min: 1, max: 3, kind: 'direct', shot: 'cannon' },
     skills: [],
     passive: { name: { zh: '重量級', en: 'Heavyweight' }, desc: { zh: '裝甲很厚，不會被推動', en: 'Thick armor. Cannot be pushed' } },
     heavy: true,
@@ -403,7 +403,7 @@ export const UNITS: Record<string, UnitDef> = {
     armor: 0,
     move: 3,
     jump: 1,
-    weapon: { name: { zh: '穿刺砲', en: 'Lance Cannon' }, dmg: 26, min: 3, max: 6, kind: 'direct' },
+    weapon: { name: { zh: '穿刺砲', en: 'Lance Cannon' }, dmg: 26, min: 3, max: 6, kind: 'direct', shot: 'rail' },
     skills: [],
     passive: { name: { zh: '超長射程', en: 'Extreme Range' }, desc: { zh: '射程 3–6；打不到 2 格內的目標，貼近它就安全了', en: 'Range 3–6. Cannot hit targets within 2 tiles, so get close' } },
     sprite: 'needle',
@@ -416,7 +416,7 @@ export const UNITS: Record<string, UnitDef> = {
     armor: 4,
     move: 3,
     jump: 1,
-    weapon: { name: { zh: '裁斷光束', en: 'Severing Beam' }, dmg: 30, min: 1, max: 4, kind: 'direct' },
+    weapon: { name: { zh: '裁斷光束', en: 'Severing Beam' }, dmg: 30, min: 1, max: 4, kind: 'direct', shot: 'beam' },
     skills: [
       {
         id: 'sweep',
@@ -503,7 +503,7 @@ export const UNITS: Record<string, UnitDef> = {
     armor: 5,
     move: 3,
     jump: 1,
-    weapon: { name: { zh: '裁決重光束', en: 'Judgment Beam' }, dmg: 32, min: 1, max: 5, kind: 'direct' },
+    weapon: { name: { zh: '裁決重光束', en: 'Judgment Beam' }, dmg: 32, min: 1, max: 5, kind: 'direct', shot: 'beam' },
     skills: [
       {
         id: 'sweep',

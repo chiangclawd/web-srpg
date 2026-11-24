@@ -27,7 +27,8 @@ import {
 import type { FrameId } from '../data/upgrades';
 import type { UnitDef } from '../sim/types';
 import { SHEETS, animKey, frameName } from '../view/sheets';
-import { Button, drawPanel } from '../view/ui';
+import { Button, KeyNav, drawPanel, registerNav, unregisterNav } from '../view/ui';
+import type { NavItem } from '../view/ui';
 
 const PAD = 14;
 const TOP = 60;
@@ -62,6 +63,7 @@ export class HangarScene extends Phaser.Scene {
     this.add.rectangle(w / 2, VIEW_H / 2, w, VIEW_H, 0x040a14, 0.72);
     this.root = this.add.container(0, 0).setScale(z);
     this.draw();
+    new KeyNav(this, { onBack: () => this.scene.start('SfMissions', { chapter: this.chapter }) });
   }
 
   /** 把物件收進根容器（跟著整個畫面一起放大） */
@@ -138,12 +140,28 @@ export class HangarScene extends Phaser.Scene {
       pg.fillRect(tx + i * 11, y + h / 2 + 6, 8, 8);
     }
     const hit = this.put(this.add.rectangle(x + w / 2, y + h / 2, w, h, 0, 0).setInteractive({ useHandCursor: true }));
-    hit.on('pointerup', () => {
+    const pick = (): void => {
       if (on) return;
       sfx('click');
       this.frame = f;
       this.draw();
-    });
+    };
+    hit.on('pointerup', pick);
+    // 鍵盤也能選機體：焦點停在上面時多畫一圈白框
+    const ring = this.put(this.add.graphics()).setVisible(false);
+    ring.lineStyle(2.5, 0xffffff, 0.95).strokeRect(x - 3, y - 3, w + 6, h + 6);
+    const item: NavItem = {
+      navActive: () => hit.active,
+      navPos: () => {
+        const m = hit.getWorldTransformMatrix();
+        return { x: m.tx, y: m.ty };
+      },
+      setFocus: (v) => void (ring.active && ring.setVisible(v)),
+      click: pick,
+      within: (c) => c === this.root,
+    };
+    registerNav(this, item);
+    hit.once('destroy', () => unregisterNav(this, item));
   }
 
   private drawDetail(x: number, y: number, w: number, h: number, left: number): void {

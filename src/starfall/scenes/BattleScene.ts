@@ -1,7 +1,7 @@
 // 戰鬥場景：畫等角地圖和單位、處理點擊操作、把模擬回傳的事件一個一個演出來。
 // 介面（按鈕、資訊卡、預估面板）在 HudScene，疊在這個場景上面。
 import Phaser from 'phaser';
-import { RS, TEX, VIEW_H, addText, uiZoom, viewW } from '../config';
+import { COL, RS, TEX, VIEW_H, addText, uiZoom, viewW, worldPx } from '../config';
 import { music, sfx } from '../audio';
 import { L, T } from '../i18n';
 import { persist, save } from '../save';
@@ -15,10 +15,15 @@ import { MISSIONS, missionById } from '../data/missions';
 import { STORY } from '../data/story';
 import { UNITS } from '../data/units';
 import { loadoutDefs, missionParts } from '../data/upgrades';
+import type { Loadout } from '../data/upgrades';
+import { clearSuspend, loadSuspend, saveSuspend } from '../suspend';
 import { EH, TH, TOP_PAD, TW, isoX, isoY, tileDepth } from '../view/iso';
-import { TILE_TEX_H, TILE_VARIANTS, tileKey } from '../view/textures';
+import { TILE_TEX_H, tileKey, tileVariant } from '../view/textures';
 import { SHEETS, SHEET_FOOT, frameName } from '../view/sheets';
 import { UnitView } from '../view/UnitView';
+import { keyUsed } from '../view/ui';
+import { BattleFx, FX_DEPTH } from '../view/fx';
+import { RECOIL, Shots } from '../view/shots';
 import type { HudScene } from './HudScene';
 
 type Mode = 'idle' | 'unit' | 'target' | 'busy';
@@ -36,7 +41,6 @@ export interface AimInfo {
   note: string;
 }
 
-const FX_DEPTH = 100000;
 const MARK_COLOR: Record<MarkKind, [number, number]> = {
   move: [0x1f6dff, 0.5],
   target: [0xff3a2a, 0.55],
@@ -70,14 +74,35 @@ export class BattleScene extends Phaser.Scene {
   private endArmed = false;
   /** 進行中的鏡頭移動結束時要呼叫的函式（見 stopFocus） */
   private focusDone: (() => void) | null = null;
+  private fx!: BattleFx;
+  /** 這場是接著上次沒打完的打（不重播開場對話、不重新開始第一回合） */
+  private resumed = false;
+  /** 開戰時的改造：存檔要連這個一起存，接著打才會用同一套數值 */
+  private upgrades: Loadout = {};
+  private shots!: Shots;
+  /** 技能特寫時鏡頭往前推了一點：這裡記著原本的倍率，這一串演出播完再退回去 */
+  private zoomBack: number | null = null;
+  /** 鍵盤游標停在哪一格（用過方向鍵才會出現；滑鼠或觸控一點就收起來） */
+  private cursor: Pos | null = null;
+  private cursorMarks: Phaser.GameObjects.Image[] = [];
 
   constructor() {
     super('SfBattle');
   }
 
-  init(data: { missionId: string }): void {
+  init(data: { missionId: string; resume?: boolean }): void {
     this.mission = missionById(data.missionId);
-    this.battle = new Battle(this.mission, loadoutDefs(UNITS, save().upgrades), save().easy);
+    // 接著打：存檔要對得上這一關才用；對不上、或是重新出擊，就把舊的存檔清掉、從頭開始
+    const sus = data.resume ? loadSuspend() : null;
+    this.resumed = !!sus && sus.battle.mission.id === this.mission.id;
+    if (sus && this.resumed) {
+      this.battle = sus.battle;
+      this.upgrades = sus.upgrades;
+    } else {
+      clearSuspend();
+      this.upgrades = JSON.parse(JSON.stringify(save().upgrades)) as Loadout;
+      this.battle = new Battle(this.mission, loadoutDefs(UNITS, this.upgrades), save().easy);
+    }
     this.views = new Map();
     this.marks = { move: [], target: [], aim: [], select: [], threat: [], zone: [], line: [] };
     this.mode = 'busy';
@@ -88,6 +113,9 @@ export class BattleScene extends Phaser.Scene {
     this.drag = null;
     this.endArmed = false;
     this.focusDone = null;
+    this.zoomBack = null;
+    this.cursor = null;
+    this.cursorMarks = [];
   }
 
   // ───────── 建立 ─────────
@@ -112,7 +140,7 @@ export class BattleScene extends Phaser.Scene {
         const sy = isoY(x, y, b.heightAt(x, y));
         if (id !== 'chasm') {
           this.add
-            .image(sx, sy, tileKey(id, (x * 7 + y * 13) % TILE_VARIANTS))
+            .image(sx, sy, tileKey(id, tileVariant(id, x, y)))
             .setOrigin(0.5, (TOP_PAD + TH / 2) / TILE_TEX_H)
             .setScale(1 / TEX)
             .setDepth(tileDepth(x, y));
@@ -124,6 +152,17 @@ export class BattleScene extends Phaser.Scene {
       }
     }
     this.bounds.setTo(minX, minY, maxX - minX, maxY - minY);
+    // 氣氛：高低差的陰影、導管的光、底部的霧、環境粒子、四角壓暗
+    this.fx = new BattleFx(this, (n) => this.ms(n));
+    this.shots = new Shots(this, this.fx, (n) => this.ms(n));
+    this.fx.ground({
+      w: b.w,
+      h: b.h,
+      top: (x, y) => (b.terrainAt(x, y) === 'chasm' ? null : b.heightAt(x, y) + (b.terrainAt(x, y) === 'wall' ? 2 : 0)),
+      glow: (x, y) => b.terrainAt(x, y) === 'grate',
+      theme: this.mission.theme ?? 'hull',
+      bounds: this.bounds,
+    });
     const win = this.mission.win;
     if (win.type === 'reach' || win.type === 'hold') for (const p of win.zone) this.mark('zone', p.x, p.y);
     // 場景擺設（爐心之類）：跟單位用同一種圖表，只是不會動
@@ -136,7 +175,8 @@ export class BattleScene extends Phaser.Scene {
         .setScale((sheet.h * (p.scale ?? 1)) / sheet.unitPx)
         .setDepth(tileDepth(p.x, p.y) + 4);
     }
-    for (const u of b.units) this.addView(u);
+    // 接著打的時候，已經被擊破的單位不用再擺出來
+    for (const u of b.units) if (u.alive) this.addView(u);
 
     // 鏡頭：整張地圖放得進畫面（留位置給上下的介面），最多放大到 1.5 倍
     // 右邊一整排是行動按鈕：地圖放在它左邊的空間裡
@@ -163,6 +203,7 @@ export class BattleScene extends Phaser.Scene {
     this.input.on('pointermove', this.onMove, this);
     this.input.on('pointerup', this.onUp, this);
     this.input.on('wheel', (_p: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) => this.setZoom(this.zoom * (dy > 0 ? 0.9 : 1.1)));
+    this.input.keyboard?.on('keydown', this.onKey, this);
     this.scale.on('resize', this.applyCamera, this);
     this.events.once('shutdown', () => this.scale.off('resize', this.applyCamera, this));
 
@@ -172,6 +213,12 @@ export class BattleScene extends Phaser.Scene {
   /** HudScene 建好之後呼叫：開場對話 → 第一回合 */
   async hudReady(hud: HudScene): Promise<void> {
     this.hud = hud;
+    if (this.resumed) {
+      this.refreshViews();
+      this.toIdle();
+      this.hud.toast(T('resumed', this.battle.turn));
+      return;
+    }
     if (this.mission.intro) await this.say(this.mission.intro);
     await this.play(this.battle.start());
     this.toIdle();
@@ -189,6 +236,7 @@ export class BattleScene extends Phaser.Scene {
 
   override update(time: number): void {
     for (const v of this.views.values()) v.update(time);
+    this.fx.update(time, this.views.values());
     // 背景固定在畫面上（不跟著縮放），只跟著鏡頭輕微平移，有一點遠近感
     const cam = this.cameras.main;
     const cover = Math.max(cam.width / this.bg.width, cam.height / this.bg.height) * 1.08;
@@ -266,13 +314,13 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** 選下一台還沒行動的我方機體，鏡頭跟過去 */
-  nextUnit(): void {
+  nextUnit(step = 1): void {
     if (this.mode === 'busy' || this.mode === 'target') return;
     const b = this.battle;
     const list = b.units.filter((u) => u.side === 'player' && b.canAct(u));
     if (!list.length) return;
     const i = this.sel ? list.findIndex((u) => u.uid === this.sel!.uid) : -1;
-    const u = list[(i + 1) % list.length];
+    const u = list[i < 0 ? (step > 0 ? 0 : list.length - 1) : (i + step + list.length) % list.length];
     this.select(u);
     void this.focus(u.x, u.y);
   }
@@ -280,6 +328,7 @@ export class BattleScene extends Phaser.Scene {
   // ───────── 輸入 ─────────
 
   private onDown(p: Phaser.Input.Pointer): void {
+    this.hideCursor();
     // 按在介面上（按鈕、小地圖、對話框）的不算拖地圖
     if (this.hud?.input.hitTestPointer(p).length) return;
     const two = this.input.pointer1.isDown && this.input.pointer2.isDown;
@@ -352,10 +401,14 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private onTap(wx: number, wy: number): void {
+    this.actAt(this.pick(wx, wy));
+  }
+
+  /** 對某一格下指令：點擊和鍵盤的 Enter 都走這裡（null = 點到地圖外面） */
+  private actAt(t: Pos | null): void {
     if (this.mode === 'busy' || this.battle.result) return;
     this.hud.hideTip();
     const b = this.battle;
-    const t = this.pick(wx, wy);
     const u = t ? b.unitAt(t.x, t.y) : undefined;
     if (this.mode === 'target') {
       if (t && this.validTargets().some((p) => p.x === t.x && p.y === t.y)) {
@@ -382,11 +435,126 @@ export class BattleScene extends Phaser.Scene {
     else if (!u) this.toIdle();
   }
 
+  // ───────── 鍵盤 ─────────
+
+  /**
+   * 方向鍵移動游標（選目標時在可以打的目標之間切換）、Enter / 空白鍵等於點那一格、Esc 退一步（沒東西可退就開選單）、
+   * Tab 跳到下一台還沒行動的機體；其餘的字母和數字是行動按鈕的快捷鍵（交給 HudScene 找按鈕）。
+   * 對話、設定頁、選單或結算開著的時候不處理：那些畫面有自己的按鍵。
+   */
+  private onKey(ev: KeyboardEvent): void {
+    if (!this.hud || this.hud.modalOpen || this.battle.result) return;
+    if (this.scene.isActive('SfDialogue') || this.scene.isActive('SfSettings')) return;
+    if (keyUsed.has(ev)) return;
+    keyUsed.add(ev);
+    const k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
+    if (k === '+' || k === '=') return this.setZoom(this.zoom * 1.1);
+    if (k === '-' || k === '_') return this.setZoom(this.zoom * 0.9);
+    if (this.mode === 'busy') return;
+    const dir = ({ ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] } as Record<string, [number, number] | undefined>)[k];
+    if (dir) {
+      ev.preventDefault();
+      // 選敵人或友軍：在名單裡前後切換；選落點（躍進）：游標自由移動
+      const tiles = this.pending?.kind === 'skill' && this.pending.skill.target === 'tile';
+      if (this.mode === 'target' && !tiles) this.cycleTarget(dir[0] + dir[1]);
+      else this.moveCursor(dir[0], dir[1]);
+      return;
+    }
+    if (k === 'Enter' || k === ' ') {
+      ev.preventDefault();
+      if (ev.repeat) return;
+      if (this.mode === 'target') {
+        const tiles = this.pending?.kind === 'skill' && this.pending.skill.target === 'tile';
+        const c = this.cursor;
+        const a = this.aim;
+        // 選落點：游標停在另一格可以跳的地方，就先瞄準那一格；其餘情況 Enter 就是「確定」那顆按鈕。
+        // 不能直接對游標那一格下指令：目標可能是自動瞄準或用滑鼠選的，游標還留在別的地方，那樣會變成取消
+        if (tiles && c && !(a && a.x === c.x && a.y === c.y) && this.validTargets().some((p) => p.x === c.x && p.y === c.y)) this.aimAt(c);
+        else if (a) this.hud.hotkey('enter');
+        else if (!tiles) this.cycleTarget(1);
+        return;
+      }
+      if (this.cursor) this.actAt(this.cursor);
+      return;
+    }
+    if (k === 'Escape' || k === 'Backspace') {
+      if (ev.repeat) return;
+      if (this.mode === 'target') this.cancelTarget();
+      else if (this.mode === 'unit') this.toIdle();
+      else this.hud.openMenu();
+      return;
+    }
+    if (k === 'Tab') {
+      ev.preventDefault();
+      this.nextUnit(ev.shiftKey ? -1 : 1);
+      if (this.sel) this.setCursor(this.sel.x, this.sel.y);
+      return;
+    }
+    if (ev.repeat || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    if (k === 'm') this.hud.openMenu();
+    else this.hud.hotkey(k);
+    // 按了攻擊或技能、只有一個目標時會自動瞄準：游標跟過去，看得出現在對著誰
+    if (this.mode === 'target' && this.aim && this.cursor) this.setCursor(this.aim.x, this.aim.y);
+  }
+
+  /** 游標往格子的方向走一步：右 = x+1（畫面右下）、左 = x-1、下 = y+1（畫面左下）、上 = y-1。跨過裂谷 */
+  private moveCursor(dx: number, dy: number): void {
+    const b = this.battle;
+    if (!this.cursor) {
+      // 第一次按方向鍵：游標先出現在選取中的機體（沒有就第一台我方機體）腳下，不移動
+      const u = this.sel ?? b.alive('player').find((p) => !p.def.structure);
+      this.setCursor(u?.x ?? 0, u?.y ?? 0);
+      return;
+    }
+    for (let n = 1; n < Math.max(b.w, b.h); n++) {
+      const x = this.cursor.x + dx * n;
+      const y = this.cursor.y + dy * n;
+      if (x < 0 || y < 0 || x >= b.w || y >= b.h) return;
+      if (b.terrainAt(x, y) === 'chasm') continue;
+      this.setCursor(x, y);
+      return;
+    }
+  }
+
+  private setCursor(x: number, y: number): void {
+    const b = this.battle;
+    this.cursor = { x, y };
+    if (!this.cursorMarks.length) {
+      const edge = this.add.image(0, 0, 'ov_edge').setTint(0xffffff);
+      const dot = this.add.image(0, 0, 'ov_dot').setTint(0xffffff).setScale(1 / TEX);
+      this.tweens.add({ targets: edge, scale: { from: 1 / TEX, to: 1.16 / TEX }, alpha: { from: 1, to: 0.55 }, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.cursorMarks = [edge, dot];
+    }
+    const h = b.heightAt(x, y) + (b.terrainAt(x, y) === 'wall' ? 2 : 0);
+    for (const im of this.cursorMarks)
+      im.setPosition(isoX(x, y), isoY(x, y, h))
+        .setDepth(tileDepth(x, y) + 3.5)
+        .setVisible(true);
+    void this.focus(x, y);
+  }
+
+  private hideCursor(): void {
+    this.cursor = null;
+    for (const im of this.cursorMarks) im.setVisible(false);
+  }
+
+  /** 選目標時用方向鍵在可以打的目標之間切換（照畫面由左到右排） */
+  private cycleTarget(step: number): void {
+    const list = [...this.validTargets()].sort((p, q) => isoX(p.x, p.y) - isoX(q.x, q.y) || isoY(p.x, p.y) - isoY(q.x, q.y));
+    if (!list.length) return;
+    const a = this.aim;
+    const i = a ? list.findIndex((p) => p.x === a.x && p.y === a.y) : -1;
+    const t = list[i < 0 ? (step > 0 ? 0 : list.length - 1) : (i + step + list.length) % list.length];
+    this.aimAt(t);
+    this.setCursor(t.x, t.y);
+  }
+
   // ───────── 範圍標示 ─────────
 
   private mark(kind: MarkKind, x: number, y: number): void {
     const b = this.battle;
-    const [tint, alpha] = MARK_COLOR[kind];
+    // 可以攻擊的格子和威脅範圍是敵方的顏色，跟著色盲配色換
+    const [tint, alpha] = kind === 'target' ? [COL.target, 0.55] : kind === 'threat' ? [COL.threat, 0.3] : MARK_COLOR[kind];
     const tex = kind === 'select' || kind === 'aim' ? 'ov_edge' : kind === 'zone' ? 'ov_zone' : 'ov_fill';
     const h = b.heightAt(x, y) + (b.terrainAt(x, y) === 'wall' ? 2 : 0);
     const im = this.add
@@ -478,6 +646,7 @@ export class BattleScene extends Phaser.Scene {
     v?.place(u.x, u.y);
     v?.setDir(u.dir);
     this.select(u);
+    this.autosave();
   }
 
   /** 按了「攻擊」或某個技能：進入選目標 */
@@ -647,6 +816,20 @@ export class BattleScene extends Phaser.Scene {
     if (tip) this.hud.showTip(tip);
   }
 
+  /**
+   * 把這場戰鬥存下來，關掉分頁或離開任務之後可以接著打。我方回合每做完一個動作、每次退回移動都存一次；
+   * 敵方回合和已經結束的戰鬥不存（Battle.snapshot 會回傳 null）。
+   */
+  private autosave(): void {
+    saveSuspend(this.battle, this.upgrades);
+  }
+
+  /** 設定頁改了配色之後，把場上的單位（耐久條、腳下的陣營色）和範圍標示照新的顏色重畫 */
+  restyle(): void {
+    this.refreshViews();
+    if (this.mode === 'unit' && this.sel) this.select(this.sel);
+  }
+
   private refreshViews(): void {
     for (const v of this.views.values()) if (v.unit.alive) v.refresh();
   }
@@ -685,8 +868,14 @@ export class BattleScene extends Phaser.Scene {
     const prev = this.mode;
     this.mode = 'busy';
     for (const e of events) await this.playOne(e);
+    if (this.zoomBack !== null) {
+      const z = this.zoomBack;
+      this.zoomBack = null;
+      this.tweens.add({ targets: this, zoom: z, duration: this.ms(260), ease: 'Quad.easeInOut', onUpdate: () => this.applyCamera() });
+    }
     if (!this.battle.result) this.mode = prev;
     this.hud?.refresh();
+    this.autosave();
   }
 
   private async playOne(e: BattleEvent): Promise<void> {
@@ -712,14 +901,18 @@ export class BattleScene extends Phaser.Scene {
         const def = v?.unit.def.skills.find((s) => s.id === e.skill);
         if (!v || !def) break;
         await this.focus(v.unit.x, v.unit.y);
+        // 技能特寫：我方每次都有；敵方只有首領有，免得敵方回合拖太久
+        if (save().cutIn && (v.unit.side === 'player' || v.unit.def.boss)) {
+          this.punchIn();
+          await this.hud.cutIn(v.unit, L(def.name));
+        }
         this.callout(v, L(def.name), 0xffe45a);
         if (def.effect.type === 'line') {
           const tiles = b.lineTiles(v.unit, e.at, def);
           const last = tiles[tiles.length - 1] ?? e.at;
           v.play('attack');
           await this.wait(260);
-          sfx('rail');
-          await this.beam(v.muzzle(), new Phaser.Math.Vector2(isoX(last.x, last.y), isoY(last.x, last.y, b.heightAt(last.x, last.y)) - 36), 0xffa53a, 9);
+          await this.shots.fire('rail', v.muzzle(), new Phaser.Math.Vector2(isoX(last.x, last.y), isoY(last.x, last.y, b.heightAt(last.x, last.y)) - 36), { color: 0xffa53a, power: true });
           v.play('idle');
         } else if (def.effect.type !== 'leap') {
           await this.wait(240);
@@ -750,9 +943,9 @@ export class BattleScene extends Phaser.Scene {
       case 'stun': {
         const v = this.views.get(e.target);
         if (!v) break;
-        sfx('stun');
         const from = this.views.get(e.uid);
-        if (from) await this.beam(from.center(), v.center(), 0xffe45a, 3);
+        if (from) await this.shots.fire('arc', from.center(), v.center(), { color: 0xffe45a, power: true });
+        else sfx('stun');
         this.number(v, T('stunned'), '#ffe45a');
         v.flash();
         v.refresh(v.hp);
@@ -828,7 +1021,7 @@ export class BattleScene extends Phaser.Scene {
         const v = this.views.get(e.uid);
         if (!v) break;
         this.views.delete(e.uid);
-        if (v.root.alpha > 0.05) await this.explode(v);
+        if (v.root.alpha > 0.05) await this.fx.destroy(v);
         v.destroy();
         break;
       }
@@ -855,7 +1048,7 @@ export class BattleScene extends Phaser.Scene {
         const y = v.root.y;
         v.root.y = y - 160;
         await this.tween({ targets: v.root, y, alpha: 1, duration: this.ms(320), ease: 'Quad.easeIn' });
-        this.ring(v.root.x, v.root.y, u.side === 'player' ? 0x5fe3ff : 0xff5a4a);
+        this.ring(v.root.x, v.root.y, u.side === 'player' ? 0x5fe3ff : COL.enemy);
         await this.wait(160);
         break;
       }
@@ -930,7 +1123,7 @@ export class BattleScene extends Phaser.Scene {
       if (e.kind === 'overwatch') this.callout(A, T('overwatch'), 0x5fe3ff);
       const w = A.unit.def.weapon;
       const pilot = A.unit.side === 'player';
-      const color = pilot ? 0x7fe9ff : 0xff6a5a;
+      const color = pilot ? 0x7fe9ff : COL.enemyShot;
       // 貫穿射擊的光束在 skill 事件已經畫過，這裡只處理命中
       const line = e.kind === 'skill' && A.unit.def.skills.find((s) => s.id === e.skill)?.effect.type === 'line';
       if (!line) {
@@ -947,10 +1140,19 @@ export class BattleScene extends Phaser.Scene {
           sfx('mortar');
           await this.lob(A.muzzle(), Tv.center());
           this.blast(Tv.root.x, Tv.root.y - 20, 0xffa53a, 1.1);
+          this.fx.fire(Tv.root.x, Tv.root.y - 14, 8);
+          this.fx.smoke(Tv.root.x, Tv.root.y - 14, 3);
+          this.fx.ring(Tv.root.x, Tv.root.y, 0xffc46a, 0.9);
+          this.cameras.main.shake(this.ms(120), 0.0026);
         } else {
           await this.wait(A.frames('attack') > 1 ? 230 : 90);
-          sfx(w.dmg >= 40 ? 'rail' : w.dmg >= 34 ? 'cannon' : 'laser');
-          await this.beam(A.muzzle(), Tv.center(), color, w.dmg >= 36 ? 7 : 4);
+          const kind = w.shot ?? 'pulse';
+          const m = A.muzzle();
+          const to = Tv.center();
+          // 後座力：機體往射擊的反方向頓一下
+          const back = RECOIL[kind] * (to.x >= m.x ? -1 : 1);
+          if (back) this.tweens.add({ targets: A.sprite, x: { from: back, to: 0 }, duration: this.ms(220), ease: 'Quad.easeOut' });
+          await this.shots.fire(kind, m, to, { color, power: e.kind === 'skill' });
         }
       }
     }
@@ -958,8 +1160,12 @@ export class BattleScene extends Phaser.Scene {
     sfx('hit');
     Tv.flash();
     Tv.refresh(e.hp);
-    this.blast(Tv.center().x, Tv.center().y, 0xffffff, 0.45);
-    this.number(Tv, `-${e.dmg}`, Tv.unit.side === 'player' ? '#ff6a5a' : '#ffe45a', e.killed);
+    const at = Tv.center();
+    this.blast(at.x, at.y, 0xffffff, 0.45);
+    // 火花順著射擊方向噴出去
+    const from = A?.center();
+    this.fx.hit(at.x, at.y, from ? Phaser.Math.RadToDeg(Math.atan2(at.y - from.y, at.x - from.x)) : -90, e.dmg >= 30);
+    this.number(Tv, `-${e.dmg}`, Tv.unit.side === 'player' ? COL.hurt : '#ffe45a', e.killed);
     this.modTags(Tv, e);
     await this.wait(anim ? 380 : 220);
     if (A && anim && A.unit.alive) A.play('idle');
@@ -973,7 +1179,7 @@ export class BattleScene extends Phaser.Scene {
     const label = flank ? (flank.rear ? T('mod_flank_back') : T('mod_flank_side')) : height ? T('mod_height') : cover ? T('mod_cover') : '';
     if (!label) return;
     const c = v.center();
-    const t = addText(this, c.x, c.y - v.tall * 0.5 - 44, label, { size: 15, raw: true, color: cover && !flank && !height ? '#9fb4c8' : '#ffa53a' })
+    const t = addText(this, c.x, c.y - v.tall * 0.5 - 44, label, { size: worldPx(15), raw: true, color: cover && !flank && !height ? '#9fb4c8' : '#ffa53a' })
       .setOrigin(0.5)
       .setDepth(FX_DEPTH + 2);
     this.tweens.add({ targets: t, y: t.y - 22, alpha: 0, duration: this.ms(900), delay: 200, onComplete: () => t.destroy() });
@@ -981,7 +1187,7 @@ export class BattleScene extends Phaser.Scene {
 
   private number(v: UnitView, text: string, color: string, big = false): void {
     const c = v.center();
-    const t = addText(this, c.x, c.y - v.tall * 0.5 - 12, text, { size: big ? 34 : 26, raw: true, color, strokeW: 5 })
+    const t = addText(this, c.x, c.y - v.tall * 0.5 - 12, text, { size: worldPx(big ? 34 : 26), raw: true, color, strokeW: 5 })
       .setOrigin(0.5)
       .setDepth(FX_DEPTH + 3)
       .setScale(0.4);
@@ -991,39 +1197,24 @@ export class BattleScene extends Phaser.Scene {
 
   private callout(v: UnitView, text: string, tint: number): void {
     const c = v.center();
-    const t = addText(this, c.x, c.y - v.tall * 0.5 - 30, text, { size: 18, raw: true, color: `#${tint.toString(16).padStart(6, '0')}`, strokeW: 4 })
+    const t = addText(this, c.x, c.y - v.tall * 0.5 - 30, text, { size: worldPx(18), raw: true, color: `#${tint.toString(16).padStart(6, '0')}`, strokeW: 4 })
       .setOrigin(0.5)
       .setDepth(FX_DEPTH + 2);
     this.tweens.add({ targets: t, y: t.y - 18, alpha: 0, duration: this.ms(900), delay: 380, onComplete: () => t.destroy() });
   }
 
-  private beam(a: Phaser.Math.Vector2, c: Phaser.Math.Vector2, color: number, width: number): Promise<void> {
-    const g = this.add.graphics().setDepth(FX_DEPTH);
-    g.lineStyle(width + 6, color, 0.25);
-    g.lineBetween(a.x, a.y, c.x, c.y);
-    g.lineStyle(width, color, 0.95);
-    g.lineBetween(a.x, a.y, c.x, c.y);
-    g.lineStyle(Math.max(1.5, width * 0.35), 0xffffff, 1);
-    g.lineBetween(a.x, a.y, c.x, c.y);
-    this.blast(a.x, a.y, color, 0.35);
-    return new Promise((ok) => {
-      this.tweens.add({
-        targets: g,
-        alpha: 0,
-        duration: this.ms(200),
-        delay: this.ms(70),
-        onComplete: () => {
-          g.destroy();
-          ok();
-        },
-      });
-    });
+  /** 技能特寫時鏡頭往前推一點；這一串演出播完再退回來（見 play） */
+  private punchIn(): void {
+    if (this.zoomBack !== null) return;
+    this.zoomBack = this.zoom;
+    this.tweens.add({ targets: this, zoom: Math.min(1.8, this.zoom * 1.14), duration: this.ms(200), ease: 'Quad.easeOut', onUpdate: () => this.applyCamera() });
   }
 
   /** 曲射：砲彈走拋物線 */
   private lob(a: Phaser.Math.Vector2, c: Phaser.Math.Vector2): Promise<void> {
     const s = this.add.image(a.x, a.y, 'glow').setTint(0xffa53a).setScale(0.3).setDepth(FX_DEPTH);
     const peak = Math.min(a.y, c.y) - 150;
+    let puff = 0;
     return new Promise((ok) => {
       this.tweens.addCounter({
         from: 0,
@@ -1033,6 +1224,7 @@ export class BattleScene extends Phaser.Scene {
           const k = tw.getValue() ?? 0;
           s.x = Phaser.Math.Linear(a.x, c.x, k);
           s.y = (1 - k) * (1 - k) * a.y + 2 * (1 - k) * k * peak + k * k * c.y;
+          if (++puff % 3 === 0) this.fx.trail(s.x, s.y);
         },
         onComplete: () => {
           s.destroy();
@@ -1042,14 +1234,21 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
+  /** 近戰：兩道弧形的爪痕 */
   private slash(v: UnitView): void {
     const c = v.center();
-    const g = this.add.graphics().setDepth(FX_DEPTH);
-    g.lineStyle(5, 0xffffff, 1);
-    g.lineBetween(c.x - 22, c.y - 20, c.x + 22, c.y + 20);
-    g.lineStyle(3, 0xff6a5a, 1);
-    g.lineBetween(c.x - 14, c.y - 26, c.x + 28, c.y + 12);
-    this.tweens.add({ targets: g, alpha: 0, duration: this.ms(240), onComplete: () => g.destroy() });
+    const g = this.add.graphics().setDepth(FX_DEPTH).setBlendMode(Phaser.BlendModes.ADD);
+    for (const [r, w, color, from] of [
+      [30, 6, 0xffffff, -2.5],
+      [21, 4, 0xff6a5a, -2.3],
+    ]) {
+      g.lineStyle(w, color, 1);
+      g.beginPath();
+      g.arc(c.x - 6, c.y + 8, r, from, from + 1.9);
+      g.strokePath();
+    }
+    this.fx.sparks(c.x, c.y, 45, 0xffd27a, 6, 60);
+    this.tweens.add({ targets: g, alpha: 0, duration: this.ms(260), onComplete: () => g.destroy() });
   }
 
   private blast(x: number, y: number, tint: number, size: number): void {
@@ -1067,28 +1266,12 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: s, scaleX: 1.6, scaleY: 0.8, alpha: 0, duration: this.ms(420), onComplete: () => s.destroy() });
   }
 
-  private async explode(v: UnitView): Promise<void> {
-    sfx('boom');
-    const c = v.center();
-    this.cameras.main.shake(this.ms(180), 0.004);
-    for (let i = 0; i < 3; i++) this.time.delayedCall(this.ms(i * 70), () => this.blast(c.x + Phaser.Math.Between(-16, 16), c.y + Phaser.Math.Between(-14, 14), i === 1 ? 0xffffff : 0xffa53a, 1.3));
-    this.ring(v.root.x, v.root.y, 0xffa53a);
-    for (let i = 0; i < 10; i++) {
-      const a = (i / 10) * Math.PI * 2;
-      const p = this.add
-        .image(c.x, c.y, 'px')
-        .setTint(i % 2 ? 0xffa53a : 0x8494aa)
-        .setScale(0.6)
-        .setDepth(FX_DEPTH);
-      this.tweens.add({ targets: p, x: c.x + Math.cos(a) * 60, y: c.y + Math.sin(a) * 36 + 30, angle: 300, alpha: 0, duration: this.ms(520), ease: 'Quad.easeOut', onComplete: () => p.destroy() });
-    }
-    await this.tween({ targets: v.root, alpha: 0, duration: this.ms(260), delay: this.ms(80) });
-  }
-
   // ───────── 結束 ─────────
 
   private async finish(result: 'win' | 'lose', reason: string): Promise<void> {
     this.mode = 'busy';
+    // 打完了：沒有可以接著打的東西
+    clearSuspend();
     this.clearMarks();
     this.hud.refresh();
     await this.wait(500);

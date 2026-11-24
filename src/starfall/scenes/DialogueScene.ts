@@ -58,6 +58,8 @@ export class DialogueScene extends Phaser.Scene {
     const skip = new Button(this, this.w - 16 - 55 * z, 14 + 24 * z, 110, 46, T('skip'), () => this.skip(), { color: 0x8fb0c8 });
     skip.setScale(z).setDepth(5);
     this.input.keyboard?.on('keydown-SPACE', () => this.advance());
+    this.input.keyboard?.on('keydown-ENTER', () => this.advance());
+    this.input.keyboard?.on('keydown-ESC', () => this.skip());
     this.show();
   }
 

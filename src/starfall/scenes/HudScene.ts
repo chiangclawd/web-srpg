@@ -2,17 +2,17 @@
 // 四個角各一個容器，手機上整組放大（uiZoom），文字跟著容器一起放大。
 import Phaser from 'phaser';
 import { COL, TEX, VIEW_H, addText, fitText, setupCamera, uiZoom, viewW } from '../config';
-import { refreshMusic, sfx } from '../audio';
+import { sfx } from '../audio';
 import { L, T } from '../i18n';
 import type { StrKey } from '../i18n';
 import { persist, save } from '../save';
 import { missionById } from '../data/missions';
 import { SPEAKERS } from '../data/story';
 import type { Speaker } from '../data/story';
-import type { Mod, Side } from '../sim/types';
+import type { Mod, Side, Unit } from '../sim/types';
 import { SHEETS, frameName } from '../view/sheets';
 import { TH, TW, isoX, isoY } from '../view/iso';
-import { Button, drawPanel } from '../view/ui';
+import { Button, KeyNav, drawPanel } from '../view/ui';
 import type { BattleScene } from './BattleScene';
 
 type Box = Phaser.GameObjects.Container;
@@ -43,6 +43,13 @@ export class HudScene extends Phaser.Scene {
   private w = 1280;
   private z = 1;
   private tipKey: StrKey | null = null;
+  /** 快捷鍵 → 目前畫面上的行動按鈕（每次重畫都重新登記） */
+  private actions = new Map<string, Button>();
+  /** 開著的是選單（Esc 可以關掉）；結算畫面不行 */
+  private menuOpen = false;
+  /** 對話框打開時鍵盤焦點先停在哪一顆 */
+  private modalFirst: Button | null = null;
+  private nav: KeyNav | null = null;
 
   constructor() {
     super('SfHud');
@@ -54,6 +61,9 @@ export class HudScene extends Phaser.Scene {
     this.tipKey = null;
     this.miniDyn = null;
     this.miniBtn = null;
+    this.actions = new Map();
+    this.menuOpen = false;
+    this.modalFirst = null;
   }
 
   create(): void {
@@ -70,8 +80,28 @@ export class HudScene extends Phaser.Scene {
     this.tipBox = this.add.container(this.w / 2, VIEW_H - 14).setScale(z).setDepth(40);
     this.ml = this.add.container(12, 10 + 118 * z).setScale(Math.min(z, 1.15));
     if (this.battle.big) this.buildMini();
-    this.tr.add(new Button(this, -28, 28, 56, 56, '', () => this.openMenu(), { icon: 'ic_menu' }));
+    this.tr.add(new Button(this, -28, 28, 56, 56, '', () => this.openMenu(), { icon: 'ic_menu', key: 'Esc' }));
+    // 鍵盤：對話框（選單、結算）開著的時候，方向鍵在裡面的按鈕之間移動；沒開的時候由戰場自己處理按鍵
+    this.nav = new KeyNav(this, {
+      scope: () => this.modal,
+      enabled: () => !!this.modal && !this.scene.isActive('SfSettings'),
+      onBack: () => {
+        if (this.menuOpen) this.closeModal();
+      },
+      first: () => this.modalFirst,
+    });
     void this.battle.hudReady(this);
+  }
+
+  /** 設定頁關掉之後：照新的文字大小重設四個角的縮放，照新的語言和配色重畫，場上的單位也重畫 */
+  relayout(): void {
+    this.z = Math.min(uiZoom(), 1.4);
+    const z = this.z;
+    for (const c of [this.tl, this.tr, this.bl, this.br, this.tipBox]) c.setScale(z);
+    this.tc.setScale(Math.min(z, 1.25));
+    this.ml.setPosition(12, 10 + 118 * z).setScale(Math.min(z, 1.15));
+    this.refresh();
+    this.battle.restyle();
   }
 
   setVisible(v: boolean): void {
@@ -235,7 +265,7 @@ export class HudScene extends Phaser.Scene {
     const k = Phaser.Math.Clamp(u.hp / u.maxHp, 0, 1);
     const bar = this.add.graphics();
     bar.fillStyle(0x06101c, 1).fillRect(x, -H + 42, bw, 12);
-    bar.fillStyle(enemy ? COL.enemy : k > 0.35 ? COL.player : 0xffb03a, 1).fillRect(x + 1, -H + 43, (bw - 2) * k, 10);
+    bar.fillStyle(enemy ? COL.enemy : k > 0.35 ? COL.player : COL.low, 1).fillRect(x + 1, -H + 43, (bw - 2) * k, 10);
     const hp = addText(this, x + bw + 8, -H + 39, `${u.hp}/${u.maxHp}`, { size: 15, raw: true, strokeW: 0 });
     const wpn = d.weapon;
     const stats = d.structure
@@ -255,33 +285,37 @@ export class HudScene extends Phaser.Scene {
   /** 右下：行動按鈕（由下往上疊） */
   private drawActions(): void {
     this.br.removeAll(true);
+    this.actions.clear();
     const bs = this.battle;
     const b = bs.battle;
     if (bs.mode === 'busy' || b.result || b.phase !== 'player') return;
     const list: Button[] = [];
     const x = -BTN_W / 2;
-    const add = (label: string, fn: () => void, o: ConstructorParameters<typeof Button>[7] = {}): void => {
-      list.push(new Button(this, x, 0, BTN_W, BTN_H, label, fn, o));
+    // key：快捷鍵（小寫）。戰場收到按鍵會來這裡找對應的按鈕按下去，所以按鈕不能按的時候快捷鍵也沒有作用
+    const add = (label: string, fn: () => void, o: ConstructorParameters<typeof Button>[7] = {}, key?: string): void => {
+      const btn = new Button(this, x, 0, BTN_W, BTN_H, label, fn, { key: key === 'enter' ? 'Enter' : key?.toUpperCase(), ...o });
+      if (key) this.actions.set(key, btn);
+      list.push(btn);
     };
     const u = bs.sel;
     if (bs.mode === 'target') {
-      add(T('confirm'), () => void bs.confirm(), { icon: 'ic_attack', color: 0xffe45a, disabled: !bs.aim, primary: true });
-      add(T('cancel'), () => bs.cancelTarget(), { icon: 'ic_undo', color: 0x8fb0c8 });
+      add(T('confirm'), () => void bs.confirm(), { icon: 'ic_attack', color: 0xffe45a, disabled: !bs.aim, primary: true }, 'enter');
+      add(T('cancel'), () => bs.cancelTarget(), { icon: 'ic_undo', color: 0x8fb0c8, key: 'Esc' });
     } else {
       if (u && u.side === 'player' && b.canAct(u)) {
-        add(T('attack'), () => bs.beginTarget({ kind: 'attack' }), { icon: 'ic_attack', color: 0xff6a5a, disabled: !b.targets(u).length });
-        for (const s of u.def.skills) {
+        add(T('attack'), () => bs.beginTarget({ kind: 'attack' }), { icon: 'ic_attack', color: 0xff6a5a, disabled: !b.targets(u).length }, 'a');
+        for (const [i, s] of u.def.skills.entries()) {
           const cd = u.cds[s.id] ?? 0;
           const ok = b.skillReady(u, s) && b.skillTargets(u, s).length > 0;
           // 變灰的原因寫在按鈕上：冷卻中，或是躍進這種「走過就不能用」的技能
           const note = cd > 0 ? T('cooldown', cd) : s.effect.type === 'leap' && u.moved ? T('afterMove') : undefined;
-          add(L(s.name), () => bs.beginTarget({ kind: 'skill', skill: s }), { icon: s.icon, color: 0xffe45a, disabled: !ok, note });
+          add(L(s.name), () => bs.beginTarget({ kind: 'skill', skill: s }), { icon: s.icon, color: 0xffe45a, disabled: !ok, note }, String(i + 1));
         }
-        if (u.def.weapon.kind !== 'indirect') add(T('overwatch'), () => void bs.doOverwatch(), { icon: 'ic_overwatch' });
-        add(T('wait'), () => void bs.doWait(), { icon: 'ic_wait', color: 0x8fb0c8 });
-        if (u.undo) add(T('undo'), () => bs.undoMove(), { icon: 'ic_undo', color: 0x8fb0c8 });
+        if (u.def.weapon.kind !== 'indirect') add(T('overwatch'), () => void bs.doOverwatch(), { icon: 'ic_overwatch' }, 'o');
+        add(T('wait'), () => void bs.doWait(), { icon: 'ic_wait', color: 0x8fb0c8 }, 'w');
+        if (u.undo) add(T('undo'), () => bs.undoMove(), { icon: 'ic_undo', color: 0x8fb0c8 }, 'z');
       }
-      add(T('endTurn'), () => void bs.endTurn(), { icon: 'ic_end', color: 0xff9a3c });
+      add(T('endTurn'), () => void bs.endTurn(), { icon: 'ic_end', color: 0xff9a3c }, 'e');
     }
     // 最後一顆在最下面
     list.reverse().forEach((btn, i) => {
@@ -364,6 +398,70 @@ export class HudScene extends Phaser.Scene {
   }
 
   /** 畫面上方短暫出現的訊息 */
+  /**
+   * 技能特寫：一條略斜的橫帶劃過畫面，駕駛員的頭像從一邊滑進來，另一邊是技能名稱。
+   * 沒有頭像的機體（無人機）只有名稱。演完自己收掉。
+   */
+  cutIn(u: Unit, name: string): Promise<void> {
+    const mine = u.side === 'player';
+    const color = mine ? COL.player : COL.enemy;
+    const fast = save().fast ? 0.5 : 1;
+    const w = this.w;
+    const cy = VIEW_H * 0.37;
+    const bh = 150;
+    const tilt = -0.045;
+    const side = mine ? -1 : 1;
+    const box = this.add.container(w / 2, cy).setDepth(32).setRotation(tilt);
+    box.add(this.add.rectangle(0, 0, w + 260, bh, 0x040a14, 0.88));
+    box.add(this.add.rectangle(0, -bh / 2, w + 260, 3, color));
+    box.add(this.add.rectangle(0, bh / 2, w + 260, 3, color));
+    // 速度線：往頭像的反方向掃過去
+    for (let i = 0; i < 9; i++) {
+      const line = this.add.rectangle(Phaser.Math.Between(-w / 2, w / 2), Phaser.Math.Between(-bh / 2 + 10, bh / 2 - 10), Phaser.Math.Between(120, 380), 2, 0xffffff, Phaser.Math.FloatBetween(0.06, 0.2));
+      box.add(line);
+      this.tweens.add({ targets: line, x: line.x - side * Phaser.Math.Between(260, 520), duration: 900 * fast });
+    }
+    const pilot = u.def.pilot ? SPEAKERS[u.def.pilot as Speaker] : undefined;
+    const slide: { o: Phaser.GameObjects.Image | Phaser.GameObjects.Text; x: number; from: number }[] = [];
+    let mask: Phaser.GameObjects.Graphics | null = null;
+    if (pilot?.portrait) {
+      // 頭像比橫帶高：用跟橫帶一樣的範圍當遮罩，只露出臉那一段
+      const im = this.add.image(side * w * 0.29, 0, pilot.portrait).setOrigin(0.5, 0.25).setFlipX(!mine);
+      im.setScale(360 / im.height);
+      mask = this.make.graphics({}, false);
+      mask.setPosition(w / 2, cy).setRotation(tilt);
+      mask.fillStyle(0xffffff).fillRect(-w / 2 - 130, -bh / 2 + 3, w + 260, bh - 6);
+      im.setMask(mask.createGeometryMask());
+      box.add(im);
+      slide.push({ o: im, x: im.x, from: im.x + side * 180 });
+    }
+    const tx = pilot?.portrait ? -side * w * 0.08 : 0;
+    const who = addText(this, tx, -40, pilot?.portrait ? `${L(pilot.name)}　${L(u.def.name)}` : L(u.def.name), { size: 22, raw: true, color: COL.dim, strokeW: 4 }).setOrigin(0.5);
+    const title = fitText(addText(this, tx, 12, name, { size: 54, raw: true, color: mine ? COL.cyan : COL.red, strokeW: 7 }).setOrigin(0.5), w * 0.5);
+    box.add([who, title]);
+    slide.push({ o: who, x: tx, from: tx - side * 140 }, { o: title, x: tx, from: tx - side * 140 });
+    sfx('select');
+    box.setAlpha(0).setScale(1, 0.1);
+    for (const p of slide) p.o.x = p.from;
+    return new Promise((ok) => {
+      this.tweens.add({ targets: box, alpha: 1, scaleY: 1, duration: 120 * fast, ease: 'Quad.easeOut' });
+      for (const p of slide) this.tweens.add({ targets: p.o, x: p.x, duration: 240 * fast, ease: 'Cubic.easeOut' });
+      this.tweens.add({
+        targets: box,
+        alpha: 0,
+        scaleY: 0.3,
+        duration: 150 * fast,
+        delay: 700 * fast,
+        ease: 'Quad.easeIn',
+        onComplete: () => {
+          box.destroy(true);
+          mask?.destroy();
+          ok();
+        },
+      });
+    });
+  }
+
   toast(text: string): void {
     const t = addText(this, this.w / 2, 150, text, { size: 22, color: COL.yellow, strokeW: 5, align: 'center' })
       .setOrigin(0.5)
@@ -421,6 +519,10 @@ export class HudScene extends Phaser.Scene {
   private closeModal(): void {
     this.modal?.destroy();
     this.modal = null;
+    // 對話框關掉就把鍵盤焦點忘掉：不然下次打開選單，焦點會從上次停的位置接下去，按兩下「下」就不是原本那一顆了
+    this.nav?.blur();
+    this.menuOpen = false;
+    this.modalFirst = null;
   }
 
   /** parts：這次新拿到的零件（重打已經拿過的星就是 0） */
@@ -436,7 +538,8 @@ export class HudScene extends Phaser.Scene {
     const by = H / 2 - 48;
     if (!win) {
       box.add(addText(this, 0, -H / 2 + 130, T(`lose_${reason}` as StrKey), { size: 20, raw: true, strokeW: 0 }).setOrigin(0.5));
-      box.add(new Button(this, -135, by, 250, 56, T('retry'), () => bs.restart(), { primary: true }));
+      this.modalFirst = new Button(this, -135, by, 250, 56, T('retry'), () => bs.restart(), { primary: true });
+      box.add(this.modalFirst);
       box.add(new Button(this, 135, by, 250, 56, T('toMissions'), () => bs.leave('missions'), { color: 0x8fb0c8 }));
       // 打不過的兩條出路：去機庫改造機體，或改用輕鬆難度
       box.add(new Button(this, b.easy ? 0 : -135, by - 66, b.easy ? 300 : 250, 48, T('hangar'), () => bs.leave('hangar'), { color: 0xffd75a, size: 17, icon: 'ic_parts' }));
@@ -497,66 +600,56 @@ export class HudScene extends Phaser.Scene {
     const endNote = storyEnd ? T('chapterEnd') : next ? '' : T('epilogueEnd');
     if (endNote) box.add(fitText(addText(this, 0, by - 50, endNote, { size: 15, raw: true, strokeW: 0, color: COL.cyan }).setOrigin(0.5), W - 40));
     if (next) {
-      box.add(new Button(this, -188, by, 180, 56, T('next'), () => bs.leave('next'), { primary: true, color: 0x6dff9a }));
+      this.modalFirst = new Button(this, -188, by, 180, 56, T('next'), () => bs.leave('next'), { primary: true, color: 0x6dff9a });
+      box.add(this.modalFirst);
       box.add(hangar(0, 180));
       box.add(new Button(this, 188, by, 180, 56, T('toMissions'), () => bs.leave('missions'), { color: 0x8fb0c8 }));
     } else {
       box.add(hangar(-135, 250));
-      box.add(new Button(this, 135, by, 250, 56, T('toMissions'), () => bs.leave('missions'), { primary: true }));
+      this.modalFirst = new Button(this, 135, by, 250, 56, T('toMissions'), () => bs.leave('missions'), { primary: true });
+      box.add(this.modalFirst);
     }
   }
 
-  private openMenu(): void {
+  /** 現在有沒有對話框蓋在上面（選單、結算）：有的話戰場不處理按鍵 */
+  get modalOpen(): boolean {
+    return !!this.modal;
+  }
+
+  /** 鍵盤快捷鍵：按下對應的行動按鈕。沒有這顆就回傳 false */
+  hotkey(key: string): boolean {
+    const btn = this.actions.get(key);
+    if (!btn?.active) return false;
+    btn.click();
+    return true;
+  }
+
+  openMenu(): void {
     if (this.modal) return;
     const bs = this.battle;
-    const sv = save();
     const W = 380;
-    const H = 560;
+    const H = 436;
     const box = this.openModal(W, H, COL.line);
+    this.menuOpen = true;
     box.add(addText(this, 0, -H / 2 + 36, T('menu'), { size: 26, raw: true, strokeW: 0 }).setOrigin(0.5));
     const rows: [string, () => void, number?][] = [
       [T('resume'), () => this.closeModal()],
       [
-        T('sound', sv.sfx > 0 ? T('on') : T('off')),
+        T('settings'),
         () => {
-          sv.sfx = sv.sfx > 0 ? 0 : 0.7;
-          persist();
           this.closeModal();
-          this.openMenu();
-        },
-      ],
-      [
-        T('music', sv.music > 0 ? T('on') : T('off')),
-        () => {
-          sv.music = sv.music > 0 ? 0 : 0.5;
-          persist();
-          refreshMusic();
-          this.closeModal();
-          this.openMenu();
-        },
-      ],
-      [
-        T('difficulty', sv.easy ? T('diffEasy') : T('diffNormal')),
-        () => {
-          sv.easy = !sv.easy;
-          persist();
-          this.closeModal();
-          this.openMenu();
-          this.toast(T('diffNote'));
-        },
-      ],
-      [
-        T('speed', sv.fast ? T('fast') : T('normal')),
-        () => {
-          sv.fast = !sv.fast;
-          persist();
-          this.closeModal();
-          this.openMenu();
+          // 設定頁關掉之後整個重排重畫：語言、難度、文字大小、配色都可能變了
+          this.scene.launch('SfSettings', { onClose: () => this.relayout() });
         },
       ],
       [T('restart'), () => bs.restart(), 0xff9a3c],
       [T('quit'), () => bs.leave('missions'), 0xff6a5a],
     ];
-    rows.forEach(([label, fn, color], i) => box.add(new Button(this, 0, -H / 2 + 100 + i * 62, 300, 52, label, fn, { color })));
+    rows.forEach(([label, fn, color], n) => {
+      const btn = new Button(this, 0, -H / 2 + 100 + n * 62, 300, 52, label, fn, { color });
+      if (n === 0) this.modalFirst = btn;
+      box.add(btn);
+    });
+    box.add(addText(this, 0, H / 2 - 22, T('menuSaveNote'), { size: 13, raw: true, strokeW: 0, color: COL.dim, bold: false, wrap: W - 50, align: 'center' }).setOrigin(0.5, 1));
   }
 }

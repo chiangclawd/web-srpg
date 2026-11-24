@@ -10,8 +10,19 @@ type Ctx = CanvasRenderingContext2D;
 export const TILE_TEX_H = TOP_PAD + TH + DEPTH;
 /** 每種地形有幾個花樣（依座標挑一個，地面才不會像貼磁磚） */
 export const TILE_VARIANTS = 3;
+/** 冰面佔地圖最大的面積，花樣多一點才看不出重複 */
+const ICE_VARIANTS = 8;
 
-function canvasTex(scene: Phaser.Scene, key: string, w: number, h: number, draw: (g: Ctx) => void): void {
+function variantsOf(id: TerrainId): number {
+  return id === 'ice' ? ICE_VARIANTS : TILE_VARIANTS;
+}
+
+/** 這一格用哪個花樣（依座標打散，同一張地圖每次都一樣） */
+export function tileVariant(id: TerrainId, x: number, y: number): number {
+  return (((x * 73856093) ^ (y * 19349663)) >>> 0) % variantsOf(id);
+}
+
+export function canvasTex(scene: Phaser.Scene, key: string, w: number, h: number, draw: (g: Ctx) => void): void {
   if (scene.textures.exists(key)) return;
   const t = scene.textures.createCanvas(key, Math.ceil(w * TEX), Math.ceil(h * TEX));
   if (!t) return;
@@ -106,30 +117,171 @@ const DECK = { top: 0x6a7d96, side: 0x3c4a60 };
 const ICE = { top: 0xb9deef, side: 0x6f9db8 };
 const SNOW = { top: 0xeaf4fa, side: 0x8fb4c8 };
 
-function deckTop(g: Ctx, variant: number, glow: boolean): void {
+/** 頂面上往 u 方向（畫面右下）走一整格、而且跟 u = 常數的邊垂直的位移（等角投影下不是 P 的差） */
+const NU: [number, number] = [TW / 5, (TW * 2) / 5];
+
+/** 頂面的受光：光從畫面左邊來（跟側面的明暗一致），左上亮、右下暗。要先 clipTop */
+function topLight(g: Ctx, z = 0, k = 1): void {
+  const [x, y] = P(0, 0, z);
+  const gr = g.createLinearGradient(x, y, x + NU[0], y + NU[1]);
+  gr.addColorStop(0, `rgba(255,255,255,${0.13 * k})`);
+  gr.addColorStop(0.5, 'rgba(255,255,255,0)');
+  gr.addColorStop(1, `rgba(6,14,28,${0.15 * k})`);
+  g.fillStyle = gr;
+  g.fillRect(0, TOP_PAD - z, TW, TH);
+}
+
+/** 細碎的顆粒：大面積的平塗才有材質感。要先 clipTop */
+function grain(g: Ctx, r: () => number, n: number, z = 0): void {
+  for (let i = 0; i < n; i++) {
+    const [x, y] = P(r(), r(), z);
+    g.fillStyle = i % 3 ? 'rgba(255,255,255,0.10)' : 'rgba(6,14,28,0.14)';
+    g.fillRect(x, y, 0.8 + r() * 1.4, 0.5 + r() * 0.5);
+  }
+}
+
+/** 頂面上的圓（等角投影下是 2:1 的橢圓） */
+function disc(g: Ctx, u: number, v: number, rad: number, fill: string, z = 0): void {
+  const [x, y] = P(u, v, z);
+  g.fillStyle = fill;
+  g.beginPath();
+  g.ellipse(x, y, rad, rad / 2, 0, 0, Math.PI * 2);
+  g.fill();
+}
+
+type SidePt = (t: number, z: number) => [number, number];
+
+/** 在兩個側面上畫細節：lit = 朝左下的受光面，另一面朝右下、背光。t 沿著上緣 0..1，z 是高度（往下為負） */
+function sides(g: Ctx, z1: number, draw: (pt: SidePt, lit: boolean) => void): void {
+  for (const lit of [true, false]) {
+    const pt: SidePt = lit ? (t, z) => P(t, 1, z) : (t, z) => P(1, 1 - t, z);
+    g.save();
+    poly(g, [pt(0, z1), pt(1, z1), pt(1, -DEPTH), pt(0, -DEPTH)]);
+    g.clip();
+    draw(pt, lit);
+    g.restore();
+  }
+}
+
+/** 方塊落在頂面上的影子（往畫面右下） */
+function boxShadow(g: Ctx, u0: number, v0: number, u1: number, v1: number, len: number): void {
   g.save();
   clipTop(g);
-  // 甲板接縫
-  const seam = 'rgba(20,30,46,0.55)';
-  if (variant !== 1) line(g, P(0.5, 0), P(0.5, 1), seam, 1.2);
-  if (variant !== 0) line(g, P(0, 0.5), P(1, 0.5), seam, 1.2);
+  poly(g, [P(u0 + 0.04, v0 + 0.02), P(u1 + len, v0 + 0.02), P(u1 + len, v1), P(u0 + 0.04, v1)]);
+  g.fillStyle = 'rgba(6,12,24,0.3)';
+  g.fill();
+  g.restore();
+}
+
+/** 船殼的側面：上緣受光、鋼板的橫縫與直肋、鉚釘；conduit = 導管格柵，側面多一條發光的管線 */
+function hullSides(g: Ctx, z1: number, seams: [number, number][], conduit = false): void {
+  sides(g, z1, (pt, lit) => {
+    line(g, pt(0, z1 - 1), pt(1, z1 - 1), lit ? 'rgba(214,230,246,0.55)' : 'rgba(170,192,218,0.3)', 1.6);
+    for (const [dz, a] of seams) {
+      line(g, pt(0, z1 - dz), pt(1, z1 - dz), `rgba(10,18,32,${a})`, 1.2);
+      line(g, pt(0, z1 - dz - 1.3), pt(1, z1 - dz - 1.3), `rgba(190,212,238,${a * 0.3})`, 0.8);
+    }
+    const rib = seams[1]?.[0] ?? 46;
+    for (const t of [0.34, 0.67]) line(g, pt(t, z1 - 3), pt(t, z1 - rib), 'rgba(10,18,32,0.26)', 1);
+    g.fillStyle = 'rgba(10,18,32,0.45)';
+    for (const t of [0.08, 0.26, 0.42, 0.59, 0.75, 0.92]) {
+      const [x, y] = pt(t, z1 - 8);
+      g.fillRect(x - 0.8, y - 0.8, 1.6, 1.6);
+    }
+    if (conduit && lit) {
+      g.shadowColor = '#3fd6ff';
+      g.shadowBlur = 6;
+      line(g, pt(0.14, z1 - 12), pt(0.86, z1 - 12), 'rgba(95,227,255,0.85)', 1.8);
+      g.shadowBlur = 0;
+    }
+  });
+}
+
+/** 冰層的側面：橫向的色帶、垂直的裂縫；積雪的話邊緣有雪垂下來 */
+function iceSides(g: Ctx, r: () => number, snow: boolean): void {
+  sides(g, 0, (pt, lit) => {
+    for (const [dz, a, w] of [
+      [12, 0.22, 5],
+      [30, 0.16, 7],
+      [54, 0.1, 9],
+    ]) {
+      poly(g, [pt(0, -dz), pt(1, -dz), pt(1, -dz - w), pt(0, -dz - w)]);
+      g.fillStyle = `rgba(255,255,255,${lit ? a : a * 0.6})`;
+      g.fill();
+    }
+    for (let i = 0; i < 3; i++) {
+      const t = 0.12 + r() * 0.76;
+      line(g, pt(t, -2), pt(t + (r() - 0.5) * 0.08, -14 - r() * 34), 'rgba(40,90,130,0.35)', 1);
+    }
+    if (snow) {
+      g.fillStyle = lit ? 'rgba(255,255,255,0.96)' : 'rgba(214,232,244,0.96)';
+      for (let i = 0; i < 6; i++) {
+        const [x, y] = pt((i + 0.5) / 6, 0);
+        g.beginPath();
+        g.ellipse(x, y + 1, 9, 3 + r() * 4, 0, 0, Math.PI * 2);
+        g.fill();
+      }
+    } else {
+      line(g, pt(0, -1.2), pt(1, -1.2), lit ? 'rgba(255,255,255,0.9)' : 'rgba(226,243,252,0.55)', 2.2);
+    }
+  });
+}
+
+function deckTop(g: Ctx, variant: number, glow: boolean): void {
+  const r = rng(variant * 5 + (glow ? 17 : 2));
+  g.save();
+  clipTop(g);
+  // 四塊鋼板，明暗略有不同
+  for (const [u, v, k] of [
+    [0, 0, 0.05],
+    [0.5, 0, -0.05],
+    [0, 0.5, -0.03],
+    [0.5, 0.5, 0.04],
+  ]) {
+    poly(g, [P(u, v), P(u + 0.5, v), P(u + 0.5, v + 0.5), P(u, v + 0.5)]);
+    g.fillStyle = k > 0 ? `rgba(255,255,255,${k})` : `rgba(6,12,24,${-k})`;
+    g.fill();
+  }
+  topLight(g);
+  // 甲板接縫：一條暗線，下面貼一條亮線，看起來是凹下去的
+  const seam = 'rgba(20,30,46,0.6)';
+  const lip = 'rgba(200,220,242,0.2)';
+  if (variant !== 1) {
+    line(g, P(0.5, 0), P(0.5, 1), seam, 1.3);
+    line(g, P(0.515, 0), P(0.515, 1), lip, 0.8);
+  }
+  if (variant !== 0) {
+    line(g, P(0, 0.5), P(1, 0.5), seam, 1.3);
+    line(g, P(0, 0.515), P(1, 0.515), lip, 0.8);
+  }
   // 內框亮線
   g.strokeStyle = 'rgba(190,215,240,0.16)';
   g.lineWidth = 1;
   poly(g, [P(0.1, 0.1), P(0.9, 0.1), P(0.9, 0.9), P(0.1, 0.9)]);
   g.stroke();
+  // 刮痕
+  for (let i = 0; i < 5; i++) {
+    const u = 0.12 + r() * 0.7;
+    const v = 0.12 + r() * 0.7;
+    const d = 0.05 + r() * 0.13;
+    line(g, P(u, v), i % 2 ? P(u + d, v + d * 0.15) : P(u + d * 0.15, v + d), 'rgba(215,230,245,0.2)', 0.8);
+  }
   // 鉚釘
-  g.fillStyle = 'rgba(15,24,38,0.6)';
   for (const [u, v] of [
     [0.16, 0.16],
     [0.84, 0.16],
     [0.84, 0.84],
     [0.16, 0.84],
   ]) {
-    const [x, y] = P(u, v);
-    g.beginPath();
-    g.ellipse(x, y, 1.6, 0.9, 0, 0, Math.PI * 2);
+    disc(g, u, v, 1.7, 'rgba(15,24,38,0.65)');
+    disc(g, u - 0.008, v - 0.008, 0.7, 'rgba(210,228,245,0.5)');
+  }
+  if (variant === 1 && !glow) {
+    // 通風口：一塊深色的格柵
+    poly(g, [P(0.58, 0.16), P(0.86, 0.16), P(0.86, 0.42), P(0.58, 0.42)]);
+    g.fillStyle = 'rgba(14,22,36,0.7)';
     g.fill();
+    for (let i = 0; i < 4; i++) line(g, P(0.61 + i * 0.065, 0.19), P(0.61 + i * 0.065, 0.39), 'rgba(150,172,198,0.5)', 1);
   }
   if (variant === 2 && !glow) {
     // 角落的警示斜紋
@@ -139,8 +291,11 @@ function deckTop(g: Ctx, variant: number, glow: boolean): void {
       g.fill();
     }
   }
+  grain(g, r, 26);
   if (glow) {
-    // 導管：發光的青色線
+    // 導管：一道凹槽，裡面是發光的青色線
+    line(g, P(0.5, 0), P(0.5, 1), 'rgba(8,16,28,0.75)', 6);
+    line(g, P(0.2, 0.5), P(0.8, 0.5), 'rgba(8,16,28,0.6)', 4);
     g.shadowColor = '#3fd6ff';
     g.shadowBlur = 8;
     line(g, P(0.5, 0), P(0.5, 1), 'rgba(95,227,255,0.95)', 2.4);
@@ -155,49 +310,77 @@ function iceTop(g: Ctx, variant: number, snow: boolean): void {
   g.save();
   clipTop(g);
   if (snow) {
-    // 雪堆的陰影
+    topLight(g, 0, 0.7);
+    // 雪堆：右下有藍色的陰影，左上是亮面
     for (let i = 0; i < 5; i++) {
-      const [x, y] = P(0.15 + r() * 0.7, 0.15 + r() * 0.7);
-      g.fillStyle = 'rgba(150,185,210,0.35)';
-      g.beginPath();
-      g.ellipse(x, y + 2, 9 + r() * 8, 3 + r() * 2, 0, 0, Math.PI * 2);
-      g.fill();
-      g.fillStyle = 'rgba(255,255,255,0.9)';
-      g.beginPath();
-      g.ellipse(x, y, 9 + r() * 6, 3 + r() * 2, 0, 0, Math.PI * 2);
-      g.fill();
+      const u = 0.15 + r() * 0.7;
+      const v = 0.15 + r() * 0.7;
+      const rad = 9 + r() * 7;
+      disc(g, u + 0.05, v + 0.03, rad, 'rgba(120,162,198,0.42)');
+      disc(g, u, v, rad, 'rgba(250,253,255,0.95)');
+      disc(g, u - 0.04, v - 0.02, rad * 0.5, 'rgba(255,255,255,1)');
     }
+    for (let i = 0; i < 12; i++) disc(g, r(), r(), 0.9, i % 2 ? 'rgba(255,255,255,0.95)' : 'rgba(150,190,220,0.6)');
   } else {
-    // 冰面的亮帶與裂紋
-    const gr = g.createLinearGradient(0, TOP_PAD, TW, TOP_PAD + TH);
-    gr.addColorStop(0, 'rgba(255,255,255,0.28)');
-    gr.addColorStop(0.5, 'rgba(255,255,255,0)');
-    gr.addColorStop(1, 'rgba(60,110,150,0.22)');
-    g.fillStyle = gr;
+    // 冰面的亮帶：左上反光、右下透出底下的藍
+    const sheen = g.createLinearGradient(0, TOP_PAD, TW, TOP_PAD + TH);
+    sheen.addColorStop(0, 'rgba(255,255,255,0.3)');
+    sheen.addColorStop(0.5, 'rgba(255,255,255,0)');
+    sheen.addColorStop(1, 'rgba(60,110,150,0.2)');
+    g.fillStyle = sheen;
     g.fillRect(0, TOP_PAD, TW, TH);
-    for (let i = 0; i < 2 + variant; i++) {
-      let u = r();
-      let v = r();
-      g.strokeStyle = i % 2 ? 'rgba(255,255,255,0.75)' : 'rgba(70,125,165,0.6)';
-      g.lineWidth = 1;
-      g.beginPath();
-      g.moveTo(...P(u, v));
-      for (let k = 0; k < 3; k++) {
-        u += (r() - 0.5) * 0.45;
-        v += (r() - 0.5) * 0.45;
-        g.lineTo(...P(u, v));
-      }
-      g.stroke();
+    // 邊緣的霜
+    for (let i = 0; i < 5; i++) {
+      const edge = r() < 0.5;
+      const a = r();
+      const b = r() < 0.5 ? 0.06 : 0.94;
+      disc(g, edge ? a : b, edge ? b : a, 7 + r() * 8, 'rgba(255,255,255,0.2)');
     }
+    // 大部分的冰面是平的，只有幾種花樣有裂紋、霜斑或薄雪：每一格都有花樣的話，整片看起來像貼磁磚
+    const cracks = variant === 3 || variant === 4 ? 1 : variant === 5 ? 2 : 0;
+    // 裂紋：下面一道深色的影子，上面一道白線
+    for (let i = 0; i < cracks; i++) {
+      let u = 0.15 + r() * 0.7;
+      let v = 0.15 + r() * 0.7;
+      const pts: [number, number][] = [P(u, v)];
+      for (let k = 0; k < 4; k++) {
+        u += (r() - 0.5) * 0.4;
+        v += (r() - 0.5) * 0.4;
+        pts.push(P(u, v));
+      }
+      for (const [dy, color, w] of [
+        [1, 'rgba(48,104,148,0.5)', 1.4],
+        [0, i % 2 ? 'rgba(255,255,255,0.85)' : 'rgba(226,244,255,0.7)', 1],
+      ] as [number, string, number][]) {
+        g.strokeStyle = color;
+        g.lineWidth = w;
+        g.beginPath();
+        pts.forEach(([x, y], k) => (k ? g.lineTo(x, y + dy) : g.moveTo(x, y + dy)));
+        g.stroke();
+      }
+    }
+    if (variant === 6) {
+      // 一大片霜，上面有反光
+      disc(g, 0.45 + r() * 0.1, 0.45 + r() * 0.1, 22, 'rgba(255,255,255,0.16)');
+      const su = 0.25 + r() * 0.2;
+      const sv = 0.35 + r() * 0.2;
+      line(g, P(su, sv), P(su + 0.2, sv - 0.16), 'rgba(255,255,255,0.5)', 1.6);
+      line(g, P(su + 0.07, sv + 0.05), P(su + 0.2, sv - 0.05), 'rgba(255,255,255,0.32)', 1);
+    }
+    // 不畫小雪堆：會跟「積雪」地形（移動要 2 點）搞混
+    if (variant === 7) disc(g, 0.2 + r() * 0.15, 0.7 + r() * 0.15, 20, 'rgba(255,255,255,0.14)');
+    for (let i = 0; i < 6; i++) disc(g, r(), r(), 0.8, 'rgba(255,255,255,0.8)');
   }
   g.restore();
 }
 
 function drawTile(g: Ctx, id: TerrainId, variant: number): void {
   if (id === 'chasm') return;
+  const r = rng(variant * 13 + id.length * 3);
   if (id === 'ice' || id === 'snow') {
     const c = id === 'snow' ? SNOW : ICE;
     box(g, 0, 0, 1, 1, -DEPTH, 0, c.top, c.side, true);
+    iceSides(g, r, id === 'snow');
     iceTop(g, variant, id === 'snow');
     gridEdge(g);
     return;
@@ -206,6 +389,11 @@ function drawTile(g: Ctx, id: TerrainId, variant: number): void {
     // 艙壁：比地面高兩層的鋼牆
     const z = EH * 2;
     box(g, 0, 0, 1, 1, -DEPTH, z, 0x4a5a74, 0x2c3850, true);
+    hullSides(g, z, [
+      [42, 0.45],
+      [70, 0.3],
+      [100, 0.14],
+    ]);
     // 側面的燈條與警示帶
     g.shadowColor = '#3fd6ff';
     g.shadowBlur = 6;
@@ -218,12 +406,24 @@ function drawTile(g: Ctx, id: TerrainId, variant: number): void {
     }
     g.save();
     clipTop(g, z);
+    topLight(g, z);
     line(g, P(0.5, 0, z), P(0.5, 1, z), 'rgba(15,24,38,0.6)', 1.2);
+    grain(g, r, 16, z);
     g.restore();
     gridEdge(g, z);
     return;
   }
   box(g, 0, 0, 1, 1, -DEPTH, 0, id === 'rubble' ? 0x586a82 : DECK.top, DECK.side, true);
+  hullSides(
+    g,
+    0,
+    [
+      [20, 0.5],
+      [46, 0.3],
+      [74, 0.14],
+    ],
+    id === 'grate',
+  );
   deckTop(g, variant, id === 'grate');
   gridEdge(g);
   if (id === 'machine') {
@@ -240,19 +440,30 @@ function drawTile(g: Ctx, id: TerrainId, variant: number): void {
     g.restore();
   } else if (id === 'rubble') {
     // 殘骸堆：幾塊歪斜的鋼板和一截橘色外殼
-    const r = rng(variant + 11);
+    const rr = rng(variant + 11);
+    disc(g, 0.52, 0.52, 30, 'rgba(8,14,26,0.28)');
     for (let i = 0; i < 6; i++) {
-      const u = 0.18 + r() * 0.55;
-      const v = 0.18 + r() * 0.55;
-      const s = 0.14 + r() * 0.14;
-      const z = 3 + r() * 9;
-      box(g, u, v, u + s, v + s * (0.6 + r() * 0.6), 0, z, i === 2 ? 0xd9772e : i % 2 ? 0x8494aa : 0x4c5a70, i === 2 ? 0x9a4f1c : 0x303c50);
+      const u = 0.18 + rr() * 0.55;
+      const v = 0.18 + rr() * 0.55;
+      const s = 0.14 + rr() * 0.14;
+      const z = 3 + rr() * 9;
+      const v1 = v + s * (0.6 + rr() * 0.6);
+      boxShadow(g, u, v, u + s, v1, 0.07);
+      box(g, u, v, u + s, v1, 0, z, i === 2 ? 0xd9772e : i % 2 ? 0x8494aa : 0x4c5a70, i === 2 ? 0x9a4f1c : 0x303c50);
+      line(g, P(u, v, z), P(u, v1, z), 'rgba(255,255,255,0.3)', 0.8);
     }
   } else if (id === 'barricade') {
     // 貨櫃掩體：靠後方兩側的貨櫃，單位站在前面
+    boxShadow(g, 0.04, 0.04, 0.96, 0.3, 0.14);
+    boxShadow(g, 0.04, 0.3, 0.3, 0.96, 0.16);
     box(g, 0.04, 0.04, 0.96, 0.3, 0, 20, 0xe07a2e, 0xa8551c);
     box(g, 0.04, 0.3, 0.3, 0.96, 0, 20, 0xdfe6ee, 0x9aa6b6);
     box(g, 0.3, 0.06, 0.62, 0.28, 20, 32, 0x3c4a60, 0x283446);
+    // 貨櫃的浪板、上緣的亮邊
+    for (let i = 1; i < 7; i++) line(g, P(0.04 + i * 0.13, 0.3, 2), P(0.04 + i * 0.13, 0.3, 18), 'rgba(90,40,10,0.35)', 1);
+    for (let i = 1; i < 5; i++) line(g, P(0.3, 0.3 + i * 0.13, 2), P(0.3, 0.3 + i * 0.13, 18), 'rgba(90,104,124,0.4)', 1);
+    line(g, P(0.04, 0.3, 20), P(0.96, 0.3, 20), 'rgba(255,214,170,0.6)', 1);
+    line(g, P(0.04, 0.96, 20), P(0.3, 0.96, 20), 'rgba(255,255,255,0.7)', 1);
     line(g, P(0.06, 0.3, 12), P(0.96, 0.3, 12), 'rgba(30,20,10,0.5)', 1.2);
   }
 }
@@ -585,7 +796,7 @@ export function tileKey(id: TerrainId, variant: number): string {
 
 export function makeTextures(scene: Phaser.Scene): void {
   const ids: TerrainId[] = ['deck', 'grate', 'ice', 'snow', 'rubble', 'barricade', 'wall', 'machine'];
-  for (const id of ids) for (let v = 0; v < TILE_VARIANTS; v++) canvasTex(scene, tileKey(id, v), TW, TILE_TEX_H, (g) => drawTile(g, id, v));
+  for (const id of ids) for (let v = 0; v < variantsOf(id); v++) canvasTex(scene, tileKey(id, v), TW, TILE_TEX_H, (g) => drawTile(g, id, v));
   for (const k of ['fill', 'edge', 'dot', 'zone'] as const) canvasTex(scene, `ov_${k}`, TW, TH, (g) => drawOverlay(g, k));
   canvasTex(scene, 'generator', 120, 124, drawGenerator);
   for (const [k, fn] of Object.entries(ICONS)) canvasTex(scene, k, 64, 64, fn);

@@ -8,6 +8,7 @@ import { HangarScene } from './scenes/HangarScene';
 import { BattleScene } from './scenes/BattleScene';
 import { HudScene } from './scenes/HudScene';
 import { DialogueScene } from './scenes/DialogueScene';
+import { SettingsScene } from './scenes/SettingsScene';
 
 const rotate = document.querySelector<HTMLElement>('#rotate-prompt .title');
 if (rotate) rotate.textContent = T('rotate');
@@ -18,7 +19,7 @@ const game = new Phaser.Game({
   width: Math.round(computeViewW() * RS),
   height: Math.round(VIEW_H * RS),
   backgroundColor: '#070d18',
-  scene: [BootScene, TitleScene, MissionScene, HangarScene, BattleScene, HudScene, DialogueScene],
+  scene: [BootScene, TitleScene, MissionScene, HangarScene, BattleScene, HudScene, DialogueScene, SettingsScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

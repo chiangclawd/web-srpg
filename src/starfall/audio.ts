@@ -181,3 +181,12 @@ export function refreshMusic(): void {
   if (current && save().music > 0) current.el.volume = save().music * 0.6;
   else music(wanted);
 }
+
+// 切到別的分頁或別的 App 時音樂停下來，回來再接著播
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (!current) return;
+    if (document.hidden) current.el.pause();
+    else if (save().music > 0) void current.el.play().catch(() => undefined);
+  });
+}
