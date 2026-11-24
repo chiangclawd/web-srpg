@@ -2,7 +2,7 @@
 import Phaser from 'phaser';
 import { COL, TEX, addText, colorBlind, worldPx } from '../config';
 import { EH, isoX, isoY, tileDepth } from './iso';
-import { SHEETS, SHEET_FOOT, animKey, facing, frameName } from './sheets';
+import { SHEETS, SHEET_FOOT, animKey, dirIndex, facing, frameName } from './sheets';
 import type { Anim, SheetDef } from './sheets';
 import type { Dir, Unit } from '../sim/types';
 
@@ -86,8 +86,6 @@ export class UnitView {
 
   setDir(dir: Dir): void {
     this.dir = dir;
-    const f = facing(dir);
-    this.sprite.setFlipX(f.flip);
     // 箭頭放在面向那一側的格子邊上，沿著等角軸線指出去
     const sx = dir === 0 || dir === 3 ? 1 : -1;
     const sy = dir <= 1 ? 1 : -1;
@@ -100,6 +98,15 @@ export class UnitView {
     this.applyAnim();
   }
 
+  /** 受擊：後仰一下再回到待機（沒有這個動作的模型不做） */
+  hit(): void {
+    if (this.frames('hit') < 2) return;
+    this.play('hit');
+    this.sprite.once('animationcomplete', () => {
+      if (this.anim === 'hit') this.play('idle');
+    });
+  }
+
   /** 這個動作有幾格（沒有動作的靜態模型回傳 1） */
   frames(anim: Anim): number {
     return this.sheet?.frames[anim] ?? 1;
@@ -107,14 +114,15 @@ export class UnitView {
 
   private applyAnim(): void {
     if (!this.sheet) return;
-    const back = facing(this.dir).back;
+    // 四個方向各有自己的圖，不用水平翻轉
+    const di = dirIndex(this.dir);
     const anim = this.frames(this.anim) > 1 ? this.anim : 'idle';
     if (this.frames(anim) > 1) {
-      const key = animKey(this.sheetKey, anim, back);
+      const key = animKey(this.sheetKey, anim, di);
       if (this.sprite.anims.currentAnim?.key !== key || !this.sprite.anims.isPlaying) this.sprite.play(key);
     } else {
       this.sprite.anims.stop();
-      this.sprite.setFrame(frameName(this.sheet, 'idle', back, 0));
+      this.sprite.setFrame(frameName(this.sheet, 'idle', di, 0));
     }
   }
 

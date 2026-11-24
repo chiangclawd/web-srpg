@@ -2,7 +2,7 @@
 // 介面（按鈕、資訊卡、預估面板）在 HudScene，疊在這個場景上面。
 import Phaser from 'phaser';
 import { COL, RS, TEX, VIEW_H, addText, uiZoom, viewW, worldPx } from '../config';
-import { music, sfx } from '../audio';
+import { ambience, music, sfx } from '../audio';
 import { L, T } from '../i18n';
 import { persist, save } from '../save';
 import { Battle } from '../sim/Battle';
@@ -18,8 +18,8 @@ import { loadoutDefs, missionParts } from '../data/upgrades';
 import type { Loadout } from '../data/upgrades';
 import { clearSuspend, loadSuspend, saveSuspend } from '../suspend';
 import { EH, TH, TOP_PAD, TW, isoX, isoY, tileDepth } from '../view/iso';
-import { TILE_TEX_H, tileKey, tileVariant } from '../view/textures';
-import { SHEETS, SHEET_FOOT, frameName } from '../view/sheets';
+import { TILE_ATLAS, TILE_TEX_H, tileKey, tileVariant } from '../view/textures';
+import { SHEETS, SHEET_FOOT, frameName, loadSheets, makeAnims } from '../view/sheets';
 import { UnitView } from '../view/UnitView';
 import { keyUsed } from '../view/ui';
 import { BattleFx, FX_DEPTH } from '../view/fx';
@@ -120,15 +120,33 @@ export class BattleScene extends Phaser.Scene {
 
   // ───────── 建立 ─────────
 
+  /** 這一關會出現的機體圖表：開場的單位、之後的增援、場景擺設。只載入還沒載入過的 */
+  preload(): void {
+    const need = [
+      ...this.battle.units.map((u) => u.def.sprite),
+      ...(this.mission.events ?? []).flatMap((e) => (e.spawn ?? []).map((s) => UNITS[s.unit]?.sprite ?? '')),
+      ...(this.mission.props ?? []).map((p) => p.sprite),
+    ];
+    if (!loadSheets(this, need)) return;
+    // 要等一下的時候畫面中間顯示一行字
+    const t = addText(this, this.scale.width / 2, this.scale.height / 2, T('loading'), { size: 22 * RS, raw: true, color: '#8fb0c8' }).setOrigin(0.5);
+    this.load.once('complete', () => t.destroy());
+  }
+
   create(): void {
+    makeAnims(this);
     const b = this.battle;
     // 有首領的關卡換一首比較兇的曲子
     music(this.battle.units.some((u) => u.def.boss) ? 'boss' : 'battle');
+    // 環境音：室外是風，船裡是機器的嗡鳴
+    const theme = this.mission.theme ?? 'hull';
+    ambience(theme === 'ice' || theme === 'field' ? 'amb_wind' : 'amb_hum');
     this.bg = this.add
       .image(0, 0, { ice: 'bg_ice', hull: 'bg_hull', bay: 'bg_bay', reactor: 'bg_reactor', field: 'bg_field' }[this.mission.theme ?? 'hull'])
       .setScrollFactor(0)
       .setDepth(-1000);
     // 地塊：每格一張「柱狀」圖（頂面 + 往下延伸的側面），靠前的蓋住靠後的
+    const atlas = this.textures.exists(TILE_ATLAS);
     let minX = Infinity;
     let maxX = -Infinity;
     let minY = Infinity;
@@ -139,8 +157,9 @@ export class BattleScene extends Phaser.Scene {
         const sx = isoX(x, y);
         const sy = isoY(x, y, b.heightAt(x, y));
         if (id !== 'chasm') {
+          const key = tileKey(id, tileVariant(id, x, y));
           this.add
-            .image(sx, sy, tileKey(id, tileVariant(id, x, y)))
+            .image(sx, sy, atlas ? TILE_ATLAS : key, atlas ? key : undefined)
             .setOrigin(0.5, (TOP_PAD + TH / 2) / TILE_TEX_H)
             .setScale(1 / TEX)
             .setDepth(tileDepth(x, y));
@@ -1159,6 +1178,7 @@ export class BattleScene extends Phaser.Scene {
     // 命中
     sfx('hit');
     Tv.flash();
+    if (!e.killed) Tv.hit();
     Tv.refresh(e.hp);
     const at = Tv.center();
     this.blast(at.x, at.y, 0xffffff, 0.45);

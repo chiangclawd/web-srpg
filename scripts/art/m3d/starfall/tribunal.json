@@ -24,15 +24,35 @@
       "loop": false,
       "from": 0.6,
       "to": 2.6
+    },
+    {
+      "url": "/models/anim_result_animation_glb_url.glb",
+      "clip": "Idle",
+      "proc": "hit",
+      "name": "hit",
+      "frames": 4,
+      "loop": false
+    },
+    {
+      "url": "/models/anim_result_animation_glb_url.glb",
+      "clip": "Idle",
+      "proc": "down",
+      "name": "down",
+      "frames": 6,
+      "loop": false
     }
   ],
   "yaws": [
     45,
-    135
+    135,
+    315,
+    225
   ],
   "dirs": {
     "front": 45,
-    "back": 135
+    "back": 135,
+    "frontL": 315,
+    "backL": 225
   },
   "elev": 30,
   "size": 256,

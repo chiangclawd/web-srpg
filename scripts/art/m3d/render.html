@@ -241,6 +241,86 @@ function attachProps(root, props, ramp, anim) {
   }
 }
 
+// ── 程序動作：不靠動作庫，直接擺骨頭做出來的短動作（受擊、被擊破前的癱倒） ──
+// 每個關鍵格：t 秒、rot = 骨頭在「世界座標軸」上多轉幾度 [前傾, 左右轉, 側傾]（正的前傾 = 往臉的方向倒）、
+// hips = 臀部的位移 [左右, 上下, 前後]，單位是身高的比例。角色面向 +Z。
+const PROC = {
+  hit: [
+    { t: 0 },
+    { t: 0.07, rot: { Spine02: [-13, 0, 0], Spine01: [-9, 0, 0], Spine: [-7, 0, 0], Head: [-12, 0, 0], LeftArm: [-14, 0, -8], RightArm: [-14, 0, 8], LeftUpLeg: [6, 0, 0], RightUpLeg: [6, 0, 0] }, hips: [0, -0.01, -0.035] },
+    { t: 0.2, rot: { Spine02: [-6, 0, 0], Spine01: [-4, 0, 0], Head: [-4, 0, 0], LeftArm: [-6, 0, -3], RightArm: [-6, 0, 3] }, hips: [0, 0, -0.018] },
+    { t: 0.36 },
+  ],
+  down: [
+    { t: 0 },
+    { t: 0.12, rot: { Spine02: [-12, 0, 0], Spine01: [-8, 0, 0], Head: [-14, 0, 0], LeftArm: [-10, 0, -8], RightArm: [-10, 0, 8] }, hips: [0, 0, -0.03] },
+    { t: 0.34, rot: { Spine02: [14, 0, 3], Spine01: [10, 0, 2], Spine: [8, 0, 0], Head: [18, 0, 0], LeftUpLeg: [-30, 0, 0], RightUpLeg: [-30, 0, 0], LeftLeg: [58, 0, 0], RightLeg: [58, 0, 0], LeftFoot: [-28, 0, 0], RightFoot: [-28, 0, 0], LeftArm: [14, 0, 4], RightArm: [14, 0, -4] }, hips: [0, -0.06, 0.01] },
+    { t: 0.6, rot: { Spine02: [24, 0, 7], Spine01: [16, 0, 4], Spine: [12, 0, 0], Head: [28, 0, 4], LeftUpLeg: [-54, 0, 0], RightUpLeg: [-54, 0, 0], LeftLeg: [100, 0, 0], RightLeg: [100, 0, 0], LeftFoot: [-46, 0, 0], RightFoot: [-46, 0, 0], LeftArm: [24, 0, 8], RightArm: [24, 0, -8], LeftForeArm: [10, 0, 0], RightForeArm: [10, 0, 0] }, hips: [0.01, -0.16, 0.03] },
+  ],
+};
+
+/** 以 base 動作的第一格當底姿勢（沒有就用綁定姿勢），照 PROC[kind] 擺出每個關鍵格，做成一段動作 */
+function procClip(root, base, kind, H) {
+  const order = [];
+  root.traverse((o) => { if (o.isBone) order.push(o); });
+  const hips = order.find((b) => b.name === "Hips");
+  if (base) {
+    const m = new THREE.AnimationMixer(root);
+    m.clipAction(base).play();
+    m.setTime(0);
+    m.stopAllAction();
+  }
+  // 上面 setTime(0) 已經把骨頭擺到底姿勢；stopAllAction 會還原，所以要先記下來
+  const rest = new Map();
+  if (base) {
+    const m = new THREE.AnimationMixer(root);
+    m.clipAction(base).play();
+    m.setTime(0);
+    for (const b of order) rest.set(b, { q: b.quaternion.clone(), p: b.position.clone() });
+    m.stopAllAction();
+    m.uncacheRoot(root);
+  } else {
+    for (const b of order) rest.set(b, { q: b.quaternion.clone(), p: b.position.clone() });
+  }
+  const bind = new Map(order.map((b) => [b, { q: b.quaternion.clone(), p: b.position.clone() }]));
+  const keys = PROC[kind];
+  const quats = new Map(order.map((b) => [b, []]));
+  const hipPos = [];
+  const rad = THREE.MathUtils.degToRad;
+  for (const key of keys) {
+    for (const b of order) {
+      b.quaternion.copy(rest.get(b).q);
+      b.position.copy(rest.get(b).p);
+    }
+    root.updateMatrixWorld(true);
+    if (key.hips && hips) {
+      const wp = hips.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(...key.hips).multiplyScalar(H));
+      hips.position.copy(hips.parent.worldToLocal(wp));
+    }
+    // 由上往下：父骨頭先轉好，子骨頭才用得到父骨頭新的方向。在世界座標軸上轉：local' = pq⁻¹ · R · pq · local
+    for (const b of order) {
+      const r = key.rot?.[b.name];
+      if (!r) continue;
+      b.parent.updateWorldMatrix(true, false);
+      const pq = b.parent.getWorldQuaternion(new THREE.Quaternion());
+      const R = new THREE.Quaternion().setFromEuler(new THREE.Euler(rad(r[0]), rad(r[1]), rad(r[2]), "YXZ"));
+      b.quaternion.premultiply(pq).premultiply(R).premultiply(pq.clone().invert());
+    }
+    for (const b of order) quats.get(b).push(...b.quaternion.toArray());
+    if (hips) hipPos.push(...hips.position.toArray());
+  }
+  for (const b of order) {
+    b.quaternion.copy(bind.get(b).q);
+    b.position.copy(bind.get(b).p);
+  }
+  const times = keys.map((k) => k.t);
+  const tracks = order.map((b) => new THREE.QuaternionKeyframeTrack(`${b.name}.quaternion`, times, quats.get(b)));
+  // 其他骨頭的位置也固定在底姿勢（base 動作可能帶位移；不寫的話會留在綁定姿勢）
+  for (const b of order) if (b !== hips) tracks.push(new THREE.VectorKeyframeTrack(`${b.name}.position`, [0], rest.get(b).p.toArray()));
+  if (hips) tracks.push(new THREE.VectorKeyframeTrack("Hips.position", times, hipPos));
+  return new THREE.AnimationClip(kind, times[times.length - 1], tracks);
+}
+
 window.renderSheets = async (opts) => {
   for (const p of opts.props ?? []) if (p.emblemImage && !IMAGES[p.emblemImage]) IMAGES[p.emblemImage] = await loadImage(p.emblemImage);
   const size = opts.size ?? 128;
@@ -389,7 +469,7 @@ window.renderSheets = async (opts) => {
     prep(root);
     attachProps(root, opts.props, ramp, a.name);
     scene.add(root);
-    const clip = a.clip != null ? gltf.animations.find((c) => c.name === a.clip) ?? gltf.animations[0] : gltf.animations[0];
+    let clip = a.clip != null ? gltf.animations.find((c) => c.name === a.clip) ?? gltf.animations[0] : gltf.animations[0];
     // 定標用 A 字姿勢（綁定姿勢）：所有動作的身高、腳底位置一致
     root.updateMatrixWorld(true);
     const box0 = new THREE.Box3().setFromObject(root, true);
@@ -407,6 +487,8 @@ window.renderSheets = async (opts) => {
         }
       }
     }
+    // proc：程序動作（受擊 / 癱倒），以上面那段動作的第一格當底姿勢
+    if (a.proc) clip = procClip(root, clip, a.proc, unitH);
     const mixer = new THREE.AnimationMixer(root);
     let action = null;
     if (clip) {
@@ -458,6 +540,12 @@ window.renderSheets = async (opts) => {
         const t1 = a.to ?? dur;
         const t = a.loop ? t0 + (f / a.frames) * (t1 - t0) : t0 + (f / Math.max(1, a.frames - 1)) * (t1 - t0) * 0.999;
         mixer.setTime(t);
+        if (a.sway) {
+          // 沒有骨架的模型（無人機）：整台輕輕搖晃、上下起伏，循環一圈
+          const ph = (f / a.frames) * Math.PI * 2;
+          root.rotation.set(THREE.MathUtils.degToRad(Math.cos(ph) * a.sway * 0.5), THREE.MathUtils.degToRad(yaw + Math.sin(ph) * a.sway), 0);
+          root.position.y = Math.sin(ph * 2) * unitH * 0.012;
+        }
         root.updateMatrixWorld(true);
         effect.render(scene, cam);
         // 外輪廓：剪影往四周擴張幾像素墊在底下（跟手繪精靈的粗描邊一致）
@@ -476,6 +564,8 @@ window.renderSheets = async (opts) => {
       frameInfo = { w: size, h: size, footAt: opts.footAt ?? 0.82, unitPx: (unitH / span) * size };
     }
     scene.remove(root);
+    root.rotation.set(0, 0, 0);
+    root.position.y = 0;
     if (action) action.stop();
   }
   return { sheets, frame: frameInfo, stats, clips: clipNames };

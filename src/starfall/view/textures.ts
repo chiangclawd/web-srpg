@@ -10,6 +10,8 @@ type Ctx = CanvasRenderingContext2D;
 export const TILE_TEX_H = TOP_PAD + TH + DEPTH;
 /** 每種地形有幾個花樣（依座標挑一個，地面才不會像貼磁磚） */
 export const TILE_VARIANTS = 3;
+/** 渲染好的地塊圖（BootScene 載入）。載不到的話退回用 Canvas 現畫的版本 */
+export const TILE_ATLAS = 'sf_tiles';
 /** 冰面佔地圖最大的面積，花樣多一點才看不出重複 */
 const ICE_VARIANTS = 8;
 
@@ -796,7 +798,7 @@ export function tileKey(id: TerrainId, variant: number): string {
 
 export function makeTextures(scene: Phaser.Scene): void {
   const ids: TerrainId[] = ['deck', 'grate', 'ice', 'snow', 'rubble', 'barricade', 'wall', 'machine'];
-  for (const id of ids) for (let v = 0; v < variantsOf(id); v++) canvasTex(scene, tileKey(id, v), TW, TILE_TEX_H, (g) => drawTile(g, id, v));
+  if (!scene.textures.exists(TILE_ATLAS)) for (const id of ids) for (let v = 0; v < variantsOf(id); v++) canvasTex(scene, tileKey(id, v), TW, TILE_TEX_H, (g) => drawTile(g, id, v));
   for (const k of ['fill', 'edge', 'dot', 'zone'] as const) canvasTex(scene, `ov_${k}`, TW, TH, (g) => drawOverlay(g, k));
   canvasTex(scene, 'generator', 120, 124, drawGenerator);
   for (const [k, fn] of Object.entries(ICONS)) canvasTex(scene, k, 64, 64, fn);

@@ -2,8 +2,8 @@
 import Phaser from 'phaser';
 import { COL, VIEW_H, addText, setupCamera, viewW } from '../config';
 import { T } from '../i18n';
-import { loadSheets, makeAnims } from '../view/sheets';
-import { makeTextures } from '../view/textures';
+import { PLAYER_SHEETS, loadSheets, makeAnims } from '../view/sheets';
+import { TILE_ATLAS, makeTextures } from '../view/textures';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -21,7 +21,9 @@ export class BootScene extends Phaser.Scene {
       g.lineStyle(2, COL.lineDim, 1).strokeRect(w / 2 - bw / 2, VIEW_H / 2 + 20, bw, 12);
       g.fillStyle(COL.line, 1).fillRect(w / 2 - bw / 2 + 2, VIEW_H / 2 + 22, (bw - 4) * k, 8);
     });
-    loadSheets(this);
+    loadSheets(this, PLAYER_SHEETS);
+    // 地塊：Blender 渲染的一整張圖（scripts/art/tiles）
+    this.load.atlas(TILE_ATLAS, 'assets/starfall/tiles.webp', 'assets/starfall/tiles.json');
     for (const p of ['kai', 'bruno', 'vey', 'echo', 'cantor', 'sparrow', 'hale', 'tomas', 'varga']) this.load.image(`pt_${p}`, `assets/starfall/pt_${p}.webp`);
     for (const b of ['bg_ice', 'bg_hull', 'bg_bay', 'bg_reactor', 'bg_field', 'cg_ending', 'title']) this.load.image(b, `assets/starfall/${b}.webp`);
   }
