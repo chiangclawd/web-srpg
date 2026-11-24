@@ -23,12 +23,16 @@ export interface GroundInfo {
   top: (x: number, y: number) => number | null;
   /** 這一格是不是會發光的導管 */
   glow: (x: number, y: number) => boolean;
+  /** 這一格開戰前就有一塊焦痕（戰場主題的冰面，零星幾處） */
+  scar?: (x: number, y: number) => boolean;
   theme: Theme;
   bounds: Phaser.Geom.Rectangle;
 }
 
 /** 霧和環境粒子的顏色 */
 const AIR: Record<Theme, number> = { ice: 0xcfe8f6, field: 0xcfe8f6, hull: 0x7fa0c4, bay: 0x8fb0cc, reactor: 0xffa66a };
+/** 導管格柵的光暈：跟那個主題的地塊上畫的燈同一個顏色 */
+const CONDUIT: Record<Theme, number> = { ice: 0x3fd6ff, hull: 0x3fd6ff, bay: 0x58f0d2, reactor: 0xff8a2a, field: 0xffd27a };
 
 function seeded(seed: number): () => number {
   let s = seed;
@@ -235,12 +239,22 @@ export class BattleFx {
         if (a !== null && a > t) shade('sh_cast', Math.min(0.52, 0.26 + 0.1 * (a - t)));
         const b = y > 0 ? top(x, y - 1) : null;
         if (b !== null && b > t) shade('sh_ao', Math.min(0.48, 0.24 + 0.1 * (b - t)));
+        if (info.scar?.(x, y)) {
+          // 打過仗的痕跡：跟擊破留下的焦痕同一張圖，大小、左右、深淺各不相同，才不會看起來像蓋章
+          const k = ((x * 31 + y * 17) % 7) / 6;
+          s.add
+            .image(px, py, 'scorch')
+            .setScale((0.7 + k * 0.45) / TEX)
+            .setFlipX((x + y) % 2 === 0)
+            .setAlpha(0.3 + k * 0.3)
+            .setDepth(tileDepth(x, y) + 0.45);
+        }
         if (info.glow(x, y)) {
           // 導管的光暈：慢慢明滅
           const im = s.add
             .image(px, py, 'glow')
             .setScale(0.9, 0.45)
-            .setTint(0x3fd6ff)
+            .setTint(CONDUIT[info.theme])
             .setAlpha(0.16)
             .setBlendMode(Phaser.BlendModes.ADD)
             .setDepth(tileDepth(x, y) + 0.5);

@@ -18,7 +18,7 @@ import { loadoutDefs, missionParts } from '../data/upgrades';
 import type { Loadout } from '../data/upgrades';
 import { clearSuspend, loadSuspend, saveSuspend } from '../suspend';
 import { EH, TH, TOP_PAD, TW, isoX, isoY, tileDepth } from '../view/iso';
-import { TILE_ATLAS, TILE_TEX_H, tileKey, tileVariant } from '../view/textures';
+import { TILE_ATLAS, TILE_TEX_H, loadThemeTiles, themeAtlas, tileKey, tileVariant } from '../view/textures';
 import { SHEETS, SHEET_FOOT, frameName, loadSheets, makeAnims } from '../view/sheets';
 import { UnitView } from '../view/UnitView';
 import { keyUsed } from '../view/ui';
@@ -145,14 +145,15 @@ export class BattleScene extends Phaser.Scene {
 
   // ───────── 建立 ─────────
 
-  /** 這一關會出現的機體圖表：開場的單位、之後的增援、場景擺設。只載入還沒載入過的 */
+  /** 這一關會出現的機體圖表（開場的單位、之後的增援、場景擺設）和這一章的地塊。只載入還沒載入過的 */
   preload(): void {
     const need = [
       ...this.battle.units.map((u) => u.def.sprite),
       ...(this.mission.events ?? []).flatMap((e) => (e.spawn ?? []).map((s) => UNITS[s.unit]?.sprite ?? '')),
       ...(this.mission.props ?? []).map((p) => p.sprite),
     ];
-    if (!loadSheets(this, need)) return;
+    const tiles = loadThemeTiles(this, this.mission.theme ?? 'hull');
+    if (!loadSheets(this, need) && !tiles) return;
     // 要等一下的時候畫面中間顯示一行字
     const t = addText(this, this.scale.width / 2, this.scale.height / 2, T('loading'), { size: 22 * RS, raw: true, color: '#8fb0c8' }).setOrigin(0.5);
     this.load.once('complete', () => t.destroy());
@@ -172,6 +173,9 @@ export class BattleScene extends Phaser.Scene {
       .setDepth(-1000);
     // 地塊：每格一張「柱狀」圖（頂面 + 往下延伸的側面），靠前的蓋住靠後的
     const atlas = this.textures.exists(TILE_ATLAS);
+    // 這一章自己的地塊（冷凍艙、反應爐、戰場）；那一套裡沒有的地形、或圖集沒載到，用共用的那一套
+    const themed = themeAtlas(theme);
+    const own = themed && this.textures.exists(themed) ? this.textures.get(themed) : null;
     let minX = Infinity;
     let maxX = -Infinity;
     let minY = Infinity;
@@ -182,9 +186,13 @@ export class BattleScene extends Phaser.Scene {
         const sx = isoX(x, y);
         const sy = isoY(x, y, b.heightAt(x, y));
         if (id !== 'chasm') {
-          const key = tileKey(id, tileVariant(id, x, y));
+          let key = tileKey(id, tileVariant(id, x, y));
+          // 殘骸堆的圖底下是鋪板；四周大多是冰雪的話，換成「冰面上的殘骸」（有這張圖的主題才換），不然冰原中間會冒出一塊鋪板
+          const onIce = id === 'rubble' && key.replace('rubble', 'rubbleice');
+          if (onIce && own?.has(onIce) && this.mostlyIce(x, y)) key = onIce;
+          const mine = !!own && own.has(key);
           this.add
-            .image(sx, sy, atlas ? TILE_ATLAS : key, atlas ? key : undefined)
+            .image(sx, sy, mine ? own.key : atlas ? TILE_ATLAS : key, mine || atlas ? key : undefined)
             .setOrigin(0.5, (TOP_PAD + TH / 2) / TILE_TEX_H)
             .setScale(1 / TEX)
             .setDepth(tileDepth(x, y));
@@ -204,6 +212,8 @@ export class BattleScene extends Phaser.Scene {
       h: b.h,
       top: (x, y) => (b.terrainAt(x, y) === 'chasm' ? null : b.heightAt(x, y) + (b.terrainAt(x, y) === 'wall' ? 2 : 0)),
       glow: (x, y) => b.terrainAt(x, y) === 'grate',
+      // 戰場：冰面上零星幾處焦痕（依座標固定，每次進這一關都在同樣的地方）
+      scar: (x, y) => theme === 'field' && b.terrainAt(x, y) === 'ice' && (((x * 73856093) ^ (y * 19349663) ^ 0x5bd1) >>> 0) % 17 === 0,
       theme: this.mission.theme ?? 'hull',
       bounds: this.bounds,
     });
@@ -267,6 +277,21 @@ export class BattleScene extends Phaser.Scene {
     if (this.mission.intro) await this.say(this.mission.intro);
     await this.play(this.battle.start());
     this.toIdle();
+  }
+
+  /** 這一格四周（上下左右）是不是大多是冰或雪 */
+  private mostlyIce(x: number, y: number): boolean {
+    const b = this.battle;
+    let n = 0;
+    let ice = 0;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      if (!b.inMap(x + dx, y + dy)) continue;
+      const t = b.terrainAt(x + dx, y + dy);
+      if (t === 'chasm') continue;
+      n++;
+      if (t === 'ice' || t === 'snow') ice++;
+    }
+    return n > 0 && ice * 2 >= n;
   }
 
   private addView(u: Unit): UnitView {
