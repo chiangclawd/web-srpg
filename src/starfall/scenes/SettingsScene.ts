@@ -7,6 +7,7 @@ import { T, getLang, setLang } from '../i18n';
 import type { StrKey } from '../i18n';
 import { persist, save } from '../save';
 import { Button, KeyNav, Slider, drawPanel, showKeyHints } from '../view/ui';
+import { hintMode } from '../gamepad';
 import { cloudAvailable, cloudSignIn, cloudSignOut, cloudState, onCloud, prepareCloud, syncNow } from '../cloud/sync';
 
 export interface SettingsData {
@@ -204,8 +205,9 @@ export class SettingsScene extends Phaser.Scene {
       y += cloudH;
     }
     if (keys) {
-      box.add(addText(this, -W / 2 + 40, y, T('keysTitle'), { size: 16, raw: true, strokeW: 0, color: COL.cyan }));
-      box.add(addText(this, -W / 2 + 40, y + 26, T('keysHelp'), { size: 13, raw: true, strokeW: 0, color: COL.dim, bold: false, wrap: W - 80, lineSpacing: 6 }));
+      const pad = hintMode() === 'pad';
+      box.add(addText(this, -W / 2 + 40, y, T(pad ? 'padTitle' : 'keysTitle'), { size: 16, raw: true, strokeW: 0, color: COL.cyan }));
+      box.add(addText(this, -W / 2 + 40, y + 26, T(pad ? 'padHelp' : 'keysHelp'), { size: 13, raw: true, strokeW: 0, color: COL.dim, bold: false, wrap: W - 80, lineSpacing: 6 }));
     }
     box.add(new Button(this, 0, H / 2 - 44, 240, 52, T('close'), () => this.close(), { primary: true }));
     new KeyNav(this, { onBack: () => this.close(), first: () => first });

@@ -1,7 +1,8 @@
 // 介面元件：科幻風的面板、按鈕、滑桿（全部用向量畫，不需要圖檔），以及鍵盤的焦點移動
 import Phaser from 'phaser';
-import { COL, TEX, addText, fitText, isTouchDevice } from '../config';
+import { COL, TEX, addText, fitText } from '../config';
 import { sfx } from '../audio';
+import { hintLabel, hintMode } from '../gamepad';
 
 export interface PanelOpts {
   fill?: number;
@@ -91,8 +92,8 @@ function inside(o: { parentContainer: Phaser.GameObjects.Container | null }, c: 
  */
 export const keyUsed = new WeakSet<KeyboardEvent>();
 
-/** 按鍵提示（按鈕角落的小字）只在有實體鍵盤的裝置上顯示 */
-export const showKeyHints = (): boolean => !isTouchDevice();
+/** 按鍵提示（按鈕角落的小字）：有實體鍵盤的裝置顯示鍵盤的，用手把的時候顯示手把的，純觸控不顯示 */
+export const showKeyHints = (): boolean => hintMode() !== 'none';
 
 export interface KeyNavOpts {
   /** 只在這個容器裡移動（開著對話框時）；回傳 null 就是整個場景 */
@@ -273,7 +274,8 @@ export class Button extends Phaser.GameObjects.Container implements NavItem {
     fitText(this.label, w - (hasIcon ? h + 8 : 20) - (o.note ? 34 : 0));
     this.add(this.label);
     if (o.note) this.add(addText(scene, w / 2 - 10, 0, o.note, { size: 13, color: COL.dim, strokeW: 0, raw: true }).setOrigin(1, 0.5));
-    if (o.key && showKeyHints()) this.add(addText(scene, -w / 2 + 6, -h / 2 + 3, o.key, { size: 11, color: COL.dim, strokeW: 0, raw: true }));
+    const hint = o.key ? hintLabel(o.key) : null;
+    if (hint) this.add(addText(scene, -w / 2 + 6, -h / 2 + 3, hint, { size: 11, color: COL.dim, strokeW: 0, raw: true }));
     this.hit = scene.add.rectangle(0, 0, w, h, 0, 0).setInteractive({ useHandCursor: true });
     this.add(this.hit);
     let down = false;

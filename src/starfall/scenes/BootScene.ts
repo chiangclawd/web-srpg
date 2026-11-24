@@ -2,6 +2,7 @@
 import Phaser from 'phaser';
 import { COL, VIEW_H, addText, setupCamera, viewW } from '../config';
 import { T } from '../i18n';
+import { loadFonts } from '../fonts';
 import { PLAYER_SHEETS, loadSheets, makeAnims } from '../view/sheets';
 import { TILE_ATLAS, makeTextures } from '../view/textures';
 
@@ -13,7 +14,10 @@ export class BootScene extends Phaser.Scene {
   preload(): void {
     setupCamera(this);
     const w = viewW(this);
-    addText(this, w / 2, VIEW_H / 2 - 40, T('title'), { size: 44, strokeW: 0, color: COL.cyan }).setOrigin(0.5);
+    // 字型跟素材一起載；載入畫面的標題等字型好了才畫（先畫的話會是系統字型，等一下又跳成另一種）
+    void loadFonts().then(() => {
+      if (this.scene.isActive()) addText(this, w / 2, VIEW_H / 2 - 40, T('title'), { size: 44, strokeW: 0, color: COL.cyan }).setOrigin(0.5);
+    });
     const g = this.add.graphics();
     const bw = 360;
     this.load.on('progress', (k: number) => {
@@ -31,6 +35,7 @@ export class BootScene extends Phaser.Scene {
   create(): void {
     makeTextures(this);
     makeAnims(this);
-    this.scene.start('SfTitle');
+    // 字型好了才進標題：畫面上的字是畫在 canvas 上的，畫的當下沒有字型就會一直是系統字型
+    void loadFonts().then(() => this.scene.start('SfTitle'));
   }
 }

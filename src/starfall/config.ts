@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { getLang } from './i18n';
 import { save } from './save';
+import { GAME_FONT } from './fonts';
 
 /** 邏輯高度固定 720；寬度依裝置比例 1280~1560 */
 export const VIEW_H = 720;
@@ -54,7 +55,8 @@ export function setupCamera(scene: Phaser.Scene): Phaser.Cameras.Scene2D.Camera 
 }
 
 const CJK_FONTS = '"PingFang TC", "Microsoft JhengHei", "Noto Sans TC", "Heiti TC", "PingFang SC", "Microsoft YaHei", "Noto Sans SC"';
-export const FONT = `"Trebuchet MS", "Segoe UI", ${CJK_FONTS}, sans-serif`;
+/** 最前面是內嵌字型（fonts.ts）；後面的系統字型是字表以外的字、和字型還沒載好時用的 */
+export const FONT = `"${GAME_FONT}", "Trebuchet MS", "Segoe UI", ${CJK_FONTS}, sans-serif`;
 
 /** 手機字體放大：720 高的畫面在手機上縮到約一半，小字放大到實際至少約 12.5 CSS px（最多 1.5 倍） */
 const MIN_CSS_PX = 12.5;
@@ -97,6 +99,25 @@ export function uiZoom(): number {
   // 「文字大小」選大的時候，按鈕和面板整組跟著放大（裡面的字一起變大）；最多 1.5 倍，跟手機一樣
   return Phaser.Math.Clamp(Math.max(1, 0.84 / screenScale()) * textScale(), 1, 1.5);
 }
+
+/** 戰鬥介面（四個角的面板和按鈕）在標準版面下最多放大到這麼多；再大就蓋住太多地圖 */
+export const HUD_FULL_MAX = 1.4;
+
+/**
+ * 戰鬥介面的倍率。先照螢幕大小決定底數（手機 1.4、桌機 1），再乘上玩家選的文字大小。
+ * 超過標準版面放得下的 1.4 倍時（手機選了「大」或「特大」），換成精簡版面：
+ * 資訊卡變窄、不放立繪，按鈕變窄，整組才能放大到 1.85 倍而不蓋住戰場。
+ */
+export function hudZoom(): { z: number; compact: boolean } {
+  const base = Phaser.Math.Clamp(Math.max(1, 0.84 / screenScale()), 1, HUD_FULL_MAX);
+  const z = Math.min(base * textScale(), 1.85);
+  return { z, compact: z > HUD_FULL_MAX + 1e-6 };
+}
+
+/** 右邊那排行動按鈕的大小（標準 / 精簡版面） */
+export const hudButton = (compact: boolean): { w: number; h: number; gap: number } => (compact ? { w: 176, h: 46, gap: 6 } : { w: 208, h: 50, gap: 8 });
+/** 左下資訊卡的寬度 */
+export const hudCardW = (compact: boolean): number => (compact ? 304 : 400);
 
 export interface TextOpts {
   size?: number;

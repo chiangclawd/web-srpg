@@ -4,6 +4,7 @@ import { music, unlockAudio } from '../audio';
 import { L, T, getLang, setLang } from '../i18n';
 import { MISSIONS } from '../data/missions';
 import { suspendInfo } from '../suspend';
+import { activeSlot } from '../save';
 import { Button, KeyNav } from '../view/ui';
 import { cloudAvailable, cloudSignIn, cloudState, onCloud, prepareCloud } from '../cloud/sync';
 
@@ -64,21 +65,24 @@ export class TitleScene extends Phaser.Scene {
       },
       { primary: true, size: 24 },
     ).setScale(z);
-    // 下面一排兩顆半寬的：切換語言、設定
+    // 蓋在上面的畫面（設定、存檔）開著的時候，這裡不處理按鍵、也不自己重畫
+    const overlay = (): boolean => this.scene.isActive('SfSettings') || this.scene.isActive('SfSaves');
+    // 下面一排三顆：切換語言、存檔、設定
     new Button(
       this,
-      x + 62 * z,
+      x + 41 * z,
       by + 76 * z,
-      124,
+      82,
       48,
       T('language'),
       () => {
         setLang(getLang() === 'zh' ? 'en' : 'zh');
         this.scene.restart();
       },
-      { color: 0x8fb0c8, size: 17 },
+      { color: 0x8fb0c8, size: 15 },
     ).setScale(z);
-    new Button(this, x + 198 * z, by + 76 * z, 124, 48, T('settings'), () => this.scene.launch('SfSettings', { onClose: () => this.scene.restart() }), { color: 0x8fb0c8, size: 17 }).setScale(z);
+    new Button(this, x + 130 * z, by + 76 * z, 82, 48, T('saveSlot', activeSlot()), () => this.scene.launch('SfSaves', { onClose: () => this.scene.restart() }), { color: 0x8fb0c8, size: 15 }).setScale(z);
+    new Button(this, x + 219 * z, by + 76 * z, 82, 48, T('settings'), () => this.scene.launch('SfSettings', { onClose: () => this.scene.restart() }), { color: 0x8fb0c8, size: 15 }).setScale(z);
     // 右上角：帳號。還沒登入是一顆「用 Google 登入」，登入後顯示名字和同步狀態（點了開設定頁，那裡可以立即同步、登出）
     if (cloudAvailable()) {
       // 先把登入要用的程式載好，按下去才能馬上開 Google 的視窗
@@ -96,10 +100,10 @@ export class TitleScene extends Phaser.Scene {
         addText(this, w - 20, by0 + 34 * z, T(cs.signInFailed ? 'cloudPopup' : 'cloudHint'), { size: 13, strokeW: 3, color: cs.signInFailed ? COL.orange : '#c4d8e8', bold: false }).setOrigin(1, 0);
       }
       // 登入、同步的狀態變了：重畫（設定頁開著的時候由它自己重畫，關掉時這裡也會重畫）
-      const off = onCloud(() => this.scene.isActive() && !this.scene.isActive('SfSettings') && this.scene.restart());
+      const off = onCloud(() => this.scene.isActive() && !overlay() && this.scene.restart());
       this.events.once('shutdown', off);
     }
-    new KeyNav(this, { enabled: () => !this.scene.isActive('SfSettings'), first: () => resume ?? start });
+    new KeyNav(this, { enabled: () => !overlay(), first: () => resume ?? start });
     addText(this, w - 14, VIEW_H - 10, `v${__APP_VERSION__} · ${__GIT_SHA__}`, { size: 12, strokeW: 0, color: '#5a7088', bold: false }).setOrigin(1, 1);
   }
 }

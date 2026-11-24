@@ -9,9 +9,11 @@ import { BattleScene } from './scenes/BattleScene';
 import { HudScene } from './scenes/HudScene';
 import { DialogueScene } from './scenes/DialogueScene';
 import { SettingsScene } from './scenes/SettingsScene';
+import { SavesScene } from './scenes/SavesScene';
 import type { HudScene as Hud } from './scenes/HudScene';
 import type { DialogueScene as Dialogue } from './scenes/DialogueScene';
 import { initCloud, onCloudChanged } from './cloud/sync';
+import { initGamepad, onHintMode } from './gamepad';
 
 const rotate = document.querySelector<HTMLElement>('#rotate-prompt .title');
 if (rotate) rotate.textContent = T('rotate');
@@ -22,7 +24,7 @@ const game = new Phaser.Game({
   width: Math.round(computeViewW() * RS),
   height: Math.round(VIEW_H * RS),
   backgroundColor: '#070d18',
-  scene: [BootScene, TitleScene, MissionScene, HangarScene, BattleScene, HudScene, DialogueScene, SettingsScene],
+  scene: [BootScene, TitleScene, MissionScene, HangarScene, BattleScene, HudScene, DialogueScene, SettingsScene, SavesScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -52,11 +54,20 @@ window.addEventListener('resize', () => {
     for (const s of game.scene.getScenes(true)) {
       const key = s.scene.key;
       // 沒有進行中狀態的畫面直接重畫（沒給資料時 Phaser 沿用上次的，設定頁關掉之後要做的事也還在）
-      if (key === 'SfTitle' || key === 'SfMissions' || key === 'SfHangar' || key === 'SfSettings') s.scene.restart();
+      if (key === 'SfTitle' || key === 'SfMissions' || key === 'SfHangar' || key === 'SfSettings' || key === 'SfSaves') s.scene.restart();
       else if (key === 'SfHud') (s as Hud).relayout();
       else if (key === 'SfDialogue') (s as Dialogue).resized();
     }
   }, 200);
+});
+
+// 手把：按鈕翻成鍵盤事件。從鍵盤換成手把（或換回來）時，按鈕角落的提示字跟著換
+initGamepad(game);
+onHintMode(() => {
+  for (const s of game.scene.getScenes(true)) {
+    if (s.scene.key === 'SfHud') (s as Hud).relayout();
+    else if (s.scene.key === 'SfSettings') s.scene.restart();
+  }
 });
 
 // 雲端同步把別台裝置的進度帶進來了：標題、任務列表、機庫照新的進度重畫（戰鬥中不動，打完回任務列表就是新的）
@@ -64,7 +75,7 @@ initCloud();
 onCloudChanged(() => {
   for (const s of game.scene.getScenes(true)) {
     const key = s.scene.key;
-    if (key === 'SfTitle' || key === 'SfMissions' || key === 'SfHangar') s.scene.restart();
+    if (key === 'SfTitle' || key === 'SfMissions' || key === 'SfHangar' || key === 'SfSaves') s.scene.restart();
   }
 });
 

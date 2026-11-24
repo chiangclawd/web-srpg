@@ -20,7 +20,8 @@
     "td:optimize": "tsx scripts/td-optimize.ts",
     "test:td": "tsx --test tests/td/*.test.ts",
     "test:starfall": "tsx --test tests/starfall/*.test.ts",
-    "starfall:sim": "tsx scripts/starfall-sim.ts"
+    "starfall:sim": "tsx scripts/starfall-sim.ts",
+    "starfall:font-chars": "tsx scripts/art/fonts/chars.ts"
   },
   "dependencies": {
     "@capacitor/app": "8.1.2",
