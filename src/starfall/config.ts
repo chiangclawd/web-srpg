@@ -136,7 +136,7 @@ export interface TextOpts {
 }
 
 const CJK = /[　-鿿＀-￯]/;
-const NO_LINE_START = '。，、．！？：；」』）】》〉〕…～,.!?:;)';
+const NO_LINE_START = '。，、．！？：；」』）】》〉〕…～,.!?:;)%％';
 
 export function addText(scene: Phaser.Scene, x: number, y: number, s: string, o: TextOpts = {}): Phaser.GameObjects.Text {
   const size = o.raw ? (o.size ?? 20) : fontPx(o.size ?? 20);

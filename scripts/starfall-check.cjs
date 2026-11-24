@@ -3,9 +3,10 @@
 //   2. 機庫：用零件買強化和專屬改造，確認存檔、餘額和開戰時的數值
 //   3. 大地圖（後日談）：小地圖點了鏡頭會移過去，「下一台」會輪流選還沒行動的機體
 //   4. 被機體擋住的落點和敵人：穿過前面那台點得到，連點兩下算前面那台
-//   5. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
+//   5. 圖鑑・成就：標題進得去、方塊和分頁點得到；戰鬥裡遇到的機體會記下來，成就會跳提示、結算畫面會列出來
+//   6. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
 // 用法：先 npx vite build && npx vite preview --port 4173，再 node scripts/starfall-check.cjs [截圖資料夾]
-// （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址；ONLY=click,hangar,big,pick,m10 只跑其中幾段）
+// （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址；ONLY=click,hangar,big,pick,codex,m10 只跑其中幾段）
 const path = require('node:path');
 const fs = require('node:fs');
 const { chromium } = require(process.env.PLAYWRIGHT ?? 'playwright');
@@ -473,6 +474,170 @@ async function pickCheck(browser) {
   ok(s.foes < full, '再點一次：開火', s);
   await ctx.close();
 }
+
+/**
+ * 圖鑑・成就：手機尺寸實際點。前半是畫面本身（標題進得去、方塊和分頁點得到、沒遇過的不露內容），
+ * 後半是戰鬥：遇到的機體記進存檔、把敵人轟進裂谷當下就算成就並跳提示、過關後結算畫面列出這一場達成的。
+ */
+async function codexCheck(browser) {
+  const view = { w: 844, h: 390, dpr: 2, touch: true };
+  const { ctx, page } = await open(browser, view, { stars: { m1: 1, m2: 1 }, tips: ALL_TIPS });
+  const { tap, press } = ui(page);
+  const saved = () => page.evaluate(() => JSON.parse(localStorage.getItem('starfall_save_v1')));
+  // 畫面上的字（不換行空白換回一般空白）；at = 某一行字的中心在網頁上的位置
+  const texts = (scene) =>
+    page.evaluate((scene) => {
+      const out = [];
+      const walk = (l) => {
+        for (const o of l) {
+          if (o.type === 'Text' && o.visible && o.alpha > 0.2) out.push(o.text.replace(/\u00a0/g, ' '));
+          if (o.list) walk(o.list);
+        }
+      };
+      walk(window.__sf.scene.getScene(scene).children.list);
+      return out;
+    }, scene);
+  const at = (scene, label) =>
+    page.evaluate(
+      ([scene, label]) => {
+        const g = window.__sf;
+        let t = null;
+        const walk = (l) => {
+          for (const o of l) {
+            if (!t && o.type === 'Text' && o.text === label) t = o;
+            if (o.list) walk(o.list);
+          }
+        };
+        walk(g.scene.getScene(scene).children.list);
+        if (!t) return null;
+        const m = t.getWorldTransformMatrix();
+        const c = g.canvas.getBoundingClientRect();
+        const k = c.height / 720;
+        return [c.left + (m.tx + (0.5 - t.originX) * t.width * m.scaleX) * k, c.top + (m.ty + (0.5 - t.originY) * t.height * m.scaleY) * k];
+      },
+      [scene, label],
+    );
+  const codex = () =>
+    page.evaluate(() => {
+      const s = window.__sf.scene.getScene('SfCodex');
+      return { tab: s.tab, unit: s.unit, feat: s.feat };
+    });
+
+  await press('SfTitle', '圖鑑・成就');
+  await page.waitForFunction(() => window.__sf.scene.isActive('SfCodex'), null, { timeout: 30000 }).catch(() => undefined);
+  await page.waitForTimeout(600);
+  let t = await texts('SfCodex');
+  // 前兩關過了：凱、布魯諾、艾可、薇、發電機、工蜂、哨兵、織網者 = 8 種
+  ok(t.includes('機體圖鑑 8/27') && t.includes('成就 0/20'), '圖鑑：打完前兩關是 8/27、0/20', t.filter((x) => /\d\/\d/.test(x)));
+  ok(t.filter((x) => x === '？？？').length === 19, '沒遇過的 19 格是問號', t.filter((x) => x === '？？？').length);
+  let p = await at('SfCodex', '織網者');
+  if (p) await tap(p);
+  t = await texts('SfCodex');
+  ok((await codex()).unit === 'weaver' && t.some((x) => x.startsWith('曲射：')) && t.some((x) => x.startsWith('首次出現：任務 2')), '點「織網者」：右邊是它的被動和第一次出現的任務', t.slice(-4));
+  await page.screenshot({ path: path.join(OUT, 'codex-01-unit.png') });
+  await press('SfCodex', '成就 0/20');
+  t = await texts('SfCodex');
+  ok((await codex()).tab === 'feats' && t.includes('尚未達成') && t.includes('完成第一章') && t.includes('2 / 3'), '成就分頁：沒達成的看得到條件和進度（第一章 2 / 3）', t.slice(-5));
+  await page.screenshot({ path: path.join(OUT, 'codex-02-feats.png') });
+  const before = JSON.stringify(await saved());
+  await press('SfCodex', '返回');
+  await page.waitForFunction(() => window.__sf.scene.isActive('SfTitle'), null, { timeout: 10000 }).catch(() => undefined);
+  ok(JSON.stringify(await saved()) === before, '只是看圖鑑不會改動存檔');
+
+  // 第三關：牧者第一次出現；把哨兵擺在裂谷邊，鐵砧用震盪砲轟下去
+  await page.evaluate(() => {
+    const g = window.__sf;
+    g.scene.stop('SfTitle');
+    g.scene.start('SfBattle', { missionId: 'm3' });
+  });
+  const skip = async (until) => {
+    for (let i = 0; i < 120; i++) {
+      const done = await page.evaluate((until) => {
+        const g = window.__sf;
+        if (g.scene.isActive('SfDialogue')) g.scene.getScene('SfDialogue').skip();
+        const b = g.scene.getScene('SfBattle');
+        return until === 'result' ? !!b.hud && b.hud.modalOpen : g.scene.isActive('SfBattle') && !!b.hud && b.mode === 'idle' && !g.scene.isActive('SfDialogue');
+      }, until);
+      if (done) return true;
+      await page.waitForTimeout(250);
+    }
+    return false;
+  };
+  ok(await skip('idle'), '第三關開場');
+  await page.waitForTimeout(400);
+  let sv = await saved();
+  ok(sv.tips.includes('seen_shepherd') && !sv.tips.includes('seen_kai'), '進第三關：牧者記進圖鑑；過關的任務裡就有的不重複記', sv.tips.filter((x) => x.startsWith('seen_')));
+  const spot = await page.evaluate(() => {
+    const s = window.__sf.scene.getScene('SfBattle');
+    const b = s.battle;
+    const bruno = b.units.find((u) => u.def.id === 'bruno');
+    const foe = b.units.find((u) => u.side === 'enemy' && u.def.id === 'sentry');
+    const free = (x, y) => b.inMap(x, y) && b.terrainAt(x, y) !== 'chasm' && b.terrainAt(x, y) !== 'wall' && !b.unitAt(x, y);
+    for (let y = 0; y < b.h; y++) {
+      for (let x = 0; x < b.w; x++) {
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          if (!free(x, y) || !free(x - dx, y - dy) || !b.inMap(x + dx, y + dy) || b.terrainAt(x + dx, y + dy) !== 'chasm') continue;
+          if (b.heightAt(x, y) !== b.heightAt(x - dx, y - dy)) continue;
+          bruno.x = x - dx;
+          bruno.y = y - dy;
+          foe.x = x;
+          foe.y = y;
+          s.view(bruno.uid).place(bruno.x, bruno.y);
+          s.view(foe.uid).place(foe.x, foe.y);
+          return { x, y };
+        }
+      }
+    }
+    return null;
+  });
+  ok(!!spot, '第三關：裂谷邊找得到位置擺哨兵和鐵砧', spot);
+  if (spot) {
+    await page.evaluate((spot) => {
+      const s = window.__sf.scene.getScene('SfBattle');
+      const b = s.battle;
+      void s.play(b.useSkill(b.units.find((u) => u.def.id === 'bruno'), 'shock', spot));
+    }, spot);
+    await page.waitForTimeout(200);
+    sv = await saved();
+    ok(sv.tips.includes('ach_fall'), '震盪砲把哨兵轟進裂谷：當下就記進存檔', sv.tips.filter((x) => x.startsWith('ach_')));
+    await idle(page);
+    await page.waitForTimeout(900);
+    t = await texts('SfHud');
+    ok(t.includes('成就達成') && t.includes('下去吧'), '演出播完，畫面上方跳出「成就達成　下去吧」', t.slice(-5));
+    await page.screenshot({ path: path.join(OUT, 'codex-03-award.png') });
+  }
+  // 牧者剩 1 點耐久，凱補一槍：過關，第一章完成
+  const shot = await page.evaluate(() => {
+    const s = window.__sf.scene.getScene('SfBattle');
+    const b = s.battle;
+    const boss = b.byTag('boss');
+    const kai = b.units.find((u) => u.def.id === 'kai');
+    boss.hp = 1;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [0, 2], [0, -2]]) {
+      const x = boss.x + dx;
+      const y = boss.y + dy;
+      if (!b.inMap(x, y) || !b.canStop(kai, x, y) || !b.canHit(kai, { x, y }, boss.x, boss.y)) continue;
+      kai.x = x;
+      kai.y = y;
+      s.view(kai.uid).place(x, y);
+      s.mode = 'idle';
+      void s.play(b.attack(kai, boss));
+      return b.result;
+    }
+    return null;
+  });
+  ok(shot === 'win', '第三關：擊破牧者', shot);
+  ok(await skip('result'), '結算畫面出來了');
+  await page.waitForTimeout(1200);
+  t = await texts('SfHud');
+  const line = t.find((x) => x.startsWith('成就達成') && x.length > 5) ?? '';
+  ok(line.includes('冰原上的訊號') && line.includes('下去吧'), '結算畫面列出這一場達成的成就（第一章完成、下去吧）', line);
+  sv = await saved();
+  ok(sv.stars.m3 > 0 && !sv.tips.includes('ach_ch1'), '章節的成就從星數算，不另外寫進存檔', sv.tips.filter((x) => x.startsWith('ach_')));
+  await page.screenshot({ path: path.join(OUT, 'codex-04-result.png') });
+  await ctx.close();
+}
+
 async function autoPlay(browser, mission) {
   const epilogue = ['m10', 'm11', 'm12'].includes(mission);
   const { ctx, page } = await open(browser, { w: 1280, h: 720, dpr: 1 }, epilogue ? { stars: ALL_STARS, tips: ALL_TIPS, upgrades: MAXED } : { stars: { m1: 1, m2: 1 }, tips: TIPS });
@@ -511,6 +676,7 @@ async function autoPlay(browser, mission) {
   if (want('hangar')) await hangarCheck(browser);
   if (want('big')) await bigMapCheck(browser);
   if (want('pick')) await pickCheck(browser);
+  if (want('codex')) await codexCheck(browser);
   for (const m of ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12']) if (want(m)) await autoPlay(browser, m);
   await browser.close();
   console.log(failed ? `${failed} 個問題（截圖在 ${OUT}）` : `全部通過（截圖在 ${OUT}）`);

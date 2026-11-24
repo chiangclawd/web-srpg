@@ -17,6 +17,7 @@ import { UNITS } from '../data/units';
 import { loadoutDefs, missionParts } from '../data/upgrades';
 import type { Loadout } from '../data/upgrades';
 import { clearSuspend, loadSuspend, saveSuspend } from '../suspend';
+import { earnedFeats, featsIn, grantFeats, markSeen, winFeats } from '../records';
 import { EH, TH, TOP_PAD, TW, isoX, isoY, tileDepth } from '../view/iso';
 import { TILE_ATLAS, TILE_TEX_H, loadThemeTiles, themeAtlas, tileKey, tileVariant } from '../view/textures';
 import { SHEETS, SHEET_FOOT, frameName, loadSheets, makeAnims } from '../view/sheets';
@@ -105,6 +106,10 @@ export class BattleScene extends Phaser.Scene {
   private quickUndo: (() => void) | null = null;
   /** 目前哪些格子要讓玩家看得到（算過一次就記著，狀態沒變不重算） */
   private revealKey = '';
+  /** 進這場戰鬥之前就有的成就：之後多出來的才是這一場達成的 */
+  private known = new Set<string>();
+  /** 這一場達成的成就（結算畫面會列出來） */
+  private feats: string[] = [];
 
   constructor() {
     super('SfBattle');
@@ -141,6 +146,8 @@ export class BattleScene extends Phaser.Scene {
     this.lastTap = -1e9;
     this.quickUndo = null;
     this.revealKey = '';
+    this.known = earnedFeats(save());
+    this.feats = [];
   }
 
   // ───────── 建立 ─────────
@@ -268,15 +275,19 @@ export class BattleScene extends Phaser.Scene {
   /** HudScene 建好之後呼叫：開場對話 → 第一回合 */
   async hudReady(hud: HudScene): Promise<void> {
     this.hud = hud;
+    // 場上的機體記進圖鑑。最後一種也遇到了的話圖鑑的成就在這裡達成：先存起來，等開場對話和回合提示播完再跳提示
+    const met = this.collect();
     if (this.resumed) {
       this.refreshViews();
       this.toIdle();
       this.hud.toast(T('resumed', this.battle.turn));
+      for (const id of met) this.hud.award(id);
       return;
     }
     if (this.mission.intro) await this.say(this.mission.intro);
     await this.play(this.battle.start());
     this.toIdle();
+    for (const id of met) this.hud.award(id);
   }
 
   /** 這一格四周（上下左右）是不是大多是冰或雪 */
@@ -1048,6 +1059,24 @@ export class BattleScene extends Phaser.Scene {
     saveSuspend(this.battle, this.upgrades);
   }
 
+  /**
+   * 圖鑑和成就：把場上出現的機體記成遇過（增援也算），把 grant 這幾個戰術成就記進存檔。
+   * 回傳這次新達成的成就 —— 包含從進度算出來的（過關拿到星之後的章節、星數成就）。
+   */
+  private collect(grant: string[] = []): string[] {
+    const sv = save();
+    const seen = markSeen(
+      sv,
+      this.battle.units.map((u) => u.def.id),
+    );
+    const got = grantFeats(sv, grant);
+    if (seen || got) persist();
+    const fresh = [...earnedFeats(sv)].filter((id) => !this.known.has(id));
+    for (const id of fresh) this.known.add(id);
+    this.feats.push(...fresh);
+    return fresh;
+  }
+
   /** 設定頁改了配色之後，把場上的單位（耐久條、腳下的陣營色）和範圍標示照新的顏色重畫 */
   restyle(): void {
     this.refreshViews();
@@ -1091,7 +1120,10 @@ export class BattleScene extends Phaser.Scene {
   async play(events: BattleEvent[]): Promise<void> {
     const prev = this.mode;
     this.mode = 'busy';
+    // 這個動作做到的成就先存起來（演到一半關掉也不會漏），演完再跳提示；這一串剛好打完的話改在結算畫面列出來
+    const fresh = this.collect(featsIn(events, this.battle));
     for (const e of events) await this.playOne(e);
+    if (!this.battle.result) for (const id of fresh) this.hud?.award(id);
     if (this.zoomBack !== null) {
       const z = this.zoomBack;
       this.zoomBack = null;
@@ -1514,7 +1546,9 @@ export class BattleScene extends Phaser.Scene {
     } else {
       sfx('lose');
     }
-    this.hud.showResult(result, reason, parts);
+    // 過關那一刻才算的成就，和拿到星之後才成立的（章節、星數）
+    this.collect(winFeats(this.battle));
+    this.hud.showResult(result, reason, parts, this.feats);
   }
 
   /**

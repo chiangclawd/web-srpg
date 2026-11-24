@@ -721,6 +721,30 @@ const ICONS: Record<string, IconFn> = {
       line(g, [47, k], [58, k], '#fff', 4);
     }
   },
+  // 獎章（成就）：兩條緞帶、圓牌、中間一顆星
+  ic_medal: (g) => {
+    stroke(g, 4);
+    for (const s of [-1, 1]) {
+      g.beginPath();
+      g.moveTo(32 + s * 18, 3);
+      g.lineTo(32 + s * 7, 3);
+      g.lineTo(32 + s * 1, 22);
+      g.lineTo(32 + s * 11, 26);
+      g.closePath();
+      g.fill();
+    }
+    g.beginPath();
+    g.arc(32, 41, 18, 0, Math.PI * 2);
+    g.stroke();
+    g.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const r = i % 2 ? 4.6 : 11;
+      const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+      g.lineTo(32 + Math.cos(a) * r, 41.5 + Math.sin(a) * r);
+    }
+    g.closePath();
+    g.fill();
+  },
   ic_lock: (g) => {
     stroke(g, 5);
     g.fillRect(14, 28, 36, 28);
