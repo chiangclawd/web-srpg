@@ -129,7 +129,7 @@ node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍�
 3. **渲染成圖表**：`node scripts/art/m3d/render.mjs scripts/art/m3d/starfall/<單位>.json <模型資料夾> public/assets/starfall/units/<單位>.webp`
    （等角視角：俯角 30°，四個方向 yaw 45 / 135 / 315 / 225）。印出來的 `unitPx` 填進 `src/starfall/view/sheets.ts`。
    預設用軟體渲染；有顯示卡的電腦可以在 `render.mjs` 後面加 `--gpu`（Windows 也能跑，需要的套件和環境變數寫在 `render.mjs` 開頭）。
-   現有的圖表都是用  渲染的，兩種的像素不完全相同，要換就整批重渲染。
+   現有的圖表都是用 `--gpu` 渲染的，兩種的像素不完全相同，要換就整批重渲染。
    渲染設定裡的 `proc: "hit" / "down"` 是受擊和擊破前癱倒的程序動作（`render.html` 的 `PROC`：以待機的第一格為底，在世界座標軸上擺骨頭），
    `sway` 是沒有骨架的無人機待機時的搖晃。四個方向（yaw 45 / 135 / 315 / 225）都實際渲染，遊戲裡不再水平翻轉。
    遊戲開機只載入我方六台的圖表，其餘進戰場時才載入那一關會出現的（`BattleScene.preload`）。
