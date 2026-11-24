@@ -71,7 +71,7 @@
 
 ## 雲端同步（Google 登入）
 
-「設定 → 雲端同步」用 Google 帳號登入之後，星數、教學提示、機庫的改造和打到一半的戰鬥會在同一個人的各台裝置之間同步；
+標題畫面右上角用 Google 帳號登入之後，星數、教學提示、機庫的改造和打到一半的戰鬥會在同一個人的各台裝置之間同步；
 音量、語言、文字大小這些設定留在各台裝置。後端是 Firebase（Google 登入 + Firestore），要先在 `src/starfall/cloud/firebase-config.ts` 填上專案設定才會出現這個選項。
 合併規則、開通步驟和已知的限制寫在 [STARFALL_CLOUD.md](STARFALL_CLOUD.md)。
 
