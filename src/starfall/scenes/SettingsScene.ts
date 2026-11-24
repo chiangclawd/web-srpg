@@ -7,6 +7,7 @@ import { T, getLang, setLang } from '../i18n';
 import type { StrKey } from '../i18n';
 import { persist, save } from '../save';
 import { Button, KeyNav, Slider, drawPanel, showKeyHints } from '../view/ui';
+import { cloudAvailable, cloudSignIn, cloudSignOut, cloudState, onCloud, prepareCloud, syncNow } from '../cloud/sync';
 
 export interface SettingsData {
   onClose?: () => void;
@@ -37,7 +38,9 @@ export class SettingsScene extends Phaser.Scene {
     const keys = showKeyHints();
     const full = this.scale.fullscreen.available;
     const keysH = keys ? 104 : 0;
-    const H = 84 + 5 * ROW + 74 + keysH + 78;
+    const cloud = cloudAvailable();
+    const cloudH = cloud ? 62 : 0;
+    const H = 84 + 5 * ROW + 74 + cloudH + keysH + 78;
     // 放大到文字大小設定的倍率，但整塊面板要留在畫面裡
     const z = Math.min(uiZoom(), (VIEW_H - 16) / H, (w - 16) / W);
     // 擋住底下的畫面
@@ -176,6 +179,30 @@ export class SettingsScene extends Phaser.Scene {
     let y = top + 5 * ROW - ROW / 2 + 10;
     box.add(addText(this, 0, y, `${T('diffNote')}\n${T('colorBlindNote')}`, { size: 13, raw: true, strokeW: 0, color: COL.dim, bold: false, wrap: W - 80, align: 'center', lineSpacing: 5 }).setOrigin(0.5, 0));
     y += 64;
+    // 雲端同步：左邊是狀態，右邊是登入（或立即同步、登出）
+    if (cloud) {
+      // 先把登入要用的程式載好，按下去才能馬上開 Google 的視窗
+      void prepareCloud();
+      const cs = cloudState();
+      const line = this.add.graphics();
+      line.lineStyle(1, COL.lineDim, 0.6).lineBetween(-W / 2 + 40, y - 6, W / 2 - 40, y - 6);
+      box.add(line);
+      const cy = y + 24;
+      box.add(addText(this, -W / 2 + 40, cy, T('cloudSync'), { size: 19, raw: true, strokeW: 0 }).setOrigin(0, 0.5));
+      const status = cs.user ? `${cs.user.name}　${T(cs.status === 'synced' ? 'cloudSynced' : cs.status === 'error' ? 'cloudError' : 'cloudSyncing')}` : T(cs.signInFailed ? 'cloudPopup' : 'cloudOff');
+      const st = addText(this, -W / 2 + 190, cy, status, { size: 14, raw: true, strokeW: 0, color: cs.status === 'error' || (!cs.user && cs.signInFailed) ? COL.orange : COL.dim, bold: false, wrap: cs.user ? 430 : 560, lineSpacing: 3 }).setOrigin(0, 0.5);
+      box.add(st);
+      if (cs.user) {
+        box.add(new Button(this, W / 2 - 40 - 110 - 150, cy, 150, 44, T('cloudSyncNow'), () => void syncNow(), { size: 16 }));
+        box.add(new Button(this, W / 2 - 40 - 50, cy, 100, 44, T('cloudSignOut'), () => cloudSignOut(), { size: 16, color: 0x8fb0c8 }));
+      } else {
+        box.add(new Button(this, W / 2 - 40 - CTL_W / 2, cy, CTL_W, 44, T('cloudSignIn'), () => cloudSignIn(), { size: 17 }));
+      }
+      // 登入、同步的狀態變了：整頁重畫
+      const off = onCloud(() => this.scene.isActive() && redraw());
+      this.events.once('shutdown', off);
+      y += cloudH;
+    }
     if (keys) {
       box.add(addText(this, -W / 2 + 40, y, T('keysTitle'), { size: 16, raw: true, strokeW: 0, color: COL.cyan }));
       box.add(addText(this, -W / 2 + 40, y + 26, T('keysHelp'), { size: 13, raw: true, strokeW: 0, color: COL.dim, bold: false, wrap: W - 80, lineSpacing: 6 }));

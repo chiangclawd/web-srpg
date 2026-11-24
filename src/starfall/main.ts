@@ -9,6 +9,7 @@ import { BattleScene } from './scenes/BattleScene';
 import { HudScene } from './scenes/HudScene';
 import { DialogueScene } from './scenes/DialogueScene';
 import { SettingsScene } from './scenes/SettingsScene';
+import { initCloud, onCloudChanged } from './cloud/sync';
 
 const rotate = document.querySelector<HTMLElement>('#rotate-prompt .title');
 if (rotate) rotate.textContent = T('rotate');
@@ -50,6 +51,15 @@ window.addEventListener('resize', () => {
       if (key === 'SfTitle' || key === 'SfMissions' || key === 'SfHangar') s.scene.restart();
     }
   }, 200);
+});
+
+// 雲端同步把別台裝置的進度帶進來了：標題、任務列表、機庫照新的進度重畫（戰鬥中不動，打完回任務列表就是新的）
+initCloud();
+onCloudChanged(() => {
+  for (const s of game.scene.getScenes(true)) {
+    const key = s.scene.key;
+    if (key === 'SfTitle' || key === 'SfMissions' || key === 'SfHangar') s.scene.restart();
+  }
 });
 
 // 自動化測試（scripts/starfall-check.cjs）用
