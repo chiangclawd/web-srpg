@@ -9,6 +9,8 @@ import { BattleScene } from './scenes/BattleScene';
 import { HudScene } from './scenes/HudScene';
 import { DialogueScene } from './scenes/DialogueScene';
 import { SettingsScene } from './scenes/SettingsScene';
+import type { HudScene as Hud } from './scenes/HudScene';
+import type { DialogueScene as Dialogue } from './scenes/DialogueScene';
 import { initCloud, onCloudChanged } from './cloud/sync';
 
 const rotate = document.querySelector<HTMLElement>('#rotate-prompt .title');
@@ -36,7 +38,7 @@ const game = new Phaser.Game({
   disableContextMenu: true,
 });
 
-// 視窗比例改變（旋轉、縮放）→ 重新計算邏輯寬度；戰鬥中不重開場景，只調整畫布
+// 視窗比例改變（旋轉、縮放、進出全螢幕）→ 重新計算邏輯寬度，每個畫面照新的寬度重排；戰鬥不重開，只重排介面
 let resizeTimer: ReturnType<typeof setTimeout> | null = null;
 window.addEventListener('resize', () => {
   if (resizeTimer) clearTimeout(resizeTimer);
@@ -45,10 +47,14 @@ window.addEventListener('resize', () => {
     const w = Math.round(computeViewW() * RS);
     if (w === game.scale.width) return;
     refreshTextScale();
-    game.scale.resize(w, Math.round(VIEW_H * RS));
+    // 要用 setGameSize：resize() 是給不縮放的模式用的，它不會更新畫布的長寬比，換了比例之後整個畫面會被拉寬
+    game.scale.setGameSize(w, Math.round(VIEW_H * RS));
     for (const s of game.scene.getScenes(true)) {
       const key = s.scene.key;
-      if (key === 'SfTitle' || key === 'SfMissions' || key === 'SfHangar') s.scene.restart();
+      // 沒有進行中狀態的畫面直接重畫（沒給資料時 Phaser 沿用上次的，設定頁關掉之後要做的事也還在）
+      if (key === 'SfTitle' || key === 'SfMissions' || key === 'SfHangar' || key === 'SfSettings') s.scene.restart();
+      else if (key === 'SfHud') (s as Hud).relayout();
+      else if (key === 'SfDialogue') (s as Dialogue).resized();
     }
   }, 200);
 });

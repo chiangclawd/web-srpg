@@ -28,10 +28,10 @@ export class DialogueScene extends Phaser.Scene {
     super('SfDialogue');
   }
 
-  init(data: { lines: Line[]; onDone: () => void }): void {
+  init(data: { lines: Line[]; onDone: () => void; at?: number }): void {
     this.lines = data.lines;
     this.onDone = data.onDone;
-    this.i = 0;
+    this.i = Phaser.Math.Clamp(data.at ?? 0, 0, Math.max(0, data.lines.length - 1));
     this.portrait = null;
     this.cg = null;
     this.cgKey = '';
@@ -60,7 +60,23 @@ export class DialogueScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-SPACE', () => this.advance());
     this.input.keyboard?.on('keydown-ENTER', () => this.advance());
     this.input.keyboard?.on('keydown-ESC', () => this.skip());
+    // 從中間接著播（視窗比例變了重排）：前面句子換上的全螢幕插圖要先鋪回去，不用淡入
+    const cg = this.lines
+      .slice(0, this.i)
+      .map((l) => l.cg)
+      .filter((k) => !!k)
+      .pop();
+    if (cg && !this.lines[this.i].cg) {
+      this.cgKey = cg;
+      this.cg = this.add.image(this.w / 2, VIEW_H / 2, cg).setDepth(0.5);
+      this.cg.setScale(Math.max(this.w / this.cg.width, VIEW_H / this.cg.height));
+    }
     this.show();
+  }
+
+  /** 視窗比例變了：照新的寬度重排，停在同一句 */
+  resized(): void {
+    this.scene.restart({ lines: this.lines, onDone: this.onDone, at: this.i });
   }
 
   private show(): void {

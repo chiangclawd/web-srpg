@@ -93,10 +93,16 @@ export class HudScene extends Phaser.Scene {
     void this.battle.hudReady(this);
   }
 
-  /** 設定頁關掉之後：照新的文字大小重設四個角的縮放，照新的語言和配色重畫，場上的單位也重畫 */
+  /** 設定頁關掉、或視窗比例變了之後：照新的寬度和文字大小重排四個角，照新的語言和配色重畫，場上的單位也重畫 */
   relayout(): void {
+    this.w = viewW(this);
     this.z = Math.min(uiZoom(), 1.4);
     const z = this.z;
+    this.tr.setX(this.w - 12);
+    this.br.setX(this.w - 12);
+    this.tc.setX(this.w / 2);
+    this.tipBox.setX(this.w / 2);
+    this.modal?.setX(this.w / 2);
     for (const c of [this.tl, this.tr, this.bl, this.br, this.tipBox]) c.setScale(z);
     this.tc.setScale(Math.min(z, 1.25));
     this.ml.setPosition(12, 10 + 118 * z).setScale(Math.min(z, 1.15));
