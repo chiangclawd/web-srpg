@@ -1,0 +1,62 @@
+# 《星墜殘響》雲端同步（Google 登入）
+
+玩家在「設定 → 雲端同步」用 Google 帳號登入之後，通關進度會在同一個人的各台裝置之間同步。
+沒登入也能玩，進度照舊存在那台裝置的瀏覽器裡。
+
+## 同步什麼
+
+| 會同步 | 不會同步（每台裝置各自的設定） |
+| --- | --- |
+| 每關拿到的星數 | 音效、音樂音量 |
+| 看過的教學提示 | 語言、文字大小、色盲配色 |
+| 機庫的改造 | 演出速度、技能特寫、難度 |
+| 打到一半的那場戰鬥 | |
+
+兩台裝置的進度不一樣時怎麼合（`src/starfall/cloud/merge.ts`，測試在 `tests/starfall/cloud.test.ts`）：
+
+- **星數**：每關取比較多的，拿過的星不會不見。
+- **教學提示**：兩邊看過的都算看過。
+- **機庫的改造**：整套用比較晚改動的那台裝置的（改造可以退還重配，逐項合併會把退掉的又加回來）。
+- **打到一半的戰鬥**：比較晚存的算數；在任何一台打完或重新出擊，其他裝置上那場也會消失。
+- 同一台裝置換另一個 Google 帳號登入：改用那個帳號雲端上的進度，不會把上一個人的進度併進去。
+  （新帳號雲端上還沒有資料的話，這台裝置現有的進度會成為它的起點。）
+
+什麼時候同步：登入時、開啟遊戲時、切回分頁時，以及進度有變動的幾秒後。連不上不影響遊玩，之後有機會再補。
+「比較晚」是用各台裝置自己的時鐘判斷的，時鐘差很多的裝置可能判斷錯（只影響改造和打到一半的戰鬥，星數不受影響）。
+
+## 開通步驟（只要做一次，約 10 分鐘，免費方案就夠）
+
+1. 到 <https://console.firebase.google.com> 用你的 Google 帳號建立一個專案（Google Analytics 可以不開）。
+2. **Authentication** → 開始使用 → 登入方式 → 啟用 **Google**，填上專案的支援電子郵件，儲存。
+3. **Authentication** → 設定 → **已授權網域** → 新增 `chiangclawd.github.io`（`localhost` 預設就有，本機測試用）。
+4. **Firestore Database** → 建立資料庫 → 選一個地區（例如 `asia-east1` 台灣）→ 以**正式版模式**啟動。
+5. Firestore 的 **規則** 分頁：把本專案 [`firestore.rules`](firestore.rules) 的內容整個貼上去，按發布。
+   （規則的意思：每個帳號只能讀寫自己的那一份存檔，其他一律拒絕。）
+6. 專案設定（左上角齒輪）→ 一般 → 你的應用程式 → 新增**網頁應用程式**（`</>`），不用勾 Hosting。
+   畫面上會出現一段 `firebaseConfig`，把其中的 `apiKey`、`authDomain`、`projectId`、`appId`
+   填進 [`src/starfall/cloud/firebase-config.ts`](src/starfall/cloud/firebase-config.ts)。
+   這組值本來就會出現在玩家下載的網頁裡，不是密鑰，可以提交進版本庫。
+
+`apiKey` 留空的版本不會出現「雲端同步」那一列，其餘完全不受影響。
+
+## 已知的限制
+
+- **App 內建的瀏覽器登不進去**：LINE、Facebook、Instagram 裡點開的網頁，Google 不允許在裡面登入。請玩家改用 Safari / Chrome 開。
+- **彈出視窗被擋**：登入是開一個 Google 的小視窗。被瀏覽器擋掉時設定頁會提示再按一次。
+- **iOS / Android 的 App 版**（Capacitor）還沒有接：App 裡不會出現登入的選項。之後上架時要改用原生的 Google 登入。
+- 一個帳號只有一份存檔，沒有多個存檔欄位，也沒有「從雲端還原舊版本」。
+- 玩家要刪除自己的雲端資料，目前只能由專案擁有者在 Firebase 主控台刪（Firestore 的 `starfall/<uid>` 和 Authentication 的使用者）。
+  正式上架前要補上遊戲內的「刪除雲端資料」和隱私權說明。
+
+## 程式在哪
+
+| 檔案 | 做什麼 |
+| --- | --- |
+| `src/starfall/cloud/merge.ts` | 合併規則和資料清理（純函式） |
+| `src/starfall/cloud/sync.ts` | 什麼時候同步、狀態、登入登出 |
+| `src/starfall/cloud/firebase.ts` | Firebase 的介接。動態載入：沒登入過的玩家不會下載 Firebase |
+| `src/starfall/cloud/firebase-config.ts` | 專案設定（要你填） |
+| `firestore.rules` | 資料庫的安全規則（要你貼到主控台） |
+| `src/starfall/scenes/SettingsScene.ts` | 設定頁的「雲端同步」那一列 |
+
+自動化測試用假的後端（`window.__sfCloudBackend`）代替 Firebase，所以真正的 Google 登入視窗和 Firestore 規則要在填好設定之後實際登入一次確認。
