@@ -7,9 +7,12 @@
 //   6. 挑戰模式：主線打完才有入口；從挑戰的列表出擊敵人比較強，過關拿到徽章，回到的還是挑戰的列表
 //   7. 離線遊玩：第一次開把整個遊戲存進裝置；把伺服器關掉之後重新開得起來、四套地形主題的關卡和圖鑑都載得到、音樂放得出來；
 //      同一個網站上的塔防不受影響；瀏覽器說可以安裝時標題畫面多一顆「安裝」（這一段自己把 dist 端出來，不用 GAME_URL）
-//   8. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
+//   8. 回報問題：設定頁左下角進得去，列得出版本和裝置的資訊、複製得了；程式出的錯會記下來，重新整理之後還在；
+//      表單設定好的時候，按鈕會帶著這些資訊開表單
+//   9. 表情差分：對話照劇本標的表情換立繪，用到才載入；同一個人接著說話時原地換臉
+//  10. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
 // 用法：先 npx vite build && npx vite preview --port 4173，再 node scripts/starfall-check.cjs [截圖資料夾]
-// （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址；ONLY=click,hangar,big,pick,codex,challenge,offline,m10 只跑其中幾段；
+// （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址；ONLY=click,hangar,big,pick,codex,challenge,offline,report,faces,m10 只跑其中幾段；
 //   SLOW=4 把網頁的 CPU 放慢四倍，用來重現 CI 上慢的機器。CI 把這份檢查拆成幾個平行的工作，見 .github/workflows/phone-check.yml）
 const path = require('node:path');
 const fs = require('node:fs');
@@ -32,7 +35,7 @@ const MAXED = {
 // CI 把這份檢查拆成幾個平行的工作，一個工作跑一份（PART=ui）。每一段都要放進其中一份，漏掉的話這支程式一開始就會報錯；
 // 多加一份的時候 .github/workflows/phone-check.yml 的 matrix 也要加（tests/starfall/ci.test.ts 會對）。
 const PARTS = {
-  ui: ['click', 'hangar', 'big', 'pick', 'codex', 'challenge', 'offline'],
+  ui: ['click', 'hangar', 'big', 'pick', 'codex', 'challenge', 'offline', 'report', 'faces'],
   'ch1-2': ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'],
   ch3: ['m7', 'm8', 'm9'],
   epilogue: ['m10', 'm11', 'm12'],
@@ -939,6 +942,185 @@ async function offlineCheck(browser) {
   await ctx.close();
 }
 
+/** 回報問題：診斷資訊列得出來、複製得了；出過的錯記得住；表單設定好之後帶著資訊開表單 */
+async function reportCheck(browser) {
+  const { ctx, page } = await open(browser, { w: 844, h: 390, dpr: 2, touch: true }, { stars: { m1: 3, m2: 2 }, tips: TIPS });
+  const { button, press } = ui(page);
+  // 複製和開新分頁都換成記下來就好：無頭瀏覽器的剪貼簿不一定能用，也不要真的開一個分頁出去。
+  // 表單的設定先蓋成「還沒設定」（專案裡實際填的那一份由 tests/starfall/report.test.ts 檢查），第 3 步再換成一組假的
+  const stub = () =>
+    page.evaluate(() => {
+      window.__copied = null;
+      window.__opened = null;
+      window.__sfFeedback = { form: '', entry: '' };
+      navigator.clipboard.writeText = async (t) => void (window.__copied = t);
+      window.open = (u) => ((window.__opened = u), null);
+    });
+  const active = (key) => page.waitForFunction((key) => window.__sf.scene.isActive(key), key, { timeout: 15000 }).then(() => true, () => false);
+  /** 回報頁上那段診斷資訊 */
+  const shown = () =>
+    page.evaluate(() => {
+      const out = [];
+      const walk = (o) => {
+        if (o.type === 'Text') out.push(o.text);
+        if (o.list) o.list.forEach(walk);
+      };
+      window.__sf.scene.getScene('SfReport').children.list.forEach(walk);
+      return out.find((t) => t.startsWith('Starfall Echo')) ?? null;
+    });
+  const openReport = async () => {
+    await press('SfTitle', '設定');
+    ok(await active('SfSettings'), '設定頁開了');
+    await page.screenshot({ path: path.join(OUT, 'report-settings.png') });
+    await press('SfSettings', '回報問題');
+    ok(await active('SfReport'), '設定頁左下角的「回報問題」開得起來');
+  };
+  const closeReport = async () => {
+    await press('SfReport', '關閉');
+    await press('SfSettings', '關閉');
+    await page.waitForTimeout(400);
+  };
+
+  // 1. 表單還沒設定：列出診斷資訊，只有「複製」
+  await stub();
+  await openReport();
+  const text = (await shown()) ?? '';
+  ok(/^Starfall Echo \d+\.\d+\.\d+ \w+ \(built /.test(text), '第一行是版本和建置時間', text.split('\n')[0]);
+  ok(text.includes('\nscene: SfTitle\n'), '寫了現在在哪個畫面', /scene: .*/.exec(text)?.[0]);
+  ok(text.includes('window 844x390@2'), '寫了視窗大小和像素倍率', /view: .*/.exec(text)?.[0]);
+  ok(text.includes('\nprogress: 2/12 cleared, 5 stars, slot 1\n'), '寫了過幾關、幾顆星', /progress: .*/.exec(text)?.[0]);
+  ok(/\ngpu: (webgl|canvas)/.test(text) && /\ndevice: Mozilla/.test(text), '寫了瀏覽器和繪圖裝置');
+  ok(text.endsWith('errors: none'), '沒出過錯的時候寫 none', text.split('\n').slice(-2));
+  ok(/^[\x20-\x7e\n]+$/.test(text), '整段只有英文和數字');
+  await page.screenshot({ path: path.join(OUT, 'report.png') });
+  ok(!(await button('SfReport', '打開回報表單')), '表單還沒設定的時候沒有「打開回報表單」');
+  await press('SfReport', '複製');
+  await page.waitForTimeout(300);
+  ok((await page.evaluate(() => window.__copied)) === text, '按「複製」複製的就是畫面上那一段');
+  ok(!!(await button('SfReport', '已複製')), '複製之後按鈕上寫「已複製」');
+  await closeReport();
+  ok(await page.evaluate(() => window.__sf.scene.isActive('SfTitle') && !window.__sf.scene.isActive('SfSettings') && !window.__sf.scene.isActive('SfReport')), '關掉之後回到標題畫面');
+
+  // 2. 程式出錯會記下來；重新整理之後還在（當掉的時候玩家多半會重新整理）
+  await page.evaluate(() => {
+    window.dispatchEvent(new ErrorEvent('error', { message: 'TypeError: boom from the check', filename: location.origin + '/assets/starfall-test.js', lineno: 12, colno: 34 }));
+    window.dispatchEvent(new PromiseRejectionEvent('unhandledrejection', { promise: Promise.resolve(), reason: new Error('late failure') }));
+  });
+  await page.reload();
+  await page.waitForFunction(() => window.__sf && window.__sf.scene.isActive('SfTitle'), null, { timeout: 60000 });
+  await stub();
+  // 3. 表單設定好的時候：多一顆「打開回報表單」，網址裡帶著同一段資訊
+  await page.evaluate(() => (window.__sfFeedback = { form: 'https://docs.google.com/forms/d/e/CHECK/viewform', entry: '4242' }));
+  await openReport();
+  const after = (await shown()) ?? '';
+  ok(/\n- \S+ \[\w+\] TypeError: boom from the check @ assets\/starfall-test\.js:12:34\n/.test(after + '\n'), '重新整理之後，報告裡還有剛才的錯誤（網址的前半段拿掉了）', after.split('\n').slice(-3));
+  ok(after.includes('unhandled: Error: late failure'), '沒人接的失敗也記下來了');
+  await press('SfReport', '打開回報表單');
+  const opened = await page.evaluate(() => window.__opened);
+  ok(typeof opened === 'string' && opened.startsWith('https://docs.google.com/forms/d/e/CHECK/viewform?usp=pp_url&entry.4242='), '按了會開表單，網址指向設定的那一題', String(opened).slice(0, 90));
+  const filled = typeof opened === 'string' ? decodeURIComponent(opened.split('entry.4242=')[1] ?? '') : '';
+  ok(filled.split('\n')[0] === after.split('\n')[0] && filled.includes('boom from the check'), '表單裡預先填好的就是這份報告');
+  await closeReport();
+
+  // 4. 戰鬥中開：報告帶著任務和回合
+  await page.evaluate(() => {
+    const g = window.__sf;
+    g.scene.stop('SfTitle');
+    g.scene.start('SfBattle', { missionId: 'm1' });
+  });
+  for (let i = 0, state = ''; i < 100 && state !== 'idle'; i++) {
+    await page.waitForTimeout(300);
+    state = await page.evaluate(() => {
+      const g = window.__sf;
+      if (g.scene.isActive('SfDialogue')) {
+        g.scene.getScene('SfDialogue').finish();
+        return 'talk';
+      }
+      const b = g.scene.getScene('SfBattle');
+      return g.scene.isActive('SfBattle') && b.hud && b.mode === 'idle' ? 'idle' : 'wait';
+    });
+  }
+  await page.evaluate(() => window.__sf.scene.getScene('SfBattle').scene.launch('SfReport'));
+  ok(await active('SfReport'), '戰鬥中開得起來');
+  const inBattle = (await shown()) ?? '';
+  ok(/\nscene: SfBattle\+SfHud m1 turn 1\n/.test(inBattle), '戰鬥中的報告寫了任務和回合', /scene: .*/.exec(inBattle)?.[0]);
+  ok(/\nfps: \d+ \(lowest \d+ in the last \d+ s\)\n/.test(inBattle), '寫了畫面更新率', /fps: .*/.exec(inBattle)?.[0]);
+  await page.screenshot({ path: path.join(OUT, 'report-battle.png') });
+  await ctx.close();
+}
+
+/** 表情差分：對話照劇本標的表情換立繪；同一個人接著說話時原地換臉，身體不動 */
+async function facesCheck(browser) {
+  const view = { w: 844, h: 390, dpr: 2, touch: true };
+  const { ctx, page } = await open(browser, view, {});
+  const { press } = ui(page);
+  const now = () =>
+    page.evaluate(() => {
+      const s = window.__sf.scene.getScene('SfDialogue');
+      const l = s.lines[s.i];
+      return { i: s.i, who: l.who, face: l.face ?? null, tex: s.portrait ? s.portrait.texture.key : null, w: s.portrait ? Math.round(s.portrait.displayWidth) : 0, h: s.portrait ? Math.round(s.portrait.displayHeight) : 0 };
+    });
+  const loaded = (keys) => page.waitForFunction((keys) => keys.every((k) => window.__sf.textures.exists(k)), keys, { timeout: 20000 }).then(() => true, () => false);
+  const next = () =>
+    page.evaluate(() => {
+      const s = window.__sf.scene.getScene('SfDialogue');
+      s.advance();
+      s.advance();
+    });
+
+  // 1. 第一關的開場：開機時沒有載表情的圖，對話開始才載
+  ok(!(await page.evaluate(() => window.__sf.textures.exists('pt_bruno_shock'))), '開機時還沒載入表情的圖');
+  await press('SfTitle', '開始作戰');
+  await page.waitForFunction(() => window.__sf.scene.isActive('SfMissions'));
+  await page.waitForTimeout(400);
+  await press('SfMissions', '出擊');
+  await page.waitForFunction(() => window.__sf.scene.isActive('SfDialogue'), null, { timeout: 30000 });
+  ok(await loaded(['pt_echo_calm', 'pt_bruno_shock', 'pt_echo_alert', 'pt_kai_shout']), '這段對話用到的表情載進來了');
+  ok(!(await page.evaluate(() => window.__sf.textures.exists('pt_vey_smile'))), '這段對話沒用到的表情沒有載');
+  const total = await page.evaluate(() => window.__sf.scene.getScene('SfDialogue').lines.length);
+  const seen = [];
+  for (let n = 0; n < total; n++) {
+    await page.waitForTimeout(260);
+    const l = await now();
+    const want = l.who === 'sys' || l.who === 'radio' ? null : 'pt_' + l.who + (l.face ? '_' + l.face : '');
+    if (l.tex !== want) ok(false, '第 ' + (l.i + 1) + ' 句的立繪不對', { ...l, want });
+    if (l.face) seen.push(l.who + ':' + l.face);
+    if (l.who === 'bruno' && l.face === 'shock') await page.screenshot({ path: path.join(OUT, 'faces-shock.png') });
+    if (n < total - 1) await next();
+  }
+  ok(seen.join(' ') === 'echo:calm bruno:shock echo:calm echo:alert kai:shout', '開場的五句照劇本換了表情', seen);
+  await page.evaluate(() => window.__sf.scene.getScene('SfDialogue').finish());
+  await page.waitForFunction(() => window.__sf.scene.getScene('SfBattle').mode === 'idle', null, { timeout: 30000 });
+
+  // 2. 同一個人接著說：立繪還是同一個物件，只有圖換了，大小不變；沒有的表情退回平常那一張
+  await page.evaluate(() => {
+    const say = (who, face) => ({ who, face, zh: '測試。', en: 'Test.' });
+    window.__sf.scene.getScene('SfBattle').scene.launch('SfDialogue', { lines: [say('kai'), say('kai', 'smile'), say('kai', 'nope'), say('vey', 'guilt'), say('cantor', 'smile')], onDone: () => undefined });
+  });
+  await page.waitForFunction(() => window.__sf.scene.isActive('SfDialogue') && !!window.__sf.scene.getScene('SfDialogue').portrait, null, { timeout: 15000 });
+  ok(await loaded(['pt_kai_smile', 'pt_vey_guilt']), '自訂的對話也會載入用到的表情');
+  await page.evaluate(() => (window.__sf.scene.getScene('SfDialogue').portrait.__same = true));
+  const a = await now();
+  await next();
+  await page.waitForTimeout(260);
+  const b = await now();
+  const same = await page.evaluate(() => !!window.__sf.scene.getScene('SfDialogue').portrait.__same);
+  ok(a.tex === 'pt_kai' && b.tex === 'pt_kai_smile', '同一個人換了表情', { a: a.tex, b: b.tex });
+  ok(same && a.w === b.w && a.h === b.h && a.w > 0, '是原地換圖：立繪沒有重新進場，大小也沒變', { same, a: [a.w, a.h], b: [b.w, b.h] });
+  await page.screenshot({ path: path.join(OUT, 'faces-smile.png') });
+  await next();
+  await page.waitForTimeout(260);
+  ok((await now()).tex === 'pt_kai', '沒有的表情退回平常那一張');
+  await next();
+  await page.waitForTimeout(260);
+  const v = await now();
+  ok(v.tex === 'pt_vey_guilt' && !(await page.evaluate(() => !!window.__sf.scene.getScene('SfDialogue').portrait.__same)), '換人說話時換成那個人的立繪', v);
+  await next();
+  await page.waitForTimeout(260);
+  ok((await now()).tex === 'pt_cantor', '沒有表情差分的角色照常顯示');
+  await ctx.close();
+}
+
 async function autoPlay(browser, mission) {
   const epilogue = ['m10', 'm11', 'm12'].includes(mission);
   const { ctx, page } = await open(browser, { w: 1280, h: 720, dpr: 1 }, epilogue ? { stars: ALL_STARS, tips: ALL_TIPS, upgrades: MAXED } : { stars: { m1: 1, m2: 1 }, tips: TIPS });
@@ -968,7 +1150,7 @@ async function autoPlay(browser, mission) {
 }
 
 (async () => {
-  const sections = { click: clickThrough, hangar: hangarCheck, big: bigMapCheck, pick: pickCheck, codex: codexCheck, challenge: challengeCheck, offline: offlineCheck };
+  const sections = { click: clickThrough, hangar: hangarCheck, big: bigMapCheck, pick: pickCheck, codex: codexCheck, challenge: challengeCheck, offline: offlineCheck, report: reportCheck, faces: facesCheck };
   for (const m of ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12']) sections[m] = (browser) => autoPlay(browser, m);
   const all = Object.keys(sections);
   const parted = Object.values(PARTS).flat();

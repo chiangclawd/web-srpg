@@ -1,4 +1,4 @@
-// 設定：音量、演出速度、技能特寫、難度、語言、文字大小、色盲配色、全螢幕，以及鍵盤操作的說明。
+// 設定：音量、演出速度、技能特寫、難度、語言、文字大小、色盲配色、全螢幕，以及鍵盤操作的說明；左下角是「回報問題」。
 // 疊在別的場景上面（標題畫面或戰鬥選單開它）；關掉時呼叫 onClose，讓底下的畫面照新設定重畫。
 import Phaser from 'phaser';
 import { COL, TEXT_SCALES, VIEW_H, addText, applyPalette, refreshTextScale, setupCamera, textScale, uiZoom, viewW } from '../config';
@@ -210,7 +210,10 @@ export class SettingsScene extends Phaser.Scene {
       box.add(addText(this, -W / 2 + 40, y + 26, T(pad ? 'padHelp' : 'keysHelp'), { size: 13, raw: true, strokeW: 0, color: COL.dim, bold: false, wrap: W - 80, lineSpacing: 6 }));
     }
     box.add(new Button(this, 0, H / 2 - 44, 240, 52, T('close'), () => this.close(), { primary: true }));
-    new KeyNav(this, { onBack: () => this.close(), first: () => first });
+    // 左下角：回報問題（疊一頁在上面，列出這一版和這台裝置的資訊，可以帶到回報表單或複製）
+    box.add(new Button(this, -W / 2 + 40 + 95, H / 2 - 44, 190, 44, T('report'), () => this.scene.launch('SfReport'), { size: 16, color: 0x8fb0c8 }));
+    // 回報頁開著的時候，這一頁不處理按鍵
+    new KeyNav(this, { enabled: () => !this.scene.isActive('SfReport'), onBack: () => this.close(), first: () => first });
   }
 
   private close(): void {

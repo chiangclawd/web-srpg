@@ -1,0 +1,63 @@
+{
+  "kai": {
+    "face": [0.46, 0.22, 0.81, 0.54],
+    "faces": {
+      "shout": "He is shouting an order in the middle of a fight: brows pulled down hard, eyes wide and fierce, mouth open wide with the upper teeth showing, jaw tense.",
+      "worried": "He has just heard bad news about someone he loves: brows drawn up and together, eyes wide and unsettled, lips slightly parted. The calm is gone from his face.",
+      "smile": "A small, tired, genuine smile: mouth closed with the corners lifted, eyes softened, brows relaxed."
+    }
+  },
+  "echo": {
+    "sheet": "Character: Echo, a small hovering repair drone that carries a gentle AI. White egg-shaped shell, dark glass face with two glowing cyan eyes, two antenna ears, one orange stripe. Close-up, tilted slightly as if listening, filling the frame like a character bust.",
+    "keep": "the same drone: the same shell, antenna ears, orange stripe, claws and dark glass face, the same tilt, framing and size in the frame, the same line weight, cel shading and colours, and the same flat magenta background. The eyes stay the same glowing cyan, the same line thickness, in the same place on the glass",
+    "face": [0.07, 0.24, 0.72, 0.58],
+    "faces": {
+      "calm": "Change only the shape of the two glowing eyes on the glass: each eye is a plain solid upright oval. Neutral and attentive, not smiling.",
+      "sad": "Change only the shape of the two glowing eyes on the glass: each eye is a solid half-circle with its flat side on top, tilted so that its outer end sits lower than its inner end. The two eyes mirror each other.",
+      "alert": "Change only the shape of the two glowing eyes on the glass: each eye is a large wide-open ring, a circle outline with a dark centre, startled and on alert."
+    }
+  },
+  "bruno": {
+    "face": [0.37, 0.13, 0.83, 0.63],
+    "faces": {
+      "shock": "He is startled and shouting in disbelief: eyebrows shot up, eyes wide open, mouth open wide.",
+      "grim": "Stern and not amused: brows low and heavy, eyes hard, mouth a flat closed line under the beard. No smile at all.",
+      "laugh": "A big hearty laugh: mouth open in a wide grin showing the upper teeth, cheeks raised, eyes crinkled nearly shut."
+    }
+  },
+  "vey": {
+    "face": [0.5, 0.21, 0.9, 0.54],
+    "faces": {
+      "shout": "She is calling out a sharp warning in the middle of a fight: brows pulled down, eyes fierce, mouth open mid-shout.",
+      "guilt": "Ashamed, carrying guilt: eyes lowered, looking down and away from the viewer, brows slightly drawn together, mouth closed and tight.",
+      "smile": "A faint, rare smile: mouth closed with one corner lifted, eyes softened, the frown gone."
+    }
+  },
+  "sparrow": {
+    "face": [0.42, 0.17, 0.74, 0.43],
+    "faces": {
+      "panic": "Alarmed and panicking: eyes wide, eyebrows high, mouth open in a yelp.",
+      "sad": "Worried and close to tears: brows drawn up and together, eyes glistening, mouth small, closed and turned down. No grin.",
+      "serious": "Serious and determined, no grin: mouth closed and firm, brows level and slightly lowered, eyes steady."
+    }
+  },
+  "hale": {
+    "face": [0.4, 0.17, 0.72, 0.5],
+    "faces": {
+      "wry": "A thin, wry, resigned half-smile: mouth closed with one corner lifted, one eyebrow slightly raised, eyes tired.",
+      "shaken": "Shaken, his certainty gone: eyes wider than usual and looking down, brows drawn together, lips slightly parted."
+    }
+  },
+  "varga": {
+    "face": [0.26, 0.17, 0.58, 0.5],
+    "faces": {
+      "shaken": "Her composure breaks at terrible news: eyes wide and wet, brows drawn up, lips parted, stunned and stricken."
+    }
+  },
+  "tomas": {
+    "face": [0.42, 0.2, 0.83, 0.62],
+    "faces": {
+      "smile": "A weak but warm smile at his son: mouth closed with the corners lifted, eyes soft and proud. Still tired."
+    }
+  }
+}

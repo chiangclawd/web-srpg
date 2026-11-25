@@ -221,6 +221,26 @@
   存到哪裡有記著，下次開遊戲接著抓，但這個情況只在測試裡模擬過。
 - **App 版**：星墜殘響自己的 App 還沒做。塔防的 App 打包（`npm run build:app`）現在會把星墜殘響的檔案拿掉，之前被一起包了進去（約 22 MB）。
 
+## 回報問題
+
+免費版同時也是公開測試：開發這邊沒有 Android 手機，那一邊的問題要靠玩家回報。所以回報要夠省事，而且要帶著足夠的資訊。
+
+- **入口**：設定頁左下角的「回報問題」（標題畫面和戰鬥選單都進得去設定）。
+- **內容**：一段十幾行的英文，玩家看得到送出去的是什麼：版本和建置時間、現在的畫面（戰鬥中帶任務和回合）、設定、
+  視窗和畫布的大小、是瀏覽器分頁還是裝在主畫面、瀏覽器和裝置、繪圖裝置和貼圖上限、最近 30 秒的畫面更新率（現在和最低）、
+  離線快取和雲端同步的狀態、過了幾關幾顆星，還有最近五筆程式錯誤。**沒有帳號名稱、信箱，也沒有存檔內容**（有測試擋著）。
+- **送到哪裡**：`src/starfall/feedback-config.ts` 填了 Google 表單之後，多一顆「打開回報表單」，表單開在新分頁，
+  這段資訊已經填在指定的那一題，玩家只要補上當時的經過。還沒填的時候只有「複製」。網址超過 4000 個字元時從最舊的錯誤開始拿掉。
+- **錯誤紀錄**：沒被接住的程式錯誤、沒人接的 Promise 失敗、繪圖環境被瀏覽器收走（手機記憶體吃緊時畫面整個黑掉的那種）都會記下來，
+  同一個錯連續出現只記一筆。紀錄也存在裝置裡（`starfall_errors_v1`），所以當掉之後重新整理，回報時還看得到當掉前的那一筆。
+  這些都留在玩家的裝置上，玩家自己按了送出或複製才會離開。
+- **程式**：`report.ts`（報告的格式、表單網址，純函式）、`report-env.ts`（記錯誤、量更新率、讀裝置和遊戲的狀態）、`scenes/ReportScene.ts`。
+  測試在 `tests/starfall/report.test.ts`，畫面上的流程在瀏覽器檢查的 `report` 那一段。
+- **表單怎麼建**：兩題「段落」就夠（發生了什麼事、診斷資訊）。不要加「檔案上傳」的題目，也不要開「收集電子郵件」或「限回覆一次」，
+  那些都會要求填的人登入 Google。建好之後從右上角選單選「取得預先填入的連結」，在診斷資訊那一題隨便打幾個字產生連結：
+  問號前面是 `form`，`entry.` 後面那串數字是 `entry`。
+- **還沒做的**：遊戲當掉之後不會主動提醒玩家去回報；載不到的素材（網路斷掉那種）沒有記進錯誤紀錄。
+
 ## 程式結構
 
 ```
@@ -233,16 +253,17 @@ src/starfall/
 ├── data/           units.ts（機體）、missions.ts（關卡，ASCII 地圖）、story.ts（對話）、upgrades.ts（零件與改造）、codex.ts（圖鑑的分類和介紹）、achievements.ts（成就）
 ├── records.ts      圖鑑、成就和挑戰模式的紀錄：哪些遇過、哪些達成、哪些關的挑戰完成了（純函式）
 ├── offline.ts      離線遊玩和安裝到主畫面（頁面這一側）；offline/sw.js 是 service worker 的樣板
+├── report.ts       回報問題：報告的格式和表單網址；report-env.ts 記錯誤、讀裝置狀態；feedback-config.ts 是表單的設定
 ├── view/           iso.ts（等角投影）、textures.ts（程序繪圖的地塊與圖示）、sheets.ts（3D 圖表）、UnitView.ts、ui.ts、fx.ts（陰影、霧、粒子、擊破演出）、shots.ts（各種武器的彈道）
-└── scenes/         Boot / Title / Mission / Hangar（機庫）/ Battle（戰場）/ Hud（介面）/ Dialogue / Settings（設定）/ Saves（存檔）/ Codex（圖鑑・成就）
+└── scenes/         Boot / Title / Mission / Hangar（機庫）/ Battle（戰場）/ Hud（介面）/ Dialogue / Settings（設定）/ Saves（存檔）/ Codex（圖鑑・成就）/ Report（回報問題）
 ```
 
 ```bash
-npm run test:starfall                 # 規則測試（113 項）
+npm run test:starfall                 # 規則測試（129 項）
 npx tsx scripts/starfall-sim.ts       # 自動對戰：每關打不打得過、幾回合
 npx tsx scripts/starfall-sim.ts m3 -v # 逐步列出某一關的過程（加 --easy 用輕鬆難度、--hard 用挑戰模式）
 npx tsx scripts/starfall-sim.ts --lv=2 --cautious --care=2  # 強化線都升到 2 級、謹慎打法、隊長保守；--max 是全部改滿
-node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍第一關、機庫、大地圖、被擋住的格子、圖鑑・成就、挑戰模式、離線遊玩 + 十二關自動對戰（要先 build 並開 preview；ONLY=big,m10 可以只跑幾段）
+node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍第一關、機庫、大地圖、被擋住的格子、圖鑑・成就、挑戰模式、離線遊玩、回報問題、表情差分 + 十二關自動對戰（要先 build 並開 preview；ONLY=big,m10 可以只跑幾段）
 ```
 
 瀏覽器檢查整套接著跑，CI 的機器上要 25–50 分鐘（同一份程式，分到的機器快慢差到兩倍）。所以 CI 把它拆成四個平行的工作
@@ -284,6 +305,17 @@ node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍�
    加了新的文字、用到字表沒有的字時 `tests/starfall/font.test.ts` 會失敗並列出缺的字，照這兩步重做。缺的字和玩家的帳號名稱會退回系統字型。
    遊戲開機時用 `fonts.ts` 載入，字型好了才進標題畫面（最多等 4 秒）。授權是 SIL OFL 1.1，全文在字型檔旁邊的 `OFL.txt`。
 7. 立繪、背景、主視覺也是 Gemini（`pt_*.txt`、`bg_*.txt`、`title.txt`），立繪用 `scripts/art/key.py` 去背。
+   **立繪的表情差分**（8 個角色共 19 張，`pt_<誰>_<表情>.webp`）分兩步：
+   - `node scripts/art/starfall-faces.mjs <原圖資料夾> --max=<張數>`：拿現有的立繪當參考圖，請 Gemini 只換表情重畫一張
+     （模型 `gemini-nano-banana-2.1`，3:4、1K）。表情的清單和描述在 `scripts/art/prompts/starfall/faces.json`。
+     不加 `--max` 只會列出還缺哪些，不會發出請求；已經有的圖不會重做。
+   - `py scripts/art/starfall_faces.py <原圖資料夾> --preview=<資料夾>`：生成的圖會把整張重畫，身體的線條跟原圖差一兩個像素，
+     所以只取臉：在 `faces.json` 給的臉部範圍裡找出跟原圖不一樣的地方，貼回原本的立繪。輸出跟原圖一樣大、輪廓一樣，
+     對話時同一個人換表情只有臉在動。`--preview` 存每個角色的對照圖，貼完要用眼睛看過。
+   - 艾可的「難過」是例外：Gemini 的內容過濾一直把那一張擋掉（換了三種描述都一樣），而艾可的眼睛只是玻璃上兩個發光的形狀，
+     所以用 `py scripts/art/starfall_echo_sad.py` 從另外兩個表情算出來。
+   - 劇本裡哪一句用哪個表情寫在 `data/story.ts`（每一句的 `face`，能用的列在 `FACES`）。表情的圖在對話開始時才載入，
+     還沒載好的那幾句先用平常的表情。`tests/starfall/faces.test.ts` 檢查圖都在、大小和輪廓跟原圖一樣、臉以外沒有動。
 8. 配樂：`scripts/art/gemini-music.mjs`（Lyria）+ `music_*.txt`，再用 `scripts/art/prep_music.py` 統一響度。
 
 模型原始檔不放在這個公開 repo（在私人的 kingdom-bastion-art 的 `starfall/`）。

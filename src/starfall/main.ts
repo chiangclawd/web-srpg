@@ -11,11 +11,13 @@ import { DialogueScene } from './scenes/DialogueScene';
 import { SettingsScene } from './scenes/SettingsScene';
 import { SavesScene } from './scenes/SavesScene';
 import { CodexScene } from './scenes/CodexScene';
+import { ReportScene } from './scenes/ReportScene';
 import type { HudScene as Hud } from './scenes/HudScene';
 import type { DialogueScene as Dialogue } from './scenes/DialogueScene';
 import { initCloud, onCloudChanged } from './cloud/sync';
 import { initGamepad, onHintMode } from './gamepad';
 import { initOffline } from './offline';
+import { initReport } from './report-env';
 
 const rotate = document.querySelector<HTMLElement>('#rotate-prompt .title');
 if (rotate) rotate.textContent = T('rotate');
@@ -26,7 +28,7 @@ const game = new Phaser.Game({
   width: Math.round(computeViewW() * RS),
   height: Math.round(VIEW_H * RS),
   backgroundColor: '#070d18',
-  scene: [BootScene, TitleScene, MissionScene, HangarScene, BattleScene, HudScene, DialogueScene, SettingsScene, SavesScene, CodexScene],
+  scene: [BootScene, TitleScene, MissionScene, HangarScene, BattleScene, HudScene, DialogueScene, SettingsScene, SavesScene, CodexScene, ReportScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -42,6 +44,9 @@ const game = new Phaser.Game({
   disableContextMenu: true,
 });
 
+// 回報問題：從現在開始記下程式錯誤和畫面更新率（越早越好，開機時出的錯也要記到）
+initReport(game);
+
 // 視窗比例改變（旋轉、縮放、進出全螢幕）→ 重新計算邏輯寬度，每個畫面照新的寬度重排；戰鬥不重開，只重排介面
 let resizeTimer: ReturnType<typeof setTimeout> | null = null;
 window.addEventListener('resize', () => {
@@ -56,7 +61,7 @@ window.addEventListener('resize', () => {
     for (const s of game.scene.getScenes(true)) {
       const key = s.scene.key;
       // 沒有進行中狀態的畫面直接重畫（沒給資料時 Phaser 沿用上次的，設定頁關掉之後要做的事也還在）
-      if (key === 'SfTitle' || key === 'SfMissions' || key === 'SfHangar' || key === 'SfSettings' || key === 'SfSaves' || key === 'SfCodex') s.scene.restart();
+      if (key === 'SfTitle' || key === 'SfMissions' || key === 'SfHangar' || key === 'SfSettings' || key === 'SfSaves' || key === 'SfCodex' || key === 'SfReport') s.scene.restart();
       else if (key === 'SfHud') (s as Hud).relayout();
       else if (key === 'SfDialogue') (s as Dialogue).resized();
     }
