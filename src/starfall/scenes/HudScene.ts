@@ -1,7 +1,7 @@
 // 戰鬥介面：任務目標、單位資訊卡、行動按鈕、預估面板、回合提示、結算與選單。
 // 四個角各一個容器，手機上整組放大（uiZoom），文字跟著容器一起放大。
 import Phaser from 'phaser';
-import { COL, TEX, VIEW_H, addText, fitText, hudButton, hudCardW, hudZoom, setupCamera, textScale, viewW } from '../config';
+import { COL, HARD_COL, HARD_TEXT, TEX, VIEW_H, addText, fitText, hudButton, hudCardW, hudZoom, setupCamera, textScale, viewW } from '../config';
 import { sfx } from '../audio';
 import { L, T } from '../i18n';
 import type { StrKey } from '../i18n';
@@ -234,7 +234,7 @@ export class HudScene extends Phaser.Scene {
     // 失敗條件。精簡版面這裡少一行（面板放大之後會蓋到地圖左上角的單位），失敗條件改到選單裡看
     const slim = this.compact;
     const fail = slim ? null : addText(this, 16, 60, this.failText(), { size: 13, raw: true, strokeW: 0, color: '#ff8a7a', bold: false });
-    const tt = addText(this, 16, slim ? 60 : 82, b.easy ? `${turn}　${T('easyTag')}` : turn, { size: 15, raw: true, strokeW: 0, color: COL.yellow });
+    const tt = addText(this, 16, slim ? 60 : 82, b.hard ? `${turn}　${T('challengeMode')}` : b.easy ? `${turn}　${T('easyTag')}` : turn, { size: 15, raw: true, strokeW: 0, color: b.hard ? HARD_TEXT : COL.yellow });
     const w = Math.max(250, name.width + 32, obj.width + 32, (fail?.width ?? 0) + 32);
     drawPanel(g, 0, 0, w, slim ? 88 : 110, { alpha: 0.82 });
     this.tl.add([g, name, obj, tt]);
@@ -597,8 +597,11 @@ export class HudScene extends Phaser.Scene {
     this.modalFirst = null;
   }
 
-  /** parts：這次新拿到的零件（重打已經拿過的星就是 0）；feats：這一場達成的成就 */
-  showResult(result: 'win' | 'lose', reason: string, parts = 0, feats: string[] = []): void {
+  /**
+   * parts：這次新拿到的零件（重打已經拿過的星就是 0）；feats：這一場達成的成就；
+   * chal：挑戰模式過關時，這一關的徽章是這次拿到的（new）還是早就有了（again）
+   */
+  showResult(result: 'win' | 'lose', reason: string, parts = 0, feats: string[] = [], chal: 'new' | 'again' | null = null): void {
     const bs = this.battle;
     const b = bs.battle;
     const win = result === 'win';
@@ -606,10 +609,10 @@ export class HudScene extends Phaser.Scene {
     // 這一場達成的成就：多一行（輸了也列，戰術成就做到的當下就算）
     const got = feats.map((id) => featById(id)).filter((f) => !!f);
     const featLine = got.length ? `${T('featGot')}　${got.map((f) => L(f.name)).join('、')}` : '';
-    const H = (win ? 450 : 360) + (featLine ? 36 : 0);
+    const H = (win ? 450 : 360) + (featLine ? 36 : 0) + (chal ? 40 : 0);
     const box = this.openModal(W, H, win ? 0x6dff9a : COL.enemy);
     box.add(addText(this, 0, -H / 2 + 44, win ? T('victory') : T('defeat'), { size: 40, raw: true, color: win ? COL.green : COL.red, strokeW: 6 }).setOrigin(0.5));
-    box.add(addText(this, 0, -H / 2 + 86, L(bs.mission.name), { size: 18, raw: true, strokeW: 0, color: COL.dim }).setOrigin(0.5));
+    box.add(addText(this, 0, -H / 2 + 86, b.hard ? `${L(bs.mission.name)}　${T('challengeMode')}` : L(bs.mission.name), { size: 18, raw: true, strokeW: 0, color: b.hard ? HARD_TEXT : COL.dim }).setOrigin(0.5));
     const by = H / 2 - 48;
     if (!win) {
       box.add(addText(this, 0, -H / 2 + 130, T(`lose_${reason}` as StrKey), { size: 20, raw: true, strokeW: 0 }).setOrigin(0.5));
@@ -617,9 +620,10 @@ export class HudScene extends Phaser.Scene {
       this.modalFirst = new Button(this, -135, by, 250, 56, T('retry'), () => bs.restart(), { primary: true });
       box.add(this.modalFirst);
       box.add(new Button(this, 135, by, 250, 56, T('toMissions'), () => bs.leave('missions'), { color: 0x8fb0c8 }));
-      // 打不過的兩條出路：去機庫改造機體，或改用輕鬆難度
-      box.add(new Button(this, b.easy ? 0 : -135, by - 66, b.easy ? 300 : 250, 48, T('hangar'), () => bs.leave('hangar'), { color: 0xffd75a, size: 17, icon: 'ic_parts' }));
-      if (!b.easy) {
+      // 打不過的兩條出路：去機庫改造機體，或改用輕鬆難度（已經是輕鬆、或是挑戰模式，就只有機庫）
+      const noEasy = b.easy || b.hard;
+      box.add(new Button(this, noEasy ? 0 : -135, by - 66, noEasy ? 300 : 250, 48, T('hangar'), () => bs.leave('hangar'), { color: 0xffd75a, size: 17, icon: 'ic_parts' }));
+      if (!noEasy) {
         box.add(
           new Button(
             this,
@@ -669,12 +673,27 @@ export class HudScene extends Phaser.Scene {
     } else {
       box.add(fitText(addText(this, 0, py, T('partsNone'), { size: 15, raw: true, strokeW: 0, color: COL.dim, bold: false }).setOrigin(0.5), W - 40));
     }
-    if (featLine) box.add(fitText(addText(this, 0, py + 38, featLine, { size: 17, raw: true, strokeW: 0, color: COL.yellow }).setOrigin(0.5), W - 40));
+    // 挑戰模式：這一關的徽章（第一次拿到的時候彈一下）
+    if (chal) {
+      const cy = py + 40;
+      const t = addText(this, 16, cy, T('chalDone'), { size: 20, raw: true, strokeW: 0, color: HARD_TEXT }).setOrigin(0.5);
+      const ic = this.add
+        .image(t.x - t.width / 2 - 22, cy, 'ic_chal')
+        .setScale(30 / 64 / TEX)
+        .setTint(HARD_COL);
+      box.add([t, ic]);
+      if (chal === 'new') {
+        ic.setScale(0);
+        this.tweens.add({ targets: ic, scale: 30 / 64 / TEX, duration: 320, delay: 1100, ease: 'Back.easeOut', onStart: () => sfx('select') });
+      }
+    }
+    if (featLine) box.add(fitText(addText(this, 0, py + 38 + (chal ? 40 : 0), featLine, { size: 17, raw: true, strokeW: 0, color: COL.yellow }).setOrigin(0.5), W - 40));
     const next = bs.nextMission();
     const hangar = (x: number, w: number): Button => new Button(this, x, by, w, 56, T('hangar'), () => bs.leave('hangar'), { color: 0xffd75a, icon: 'ic_parts' });
     // 主線最後一關（下一關是後日談）和全部的最後一關，多一行完結的話
     const storyEnd = !!next && (bs.mission.chapter ?? 1) === 3 && (missionById(next).chapter ?? 1) > 3;
-    const endNote = storyEnd ? T('chapterEnd') : next ? '' : T('epilogueEnd');
+    // 挑戰模式是重打，不再說一次完結
+    const endNote = b.hard ? '' : storyEnd ? T('chapterEnd') : next ? '' : T('epilogueEnd');
     if (endNote) box.add(fitText(addText(this, 0, by - 50, endNote, { size: 15, raw: true, strokeW: 0, color: COL.cyan }).setOrigin(0.5), W - 40));
     if (next) {
       this.modalFirst = new Button(this, -188, by, 180, 56, T('next'), () => bs.leave('next'), { primary: true, color: 0x6dff9a });

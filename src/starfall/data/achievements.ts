@@ -20,6 +20,10 @@ export const FEATS: readonly FeatDef[] = [
   { id: 'mod', name: { zh: '改裝', en: 'Custom Job' }, desc: { zh: '在機庫安裝一個專屬改造', en: 'Install a frame mod in the hangar' } },
   { id: 'maxed', name: { zh: '全套改造', en: 'Fully Loaded' }, desc: { zh: '把一台機體的八項改造全部裝滿', en: 'Install all eight upgrades on one frame' } },
   { id: 'codex', name: { zh: '都記下來了', en: 'All on Record' }, desc: { zh: '圖鑑記錄全部的機體與設施', en: 'Record every unit and structure in the codex' } },
+  // 挑戰模式：從完成挑戰的任務算
+  { id: 'chal1', name: { zh: '硬碰硬', en: 'The Hard Way' }, desc: { zh: '完成任何一個任務的挑戰', en: "Clear any mission's challenge" } },
+  { id: 'chalMain', name: { zh: '重返冰原', en: 'Back on the Ice' }, desc: { zh: '完成主線每一個任務的挑戰', en: 'Clear the challenge of every main-story mission' } },
+  { id: 'chalAll', name: { zh: '殘響不絕', en: 'The Echo Carries' }, desc: { zh: '完成每一個任務的挑戰，後日談也算', en: 'Clear the challenge of every mission, the epilogue included' } },
   // 戰術：戰鬥裡做到的當下就算，輸了或重來也留著
   { id: 'fall', name: { zh: '下去吧', en: 'Mind the Gap' }, desc: { zh: '把一個敵人轟進裂谷', en: 'Knock an enemy into a chasm' } },
   { id: 'overwatch', name: { zh: '守株待兔', en: 'Lying in Wait' }, desc: { zh: '用警戒射擊擊破一個敵人', en: 'Destroy an enemy with an overwatch shot' } },

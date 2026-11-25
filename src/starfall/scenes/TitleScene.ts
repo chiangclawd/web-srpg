@@ -43,7 +43,7 @@ export class TitleScene extends Phaser.Scene {
             by - 70 * z,
             260,
             52,
-            `${T('continueBattle')}　${L(susMission.name)}`,
+            `${T('continueBattle')}　${L(susMission.name)}${sus.hard ? `（${T('challenge')}）` : ''}`,
             () => {
               unlockAudio();
               this.scene.start('SfBattle', { missionId: sus.mission, resume: true });
@@ -60,8 +60,9 @@ export class TitleScene extends Phaser.Scene {
       T('start'),
       () => {
         unlockAudio();
-        // 要傳一個物件：Phaser 沒收到資料時會沿用上次的，任務列表就會停在上次看的那一章
-        this.scene.start('SfMissions', {});
+        // 要傳一個物件：Phaser 沒收到資料時會沿用上次的，任務列表就會停在上次看的那一章。
+        // 從標題進去一律是平常的列表，不是挑戰模式
+        this.scene.start('SfMissions', { hard: false });
       },
       { primary: true, size: 24 },
     ).setScale(z);

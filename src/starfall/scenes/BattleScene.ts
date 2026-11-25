@@ -17,7 +17,8 @@ import { UNITS } from '../data/units';
 import { loadoutDefs, missionParts } from '../data/upgrades';
 import type { Loadout } from '../data/upgrades';
 import { clearSuspend, loadSuspend, saveSuspend } from '../suspend';
-import { earnedFeats, featsIn, grantFeats, markSeen, winFeats } from '../records';
+import { challengeReady, earnedFeats, featsIn, grantFeats, markChallenge, markSeen, winFeats } from '../records';
+import { setChallengeView } from './MissionScene';
 import { EH, TH, TOP_PAD, TW, isoX, isoY, tileDepth } from '../view/iso';
 import { TILE_ATLAS, TILE_TEX_H, loadThemeTiles, themeAtlas, tileKey, tileVariant } from '../view/textures';
 import { SHEETS, SHEET_FOOT, frameName, loadSheets, makeAnims } from '../view/sheets';
@@ -115,7 +116,7 @@ export class BattleScene extends Phaser.Scene {
     super('SfBattle');
   }
 
-  init(data: { missionId: string; resume?: boolean }): void {
+  init(data: { missionId: string; resume?: boolean; hard?: boolean }): void {
     this.mission = missionById(data.missionId);
     // 接著打：存檔要對得上這一關才用；對不上、或是重新出擊，就把舊的存檔清掉、從頭開始
     const sus = data.resume ? loadSuspend() : null;
@@ -126,8 +127,11 @@ export class BattleScene extends Phaser.Scene {
     } else {
       clearSuspend();
       this.upgrades = JSON.parse(JSON.stringify(save().upgrades)) as Loadout;
-      this.battle = new Battle(this.mission, loadoutDefs(UNITS, this.upgrades), save().easy);
+      // 挑戰模式：這一關要已經過關、主線也打完了才算數（資料對不上就當一般模式）
+      this.battle = new Battle(this.mission, loadoutDefs(UNITS, this.upgrades), save().easy, !!data.hard && challengeReady(save(), this.mission.id));
     }
+    // 打完回任務列表時，停在這一場的那一邊（一般 / 挑戰）
+    setChallengeView(this.battle.hard);
     this.views = new Map();
     this.marks = { move: [], target: [], aim: [], select: [], threat: [], zone: [], line: [] };
     this.mode = 'busy';
@@ -284,7 +288,8 @@ export class BattleScene extends Phaser.Scene {
       for (const id of met) this.hud.award(id);
       return;
     }
-    if (this.mission.intro) await this.say(this.mission.intro);
+    // 挑戰模式是重打，開場和結尾的劇情不再播一次（戰鬥中的對話照常：增援之類要靠它提醒）
+    if (this.mission.intro && !this.battle.hard) await this.say(this.mission.intro);
     await this.play(this.battle.start());
     this.toIdle();
     for (const id of met) this.hud.award(id);
@@ -1534,21 +1539,24 @@ export class BattleScene extends Phaser.Scene {
     await this.wait(500);
     // 零件只發「這次新拿到的星」：重打同一關不會重複領
     let parts = 0;
+    // 挑戰模式過關：這一關的徽章是這次才拿到的（new），還是早就有了（again）
+    let chal: 'new' | 'again' | null = null;
     if (result === 'win') {
       sfx('win');
-      if (this.mission.outro) await this.say(this.mission.outro);
+      if (this.mission.outro && !this.battle.hard) await this.say(this.mission.outro);
       const stars = this.battle.stars();
       const sv = save();
       const before = sv.stars[this.mission.id] ?? 0;
       sv.stars[this.mission.id] = Math.max(before, stars);
       parts = missionParts(this.mission, sv.stars[this.mission.id]) - missionParts(this.mission, before);
+      if (this.battle.hard) chal = markChallenge(sv, this.mission.id) ? 'new' : 'again';
       persist();
     } else {
       sfx('lose');
     }
-    // 過關那一刻才算的成就，和拿到星之後才成立的（章節、星數）
+    // 過關那一刻才算的成就，和拿到星、拿到徽章之後才成立的（章節、星數、挑戰）
     this.collect(winFeats(this.battle));
-    this.hud.showResult(result, reason, parts, this.feats);
+    this.hud.showResult(result, reason, parts, this.feats, chal);
   }
 
   /**
@@ -1575,23 +1583,24 @@ export class BattleScene extends Phaser.Scene {
     return b.result ?? 'timeout';
   }
 
-  /** 下一關的編號（沒有就回傳 null） */
+  /** 下一關的編號（沒有就回傳 null）。挑戰模式：下一關的挑戰還不能打的話也是 null */
   nextMission(): string | null {
     const i = MISSIONS.findIndex((m) => m.id === this.mission.id);
-    return MISSIONS[i + 1]?.id ?? null;
+    const next = MISSIONS[i + 1]?.id ?? null;
+    return next && this.battle.hard && !challengeReady(save(), next) ? null : next;
   }
 
   restart(): void {
     this.scene.stop('SfHud');
     this.scene.stop('SfDialogue');
-    this.scene.restart({ missionId: this.mission.id });
+    this.scene.restart({ missionId: this.mission.id, hard: this.battle.hard });
   }
 
   leave(to: 'missions' | 'next' | 'hangar'): void {
     const next = to === 'next' ? this.nextMission() : null;
     this.scene.stop('SfHud');
     this.scene.stop('SfDialogue');
-    if (next) this.scene.restart({ missionId: next });
+    if (next) this.scene.restart({ missionId: next, hard: this.battle.hard });
     else if (to === 'hangar') this.scene.start('SfHangar', { chapter: this.mission.chapter });
     else this.scene.start('SfMissions', { chapter: this.mission.chapter });
   }

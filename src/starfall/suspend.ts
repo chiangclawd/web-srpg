@@ -95,8 +95,8 @@ export function loadSuspend(n: SlotId = activeSlot()): { battle: Battle; upgrade
   return { battle, upgrades };
 }
 
-/** 有沒有可以接著打的戰鬥：哪一關、打到第幾回合（標題畫面、任務列表、存檔畫面用） */
-export function suspendInfo(n: SlotId = activeSlot()): { mission: string; turn: number } | null {
+/** 有沒有可以接著打的戰鬥：哪一關、打到第幾回合、是不是挑戰模式（標題畫面、任務列表、存檔畫面用） */
+export function suspendInfo(n: SlotId = activeSlot()): { mission: string; turn: number; hard: boolean } | null {
   const s = loadSuspend(n);
-  return s ? { mission: s.battle.mission.id, turn: s.battle.turn } : null;
+  return s ? { mission: s.battle.mission.id, turn: s.battle.turn, hard: s.battle.hard } : null;
 }

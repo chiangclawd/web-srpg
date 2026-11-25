@@ -252,6 +252,8 @@ export interface BattleSnap {
   /** 任務內容的指紋：任務資料改過，舊存檔就不能接著打 */
   sig: string;
   easy: boolean;
+  /** 挑戰模式的戰鬥才有這一欄（沒有 = 不是） */
+  hard?: boolean;
   turn: number;
   lost: number;
   held: number;

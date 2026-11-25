@@ -1,5 +1,6 @@
 // 自動對戰：雙方都交給 AI 打完每一關，看關卡打不打得過、要幾回合。
-// 用法：npx tsx scripts/starfall-sim.ts [missionId] [-v] [--easy] [--max | --lv=N] [--cautious] [--care=N]
+// 用法：npx tsx scripts/starfall-sim.ts [missionId] [-v] [--easy | --hard] [--max | --lv=N] [--cautious] [--care=N]
+//   --hard：挑戰模式（敵方比較強）
 //   --max：六台機體全部改滿；--lv=N：兩條強化線都升到 N 級、不裝專屬改造
 import { Battle } from '../src/starfall/sim/Battle';
 import { autoPlay } from '../src/starfall/sim/ai';
@@ -10,6 +11,7 @@ import { FRAMES, TRACK_MAX, loadoutDefs, modsOf } from '../src/starfall/data/upg
 const only = process.argv[2] && !process.argv[2].startsWith('-') ? process.argv[2] : null;
 const verbose = process.argv.includes('-v');
 const easy = process.argv.includes('--easy');
+const hard = process.argv.includes('--hard');
 const max = process.argv.includes('--max');
 const cautious = process.argv.includes('--cautious');
 const care = Number(process.argv.find((a) => a.startsWith('--care='))?.slice(7) ?? 1);
@@ -20,7 +22,7 @@ const defs = loadoutDefs(
 );
 for (const m of MISSIONS) {
   if (only && m.id !== only) continue;
-  const b = new Battle(m, defs, easy);
+  const b = new Battle(m, defs, easy, hard);
   const name = (uid: number): string => `${b.unit(uid).def.id}#${uid}`;
   const r = autoPlay(b, 40, verbose ? (ev) => {
     for (const e of ev) {
