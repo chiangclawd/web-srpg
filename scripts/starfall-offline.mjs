@@ -4,6 +4,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { LICENSED } from './starfall-legal.mjs';
 
 const sha = (data) => crypto.createHash('sha1').update(data).digest('hex').slice(0, 10);
 
@@ -32,6 +33,29 @@ export function chunkFiles(bundle, entryFile) {
     .filter((f) => !f.endsWith('.map'))
     .sort()
     .map((f) => [f, '', sizeOf(bundle[f])]);
+}
+
+/**
+ * 從進入點出發的打包檔裡包了哪些 npm 套件。授權頁（scripts/starfall-legal.mjs）要列的就是這些：
+ * 多數開源授權要求散布時附上授權文字，壓縮過的程式裡註解都被拿掉了，所以另外放一頁。
+ */
+export function bundledPackages(bundle, entryFile) {
+  const seen = new Set();
+  const pkgs = new Set();
+  const walk = (name) => {
+    const c = bundle[name];
+    if (!c || seen.has(name) || c.type !== 'chunk') return;
+    seen.add(name);
+    for (const raw of Object.keys(c.modules ?? {})) {
+      const id = raw.replace(/\\/g, '/');
+      const at = id.lastIndexOf('node_modules/');
+      const m = at < 0 ? null : /^((?:@[^/]+\/)?[^/]+)/.exec(id.slice(at + 13));
+      if (m) pkgs.add(m[1]);
+    }
+    for (const n of [...(c.imports ?? []), ...(c.dynamicImports ?? [])]) walk(n);
+  };
+  walk(entryFile);
+  return [...pkgs].sort();
 }
 
 /** 分享卡片的預覽圖只有社群網站會抓，遊戲本身用不到 */
@@ -83,6 +107,9 @@ export function starfallOffline() {
     generateBundle(_options, bundle) {
       const entry = Object.values(bundle).find((c) => c.type === 'chunk' && c.isEntry && /[\\/]starfall\.html$/.test(c.facadeModuleId ?? ''));
       if (!entry) return;
+      // 打包進來的套件都要在授權頁上：漏了就不讓建置過
+      const unlisted = bundledPackages(bundle, entry.fileName).filter((p) => !LICENSED.includes(p));
+      if (unlisted.length) this.error(`授權頁沒有列到打包進遊戲的套件：${unlisted.join(', ')}。加進 scripts/starfall-legal.mjs 的 PACKAGES，再跑 node scripts/starfall-legal.mjs`);
       // 頁面本身的版本：拿得到內容就用內容（只改了 HTML 的時候也要算新版），拿不到就用進入點的檔名
       const html = bundle['starfall.html'];
       const page = ['starfall.html', sha(html?.type === 'asset' ? String(html.source) : entry.fileName), html ? sizeOf(html) : 0];

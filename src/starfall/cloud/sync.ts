@@ -21,6 +21,12 @@ export interface CloudBackend {
   signOut(): Promise<void>;
   load(uid: string): Promise<unknown>;
   store(uid: string, doc: CloudDoc): Promise<void>;
+  /** 再確認一次是本人（重新選一次帳號）。選了別的帳號、把視窗關掉或被擋住都算失敗 */
+  reauth(): Promise<void>;
+  /** 刪掉這個帳號的雲端存檔 */
+  remove(uid: string): Promise<void>;
+  /** 刪掉這個帳號在這個遊戲的登入紀錄。刪完就是登出的狀態 */
+  removeUser(): Promise<void>;
 }
 
 export type CloudStatus = 'signedOut' | 'syncing' | 'synced' | 'error';
@@ -29,7 +35,15 @@ export interface CloudState {
   user: CloudUser | null;
   /** 登入失敗的原因（視窗被擋、被關掉）；成功登入後清掉 */
   signInFailed: boolean;
+  /** 這個帳號的雲端資料在別的裝置被刪掉了，這台因此登出；重新登入後清掉 */
+  erasedElsewhere: boolean;
 }
+
+/**
+ * 刪除雲端資料的結果。done = 雲端存檔和登入紀錄都刪了；cancelled = 沒有通過帳號確認，什麼都沒刪；
+ * failed = 確認過了但雲端存檔沒刪成，什麼都沒刪；partial = 雲端存檔刪了，登入紀錄沒刪成（已經先登出，重新登入後可以再刪一次）
+ */
+export type EraseResult = 'done' | 'cancelled' | 'failed' | 'partial';
 
 /** 登入過的記號：下次開遊戲時才會去載入 Firebase、恢復登入狀態 */
 const FLAG_KEY = 'starfall_cloud';
@@ -37,7 +51,7 @@ const FLAG_KEY = 'starfall_cloud';
 const UID_KEY = 'starfall_cloud_uid';
 const PUSH_DELAY = 3000;
 
-const state: CloudState = { status: 'signedOut', user: null, signInFailed: false };
+const state: CloudState = { status: 'signedOut', user: null, signInFailed: false, erasedElsewhere: false };
 const listeners = new Set<() => void>();
 /** 同步把別台裝置的進度帶進來了：畫面要重畫 */
 const changed = new Set<() => void>();
@@ -46,6 +60,8 @@ let loading: Promise<CloudBackend | null> | null = null;
 let busy = false;
 let again = false;
 let applying = false;
+/** 正在刪除雲端資料：這段時間不同步，不然剛刪掉的又被傳回去 */
+let erasing = false;
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
 let lastSync = 0;
 
@@ -92,7 +108,7 @@ export function prepareCloud(): Promise<CloudBackend | null> {
     backend.onUser((u) => {
       if (u) {
         ls(FLAG_KEY, '1');
-        set({ user: u, signInFailed: false });
+        set({ user: u, signInFailed: false, erasedElsewhere: false });
         void syncNow();
       } else {
         ls(FLAG_KEY, null);
@@ -119,10 +135,53 @@ export function cloudSignOut(): void {
   void backend?.signOut().catch(() => undefined);
 }
 
+/**
+ * 刪除雲端資料：這個帳號的雲端存檔，連同它在這個遊戲的登入紀錄。這台裝置上的存檔不動。
+ * 要在按鈕的點擊裡直接呼叫：第一步會開 Google 的視窗再確認一次帳號，等過別的事才開會被瀏覽器擋掉。
+ * 先確認、再刪存檔、最後刪登入紀錄：前兩步失敗就什麼都沒刪。
+ */
+export async function cloudErase(): Promise<EraseResult> {
+  const b = backend;
+  const user = state.user;
+  if (!b || !user || erasing) return 'failed';
+  erasing = true;
+  if (pushTimer) clearTimeout(pushTimer);
+  pushTimer = null;
+  try {
+    try {
+      await b.reauth();
+    } catch {
+      return 'cancelled';
+    }
+    // 確認帳號的那幾秒裡如果有一次同步還在跑，等它寫完再刪
+    while (busy) await new Promise((r) => setTimeout(r, 50));
+    try {
+      await b.remove(user.uid);
+    } catch {
+      return 'failed';
+    }
+    ls(UID_KEY, null);
+    try {
+      await b.removeUser();
+    } catch {
+      // 存檔刪了、登入紀錄還在：先登出，不然下一次同步會把這台的進度又傳上去
+      await b.signOut().catch(() => undefined);
+      ls(FLAG_KEY, null);
+      set({ user: null, status: 'signedOut' });
+      return 'partial';
+    }
+    ls(FLAG_KEY, null);
+    set({ user: null, status: 'signedOut' });
+    return 'done';
+  } finally {
+    erasing = false;
+  }
+}
+
 /** 讀下來、合併、寫回去。同時只跑一個；跑的時候又有人要求，跑完再來一次 */
 export async function syncNow(): Promise<void> {
   const user = state.user;
-  if (!backend || !user) return;
+  if (!backend || !user || erasing) return;
   if (busy) {
     again = true;
     return;
@@ -134,6 +193,15 @@ export async function syncNow(): Promise<void> {
   try {
     const raw = await backend.load(user.uid);
     const remote = raw ? readDoc(raw) : null;
+    // 這台跟這個帳號同步過，雲端上那一份卻不見了：是在別的裝置按了「刪除雲端資料」。
+    // 不要把這台的進度再傳上去（那樣等於沒刪），登出就好；這台裝置上的存檔留著。
+    if (!remote && ls(UID_KEY) === user.uid) {
+      ls(UID_KEY, null);
+      ls(FLAG_KEY, null);
+      await backend.signOut().catch(() => undefined);
+      set({ user: null, status: 'signedOut', erasedElsewhere: true });
+      return;
+    }
     // 這台裝置上次是跟別的帳號同步的（換人登入）：不要把上一個人的進度併進這個帳號，直接用這個帳號雲端上的
     const other = ls(UID_KEY);
     const foreign = !!other && other !== user.uid && !!remote;
@@ -156,8 +224,9 @@ export async function syncNow(): Promise<void> {
     } finally {
       applying = false;
     }
+    if (push && !erasing) await backend.store(user.uid, writeDoc(merged));
+    // 雲端上確定有這個帳號的存檔了才記：之後那一份不見，就知道是被刪掉的，不是還沒傳上去
     ls(UID_KEY, user.uid);
-    if (push) await backend.store(user.uid, writeDoc(merged));
     lastSync = Date.now();
     set({ status: 'synced' });
     if (touched) for (const cb of [...changed]) cb();

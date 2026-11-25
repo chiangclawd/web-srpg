@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>隱私權說明 Privacy｜星墜殘響 Starfall Echo</title>
+    <meta name="description" content="星墜殘響 Starfall Echo 的隱私權說明：沒有廣告和追蹤；只有你自己登入雲端同步或送出問題回報時，資料才會離開裝置。" />
+    <meta name="theme-color" content="#070d18" />
+    <style>
+      :root {
+        --bg: #e9eff6;
+        --paper: #f7fafd;
+        --ink: #14212f;
+        --muted: #50657a;
+        --accent: #0b6f95;
+        --rule: #c3d2e0;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #070d18;
+          --paper: #0d1826;
+          --ink: #e2edf8;
+          --muted: #8fb0c8;
+          --accent: #5fe3ff;
+          --rule: #23384d;
+        }
+      }
+      html { background: var(--bg); }
+      body {
+        margin: 0 auto;
+        max-width: 760px;
+        padding: max(24px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) 48px max(18px, env(safe-area-inset-left));
+        font: 16px/1.7 "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", "Trebuchet MS", sans-serif;
+        color: var(--ink);
+      }
+      main { background: var(--paper); border: 1px solid var(--rule); border-radius: 14px; padding: 8px 22px 22px; }
+      h1 { font-size: 1.5rem; line-height: 1.3; margin: 18px 0 4px; color: var(--accent); }
+      h2 { font-size: 1.1rem; margin: 24px 0 6px; }
+      p, li { margin: 6px 0; }
+      ul { padding-left: 1.3em; }
+      .date { color: var(--muted); font-size: 0.9rem; margin: 0 0 8px; }
+      .lang { border-top: 1px solid var(--rule); margin-top: 28px; padding-top: 4px; }
+      nav { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 14px; font-size: 0.95rem; }
+      a { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <a href="../starfall.html">← 回到遊戲 Back to the game</a>
+      <a href="#en">English</a>
+    </nav>
+    <main>
+      <h1>隱私權說明</h1>
+      <p class="date">《星墜殘響 Starfall Echo》｜最後更新：2026 年 11 月 26 日</p>
+      <p>簡單說：<strong>不用登入、不用提供任何資料，就能玩完整個遊戲。</strong>沒有廣告，沒有數據分析或追蹤，資料不會賣給或交給別人。只有兩種情況資料會離開你的裝置：你自己登入雲端同步，或你自己送出問題回報。</p>
+
+      <h2>存在你裝置上的資料</h2>
+      <p>遊戲用瀏覽器的本機儲存空間保存下面這些東西。它們不會自己傳到任何地方。</p>
+      <ul>
+        <li>三個存檔：每一關的星數、看過的教學提示、機庫的改造，以及打到一半的戰鬥。</li>
+        <li>設定：音量、語言、文字大小、難度等。</li>
+        <li>最近五筆程式錯誤的訊息，讓你回報問題時可以附上。</li>
+        <li>遊戲本身的檔案，讓你沒有網路時也能玩。</li>
+        <li>如果你登入過：登入狀態，由 Firebase 的程式保存在瀏覽器裡。</li>
+      </ul>
+      <p>要清掉這些資料：在遊戲的「存檔」頁刪除存檔，或在瀏覽器的設定裡清除這個網站的資料。</p>
+
+      <h2>雲端同步（選用）</h2>
+      <p>按下「用 Google 登入」之後才會啟用，用來讓存檔在你自己的各台裝置之間同步。這項功能使用 Google 的 Firebase 服務：</p>
+      <ul>
+        <li><strong>登入紀錄</strong>（Firebase Authentication）：一組隨機的使用者代碼、你的 Google 帳號的名稱、電子郵件地址、大頭貼的網址，以及建立和最後登入的時間。遊戲畫面上只會顯示名稱，沒有名稱時顯示電子郵件。依 Google 的說明，這項服務的資料存放在美國。</li>
+        <li><strong>雲端存檔</strong>（Cloud Firestore）：你的三個存檔，內容和裝置上的一樣（星數、教學提示、改造、打到一半的戰鬥，以及這些資料最後修改的時間）。存放在 Google 位於台灣的資料中心。</li>
+        <li>這些資料只用來同步你的存檔。除了你自己，只有開發者能從 Firebase 的管理後台看到；開發者不會拿來做別的事，也不會提供給其他人。</li>
+        <li>登出不會刪除雲端上的資料，只是那台裝置不再同步。要刪除請看下面「刪除你的資料」。</li>
+      </ul>
+
+      <h2>回報問題</h2>
+      <p>設定頁的「回報問題」會列出一段診斷資訊：遊戲版本、你正在玩的關卡和回合、設定、畫面大小、瀏覽器和裝置的識別字串、繪圖裝置、畫面更新率、離線快取和雲端同步的狀態、過了幾關，以及最近的程式錯誤。裡面<strong>沒有</strong>你的帳號名稱、電子郵件或存檔內容。</p>
+      <ul>
+        <li>這段資訊只有在你按「打開回報表單」並送出表單，或是自己複製、貼給開發者的時候，才會離開你的裝置。送出之前，內容都看得到。</li>
+        <li>表單是 Google 表單，不需要登入，也不收集電子郵件。你送出的內容（診斷資訊、你寫的經過、你填的裝置型號）保存在開發者的 Google 帳號裡，用來找出和修正問題。</li>
+        <li>請不要在回報裡寫個人資料。回報是匿名的，所以開發者沒辦法找出哪一筆是你送的。</li>
+      </ul>
+
+      <h2>經手資料的其他服務</h2>
+      <ul>
+        <li><strong>GitHub Pages</strong>：遊戲的網站放在這裡。跟瀏覽任何網站一樣，GitHub 可能依其<a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" rel="noopener">隱私聲明</a>記錄一般的連線資訊（例如 IP 位址）。開發者拿不到這些紀錄。</li>
+        <li><strong>Google</strong>（Firebase、Google 登入、Google 表單）：只有在你使用雲端同步或送出回報時才會用到，適用 <a href="https://policies.google.com/privacy" rel="noopener">Google 的隱私權政策</a>。Firebase 處理資料的方式見 <a href="https://firebase.google.com/support/privacy" rel="noopener">Firebase 的隱私權與安全性說明</a>。</li>
+      </ul>
+
+      <h2>刪除你的資料</h2>
+      <ul>
+        <li><strong>雲端資料</strong>：在遊戲裡登入要刪除的帳號，到「設定 → 隱私權 → 刪除雲端資料」。這會刪掉雲端上的三個存檔，以及你在這個遊戲的登入紀錄，刪掉之後無法復原。裝置上的存檔不受影響。其他還登入著的裝置會自動登出。</li>
+        <li>沒辦法打開遊戲的話，可以到 <a href="https://github.com/chiangclawd/web-srpg/issues" rel="noopener">GitHub 專案頁</a>提出，或用<a href="https://docs.google.com/forms/d/e/1FAIpQLSd6gGeyuQlyPykgDlFhzDpxGzpLJHl51QGE7o0hK4NjjvYKnA/viewform" rel="noopener">回報表單</a>說明要刪除哪一個 Google 帳號的資料，開發者會手動刪除。</li>
+        <li><strong>裝置上的資料</strong>：見上面「存在你裝置上的資料」。</li>
+      </ul>
+
+      <h2>兒童隱私</h2>
+      <p>遊戲不需要帳號就能玩，也不會主動向任何人收集個人資料。雲端同步要用 Google 帳號，而 Google 帳號本身有年齡限制。</p>
+
+      <h2>變更與聯絡方式</h2>
+      <p>這份說明有修改時，會更新上面的日期。有任何問題，請到 <a href="https://github.com/chiangclawd/web-srpg/issues" rel="noopener">GitHub 專案頁</a>提出，或使用遊戲裡的「回報問題」。</p>
+
+      <div class="lang" id="en">
+        <h1>Privacy</h1>
+        <p class="date">Starfall Echo · Last updated: November 26, 2026</p>
+        <p>In short: <strong>you can play the whole game without signing in or giving any information.</strong> There are no ads, no analytics and no tracking, and data is never sold or passed on to anyone. Data leaves your device in only two cases: you sign in to cloud sync yourself, or you submit a problem report yourself.</p>
+
+        <h2>Data kept on your device</h2>
+        <p>The game keeps the following in your browser's local storage. None of it is sent anywhere on its own.</p>
+        <ul>
+          <li>Three saves: stars for each mission, tutorial tips you have seen, hangar upgrades, and a battle in progress.</li>
+          <li>Settings: volume, language, text size, difficulty and so on.</li>
+          <li>The messages of the last five program errors, so that you can attach them to a problem report.</li>
+          <li>The game's own files, so that you can play without a network.</li>
+          <li>If you have signed in: your sign-in state, kept in the browser by Firebase's code.</li>
+        </ul>
+        <p>To remove it: delete saves on the game's “Saves” page, or clear this site's data in your browser's settings.</p>
+
+        <h2>Cloud sync (optional)</h2>
+        <p>This is turned on only when you press “Sign in with Google”. It syncs your saves between your own devices, using Google's Firebase services:</p>
+        <ul>
+          <li><strong>Sign-in record</strong> (Firebase Authentication): a random user ID, your Google account's name, email address and photo address, and the times the record was created and last used. The game shows only the name, or the email address when there is no name. According to Google, this service stores its data in the United States.</li>
+          <li><strong>Cloud saves</strong> (Cloud Firestore): your three saves, with the same content as on your device (stars, tutorial tips, upgrades, the battle in progress, and when each was last changed). They are stored in Google's data centre in Taiwan.</li>
+          <li>This data is used only to sync your saves. Apart from you, only the developer can see it, through the Firebase console. The developer does not use it for anything else and does not give it to anyone.</li>
+          <li>Signing out does not delete the cloud data; that device simply stops syncing. To delete it, see “Deleting your data” below.</li>
+        </ul>
+
+        <h2>Problem reports</h2>
+        <p>“Report a problem” in Settings shows a short diagnostic text: the game version, the mission and turn you are in, your settings, screen sizes, the browser and device identification string, the graphics device, the frame rate, the state of the offline cache and of cloud sync, how many missions you have cleared, and recent program errors. It does <strong>not</strong> contain your account name, your email address or the content of your saves.</p>
+        <ul>
+          <li>This text leaves your device only when you press “Open the report form” and submit the form, or when you copy it and send it to the developer yourself. You can read all of it before sending.</li>
+          <li>The form is a Google Form. It needs no sign-in and collects no email address. What you submit (the diagnostic text, what you write, and the device model if you fill it in) is kept in the developer's Google account and used to find and fix problems.</li>
+          <li>Please do not put personal information in a report. Reports are anonymous, so the developer cannot find which one was yours.</li>
+        </ul>
+
+        <h2>Other services that handle data</h2>
+        <ul>
+          <li><strong>GitHub Pages</strong> hosts the game's website. As with any website, GitHub may log standard connection information (such as your IP address) under its <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" rel="noopener">privacy statement</a>. The developer has no access to those logs.</li>
+          <li><strong>Google</strong> (Firebase, Google Sign-In, Google Forms) is involved only when you use cloud sync or submit a report. <a href="https://policies.google.com/privacy" rel="noopener">Google's privacy policy</a> applies; see also <a href="https://firebase.google.com/support/privacy" rel="noopener">Privacy and Security in Firebase</a>.</li>
+        </ul>
+
+        <h2>Deleting your data</h2>
+        <ul>
+          <li><strong>Cloud data</strong>: sign in to the account in the game, then go to Settings → Privacy → Delete cloud data. This deletes the three cloud saves and your sign-in record for this game, and cannot be undone. Saves on your devices are not affected. Other devices that are still signed in will sign out by themselves.</li>
+          <li>If you cannot open the game, open an issue on the <a href="https://github.com/chiangclawd/web-srpg/issues" rel="noopener">GitHub project page</a>, or use the <a href="https://docs.google.com/forms/d/e/1FAIpQLSd6gGeyuQlyPykgDlFhzDpxGzpLJHl51QGE7o0hK4NjjvYKnA/viewform" rel="noopener">report form</a> and say which Google account's data should be deleted. The developer will delete it by hand.</li>
+          <li><strong>Data on your device</strong>: see “Data kept on your device” above.</li>
+        </ul>
+
+        <h2>Children's privacy</h2>
+        <p>The game can be played without an account and does not ask anyone for personal information. Cloud sync needs a Google account, and Google accounts have their own age requirements.</p>
+
+        <h2>Changes and contact</h2>
+        <p>When this notice changes, the date above is updated. For questions, please open an issue on the <a href="https://github.com/chiangclawd/web-srpg/issues" rel="noopener">GitHub project page</a> or use “Report a problem” in the game.</p>
+      </div>
+    </main>
+  </body>
+</html>
