@@ -62,11 +62,12 @@
 
 - [x] 離線安裝的網頁版：第一次開的時候把整個遊戲（約 24 MB）存進裝置，之後斷網也能玩；可以裝到主畫面，全螢幕、鎖橫向；更新時只下載有變的檔案（`src/starfall/offline.ts`、`offline/sw.js`、`scripts/starfall-offline.mjs`，見 README「離線遊玩與安裝到主畫面」）。只在電腦的 Chrome 測過，真機還沒試
 - [ ] 星墜殘響自己的 App：接上塔防已有的手機打包流程（Android 先，iOS 跟著）。要先決定 App ID（上架後不能改）；這台電腦沒有 Android 的建置工具，APK 要靠 GitHub Actions 建
-- [ ] 真機效能和操作測試；找沒玩過的人試玩，記錄卡關點
+- [ ] 真機效能和操作測試；找沒玩過的人試玩，記錄卡關點。手邊有 iPhone、iPad、Mac，沒有 Android：Android 上的問題靠玩家回報，免費版同時就是公開測試
+- [x] 回報問題：設定頁左下角進去，列出版本、裝置、畫面更新率和最近的程式錯誤，可以複製，也可以按「打開回報表單」帶著這些資訊開 Google 表單（見 README「回報問題」）。表單「星墜殘響 問題回報」2026-11-25 建好並發布，連結在 `src/starfall/feedback-config.ts`；回覆在表單擁有者的 Google 表單「回覆」分頁看
 - [ ] 商店素材：截圖、預告片、說明文字
 - [x] 授權：查過 Gemini、Lyria、Meshy 的條款和 Google Play、App Store、Steam、itch.io 對 AI 素材的規定，沒有找到會擋住免費發行或收費 DLC 的條文（[STARFALL_LICENSING.md](STARFALL_LICENSING.md)，不是法律意見）
 - [ ] 確認產生模型時 Meshy 是付費方案、之後的 Gemini 生成走付費層級（見上面那份文件的最後一節）
-- [ ] 製作名單和授權頁（用到的生成工具、字型授權）；隱私權說明；遊戲內的「刪除雲端資料」
+- [ ] 製作名單和授權頁（用到的生成工具、字型授權）；隱私權說明（要寫到回報問題送出的內容）；遊戲內的「刪除雲端資料」（2026-11-25 決定：連 Google 登入的帳號紀錄一起刪）
 
 ## 發行之後：收費 DLC
 
