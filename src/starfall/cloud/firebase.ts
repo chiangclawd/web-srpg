@@ -1,8 +1,8 @@
 // Firebase 版的雲端後端：Google 登入（彈出視窗）+ Firestore 裡每個帳號一份文件（starfall/{uid}）。
 // 這個檔案只會被 sync.ts 動態載入：沒登入過的玩家不會下載 Firebase 的程式。
 import { initializeApp } from 'firebase/app';
-import { GoogleAuthProvider, getAuth, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
-import { doc, getDoc, getFirestore, setDoc } from 'firebase/firestore/lite';
+import { GoogleAuthProvider, deleteUser, getAuth, onAuthStateChanged, reauthenticateWithPopup, signInWithPopup, signOut } from 'firebase/auth';
+import { deleteDoc, doc, getDoc, getFirestore, setDoc } from 'firebase/firestore/lite';
 import { FIREBASE_CONFIG } from './firebase-config';
 import type { CloudBackend } from './sync';
 
@@ -29,5 +29,16 @@ export const backend: CloudBackend = {
   },
   async store(uid, data) {
     await setDoc(doc(db, 'starfall', uid), data);
+  },
+  // 刪除雲端資料用的三步。Firebase 規定刪帳號前要最近登入過，所以先請玩家再選一次帳號；選了別的帳號會丟錯
+  async reauth() {
+    if (!auth.currentUser) throw new Error('signed out');
+    await reauthenticateWithPopup(auth.currentUser, provider);
+  },
+  async remove(uid) {
+    await deleteDoc(doc(db, 'starfall', uid));
+  },
+  async removeUser() {
+    if (auth.currentUser) await deleteUser(auth.currentUser);
   },
 };

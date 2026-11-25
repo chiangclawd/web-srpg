@@ -104,7 +104,7 @@ export class TitleScene extends Phaser.Scene {
         new Button(this, bx, by0, bw, 52, `${cs.user.name}　${st}`, settings, { size: 17, color: cs.status === 'error' ? 0xffa53a : 0x6dff9a }).setScale(z);
       } else {
         new Button(this, bx, by0, bw, 52, T('cloudSignIn'), () => cloudSignIn(), { size: 18, primary: true }).setScale(z);
-        addText(this, w - 20, by0 + 34 * z, T(cs.signInFailed ? 'cloudPopup' : 'cloudHint'), { size: 13, strokeW: 3, color: cs.signInFailed ? COL.orange : '#c4d8e8', bold: false }).setOrigin(1, 0);
+        addText(this, w - 20, by0 + 34 * z, T(cs.signInFailed ? 'cloudPopup' : cs.erasedElsewhere ? 'cloudErasedElsewhere' : 'cloudHint'), { size: 13, strokeW: 3, color: cs.signInFailed || cs.erasedElsewhere ? COL.orange : '#c4d8e8', bold: false }).setOrigin(1, 0);
       }
       // 登入、同步的狀態變了：重畫（設定頁開著的時候由它自己重畫，關掉時這裡也會重畫）
       const off = onCloud(() => this.scene.isActive() && !overlay() && this.scene.restart());

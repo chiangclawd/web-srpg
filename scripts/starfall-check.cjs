@@ -10,9 +10,11 @@
 //   8. 回報問題：設定頁左下角進得去，列得出版本和裝置的資訊、複製得了；程式出的錯會記下來，重新整理之後還在；
 //      表單設定好的時候，按鈕會帶著這些資訊開表單
 //   9. 表情差分：對話照劇本標的表情換立繪，用到才載入；同一個人接著說話時原地換臉
-//  10. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
+//  10. 製作名單和隱私權說明：設定頁進得去、說明頁開得到；刪除雲端資料要先確認帳號，刪完這台的存檔還在，
+//      別的裝置刪掉之後這台不會再傳上去（雲端用假的）
+//  11. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
 // 用法：先 npx vite build && npx vite preview --port 4173，再 node scripts/starfall-check.cjs [截圖資料夾]
-// （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址；ONLY=click,hangar,big,pick,codex,challenge,offline,report,faces,m10 只跑其中幾段；
+// （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址；ONLY=click,hangar,big,pick,codex,challenge,offline,report,faces,privacy,m10 只跑其中幾段；
 //   SLOW=4 把網頁的 CPU 放慢四倍，用來重現 CI 上慢的機器。CI 把這份檢查拆成幾個平行的工作，見 .github/workflows/phone-check.yml）
 const path = require('node:path');
 const fs = require('node:fs');
@@ -35,7 +37,7 @@ const MAXED = {
 // CI 把這份檢查拆成幾個平行的工作，一個工作跑一份（PART=ui）。每一段都要放進其中一份，漏掉的話這支程式一開始就會報錯；
 // 多加一份的時候 .github/workflows/phone-check.yml 的 matrix 也要加（tests/starfall/ci.test.ts 會對）。
 const PARTS = {
-  ui: ['click', 'hangar', 'big', 'pick', 'codex', 'challenge', 'offline', 'report', 'faces'],
+  ui: ['click', 'hangar', 'big', 'pick', 'codex', 'challenge', 'offline', 'report', 'faces', 'privacy'],
   'ch1-2': ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'],
   ch3: ['m7', 'm8', 'm9'],
   epilogue: ['m10', 'm11', 'm12'],
@@ -52,13 +54,15 @@ const ok = (cond, msg, extra) => {
 };
 
 // 離線快取（service worker）平常擋掉：每一段都是全新的瀏覽器環境，不擋的話每一段都會在背景把整個遊戲下載一次，白白拖慢檢查。只有 offline 那一段打開
-async function open(browser, view, save, { sw = false, url = URL } = {}) {
+async function open(browser, view, save, { sw = false, url = URL, init = null } = {}) {
   const ctx = await browser.newContext({ viewport: { width: view.w, height: view.h }, deviceScaleFactor: view.dpr, isMobile: !!view.touch, hasTouch: !!view.touch, serviceWorkers: sw ? 'allow' : 'block' });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => ok(false, `程式錯誤：${e.message}`));
   // SLOW=4：把網頁的 CPU 放慢四倍，在自己的電腦上重現 CI 上比較慢的機器
   if (process.env.SLOW) await (await ctx.newCDPSession(page)).send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.SLOW) });
   await page.addInitScript((s) => localStorage.setItem('starfall_save_v1', JSON.stringify(s)), { lang: 'zh', sfx: 0, music: 0, stars: {}, tips: [], fast: true, ...save });
+  // init：遊戲開機前要先放好的東西（假的雲端後端）
+  if (init) await page.addInitScript(init);
   await page.goto(url);
   await page.waitForFunction(() => window.__sf && window.__sf.scene.isActive('SfTitle'), null, { timeout: 120000 });
   return { ctx, page };
@@ -1121,6 +1125,172 @@ async function facesCheck(browser) {
   await ctx.close();
 }
 
+/**
+ * 製作名單、隱私權說明、刪除雲端資料。雲端用假的後端（window.__sfCloudBackend），在遊戲開機前就放好：
+ * 沒通過帳號確認不能刪；刪了之後雲端那一份和登入紀錄都沒了，這台裝置的存檔還在；
+ * 別的裝置刪掉之後，這台不會把進度再傳上去。
+ */
+async function privacyCheck(browser) {
+  const fakeCloud = () => {
+    const cloud = (window.__cloud = { docs: {}, user: null, cb: () => undefined, log: [], fail: {} });
+    window.__sfCloudBackend = {
+      onUser(cb) {
+        cloud.cb = cb;
+      },
+      async signIn() {
+        cloud.user = { uid: 'u1', name: 'Tester' };
+        cloud.cb(cloud.user);
+      },
+      async signOut() {
+        cloud.log.push('signOut');
+        cloud.user = null;
+        cloud.cb(null);
+      },
+      async load(uid) {
+        return cloud.docs[uid] ?? null;
+      },
+      async store(uid, doc) {
+        cloud.log.push('store');
+        cloud.docs[uid] = doc;
+      },
+      async reauth() {
+        cloud.log.push('reauth');
+        if (cloud.fail.reauth) throw new Error('popup closed');
+      },
+      async remove(uid) {
+        cloud.log.push('remove');
+        delete cloud.docs[uid];
+      },
+      async removeUser() {
+        cloud.log.push('removeUser');
+        cloud.user = null;
+        cloud.cb(null);
+      },
+    };
+  };
+  const { ctx, page } = await open(browser, { w: 844, h: 390, dpr: 2, touch: true }, { stars: { m1: 3, m2: 2 }, tips: TIPS }, { init: fakeCloud });
+  const { button, press } = ui(page);
+  await page.evaluate(() => {
+    window.__opened = [];
+    window.open = (u) => (window.__opened.push(u), null);
+  });
+  const active = (key, on = true) => page.waitForFunction(([key, on]) => window.__sf.scene.isActive(key) === on, [key, on], { timeout: 15000 }).then(() => true, () => false);
+  /** 那一頁上所有的字 */
+  const texts = (scene) =>
+    page.evaluate((scene) => {
+      const out = [];
+      const walk = (o) => {
+        if (o.type === 'Text') out.push(o.text.replace(/\u00a0/g, ' '));
+        if (o.list) o.list.forEach(walk);
+      };
+      window.__sf.scene.getScene(scene).children.list.forEach(walk);
+      return out;
+    }, scene);
+  const has = async (scene, part) => (await texts(scene)).some((t) => t.includes(part));
+  const cloud = () => page.evaluate(() => ({ doc: !!window.__cloud.docs.u1, user: window.__cloud.user && window.__cloud.user.uid, log: window.__cloud.log.slice(), stars: JSON.parse(localStorage.getItem('starfall_save_v1')).stars }));
+  const synced = () => page.waitForFunction(() => !!window.__cloud.docs.u1, null, { timeout: 15000 }).then(() => true, () => false);
+  /** 頁面重畫（scene.restart）要一兩格才完成 */
+  const settle = () => page.waitForTimeout(450);
+
+  // 1. 設定頁右下角進得去製作名單，授權全文開的是遊戲外面的那一頁
+  await press('SfTitle', '設定');
+  ok(await active('SfSettings'), '設定頁開了');
+  await settle();
+  await press('SfSettings', '製作名單');
+  ok(await active('SfCredits'), '製作名單開了');
+  await settle();
+  ok((await has('SfCredits', 'chiangclawd')) && (await has('SfCredits', 'Phaser 3')) && (await has('SfCredits', 'Meshy')), '列出製作者、引擎和生成工具');
+  await page.screenshot({ path: path.join(OUT, 'privacy-credits.png') });
+  await press('SfCredits', '授權全文');
+  const lic = await page.evaluate(async () => {
+    const url = window.__opened.pop();
+    const res = await fetch(url);
+    return { url, status: res.status, text: await res.text() };
+  });
+  ok(lic.url === 'legal/starfall-licenses.html' && lic.status === 200 && lic.text.includes('Apache License') && lic.text.includes('SIL OPEN FONT LICENSE'), '「授權全文」開的那一頁在，裡面有授權文字', { url: lic.url, status: lic.status });
+  await press('SfCredits', '關閉');
+  ok(await active('SfCredits', false), '製作名單關得掉');
+
+  // 2. 隱私權說明：沒登入時只有說明，沒有刪除的按鈕
+  await press('SfSettings', '隱私權');
+  ok(await active('SfPrivacy'), '隱私權說明開了');
+  await settle();
+  ok((await has('SfPrivacy', 'Firebase')) && (await has('SfPrivacy', 'GitHub Pages')) && (await has('SfPrivacy', '回報問題')), '說明提到雲端、網站和回報');
+  ok((await has('SfPrivacy', '請先回設定頁登入')) && !(await button('SfPrivacy', '刪除雲端資料')), '沒登入時沒有刪除的按鈕，寫明要先登入');
+  await page.screenshot({ path: path.join(OUT, 'privacy-signed-out.png') });
+  await press('SfPrivacy', '完整說明');
+  const pol = await page.evaluate(async () => {
+    const url = window.__opened.pop();
+    const res = await fetch(url);
+    return { url, status: res.status, text: await res.text() };
+  });
+  ok(pol.url === 'legal/starfall-privacy.html' && pol.status === 200 && pol.text.includes('隱私權說明') && pol.text.includes('id="en"'), '「完整說明」開的那一頁在，中英文都有', { url: pol.url, status: pol.status });
+  await press('SfPrivacy', '關閉');
+  ok(await active('SfPrivacy', false), '隱私權說明關得掉');
+
+  // 3. 登入、同步之後：有刪除的按鈕；先問一次，按取消什麼都不做
+  await page.evaluate(() => window.__sfCloudBackend.signIn());
+  ok(await synced(), '登入後這台的進度同步到雲端');
+  await settle();
+  await press('SfSettings', '隱私權');
+  ok(await active('SfPrivacy'), '登入後再開隱私權說明');
+  await settle();
+  ok(await has('SfPrivacy', '已登入：Tester'), '顯示登入的是誰');
+  await press('SfPrivacy', '刪除雲端資料');
+  await settle();
+  ok((await has('SfPrivacy', '無法復原')) && (await has('SfPrivacy', '這台裝置上的存檔不會動')) && !!(await button('SfPrivacy', '確定刪除')), '先說清楚會刪什麼，再讓人按確定');
+  await page.screenshot({ path: path.join(OUT, 'privacy-ask.png') });
+  await press('SfPrivacy', '取消');
+  await settle();
+  let c = await cloud();
+  ok(c.doc && c.user === 'u1' && !c.log.includes('reauth'), '按取消什麼都沒發生', c.log);
+
+  // 4. 帳號確認沒過（視窗被關掉）：不刪
+  await page.evaluate(() => (window.__cloud.fail.reauth = true));
+  await press('SfPrivacy', '刪除雲端資料');
+  await settle();
+  await press('SfPrivacy', '確定刪除');
+  await settle();
+  c = await cloud();
+  ok(c.doc && c.user === 'u1' && !c.log.includes('remove') && (await has('SfPrivacy', '沒有刪除')), '帳號確認沒過就不刪，並且說明原因', c.log);
+
+  // 5. 確認過了：雲端存檔和登入紀錄都刪掉，這台的存檔還在
+  await page.evaluate(() => {
+    window.__cloud.fail.reauth = false;
+    window.__cloud.log.length = 0;
+  });
+  await press('SfPrivacy', '刪除雲端資料');
+  await settle();
+  await press('SfPrivacy', '確定刪除');
+  await settle();
+  c = await cloud();
+  ok(!c.doc && c.user === null && c.log.join() === 'reauth,remove,removeUser', '雲端存檔和登入紀錄都刪了（先確認帳號、再刪存檔、最後刪登入紀錄）', c.log);
+  ok(c.stars.m1 === 3 && c.stars.m2 === 2, '這台裝置上的存檔還在', c.stars);
+  ok((await has('SfPrivacy', '都刪除了')) && !(await button('SfPrivacy', '刪除雲端資料')), '顯示結果，刪除的按鈕收起來');
+  await page.screenshot({ path: path.join(OUT, 'privacy-done.png') });
+  await page.waitForTimeout(3500);
+  ok(!(await cloud()).doc, '過了同步的延遲，進度也沒有再傳上去');
+  await press('SfPrivacy', '關閉');
+  await settle();
+  ok(!!(await button('SfSettings', '用 Google 登入')), '回到設定頁是登出的狀態');
+
+  // 6. 在別的裝置刪掉了：這台下次同步時發現雲端那一份不見，登出，不再上傳
+  await page.evaluate(() => window.__sfCloudBackend.signIn());
+  ok(await synced(), '重新登入後又同步了一份上去');
+  await settle();
+  await page.evaluate(() => {
+    delete window.__cloud.docs.u1;
+    window.__cloud.log.length = 0;
+  });
+  await press('SfSettings', '立即同步');
+  await page.waitForTimeout(700);
+  c = await cloud();
+  ok(!c.doc && c.user === null && !c.log.includes('store') && c.stars.m1 === 3, '別處刪掉之後這台不會把進度再傳上去，存檔留著', c.log);
+  ok(await has('SfSettings', '已經在別的裝置刪除'), '設定頁說明為什麼登出了');
+  await page.screenshot({ path: path.join(OUT, 'privacy-elsewhere.png') });
+  await ctx.close();
+}
+
 async function autoPlay(browser, mission) {
   const epilogue = ['m10', 'm11', 'm12'].includes(mission);
   const { ctx, page } = await open(browser, { w: 1280, h: 720, dpr: 1 }, epilogue ? { stars: ALL_STARS, tips: ALL_TIPS, upgrades: MAXED } : { stars: { m1: 1, m2: 1 }, tips: TIPS });
@@ -1150,7 +1320,7 @@ async function autoPlay(browser, mission) {
 }
 
 (async () => {
-  const sections = { click: clickThrough, hangar: hangarCheck, big: bigMapCheck, pick: pickCheck, codex: codexCheck, challenge: challengeCheck, offline: offlineCheck, report: reportCheck, faces: facesCheck };
+  const sections = { click: clickThrough, hangar: hangarCheck, big: bigMapCheck, pick: pickCheck, codex: codexCheck, challenge: challengeCheck, offline: offlineCheck, report: reportCheck, faces: facesCheck, privacy: privacyCheck };
   for (const m of ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12']) sections[m] = (browser) => autoPlay(browser, m);
   const all = Object.keys(sections);
   const parted = Object.values(PARTS).flat();

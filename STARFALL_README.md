@@ -241,6 +241,30 @@
   問號前面是 `form`，`entry.` 後面那串數字是 `entry`。
 - **還沒做的**：遊戲當掉之後不會主動提醒玩家去回報；載不到的素材（網路斷掉那種）沒有記進錯誤紀錄。
 
+## 製作名單、隱私權說明、刪除雲端資料
+
+上架前商店會要的三樣東西，入口都在設定頁右下角。
+
+- **製作名單**（`scenes/CreditsScene.ts`）：誰做的、圖和音樂用什麼工具生成、用了哪些字型和程式庫。名字在 `src/starfall/legal.ts` 的 `MAKER`。
+  「授權全文」開 `public/legal/starfall-licenses.html`：同一份名單，加上字型和打包進遊戲的程式庫的授權全文。
+  那一頁是 `node scripts/starfall-legal.mjs` 產生的，授權文字直接從 `node_modules` 讀；升級了套件要重跑一次。
+  建置時會對一次：打包進遊戲的套件有哪個沒列在那一頁，建置就失敗（`scripts/starfall-offline.mjs` 的 `bundledPackages`）。
+- **隱私權說明**（`scenes/PrivacyScene.ts`）：遊戲裡是五行摘要；「完整說明」開 `public/legal/starfall-privacy.html`（中英文在同一頁）。
+  商店要填的隱私權政策網址就是那一頁。內容照程式實際做的事寫：資料只存在裝置上，只有玩家自己登入雲端同步、或自己送出回報時才會離開裝置；
+  沒有廣告和分析（測試會擋：程式裡出現分析或廣告的程式庫，測試就失敗，提醒要改說明）。**這不是律師看過的文件，上架前要自己讀一遍。**
+- **刪除雲端資料**：在隱私權說明那一頁，登入了才有按鈕。刪的是雲端上的三個存檔，連同這個帳號在遊戲的登入紀錄；裝置上的存檔不動。
+  - 先問一次（寫清楚會刪什麼），按「確定刪除」之後 Google 會再請玩家選一次帳號：Firebase 規定刪帳號前要最近登入過，這一步同時也是確認本人。
+    選了別的帳號、把視窗關掉或被瀏覽器擋住，就什麼都不刪。
+  - 順序是確認帳號 → 刪雲端存檔 → 刪登入紀錄；正在跑的同步會先等它寫完。登入紀錄沒刪成的話先登出，畫面會請玩家重新登入後再刪一次。
+  - **別的裝置**：帳號刪掉之後，其他裝置的登入憑證最多還能用一小時。那些裝置下次同步時發現雲端那一份不見了，會直接登出、不再上傳
+    （不然等於沒刪），裝置上的存檔留著，設定頁和標題畫面會寫明原因。
+  - Firestore 的規則本來就允許刪自己的那一份，**這次不用重貼規則**。Firebase 主控台 Authentication → 設定 →「使用者動作」裡的「啟用刪除」要開著（預設是開的）。
+- **這兩頁為什麼放在 `public/legal/`**：離線快取只管 `starfall` 開頭的網址。放在範圍外面，裝成 App 之後從遊戲開這兩頁會開在瀏覽器裡，有返回鍵；
+  放在範圍裡會開在全螢幕的 App 視窗裡，沒有地方可以關。代價是沒有網路時這兩頁打不開，遊戲裡的摘要還在。
+- **測試**：`tests/starfall/sync.test.ts`（刪除的每一種結果、別的裝置不會傳回去，用假的雲端跑真的同步程式）、`tests/starfall/legal.test.ts`（授權頁是最新的、
+  製作名單兩邊寫的一樣、隱私權說明提到每一項服務），以及瀏覽器檢查的 `privacy` 那一段。
+- **沒有驗證的**：真的 Google 帳號和 Firebase。再確認帳號的視窗、刪除登入紀錄這兩步只在假的雲端上跑過，要用自己的帳號實際刪一次才算數。
+
 ## 程式結構
 
 ```
@@ -254,16 +278,18 @@ src/starfall/
 ├── records.ts      圖鑑、成就和挑戰模式的紀錄：哪些遇過、哪些達成、哪些關的挑戰完成了（純函式）
 ├── offline.ts      離線遊玩和安裝到主畫面（頁面這一側）；offline/sw.js 是 service worker 的樣板
 ├── report.ts       回報問題：報告的格式和表單網址；report-env.ts 記錯誤、讀裝置狀態；feedback-config.ts 是表單的設定
+├── legal.ts        製作名單上的名字、兩份說明頁（public/legal/）的網址
+├── cloud/          雲端同步：sync.ts（登入、同步、刪除雲端資料）、merge.ts（合併規則）、firebase.ts（Firebase 版的後端，登入過才載入）
 ├── view/           iso.ts（等角投影）、textures.ts（程序繪圖的地塊與圖示）、sheets.ts（3D 圖表）、UnitView.ts、ui.ts、fx.ts（陰影、霧、粒子、擊破演出）、shots.ts（各種武器的彈道）
-└── scenes/         Boot / Title / Mission / Hangar（機庫）/ Battle（戰場）/ Hud（介面）/ Dialogue / Settings（設定）/ Saves（存檔）/ Codex（圖鑑・成就）/ Report（回報問題）
+└── scenes/         Boot / Title / Mission / Hangar（機庫）/ Battle（戰場）/ Hud（介面）/ Dialogue / Settings（設定）/ Saves（存檔）/ Codex（圖鑑・成就）/ Report（回報問題）/ Credits（製作名單）/ Privacy（隱私權說明）
 ```
 
 ```bash
-npm run test:starfall                 # 規則測試（129 項）
+npm run test:starfall                 # 規則測試（143 項）
 npx tsx scripts/starfall-sim.ts       # 自動對戰：每關打不打得過、幾回合
 npx tsx scripts/starfall-sim.ts m3 -v # 逐步列出某一關的過程（加 --easy 用輕鬆難度、--hard 用挑戰模式）
 npx tsx scripts/starfall-sim.ts --lv=2 --cautious --care=2  # 強化線都升到 2 級、謹慎打法、隊長保守；--max 是全部改滿
-node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍第一關、機庫、大地圖、被擋住的格子、圖鑑・成就、挑戰模式、離線遊玩、回報問題、表情差分 + 十二關自動對戰（要先 build 並開 preview；ONLY=big,m10 可以只跑幾段）
+node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍第一關、機庫、大地圖、被擋住的格子、圖鑑・成就、挑戰模式、離線遊玩、回報問題、表情差分、製作名單與隱私權 + 十二關自動對戰（要先 build 並開 preview；ONLY=big,m10 可以只跑幾段）
 ```
 
 瀏覽器檢查整套接著跑，CI 的機器上要 25–50 分鐘（同一份程式，分到的機器快慢差到兩倍）。所以 CI 把它拆成四個平行的工作

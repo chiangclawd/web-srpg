@@ -22,6 +22,10 @@ fs.writeFileSync(
 
 const drop = ['assets/cg', 'assets/tiles', 'manifest.json', 'kingdom-bastion.html', 'assets/promo', 'assets/starfall'];
 for (const f of fs.readdirSync(dir)) if (f.startsWith('starfall-')) drop.push(f);
+// 《星墜殘響》的隱私權說明和授權頁（legal 底下只有它的檔案的話，整個資料夾拿掉）
+const legal = fs.existsSync(path.join(dir, 'legal')) ? fs.readdirSync(path.join(dir, 'legal')) : [];
+if (legal.length && legal.every((f) => f.startsWith('starfall-'))) drop.push('legal');
+else for (const f of legal) if (f.startsWith('starfall-')) drop.push(`legal/${f}`);
 for (const f of fs.readdirSync(path.join(dir, 'assets/audio'))) if (/^bgm_.*\.mp3$/.test(f)) drop.push(`assets/audio/${f}`);
 let saved = 0;
 const size = (p) => (fs.statSync(p).isDirectory() ? fs.readdirSync(p).reduce((s, f) => s + size(path.join(p, f)), 0) : fs.statSync(p).size);
