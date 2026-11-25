@@ -191,6 +191,8 @@ export interface MissionDef {
   protectLose?: number;
   /** 第幾章 */
   chapter?: number;
+  /** 這一關專屬的戰鬥配樂（沒寫就用那一章的，見 missions.ts 的 battleTrack） */
+  music?: 'rollcall';
   objective: L10n;
   /** 幾回合內過關多一顆星 */
   par: number;

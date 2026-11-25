@@ -1,0 +1,4 @@
+
+Style: polished anime key visual in exactly the look of the attached key art: a painted, atmospheric background with clean cel-shaded figures and machines, crisp dark outlines, cinematic lighting, a cold navy and teal palette with warm orange accents. Mechs have the heroic, realistic proportions of the mechs in the key art (not chibi, not toy-like).
+
+Composition: 16:9. Everything important sits in the middle band of the picture. In the game a dialogue box is laid over the bottom quarter, so keep faces and anything important above it and let that part hold only ordinary foreground (snow, floor, mist, the lower legs of foreground figures). Paint the picture normally all the way to the bottom edge: no dark bar, no band, no gradient overlay, no letterbox. Leave a little quiet space along the top edge as well. No text, no letters, no numbers, no logo, no UI, no frame, no speech bubbles.

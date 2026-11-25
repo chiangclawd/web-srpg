@@ -222,7 +222,8 @@ export function sfx(name: Sfx): void {
 // ───────── 音樂 ─────────
 // 用 <audio> 串流播放（每首 2 MB 多，不放進開機載入）；換曲時舊的淡出、新的淡入
 
-export type Track = 'title' | 'battle' | 'boss' | 'ending';
+/** battle 是第一章的戰鬥曲，ch2 / ch3 / ch4 是其餘各章的，rollcall 是主線最後一關的 */
+export type Track = 'title' | 'battle' | 'ch2' | 'ch3' | 'ch4' | 'rollcall' | 'boss' | 'ending';
 
 let current: { name: Track; el: HTMLAudioElement } | null = null;
 let wanted: Track | null = null;

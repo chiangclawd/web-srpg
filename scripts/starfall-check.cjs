@@ -12,9 +12,11 @@
 //   9. 表情差分：對話照劇本標的表情換立繪，用到才載入；同一個人接著說話時原地換臉
 //  10. 製作名單和隱私權說明：設定頁進得去、說明頁開得到；刪除雲端資料要先確認帳號，刪完這台的存檔還在，
 //      別的裝置刪掉之後這台不會再傳上去（雲端用假的）
-//  11. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
+//  11. 劇情插圖：用到才載入，只在劇本標的那幾句出現，收掉之後立繪回來；按「跳過」只在結局圖停
+//  12. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤；
+//      順便確認每一關播的是那一章的戰鬥曲，有首領的關卡打起來之後換成首領曲
 // 用法：先 npx vite build && npx vite preview --port 4173，再 node scripts/starfall-check.cjs [截圖資料夾]
-// （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址；ONLY=click,hangar,big,pick,codex,challenge,offline,report,faces,privacy,m10 只跑其中幾段；
+// （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址；ONLY=click,hangar,big,pick,codex,challenge,offline,report,faces,privacy,cg,m10 只跑其中幾段；
 //   SLOW=4 把網頁的 CPU 放慢四倍，用來重現 CI 上慢的機器。CI 把這份檢查拆成幾個平行的工作，見 .github/workflows/phone-check.yml）
 const path = require('node:path');
 const fs = require('node:fs');
@@ -37,7 +39,7 @@ const MAXED = {
 // CI 把這份檢查拆成幾個平行的工作，一個工作跑一份（PART=ui）。每一段都要放進其中一份，漏掉的話這支程式一開始就會報錯；
 // 多加一份的時候 .github/workflows/phone-check.yml 的 matrix 也要加（tests/starfall/ci.test.ts 會對）。
 const PARTS = {
-  ui: ['click', 'hangar', 'big', 'pick', 'codex', 'challenge', 'offline', 'report', 'faces', 'privacy'],
+  ui: ['click', 'hangar', 'big', 'pick', 'codex', 'challenge', 'offline', 'report', 'faces', 'privacy', 'cg'],
   'ch1-2': ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'],
   ch3: ['m7', 'm8', 'm9'],
   epilogue: ['m10', 'm11', 'm12'],
@@ -1062,7 +1064,7 @@ async function facesCheck(browser) {
     page.evaluate(() => {
       const s = window.__sf.scene.getScene('SfDialogue');
       const l = s.lines[s.i];
-      return { i: s.i, who: l.who, face: l.face ?? null, tex: s.portrait ? s.portrait.texture.key : null, w: s.portrait ? Math.round(s.portrait.displayWidth) : 0, h: s.portrait ? Math.round(s.portrait.displayHeight) : 0 };
+      return { i: s.i, who: l.who, face: l.face ?? null, cg: s.cgKey, tex: s.portrait ? s.portrait.texture.key : null, w: s.portrait ? Math.round(s.portrait.displayWidth) : 0, h: s.portrait ? Math.round(s.portrait.displayHeight) : 0 };
     });
   const loaded = (keys) => page.waitForFunction((keys) => keys.every((k) => window.__sf.textures.exists(k)), keys, { timeout: 20000 }).then(() => true, () => false);
   const next = () =>
@@ -1086,7 +1088,8 @@ async function facesCheck(browser) {
   for (let n = 0; n < total; n++) {
     await page.waitForTimeout(260);
     const l = await now();
-    const want = l.who === 'sys' || l.who === 'radio' ? null : 'pt_' + l.who + (l.face ? '_' + l.face : '');
+    // 有全螢幕插圖的那幾句不放立繪
+    const want = l.cg || l.who === 'sys' || l.who === 'radio' ? null : 'pt_' + l.who + (l.face ? '_' + l.face : '');
     if (l.tex !== want) ok(false, '第 ' + (l.i + 1) + ' 句的立繪不對', { ...l, want });
     if (l.face) seen.push(l.who + ':' + l.face);
     if (l.who === 'bruno' && l.face === 'shock') await page.screenshot({ path: path.join(OUT, 'faces-shock.png') });
@@ -1291,6 +1294,108 @@ async function privacyCheck(browser) {
   await ctx.close();
 }
 
+/**
+ * 劇情插圖：用到才載入，只在劇本標的那幾句鋪滿畫面，收掉之後立繪回來；視窗比例變了插圖還在；
+ * 按「跳過」不會被中途的插圖攔下來，只在留到最後的那一張（結局）停一次。各章的戰鬥曲在自動對戰那幾段檢查。
+ */
+async function cgCheck(browser) {
+  const { ctx, page } = await open(browser, { w: 844, h: 390, dpr: 2, touch: true }, { stars: ALL_STARS, tips: ALL_TIPS });
+  const now = () =>
+    page.evaluate(() => {
+      const s = window.__sf.scene.getScene('SfDialogue');
+      return { i: s.i, want: s.cgKey, cg: s.cg ? s.cg.texture.key : null, alpha: s.cg ? Math.round(s.cg.alpha * 100) / 100 : 0, tex: s.portrait ? s.portrait.texture.key : null };
+    });
+  const next = () =>
+    page.evaluate(() => {
+      const s = window.__sf.scene.getScene('SfDialogue');
+      s.advance();
+      s.advance();
+    });
+  /** 走到第 i 句（從 0 算），等淡入淡出做完 */
+  const goto = async (i) => {
+    while ((await now()).i < i) await next();
+    await page.waitForTimeout(1200);
+    return now();
+  };
+  const start = async (m) => {
+    await page.evaluate((m) => {
+      const g = window.__sf;
+      for (const k of ['SfTitle', 'SfDialogue', 'SfHud']) g.scene.stop(k);
+      g.scene.start('SfBattle', { missionId: m });
+    }, m);
+    await page.waitForFunction(() => window.__sf.scene.isActive('SfDialogue'), null, { timeout: 60000 });
+    await page.waitForTimeout(300);
+  };
+  const has = (key) => page.evaluate((key) => window.__sf.textures.exists(key), key);
+  const loaded = (key) => page.waitForFunction((key) => window.__sf.textures.exists(key), key, { timeout: 20000 }).then(() => true, () => false);
+
+  // 1. 第一關開場：插圖用到才載入，出現在撬開維修艙那一句，艾可說完第一句就收掉
+  ok(!(await has('cg_wake')), '開機時還沒載入劇情插圖');
+  await start('m1');
+  ok(await loaded('cg_wake'), '這段對話用到的插圖載進來了');
+  ok(!(await has('cg_tram')), '別段對話的插圖沒有載');
+  let l = await goto(3);
+  ok(l.cg === null && l.want === '' && l.tex === 'pt_bruno', '插圖出現之前照常放立繪', l);
+  l = await goto(4);
+  ok(l.cg === 'cg_wake' && l.alpha === 1 && l.tex === null, '劇本標的那一句換成全螢幕插圖，立繪收起來', l);
+  const cover = await page.evaluate(() => {
+    const s = window.__sf.scene.getScene('SfDialogue');
+    return { w: Math.round(s.cg.displayWidth), h: Math.round(s.cg.displayHeight), vw: Math.round(s.w), vh: 720 };
+  });
+  ok(cover.w >= cover.vw && cover.h >= cover.vh, '插圖鋪滿整個畫面', cover);
+  await page.screenshot({ path: path.join(OUT, 'cg-wake.png') });
+  l = await goto(5);
+  ok(l.cg === 'cg_wake' && l.tex === null, '下一句沿用同一張插圖', l);
+  // 視窗比例變了會整個重排：插圖直接鋪回去，停在同一句
+  await page.evaluate(() => window.__sf.scene.getScene('SfDialogue').resized());
+  await page.waitForTimeout(500);
+  l = await now();
+  ok(l.i === 5 && l.cg === 'cg_wake' && l.alpha === 1 && l.tex === null, '重排之後插圖還在、停在同一句', l);
+  l = await goto(6);
+  ok(l.cg === null && l.want === '' && l.tex === 'pt_bruno_shock', '劇本標了收掉的那一句：插圖收掉，立繪回來', l);
+  await page.evaluate(() => window.__sf.scene.getScene('SfDialogue').finish());
+  await page.waitForFunction(() => window.__sf.scene.getScene('SfBattle').mode === 'idle', null, { timeout: 30000 });
+
+  // 2. 跳過：中途出現又收掉的插圖不攔；留到最後的那一張（結局圖）要停一次
+  const play = async (cgs) => {
+    await page.evaluate((cgs) => {
+      window.__cgDone = false;
+      const lines = cgs.map((cg) => ({ who: cg === undefined || cg === null ? 'kai' : 'sys', zh: '測試。', en: 'Test.', ...(cg === null ? {} : { cg }) }));
+      window.__sf.scene.getScene('SfBattle').scene.launch('SfDialogue', { lines, onDone: () => (window.__cgDone = true) });
+    }, cgs);
+    await page.waitForFunction(() => window.__sf.scene.isActive('SfDialogue') && window.__sf.scene.getScene('SfDialogue').lines.length < 10, null, { timeout: 15000 });
+    await page.waitForTimeout(300);
+  };
+  const skip = async () => {
+    await page.evaluate(() => window.__sf.scene.getScene('SfDialogue').skip());
+    await page.waitForTimeout(1200);
+    return page.evaluate(() => ({ done: window.__cgDone, active: window.__sf.scene.isActive('SfDialogue') }));
+  };
+  await play([null, 'cg_wake', '', null]);
+  let r = await skip();
+  ok(r.done && !r.active, '中途的插圖不會攔住「跳過」，按一次就結束', r);
+  await play([null, 'cg_wake', '', null, 'cg_ending', null]);
+  r = await skip();
+  l = await now();
+  ok(!r.done && r.active && l.i === 4 && l.cg === 'cg_ending', '後面有留到最後的插圖：先跳到那一句', { ...r, ...l });
+  r = await skip();
+  ok(r.done && !r.active, '再按一次才結束', r);
+
+  // 3. 第四關：無線電那一句換成電車站的插圖，紗羅自我介紹時收掉
+  await start('m4');
+  ok(await loaded('cg_tram'), '換一關，那一關的插圖載進來了');
+  l = await goto(3);
+  ok(l.cg === 'cg_tram' && l.alpha === 1 && l.tex === null, '第四關開場的插圖', l);
+  await page.screenshot({ path: path.join(OUT, 'cg-tram.png') });
+  l = await goto(7);
+  ok(l.cg === null && l.tex === 'pt_sparrow_panic', '收掉之後換成說話的人的立繪', l);
+  await ctx.close();
+}
+
+// 每一關平常播的戰鬥曲；有首領的那幾關，首領出手或挨打之後換成首領曲
+const BATTLE_TRACK = { m1: 'battle', m2: 'battle', m3: 'battle', m4: 'ch2', m5: 'ch2', m6: 'ch2', m7: 'ch3', m8: 'ch3', m9: 'rollcall', m10: 'ch4', m11: 'ch4', m12: 'ch4' };
+const BOSS_MISSIONS = ['m3', 'm5', 'm6', 'm8', 'm12'];
+
 async function autoPlay(browser, mission) {
   const epilogue = ['m10', 'm11', 'm12'].includes(mission);
   const { ctx, page } = await open(browser, { w: 1280, h: 720, dpr: 1 }, epilogue ? { stars: ALL_STARS, tips: ALL_TIPS, upgrades: MAXED } : { stars: { m1: 1, m2: 1 }, tips: TIPS });
@@ -1309,6 +1414,9 @@ async function autoPlay(browser, mission) {
   }, 400);
   await page.waitForFunction(() => window.__sf.scene.getScene('SfBattle').mode === 'idle', null, { timeout: 60000 });
   await page.screenshot({ path: path.join(OUT, `auto-${mission}-start.png`) });
+  const track = () => page.evaluate(() => window.__sf.scene.getScene('SfBattle').track);
+  const opening = await track();
+  ok(opening === BATTLE_TRACK[mission], `${mission} 開場播的是 ${BATTLE_TRACK[mission]}`, opening);
   const result = await page.evaluate(() => window.__sf.scene.getScene('SfBattle').autoBattle());
   await page.waitForTimeout(3000);
   clearInterval(skipper);
@@ -1316,11 +1424,14 @@ async function autoPlay(browser, mission) {
   await page.screenshot({ path: path.join(OUT, `auto-${mission}-end.png`) });
   const turn = await page.evaluate(() => window.__sf.scene.getScene('SfBattle').battle.turn);
   ok(result === 'win', `${mission} 自動對戰打得過（第 ${turn} 回合，結果 ${result}）`);
+  const closing = await track();
+  const wantClosing = BOSS_MISSIONS.includes(mission) ? 'boss' : BATTLE_TRACK[mission];
+  ok(closing === wantClosing, `${mission} 打完時播的是 ${wantClosing}`, closing);
   await ctx.close();
 }
 
 (async () => {
-  const sections = { click: clickThrough, hangar: hangarCheck, big: bigMapCheck, pick: pickCheck, codex: codexCheck, challenge: challengeCheck, offline: offlineCheck, report: reportCheck, faces: facesCheck, privacy: privacyCheck };
+  const sections = { click: clickThrough, hangar: hangarCheck, big: bigMapCheck, pick: pickCheck, codex: codexCheck, challenge: challengeCheck, offline: offlineCheck, report: reportCheck, faces: facesCheck, privacy: privacyCheck, cg: cgCheck };
   for (const m of ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12']) sections[m] = (browser) => autoPlay(browser, m);
   const all = Object.keys(sections);
   const parted = Object.values(PARTS).flat();
