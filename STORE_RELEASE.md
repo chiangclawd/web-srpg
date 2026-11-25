@@ -9,7 +9,7 @@ App 版用 Capacitor 把網頁版包成 iOS / Android App（`capacitor.config.js
 |---|---|
 | 隱私權政策 | `public/td-privacy.html`，網址 `https://chiangclawd.github.io/web-srpg/td-privacy.html`；主選單左下角有連結 |
 | 製作群 / AI 揭露 | 製作群名單列出 Gemini、Meshy、three.js、Phaser、字型授權，並註明美術、音樂、語音以 AI 輔助製作 |
-| App 打包 | `npm run build:app` 只打包塔防到 `dist-app/`（拿掉 SRPG 素材，約 54 MB）；`npx cap sync android` 複製進 Android 專案 |
+| App 打包 | `npm run build:app` 只打包塔防到 `dist-app/`（拿掉 SRPG 和《星墜殘響》的檔案，2026-11-25 量到約 72 MB）；`npx cap sync android` 複製進 Android 專案 |
 | 存檔保險 | App 版每次存檔也寫一份到原生儲存，iOS 清掉 WebView 資料時開遊戲會自動搬回來 |
 | App 圖示 / 啟動畫面 | 原圖在 `resources/`，用 `npx @capacitor/assets generate` 產生各尺寸；網頁版也加了主畫面圖示 |
 | Android 測試版 | GitHub Actions `android.yml`：main 每次更新自動建 APK，放在 Releases 的 `android-test`；固定的測試金鑰讓新版能覆蓋安裝 |

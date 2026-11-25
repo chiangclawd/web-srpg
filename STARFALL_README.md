@@ -197,6 +197,30 @@
   （六台連專屬改造全部裝滿要 3180，本來就買不齊，所以不拿它當基準）。最後一關的挑戰最緊，機器人只有一種打法過得了。
   試別的倍率用 `npx tsx scripts/starfall-sim.ts --hard --lv=2`。
 
+## 離線遊玩與安裝到主畫面
+
+網頁版開過一次之後，沒有網路也能玩；也可以裝到手機的主畫面，像 App 一樣全螢幕開。
+
+- **怎麼安裝**：Android 的 Chrome 開遊戲後，標題畫面下面那一排多一顆「安裝」（瀏覽器判斷這個網站可以安裝時才有；
+  也可以從 Chrome 的選單選「安裝應用程式」或「加到主畫面」）。iPhone / iPad 沒有這顆按鈕，要用 Safari 的「分享 → 加入主畫面」。
+  安裝設定在 `public/starfall-manifest.json`：全螢幕、鎖橫向。圖示是從主視覺裁的（`scripts/art/starfall-icons.mjs`），先頂著用。
+- **離線**：第一次開的時候，背景把整個遊戲（約 24 MB、一百多個檔案）存進裝置，標題畫面右下角版本號後面顯示進度
+  （「離線資料 42%」，照檔案大小算），存完變成「可離線遊玩」。之後沒有網路也開得起來，十二關、圖鑑、音樂都在。
+- **更新**：有網路時頁面永遠先拿新版。新版在背景安裝，檔案沒變的直接沿用上一版的快取，只下載有變的（改一張圖就只抓那一張）。
+  裝好的時候人還停在標題畫面，頁面自己重新載入一次；已經在玩了就不打斷，下次開遊戲是新的。
+- **怎麼做的**：`src/starfall/offline/sw.js` 是 service worker 的樣板。建置時 `scripts/starfall-offline.mjs`（Vite 外掛）
+  列出這一版用到的檔案：打包檔從進入點照引用一路找（含之後才載入的雲端同步），加上 `public/assets/starfall` 底下的素材和它們內容的雜湊；
+  清單寫在樣板前面，產出 `starfall-sw.js`。清單一變這個檔案就變，瀏覽器就知道有新版。頁面這一側（註冊、進度、安裝按鈕）在 `src/starfall/offline.ts`。
+  它管的範圍只有 `starfall` 開頭的頁面，同一個網站上的另外兩款遊戲不受影響。
+  音樂是 `<audio>` 播的，瀏覽器會用 Range 要檔案的一段；快取存的是整個檔案，由它切出那一段回 206（iOS 的 Safari 要這樣才肯播）。
+- **測試**：`tests/starfall/offline.test.ts` 在假的環境裡跑 service worker：第一次安裝、更新只抓有變的、抓到一半斷網下次接著抓、Range 的各種寫法。
+  瀏覽器檢查的 `offline` 那一段自己把建好的 `dist` 端出來，存完之後把伺服器關掉（真的斷網），
+  確認重新開得起來、四套地形主題各一關和圖鑑都載得到、音樂載得到，而且塔防的頁面不歸它管。
+- **還沒驗證的**：只在電腦的 Chrome 測過。真的手機上安裝的過程、Android 的全螢幕、iPhone 的 Safari 都還沒試。
+  登入雲端同步之後斷網會怎麼顯示也還沒測。手機網路很慢的話，第一次的 24 MB 可能一次存不完（瀏覽器對背景工作有時間限制）；
+  存到哪裡有記著，下次開遊戲接著抓，但這個情況只在測試裡模擬過。
+- **App 版**：星墜殘響自己的 App 還沒做。塔防的 App 打包（`npm run build:app`）現在會把星墜殘響的檔案拿掉，之前被一起包了進去（約 22 MB）。
+
 ## 程式結構
 
 ```
@@ -208,16 +232,17 @@ src/starfall/
 │   └── types.ts
 ├── data/           units.ts（機體）、missions.ts（關卡，ASCII 地圖）、story.ts（對話）、upgrades.ts（零件與改造）、codex.ts（圖鑑的分類和介紹）、achievements.ts（成就）
 ├── records.ts      圖鑑、成就和挑戰模式的紀錄：哪些遇過、哪些達成、哪些關的挑戰完成了（純函式）
+├── offline.ts      離線遊玩和安裝到主畫面（頁面這一側）；offline/sw.js 是 service worker 的樣板
 ├── view/           iso.ts（等角投影）、textures.ts（程序繪圖的地塊與圖示）、sheets.ts（3D 圖表）、UnitView.ts、ui.ts、fx.ts（陰影、霧、粒子、擊破演出）、shots.ts（各種武器的彈道）
 └── scenes/         Boot / Title / Mission / Hangar（機庫）/ Battle（戰場）/ Hud（介面）/ Dialogue / Settings（設定）/ Saves（存檔）/ Codex（圖鑑・成就）
 ```
 
 ```bash
-npm run test:starfall                 # 規則測試（103 項）
+npm run test:starfall                 # 規則測試（113 項）
 npx tsx scripts/starfall-sim.ts       # 自動對戰：每關打不打得過、幾回合
 npx tsx scripts/starfall-sim.ts m3 -v # 逐步列出某一關的過程（加 --easy 用輕鬆難度、--hard 用挑戰模式）
 npx tsx scripts/starfall-sim.ts --lv=2 --cautious --care=2  # 強化線都升到 2 級、謹慎打法、隊長保守；--max 是全部改滿
-node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍第一關、機庫、大地圖、被擋住的格子、圖鑑・成就、挑戰模式 + 十二關自動對戰（要先 build 並開 preview；ONLY=big,m10 可以只跑幾段）
+node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍第一關、機庫、大地圖、被擋住的格子、圖鑑・成就、挑戰模式、離線遊玩 + 十二關自動對戰（要先 build 並開 preview；ONLY=big,m10 可以只跑幾段）
 ```
 
 瀏覽器檢查整套接著跑，CI 的機器上要 25–50 分鐘（同一份程式，分到的機器快慢差到兩倍）。所以 CI 把它拆成四個平行的工作

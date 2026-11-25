@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { starfallOffline } from './scripts/starfall-offline.mjs';
 
 // 把 package.json 版本 + 當前 git short SHA + build 日期注入成全域常數，
 // TitleScene 右下角顯示，使用者可確認部署是否真的拿到最新 commit。
@@ -20,6 +21,8 @@ const buildDate = new Date().toISOString().slice(0, 16).replace('T', ' ');
 // npm run build:app（vite build --mode app）：只打包塔防，給 Capacitor 包成 iOS / Android App
 export default defineConfig(({ mode }) => ({
   base: './',
+  // 《星墜殘響》離線遊玩：建置時列出整個遊戲的檔案，產生 starfall-sw.js
+  plugins: [starfallOffline()],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __GIT_SHA__: JSON.stringify(gitSha),

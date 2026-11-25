@@ -1,0 +1,32 @@
+{
+  "id": "./starfall.html",
+  "name": "星墜殘響 Starfall Echo",
+  "short_name": "星墜殘響",
+  "description": "科幻機甲戰棋 — 指揮拾荒隊的機甲小隊，在墜毀殖民船的殘骸間作戰",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "start_url": "./starfall.html",
+  "scope": "./starfall",
+  "background_color": "#070d18",
+  "theme_color": "#070d18",
+  "lang": "zh-TW",
+  "categories": ["games"],
+  "icons": [
+    {
+      "src": "starfall-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "starfall-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "starfall-icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
