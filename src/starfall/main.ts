@@ -15,6 +15,7 @@ import type { HudScene as Hud } from './scenes/HudScene';
 import type { DialogueScene as Dialogue } from './scenes/DialogueScene';
 import { initCloud, onCloudChanged } from './cloud/sync';
 import { initGamepad, onHintMode } from './gamepad';
+import { initOffline } from './offline';
 
 const rotate = document.querySelector<HTMLElement>('#rotate-prompt .title');
 if (rotate) rotate.textContent = T('rotate');
@@ -79,6 +80,9 @@ onCloudChanged(() => {
     if (key === 'SfTitle' || key === 'SfMissions' || key === 'SfHangar' || key === 'SfSaves' || key === 'SfCodex') s.scene.restart();
   }
 });
+
+// 離線遊玩：第一次開的時候在背景把整個遊戲存進裝置，之後斷網也能玩；瀏覽器說可以安裝時標題畫面多一顆「安裝」
+initOffline(game);
 
 // 自動化測試（scripts/starfall-check.cjs）用
 (window as unknown as { __sf: Phaser.Game }).__sf = game;

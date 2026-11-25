@@ -7,6 +7,7 @@ import { suspendInfo } from '../suspend';
 import { activeSlot } from '../save';
 import { Button, KeyNav } from '../view/ui';
 import { cloudAvailable, cloudSignIn, cloudState, onCloud, prepareCloud } from '../cloud/sync';
+import { canInstall, offlineState, onOffline, promptInstall } from '../offline';
 
 export class TitleScene extends Phaser.Scene {
   constructor() {
@@ -86,6 +87,9 @@ export class TitleScene extends Phaser.Scene {
     ).setScale(z);
     new Button(this, x + 130 * z, by + 76 * z, 82, 48, T('saveSlot', activeSlot()), () => this.scene.launch('SfSaves', { onClose: () => this.scene.restart() }), { color: 0x8fb0c8, size: 15 }).setScale(z);
     new Button(this, x + 219 * z, by + 76 * z, 82, 48, T('settings'), () => this.scene.launch('SfSettings', { onClose: () => this.scene.restart() }), { color: 0x8fb0c8, size: 15 }).setScale(z);
+    // 瀏覽器說這個網站可以安裝的時候（Android 和電腦的 Chrome）多一顆「安裝」：裝到主畫面，之後像 App 一樣全螢幕開
+    const installable = canInstall();
+    if (installable) new Button(this, x + 308 * z, by + 76 * z, 82, 48, T('install'), () => void promptInstall(), { color: 0x6dff9a, size: 15 }).setScale(z);
     // 右上角：帳號。還沒登入是一顆「用 Google 登入」，登入後顯示名字和同步狀態（點了開設定頁，那裡可以立即同步、登出）
     if (cloudAvailable()) {
       // 先把登入要用的程式載好，按下去才能馬上開 Google 的視窗
@@ -107,6 +111,20 @@ export class TitleScene extends Phaser.Scene {
       this.events.once('shutdown', off);
     }
     new KeyNav(this, { enabled: () => !overlay(), first: () => resume ?? start });
-    addText(this, w - 14, VIEW_H - 10, `v${__APP_VERSION__} · ${__GIT_SHA__}`, { size: 12, strokeW: 0, color: '#5a7088', bold: false }).setOrigin(1, 1);
+    // 右下角：版本，後面接離線遊玩的狀態（第一次開會在背景把整個遊戲存進裝置，存完就能斷網玩）
+    const version = (): string => {
+      const o = offlineState();
+      const tail = o.status === 'ready' ? ` · ${T('offlineReady')}` : o.status === 'loading' && o.total ? ` · ${T('offlineLoading', Math.floor((o.done / o.total) * 100))}` : '';
+      return `v${__APP_VERSION__} · ${__GIT_SHA__}${tail}`;
+    };
+    const ver = addText(this, w - 14, VIEW_H - 10, version(), { size: 12, strokeW: 3, color: '#8fa8c0', bold: false }).setOrigin(1, 1);
+    const offOffline = onOffline(() => {
+      if (!this.scene.isActive()) return;
+      // 能不能安裝變了：按鈕要多一顆或少一顆，整個重畫（設定、存檔開著的時候等它關掉再畫）
+      if (canInstall() !== installable) {
+        if (!overlay()) this.scene.restart();
+      } else ver.setText(version());
+    });
+    this.events.once('shutdown', offOffline);
   }
 }

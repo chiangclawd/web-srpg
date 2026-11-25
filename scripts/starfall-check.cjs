@@ -5,9 +5,11 @@
 //   4. 被機體擋住的落點和敵人：穿過前面那台點得到，連點兩下算前面那台
 //   5. 圖鑑・成就：標題進得去、方塊和分頁點得到；戰鬥裡遇到的機體會記下來，成就會跳提示、結算畫面會列出來
 //   6. 挑戰模式：主線打完才有入口；從挑戰的列表出擊敵人比較強，過關拿到徽章，回到的還是挑戰的列表
-//   7. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
+//   7. 離線遊玩：第一次開把整個遊戲存進裝置；把伺服器關掉之後重新開得起來、四套地形主題的關卡和圖鑑都載得到、音樂放得出來；
+//      同一個網站上的塔防不受影響；瀏覽器說可以安裝時標題畫面多一顆「安裝」（這一段自己把 dist 端出來，不用 GAME_URL）
+//   8. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
 // 用法：先 npx vite build && npx vite preview --port 4173，再 node scripts/starfall-check.cjs [截圖資料夾]
-// （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址；ONLY=click,hangar,big,pick,codex,challenge,m10 只跑其中幾段；
+// （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址；ONLY=click,hangar,big,pick,codex,challenge,offline,m10 只跑其中幾段；
 //   SLOW=4 把網頁的 CPU 放慢四倍，用來重現 CI 上慢的機器。CI 把這份檢查拆成幾個平行的工作，見 .github/workflows/phone-check.yml）
 const path = require('node:path');
 const fs = require('node:fs');
@@ -30,7 +32,7 @@ const MAXED = {
 // CI 把這份檢查拆成幾個平行的工作，一個工作跑一份（PART=ui）。每一段都要放進其中一份，漏掉的話這支程式一開始就會報錯；
 // 多加一份的時候 .github/workflows/phone-check.yml 的 matrix 也要加（tests/starfall/ci.test.ts 會對）。
 const PARTS = {
-  ui: ['click', 'hangar', 'big', 'pick', 'codex', 'challenge'],
+  ui: ['click', 'hangar', 'big', 'pick', 'codex', 'challenge', 'offline'],
   'ch1-2': ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'],
   ch3: ['m7', 'm8', 'm9'],
   epilogue: ['m10', 'm11', 'm12'],
@@ -46,14 +48,15 @@ const ok = (cond, msg, extra) => {
   }
 };
 
-async function open(browser, view, save) {
-  const ctx = await browser.newContext({ viewport: { width: view.w, height: view.h }, deviceScaleFactor: view.dpr, isMobile: !!view.touch, hasTouch: !!view.touch });
+// 離線快取（service worker）平常擋掉：每一段都是全新的瀏覽器環境，不擋的話每一段都會在背景把整個遊戲下載一次，白白拖慢檢查。只有 offline 那一段打開
+async function open(browser, view, save, { sw = false, url = URL } = {}) {
+  const ctx = await browser.newContext({ viewport: { width: view.w, height: view.h }, deviceScaleFactor: view.dpr, isMobile: !!view.touch, hasTouch: !!view.touch, serviceWorkers: sw ? 'allow' : 'block' });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => ok(false, `程式錯誤：${e.message}`));
   // SLOW=4：把網頁的 CPU 放慢四倍，在自己的電腦上重現 CI 上比較慢的機器
   if (process.env.SLOW) await (await ctx.newCDPSession(page)).send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.SLOW) });
   await page.addInitScript((s) => localStorage.setItem('starfall_save_v1', JSON.stringify(s)), { lang: 'zh', sfx: 0, music: 0, stars: {}, tips: [], fast: true, ...save });
-  await page.goto(URL);
+  await page.goto(url);
   await page.waitForFunction(() => window.__sf && window.__sf.scene.isActive('SfTitle'), null, { timeout: 120000 });
   return { ctx, page };
 }
@@ -786,6 +789,156 @@ async function challengeCheck(browser) {
   await ctx.close();
 }
 
+/**
+ * 把建置好的資料夾用一個臨時的伺服器端出來。把它關掉就是真的斷網：
+ * 瀏覽器的離線模擬只管頁面發的請求，service worker 自己發的請求不一定管得到，那樣測不出快取有沒有漏。
+ */
+function serveDist(dir) {
+  const http = require('node:http');
+  const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8' };
+  const root = path.resolve(dir);
+  const server = http.createServer((req, res) => {
+    const file = path.resolve(root, decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, ''));
+    if (!file.startsWith(root + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+      res.writeHead(404);
+      res.end('not found');
+      return;
+    }
+    res.writeHead(200, { 'content-type': TYPES[path.extname(file)] ?? 'application/octet-stream', 'cache-control': 'no-cache' });
+    fs.createReadStream(file).pipe(res);
+  });
+  return new Promise((resolve) => {
+    server.listen(0, '127.0.0.1', () => {
+      const base = 'http://127.0.0.1:' + server.address().port + '/';
+      const stop = () =>
+        new Promise((done) => {
+          server.closeAllConnections();
+          server.close(done);
+        });
+      resolve({ base, stop });
+    });
+  });
+}
+
+/** 離線遊玩：第一次開把整個遊戲存進裝置，伺服器關掉之後照樣開得起來、玩得下去 */
+async function offlineCheck(browser) {
+  if (!fs.existsSync('dist/starfall-sw.js')) {
+    ok(false, 'dist 裡沒有 starfall-sw.js（先 npx vite build，而且要在專案的根目錄執行）');
+    return;
+  }
+  const site = await serveDist('dist');
+  const { ctx, page } = await open(browser, { w: 844, h: 390, dpr: 2, touch: true }, { stars: ALL_STARS, tips: ALL_TIPS, upgrades: MAXED }, { sw: true, url: site.base + 'starfall.html' });
+  const { button, tap } = ui(page);
+  const titleSays = (word) => page.waitForFunction((word) => window.__sf.scene.isActive('SfTitle') && window.__sf.scene.getScene('SfTitle').children.list.some((o) => o.type === 'Text' && o.text.includes(word)), word, { timeout: 15000 }).then(() => true, () => false);
+
+  // 1. 第一次開：背景把清單上的檔案全部存進裝置，存完才接手這個頁面
+  await page.waitForFunction(() => navigator.serviceWorker.controller, null, { timeout: 180000 });
+  const stored = await page.evaluate(async () => {
+    const names = (await caches.keys()).filter((k) => k.startsWith('starfall-'));
+    const cache = await caches.open(names[0]);
+    const meta = await (await cache.match(new URL('__files__.json', location.href).href)).json();
+    const have = new Set((await cache.keys()).map((r) => r.url));
+    const listed = Object.keys(meta);
+    return { caches: names.length, listed: listed.length, missing: listed.filter((u) => !have.has(new URL(u, location.href).href)) };
+  });
+  ok(stored.caches === 1 && stored.listed > 90 && stored.missing.length === 0, '第一次開：整個遊戲存進了裝置（' + stored.listed + ' 個檔案）', stored);
+  ok(await titleSays('可離線遊玩'), '存完之後標題畫面右下角寫著「可離線遊玩」');
+  await page.screenshot({ path: path.join(OUT, 'offline-ready.png') });
+
+  // 2. 範圍只有這個遊戲：同一個網站上的塔防頁面不歸它管
+  const other = await ctx.newPage();
+  await other.goto(site.base + 'td.html', { waitUntil: 'domcontentloaded' });
+  const boss = await other.evaluate(() => (navigator.serviceWorker.controller ? navigator.serviceWorker.controller.scriptURL : null));
+  ok(!boss || !boss.includes('starfall-sw'), '塔防的頁面不受這個快取控制', boss);
+  await other.close();
+
+  // 3. 瀏覽器說可以安裝（自動化的瀏覽器不會真的發這個事件，這裡自己發一個）：標題多一顆「安裝」，按了就叫出瀏覽器的安裝視窗
+  await page.evaluate(() => {
+    const e = new Event('beforeinstallprompt', { cancelable: true });
+    e.prompt = () => {
+      window.__installAsked = true;
+      return Promise.resolve();
+    };
+    window.dispatchEvent(e);
+  });
+  await page.waitForTimeout(600);
+  const install = await button('SfTitle', '安裝');
+  ok(!!install, '可以安裝時標題畫面出現「安裝」按鈕');
+  await page.screenshot({ path: path.join(OUT, 'offline-install.png') });
+  if (install) await tap(install);
+  await page.waitForTimeout(400);
+  ok(await page.evaluate(() => window.__installAsked === true), '按「安裝」會叫出瀏覽器的安裝視窗');
+  ok(!(await button('SfTitle', '安裝')), '叫出來之後按鈕收起來（同一個邀請只能用一次）');
+
+  // 4. 真的斷網：把伺服器關掉，重新開
+  await site.stop();
+  const lost = [];
+  page.on('requestfailed', (r) => {
+    if (r.url().startsWith(site.base)) lost.push(r.url().slice(site.base.length));
+  });
+  await page.reload();
+  const up = await page.waitForFunction(() => window.__sf && window.__sf.scene.isActive('SfTitle'), null, { timeout: 60000 }).then(() => true, () => false);
+  ok(up, '伺服器關掉之後重新開得起來');
+  if (!up) {
+    await ctx.close();
+    return;
+  }
+  ok(await titleSays('可離線遊玩'), '斷網時開起來，右下角一樣寫著「可離線遊玩」');
+
+  // 5. 四套地形主題各開一關（機體圖表和地塊是進關卡才載入的），再開圖鑑
+  for (const m of ['m1', 'm4', 'm7', 'm10']) {
+    await page.evaluate((m) => {
+      const g = window.__sf;
+      for (const s of g.scene.getScenes(true)) if (s.scene.key !== 'SfBattle') g.scene.stop(s.scene.key);
+      g.scene.start('SfBattle', { missionId: m });
+    }, m);
+    let state = 'wait';
+    for (let i = 0; i < 100 && state !== 'idle'; i++) {
+      await page.waitForTimeout(300);
+      state = await page.evaluate(() => {
+        const g = window.__sf;
+        if (g.scene.isActive('SfDialogue')) {
+          g.scene.getScene('SfDialogue').finish();
+          return 'talk';
+        }
+        const b = g.scene.getScene('SfBattle');
+        return g.scene.isActive('SfBattle') && b.hud && b.mode === 'idle' ? 'idle' : 'wait';
+      });
+    }
+    const failedLoads = await page.evaluate(() => window.__sf.scene.getScene('SfBattle').load.totalFailed);
+    ok(state === 'idle' && failedLoads === 0, '斷網時 ' + m + ' 進得去，素材都載得到', { state, failedLoads });
+    if (m === 'm7') await page.screenshot({ path: path.join(OUT, 'offline-m7.png') });
+  }
+  await page.evaluate(() => {
+    const g = window.__sf;
+    for (const s of g.scene.getScenes(true)) g.scene.stop(s.scene.key);
+    g.scene.start('SfCodex');
+  });
+  await page.waitForFunction(() => window.__sf.scene.isActive('SfCodex'), null, { timeout: 30000 }).catch(() => undefined);
+  await page.waitForTimeout(800);
+  ok(await page.evaluate(() => window.__sf.scene.isActive('SfCodex') && window.__sf.scene.getScene('SfCodex').load.totalFailed === 0), '斷網時圖鑑開得起來');
+  await page.screenshot({ path: path.join(OUT, 'offline-codex.png') });
+
+  // 6. 音樂是 <audio> 播的，瀏覽器會用 Range 要檔案的一段：快取要回 206 和正確的那一段，播放器才收
+  const music = await page.evaluate(async () => {
+    const r = await fetch('assets/starfall/music/battle.mp3', { headers: { Range: 'bytes=100-299' } });
+    const bytes = (await r.arrayBuffer()).byteLength;
+    const seconds = await new Promise((done) => {
+      const a = new Audio('assets/starfall/music/boss.mp3');
+      a.preload = 'auto';
+      a.addEventListener('canplaythrough', () => done(a.duration), { once: true });
+      a.addEventListener('error', () => done(0), { once: true });
+      setTimeout(() => done(-1), 15000);
+      a.load();
+    });
+    return { status: r.status, bytes, range: r.headers.get('content-range'), seconds };
+  });
+  ok(music.status === 206 && music.bytes === 200 && /^bytes 100-299\/\d+$/.test(music.range ?? ''), '斷網時要音樂的一段，拿到的是 206 和那一段', music);
+  ok(music.seconds > 30, '斷網時播放器載得到整首音樂（' + Math.round(music.seconds) + ' 秒）', music);
+  ok(lost.length === 0, '斷網的這段時間沒有任何檔案要不到', lost.slice(0, 8));
+  await ctx.close();
+}
+
 async function autoPlay(browser, mission) {
   const epilogue = ['m10', 'm11', 'm12'].includes(mission);
   const { ctx, page } = await open(browser, { w: 1280, h: 720, dpr: 1 }, epilogue ? { stars: ALL_STARS, tips: ALL_TIPS, upgrades: MAXED } : { stars: { m1: 1, m2: 1 }, tips: TIPS });
@@ -815,7 +968,7 @@ async function autoPlay(browser, mission) {
 }
 
 (async () => {
-  const sections = { click: clickThrough, hangar: hangarCheck, big: bigMapCheck, pick: pickCheck, codex: codexCheck, challenge: challengeCheck };
+  const sections = { click: clickThrough, hangar: hangarCheck, big: bigMapCheck, pick: pickCheck, codex: codexCheck, challenge: challengeCheck, offline: offlineCheck };
   for (const m of ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12']) sections[m] = (browser) => autoPlay(browser, m);
   const all = Object.keys(sections);
   const parted = Object.values(PARTS).flat();

@@ -1,13 +1,14 @@
 /**
  * 用 Gemini Lyria 產生配樂（Interactions API 背景模式，輪詢到完成為止）。
- *   NODE_USE_ENV_PROXY=1 node scripts/art/gemini-music.mjs <out.mp3> <prompt-file>
+ *   node scripts/art/gemini-music.mjs <out.mp3> <prompt-file>
  * 環境變數：GEMINI_MUSIC_MODEL（預設 lyria-3.5，約 3 分鐘；lyria-3-clip-preview 為 30 秒）、
  *           ART_LEDGER（花費紀錄）。
  * 長時間生成走背景模式，避免一般請求在等待中被中途切斷。
- * 金鑰由執行環境提供，不寫進程式或儲存庫。
+ * 金鑰從環境變數 GEMINI_API_KEY 讀（gemini-key.mjs）；雲端工作環境由網路代理附加，那裡要加 NODE_USE_ENV_PROXY=1。
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { keyHeader } from './gemini-key.mjs';
 
 const [out, promptFile] = process.argv.slice(2);
 if (!out || !promptFile) {
@@ -19,7 +20,7 @@ const prompt = fs.readFileSync(promptFile, 'utf8');
 const API = 'https://generativelanguage.googleapis.com/v1beta/interactions';
 
 async function call(url, init) {
-  const res = await fetch(url, init);
+  const res = await fetch(url, { ...init, headers: { ...(init?.headers ?? {}), ...keyHeader() } });
   const raw = await res.text();
   try {
     return { res, body: JSON.parse(raw) };

@@ -1,9 +1,10 @@
-// Gemini 圖片生成：讀參考圖 + 提示詞 → 存原圖。金鑰由環境的網路密鑰自動附加（x-goog-api-key），程式裡不放金鑰。
+// Gemini 圖片生成：讀參考圖 + 提示詞 → 存原圖。金鑰從環境變數 GEMINI_API_KEY 讀（gemini-key.mjs），程式裡不放金鑰。
 // 用法：node scripts/art/gemini-image.mjs <out.png> <prompt-file> [ref1.png ref2.png ...]
-// 注意：Node 內建 fetch 預設不走 HTTPS_PROXY，要用 NODE_USE_ENV_PROXY=1 執行，金鑰才會被代理附加。
+// 雲端工作環境沒有這個變數，金鑰由網路代理附加：Node 內建 fetch 預設不走 HTTPS_PROXY，那裡要用 NODE_USE_ENV_PROXY=1 執行。
 // 環境變數：GEMINI_IMAGE_MODEL（預設 gemini-2.5-flash-image）、GEMINI_ASPECT（如 16:9）、GEMINI_SIZE（1K/2K/4K，gemini-3 系列）、ART_LEDGER（花費紀錄檔）
 import fs from 'node:fs';
 import path from 'node:path';
+import { keyHeader } from './gemini-key.mjs';
 
 const [out, promptFile, ...refs] = process.argv.slice(2);
 if (!out || !promptFile) {
@@ -17,7 +18,7 @@ for (const r of refs) parts.push({ inline_data: { mime_type: 'image/png', data: 
 
 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
   method: 'POST',
-  headers: { 'content-type': 'application/json' },
+  headers: { 'content-type': 'application/json', ...keyHeader() },
   body: JSON.stringify({
     contents: [{ role: 'user', parts }],
     generationConfig: {
