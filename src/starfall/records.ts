@@ -1,8 +1,10 @@
-// 圖鑑和成就的規則（純函式，不碰瀏覽器，tests/starfall/records.test.ts 直接測）。
+// 圖鑑、成就和挑戰模式的紀錄（純函式，不碰瀏覽器，tests/starfall/records.test.ts 和 challenge.test.ts 直接測）。
 //
-// 存在哪裡：存檔裡「看過的教學」那份清單（tips）。遇過的機體記成 seen_<機型>，達成的成就記成 ach_<編號>。
+// 存在哪裡：存檔裡「看過的教學」那份清單（tips）。遇過的機體記成 seen_<機型>，達成的成就記成 ach_<編號>，
+// 完成挑戰的任務記成 chal_<任務>。
 // 用既有的清單是因為它本來就會存檔、匯出、雲端同步（兩台裝置取聯集），不用改存檔和雲端文件的形狀，
-// Firestore 的規則也不用重貼。清單上限 200 筆（cloud/merge.ts 的 cleanProgress），現在最多教學 13 + 機體 27 + 戰鬥中達成的成就 10。
+// Firestore 的規則也不用重貼。清單上限 200 筆（cloud/merge.ts 的 cleanProgress），
+// 現在最多教學 13 + 機體 27 + 戰鬥中達成的成就 10 + 挑戰 12。
 //
 // 能從進度算出來的不另外記：過關的任務裡出現的機體都算遇過，章節、星數、改造、圖鑑的成就直接看進度。
 // 所以加這個功能之前就玩過的存檔，打開圖鑑就是對的；也不會因為「補記」而平白改動存檔。
@@ -23,6 +25,7 @@ export interface Records {
 
 const SEEN = 'seen_';
 const FEAT = 'ach_';
+const CHAL = 'chal_';
 
 // ───────── 圖鑑 ─────────
 
@@ -60,6 +63,35 @@ export function markSeen(p: Records, ids: Iterable<string>): boolean {
   return changed;
 }
 
+// ───────── 挑戰模式 ─────────
+
+/** 主線的任務（後日談不算） */
+const mainMissions = (): MissionDef[] => MISSIONS.filter((m) => (m.chapter ?? 1) <= 3);
+
+/** 挑戰模式開放了沒：主線全部過關之後 */
+export function challengeOpen(p: Records): boolean {
+  return mainMissions().every((m) => (p.stars[m.id] ?? 0) > 0);
+}
+
+/** 這個任務可以打挑戰了沒：挑戰模式開放了，而且這一關已經過關（挑戰是重打，不是用來第一次看劇情的） */
+export function challengeReady(p: Records, mission: string): boolean {
+  return challengeOpen(p) && (p.stars[mission] ?? 0) > 0;
+}
+
+/** 完成挑戰的任務 */
+export function challengeDone(p: Records): Set<string> {
+  const out = new Set<string>();
+  for (const t of p.tips) if (t.startsWith(CHAL) && MISSIONS.some((m) => m.id === t.slice(CHAL.length))) out.add(t.slice(CHAL.length));
+  return out;
+}
+
+/** 記下這個任務的挑戰完成了。已經記過的不重複記；回傳清單有沒有變 */
+export function markChallenge(p: Records, mission: string): boolean {
+  if (!MISSIONS.some((m) => m.id === mission) || p.tips.includes(CHAL + mission)) return false;
+  p.tips.push(CHAL + mission);
+  return true;
+}
+
 // ───────── 成就 ─────────
 
 const totalStars = (p: Records): number => MISSIONS.reduce((n, m) => n + Math.min(3, p.stars[m.id] ?? 0), 0);
@@ -71,7 +103,7 @@ function frameProgress(p: Records, f: string): [number, number] {
   return [TRACKS.reduce((n, t) => n + up[t], 0) + up.mods.length, TRACKS.length * TRACK_MAX + mods];
 }
 
-/** 從進度算得出來的成就（章節、星數、改造、圖鑑） */
+/** 從進度算得出來的成就（章節、星數、改造、圖鑑、挑戰） */
 export function stateFeats(p: Records): string[] {
   const out: string[] = [];
   for (const c of [1, 2, 3, 4]) {
@@ -85,6 +117,10 @@ export function stateFeats(p: Records): string[] {
   if (FRAMES.some((f) => frameUpgrades(p.upgrades, f).mods.length > 0)) out.push('mod');
   if (FRAMES.some((f) => frameProgress(p, f)[0] >= frameProgress(p, f)[1])) out.push('maxed');
   if (seenUnits(p).size >= CODEX.length) out.push('codex');
+  const done = challengeDone(p);
+  if (done.size > 0) out.push('chal1');
+  if (mainMissions().every((m) => done.has(m.id))) out.push('chalMain');
+  if (MISSIONS.every((m) => done.has(m.id))) out.push('chalAll');
   return out;
 }
 
@@ -115,6 +151,8 @@ export function featProgress(id: string, p: Records): [number, number] | null {
   if (id === 'stars36') return [totalStars(p), MISSIONS.length * 3];
   if (id === 'codex') return [seenUnits(p).size, CODEX.length];
   if (id === 'maxed') return FRAMES.map((f) => frameProgress(p, f)).sort((a, b) => b[0] / b[1] - a[0] / a[1])[0];
+  if (id === 'chalMain') return [mainMissions().filter((m) => challengeDone(p).has(m.id)).length, mainMissions().length];
+  if (id === 'chalAll') return [challengeDone(p).size, MISSIONS.length];
   const ch = /^ch(\d)$/.exec(id);
   if (ch) {
     const list = MISSIONS.filter((m) => (m.chapter ?? 1) === Number(ch[1]));

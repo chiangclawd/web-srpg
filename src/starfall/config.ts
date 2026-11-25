@@ -189,6 +189,10 @@ export function fitText<T extends Phaser.GameObjects.Text>(t: T, maxW: number): 
 export const TEX = 2;
 
 /** 介面配色 */
+/** 挑戰模式的顏色（按鈕和卡片的邊框、徽章；字用 HARD_TEXT） */
+export const HARD_COL = 0xff7043;
+export const HARD_TEXT = '#ff9a6e';
+
 export const COL = {
   bg: 0x070d18,
   panel: 0x0d1a2c,

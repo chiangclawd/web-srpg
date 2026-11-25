@@ -17,6 +17,9 @@ export const FALL_DMG = 8;
 /** 輕鬆難度下敵方的傷害與耐久倍率 */
 export const EASY_DMG = 0.75;
 export const EASY_HP = 0.85;
+/** 挑戰模式的敵方傷害與耐久倍率。以改造過的小隊為基準（tests/starfall/challenge.test.ts 有對戰結果的要求） */
+export const HARD_DMG = 1.2;
+export const HARD_HP = 1.3;
 
 export interface Reach {
   cost: number;
@@ -53,12 +56,19 @@ export class Battle {
   private queue: number[] = [];
   private fired = new Set<number>();
 
+  /** 輕鬆難度：敵方傷害 ×0.75、耐久 ×0.85 */
+  readonly easy: boolean;
+  /** 挑戰模式：敵方傷害 ×1.2、耐久 ×1.3。輕鬆難度在這裡不算數 */
+  readonly hard: boolean;
+
   constructor(
     readonly mission: MissionDef,
     private readonly defs: Record<string, UnitDef>,
-    /** 輕鬆難度：敵方傷害 ×0.75、耐久 ×0.85 */
-    readonly easy = false,
+    easy = false,
+    hard = false,
   ) {
+    this.hard = hard;
+    this.easy = easy && !hard;
     this.h = mission.tiles.length;
     this.w = mission.tiles[0].length;
     this.terrain = [];
@@ -124,8 +134,9 @@ export class Battle {
     const def = this.defs[s.unit];
     if (!def) throw new Error(`unknown unit ${s.unit}`);
     const side = s.side ?? 'enemy';
-    const weak = this.easy && side === 'enemy';
-    const hp = weak ? Math.round(def.hp * EASY_HP) : def.hp;
+    const foe = side === 'enemy';
+    const [hpMul, power] = foe && this.hard ? [HARD_HP, HARD_DMG] : foe && this.easy ? [EASY_HP, EASY_DMG] : [1, 1];
+    const hp = hpMul === 1 ? def.hp : Math.round(def.hp * hpMul);
     const u: Unit = {
       uid: this.nextUid++,
       def,
@@ -135,7 +146,7 @@ export class Battle {
       dir: s.dir ?? 0,
       hp,
       maxHp: hp,
-      power: weak ? EASY_DMG : 1,
+      power,
       moved: false,
       acted: false,
       cds: {},
@@ -864,6 +875,7 @@ export class Battle {
       mission: this.mission.id,
       sig: Battle.signature(this.mission),
       easy: this.easy,
+      ...(this.hard ? { hard: true } : {}),
       turn: this.turn,
       lost: this.lost,
       held: this.held,
@@ -884,7 +896,7 @@ export class Battle {
     const int = (v: unknown, lo: number, hi: number): v is number => Number.isInteger(v) && (v as number) >= lo && (v as number) <= hi;
     if (!int(s.turn, 1, 9999) || !int(s.lost, 0, 999) || !int(s.held, 0, 999) || !int(s.nextUid, 1, 99999)) return null;
     if (!Array.isArray(s.fired) || !Array.isArray(s.units) || !s.units.length) return null;
-    const b = new Battle(mission, defs, !!s.easy);
+    const b = new Battle(mission, defs, !!s.easy, s.hard === true);
     const units: Unit[] = [];
     const seen = new Set<number>();
     for (const r of s.units as Partial<UnitSnap>[]) {

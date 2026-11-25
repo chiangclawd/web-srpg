@@ -126,7 +126,7 @@ const STR = {
   reinforce: { zh: '增援抵達', en: 'Reinforcements' },
   threat: { zh: '威脅範圍', en: 'Threat range' },
   enemyUnit: { zh: '敵方', en: 'Enemy' },
-  chapterEnd: { zh: '《星墜殘響》主線完結 —— 後日談（大地圖）已開放', en: 'Starfall Echo: the story is complete. The epilogue (large maps) is now open' },
+  chapterEnd: { zh: '《星墜殘響》主線完結 —— 後日談（大地圖）和挑戰模式已開放', en: 'Starfall Echo: the story is complete. The epilogue (large maps) and challenge mode are now open' },
   epilogueEnd: { zh: '《星墜殘響》後日談完結 —— 感謝遊玩！', en: 'Starfall Echo: the epilogue is complete. Thank you for playing!' },
   tip_move: { zh: '點自己的機體，再點藍色格子移動。移動後可以攻擊、用技能，或按「退回」重選', en: 'Tap one of your frames, then a blue tile to move. After moving you can attack, use a skill, or tap Undo' },
   tip_flank: { zh: '從側面或背後攻擊傷害更高；站在高處射得更遠、打得更痛', en: 'Attacks from the side or rear hit harder. High ground gives more range and damage' },
@@ -242,6 +242,13 @@ const STR = {
   featDone: { zh: '已達成', en: 'Earned' },
   featTodo: { zh: '尚未達成', en: 'Not earned yet' },
   featGot: { zh: '成就達成', en: 'Achievement earned' },
+  challenge: { zh: '挑戰', en: 'Challenge' },
+  challengeMode: { zh: '挑戰模式', en: 'Challenge mode' },
+  challengeRule: { zh: '敵方耐久 +{0}%、傷害 +{1}%，輕鬆難度在這裡不算數。建議先到機庫把機體改造好。', en: 'Enemy HP +{0}%, damage +{1}%, and Easy does not apply here. Upgrade your frames in the hangar first.' },
+  challengeLocked: { zh: '先在一般模式完成這個任務', en: 'Clear this mission in normal mode first' },
+  sortieHard: { zh: '挑戰出擊', en: 'Take it on' },
+  chalDone: { zh: '挑戰完成', en: 'Challenge cleared' },
+  chalTodo: { zh: '挑戰尚未完成', en: 'Challenge not cleared' },
 } satisfies Record<string, L10n>;
 
 export type StrKey = keyof typeof STR;

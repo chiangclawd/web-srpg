@@ -4,9 +4,11 @@
 //   3. 大地圖（後日談）：小地圖點了鏡頭會移過去，「下一台」會輪流選還沒行動的機體
 //   4. 被機體擋住的落點和敵人：穿過前面那台點得到，連點兩下算前面那台
 //   5. 圖鑑・成就：標題進得去、方塊和分頁點得到；戰鬥裡遇到的機體會記下來，成就會跳提示、結算畫面會列出來
-//   6. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
+//   6. 挑戰模式：主線打完才有入口；從挑戰的列表出擊敵人比較強，過關拿到徽章，回到的還是挑戰的列表
+//   7. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
 // 用法：先 npx vite build && npx vite preview --port 4173，再 node scripts/starfall-check.cjs [截圖資料夾]
-// （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址；ONLY=click,hangar,big,pick,codex,m10 只跑其中幾段）
+// （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址；ONLY=click,hangar,big,pick,codex,challenge,m10 只跑其中幾段；
+//   SLOW=4 把網頁的 CPU 放慢四倍，用來重現 CI 上慢的機器。CI 把這份檢查拆成幾個平行的工作，見 .github/workflows/phone-check.yml）
 const path = require('node:path');
 const fs = require('node:fs');
 const { chromium } = require(process.env.PLAYWRIGHT ?? 'playwright');
@@ -25,6 +27,14 @@ const MAXED = {
   sparrow: { plating: 3, firepower: 3, mods: ['sparrow_thrust', 'sparrow_barrel'] },
   hale_ally: { plating: 3, firepower: 3, mods: ['hale_net', 'hale_phalanx'] },
 };
+// CI 把這份檢查拆成幾個平行的工作，一個工作跑一份（PART=ui）。每一段都要放進其中一份，漏掉的話這支程式一開始就會報錯；
+// 多加一份的時候 .github/workflows/phone-check.yml 的 matrix 也要加（tests/starfall/ci.test.ts 會對）。
+const PARTS = {
+  ui: ['click', 'hangar', 'big', 'pick', 'codex', 'challenge'],
+  'ch1-2': ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'],
+  ch3: ['m7', 'm8', 'm9'],
+  epilogue: ['m10', 'm11', 'm12'],
+};
 let failed = 0;
 
 const ok = (cond, msg, extra) => {
@@ -40,6 +50,8 @@ async function open(browser, view, save) {
   const ctx = await browser.newContext({ viewport: { width: view.w, height: view.h }, deviceScaleFactor: view.dpr, isMobile: !!view.touch, hasTouch: !!view.touch });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => ok(false, `程式錯誤：${e.message}`));
+  // SLOW=4：把網頁的 CPU 放慢四倍，在自己的電腦上重現 CI 上比較慢的機器
+  if (process.env.SLOW) await (await ctx.newCDPSession(page)).send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.SLOW) });
   await page.addInitScript((s) => localStorage.setItem('starfall_save_v1', JSON.stringify(s)), { lang: 'zh', sfx: 0, music: 0, stars: {}, tips: [], fast: true, ...save });
   await page.goto(URL);
   await page.waitForFunction(() => window.__sf && window.__sf.scene.isActive('SfTitle'), null, { timeout: 120000 });
@@ -47,6 +59,21 @@ async function open(browser, view, save) {
 }
 
 const idle = (page, timeout = 60000) => page.waitForFunction(() => window.__sf.scene.getScene('SfBattle').mode !== 'busy', null, { timeout });
+
+/**
+ * 連點兩下。兩下的時間直接寫在觸控事件裡（相隔 0.12 秒），遊戲是照事件的時間判斷連點的，
+ * 所以機器再慢結果也一樣。分兩次 tap 送的話，慢的機器上兩下會隔超過 0.35 秒，被當成點了兩次。
+ */
+async function doubleTap(page, p) {
+  const cdp = await page.context().newCDPSession(page);
+  const t = Date.now() / 1000;
+  const send = (type, at) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: p[0], y: p[1] }], timestamp: at });
+  await send('touchStart', t);
+  await send('touchEnd', t + 0.03);
+  await send('touchStart', t + 0.12);
+  await send('touchEnd', t + 0.15);
+  await cdp.detach();
+}
 
 /** 觸控點擊與「用按鈕上的文字找按鈕」 */
 function ui(page) {
@@ -444,8 +471,8 @@ async function pickCheck(browser) {
   await setup(move);
   await select('kai');
   await page.waitForTimeout(700);
-  await tap(p, 90);
-  await tap(p, 700);
+  await doubleTap(page, p);
+  await page.waitForTimeout(700);
   s = await state();
   ok(s.sel === 'bruno' && same(s.kai, [2, 9]) && s.peek === null, '在友軍身上連點兩下：改選友軍，沒有移動', s);
 
@@ -455,8 +482,8 @@ async function pickCheck(browser) {
   await select('kai');
   await page.waitForTimeout(700);
   const full = (await state()).foes;
-  await tap(p, 90);
-  await tap(p, 700);
+  await doubleTap(page, p);
+  await page.waitForTimeout(700);
   s = await state();
   ok(s.sel === 'bruno' && s.mode === 'unit' && s.foes === full, '敵人躲在友軍身後、在那裡連點兩下：改選友軍，沒有開火', s);
   await setup(foe);
@@ -528,14 +555,14 @@ async function codexCheck(browser) {
   await page.waitForTimeout(600);
   let t = await texts('SfCodex');
   // 前兩關過了：凱、布魯諾、艾可、薇、發電機、工蜂、哨兵、織網者 = 8 種
-  ok(t.includes('機體圖鑑 8/27') && t.includes('成就 0/20'), '圖鑑：打完前兩關是 8/27、0/20', t.filter((x) => /\d\/\d/.test(x)));
+  ok(t.includes('機體圖鑑 8/27') && t.includes('成就 0/23'), '圖鑑：打完前兩關是 8/27、0/23', t.filter((x) => /\d\/\d/.test(x)));
   ok(t.filter((x) => x === '？？？').length === 19, '沒遇過的 19 格是問號', t.filter((x) => x === '？？？').length);
   let p = await at('SfCodex', '織網者');
   if (p) await tap(p);
   t = await texts('SfCodex');
   ok((await codex()).unit === 'weaver' && t.some((x) => x.startsWith('曲射：')) && t.some((x) => x.startsWith('首次出現：任務 2')), '點「織網者」：右邊是它的被動和第一次出現的任務', t.slice(-4));
   await page.screenshot({ path: path.join(OUT, 'codex-01-unit.png') });
-  await press('SfCodex', '成就 0/20');
+  await press('SfCodex', '成就 0/23');
   t = await texts('SfCodex');
   ok((await codex()).tab === 'feats' && t.includes('尚未達成') && t.includes('完成第一章') && t.includes('2 / 3'), '成就分頁：沒達成的看得到條件和進度（第一章 2 / 3）', t.slice(-5));
   await page.screenshot({ path: path.join(OUT, 'codex-02-feats.png') });
@@ -638,6 +665,127 @@ async function codexCheck(browser) {
   await ctx.close();
 }
 
+/**
+ * 挑戰模式：手機尺寸實際點。主線沒打完看不到入口；打完之後任務列表多一顆「挑戰」，
+ * 按下去換成挑戰的列表，從那裡出擊的戰鬥敵人比較強，過關拿到徽章和成就，回到的還是挑戰的列表。
+ */
+async function challengeCheck(browser) {
+  const view = { w: 844, h: 390, dpr: 2, touch: true };
+  const main = Object.fromEntries(['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9'].map((m) => [m, 2]));
+  const texts = (page, scene) =>
+    page.evaluate((scene) => {
+      const out = [];
+      const walk = (l) => {
+        for (const o of l) {
+          if (o.type === 'Text' && o.visible && o.alpha > 0.2) out.push(o.text.replace(/\u00a0/g, ' '));
+          if (o.list) walk(o.list);
+        }
+      };
+      walk(window.__sf.scene.getScene(scene).children.list);
+      return out;
+    }, scene);
+
+  // 還差最後一關：沒有入口
+  {
+    const { ctx, page } = await open(browser, view, { stars: { ...main, m9: 0 }, tips: ALL_TIPS });
+    const { press, button } = ui(page);
+    await press('SfTitle', '開始作戰');
+    await page.waitForFunction(() => window.__sf.scene.isActive('SfMissions'), null, { timeout: 30000 }).catch(() => undefined);
+    await page.waitForTimeout(500);
+    ok(!(await button('SfMissions', '挑戰')), '主線還沒打完：任務列表沒有「挑戰」');
+    await ctx.close();
+  }
+
+  const { ctx, page } = await open(browser, view, { stars: main, tips: ALL_TIPS });
+  const { tap, press, button } = ui(page);
+  const saved = () => page.evaluate(() => JSON.parse(localStorage.getItem('starfall_save_v1')));
+  await press('SfTitle', '開始作戰');
+  await page.waitForFunction(() => window.__sf.scene.isActive('SfMissions'), null, { timeout: 30000 }).catch(() => undefined);
+  await page.waitForTimeout(500);
+  await press('SfMissions', '第 1 章');
+  let t = await texts(page, 'SfMissions');
+  ok(t.filter((x) => x === '出擊').length === 3 && !t.some((x) => x.includes('挑戰模式')), '主線打完：從標題進來是平常的列表', t);
+  await press('SfMissions', '挑戰');
+  t = await texts(page, 'SfMissions');
+  ok(t.some((x) => x.includes('挑戰模式')) && t.filter((x) => x === '挑戰出擊').length === 3 && t.some((x) => x.includes('+30%') && x.includes('+20%')), '按「挑戰」：三張卡都是「挑戰出擊」，寫著敵方加強多少', t);
+  await page.screenshot({ path: path.join(OUT, 'challenge-01-list.png') });
+
+  // 第三張卡（第三關）的「挑戰出擊」
+  const third = await page.evaluate(() => {
+    const g = window.__sf;
+    const hits = [];
+    const walk = (o) => {
+      if (!o.list) return;
+      if (o.list.some((c) => c.type === 'Text' && c.text === '挑戰出擊') && o.list.some((c) => c.type === 'Rectangle')) {
+        const m = o.getWorldTransformMatrix();
+        hits.push([m.tx, m.ty]);
+      }
+      o.list.forEach(walk);
+    };
+    g.scene.getScene('SfMissions').children.list.forEach(walk);
+    hits.sort((a, b) => a[0] - b[0]);
+    const c = g.canvas.getBoundingClientRect();
+    const k = c.height / 720;
+    return hits[2] ? [c.left + hits[2][0] * k, c.top + hits[2][1] * k] : null;
+  });
+  ok(!!third, '找得到第三關的「挑戰出擊」');
+  if (third) await tap(third);
+  await page.waitForFunction(() => window.__sf.scene.isActive('SfBattle') && !!window.__sf.scene.getScene('SfBattle').hud, null, { timeout: 60000 }).catch(() => undefined);
+  await page.waitForTimeout(500);
+  ok(!(await page.evaluate(() => window.__sf.scene.isActive('SfDialogue'))), '挑戰模式不再播開場劇情');
+  await page.waitForFunction(() => window.__sf.scene.getScene('SfBattle').mode === 'idle', null, { timeout: 60000 }).catch(() => undefined);
+  const st = await page.evaluate(() => {
+    const b = window.__sf.scene.getScene('SfBattle').battle;
+    return { mission: b.mission.id, hard: b.hard, foes: b.units.filter((u) => u.side === 'enemy').map((u) => [u.def.id, u.maxHp, u.def.hp, u.power]), kai: b.units.find((u) => u.def.id === 'kai').maxHp };
+  });
+  ok(st.mission === 'm3' && st.hard, '進到第三關，是挑戰模式', st);
+  ok(st.foes.length > 0 && st.foes.every(([, hp, base, power]) => hp === Math.round(base * 1.3) && power === 1.2) && st.kai === 100, '敵方耐久 ×1.3、傷害 ×1.2，我方不變', st);
+  t = await texts(page, 'SfHud');
+  ok(t.some((x) => x.includes('挑戰模式')), '左上角標著「挑戰模式」', t.slice(0, 6));
+  await page.screenshot({ path: path.join(OUT, 'challenge-02-battle.png') });
+
+  // 牧者剩 1 點耐久，凱補一槍：過關
+  const shot = await page.evaluate(() => {
+    const s = window.__sf.scene.getScene('SfBattle');
+    const b = s.battle;
+    const boss = b.byTag('boss');
+    const kai = b.units.find((u) => u.def.id === 'kai');
+    boss.hp = 1;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [0, 2], [0, -2]]) {
+      const x = boss.x + dx;
+      const y = boss.y + dy;
+      if (!b.inMap(x, y) || !b.canStop(kai, x, y) || !b.canHit(kai, { x, y }, boss.x, boss.y)) continue;
+      kai.x = x;
+      kai.y = y;
+      s.view(kai.uid).place(x, y);
+      s.mode = 'idle';
+      void s.play(b.attack(kai, boss));
+      return b.result;
+    }
+    return null;
+  });
+  ok(shot === 'win', '第三關的挑戰：擊破牧者', shot);
+  await page.waitForFunction(() => window.__sf.scene.getScene('SfBattle').hud.modalOpen, null, { timeout: 60000 }).catch(() => undefined);
+  await page.waitForTimeout(1800);
+  t = await texts(page, 'SfHud');
+  const line = t.find((x) => x.startsWith('成就達成') && x.length > 5) ?? '';
+  ok(t.includes('挑戰完成') && line.includes('硬碰硬'), '結算畫面：挑戰完成，成就列出「硬碰硬」', t);
+  const sv = await saved();
+  ok(sv.tips.includes('chal_m3') && !sv.tips.some((x) => x.startsWith('ach_chal')), '存檔記下這一關的徽章；挑戰的成就不另外寫記號', sv.tips.filter((x) => x.startsWith('chal_') || x.startsWith('ach_')));
+  await page.screenshot({ path: path.join(OUT, 'challenge-03-result.png') });
+
+  await press('SfHud', '回任務列表');
+  await page.waitForFunction(() => window.__sf.scene.isActive('SfMissions'), null, { timeout: 30000 }).catch(() => undefined);
+  await page.waitForTimeout(500);
+  t = await texts(page, 'SfMissions');
+  ok(t.some((x) => x.includes('挑戰模式')) && t.filter((x) => x === '挑戰完成').length === 1, '回到的是挑戰的列表，第三關顯示完成', t);
+  await page.screenshot({ path: path.join(OUT, 'challenge-04-back.png') });
+  await press('SfMissions', '挑戰');
+  t = await texts(page, 'SfMissions');
+  ok(t.filter((x) => x === '出擊').length === 3 && !t.some((x) => x.includes('挑戰模式')), '再按一次「挑戰」：回到平常的列表', t);
+  await ctx.close();
+}
+
 async function autoPlay(browser, mission) {
   const epilogue = ['m10', 'm11', 'm12'].includes(mission);
   const { ctx, page } = await open(browser, { w: 1280, h: 720, dpr: 1 }, epilogue ? { stars: ALL_STARS, tips: ALL_TIPS, upgrades: MAXED } : { stars: { m1: 1, m2: 1 }, tips: TIPS });
@@ -667,18 +815,31 @@ async function autoPlay(browser, mission) {
 }
 
 (async () => {
+  const sections = { click: clickThrough, hangar: hangarCheck, big: bigMapCheck, pick: pickCheck, codex: codexCheck, challenge: challengeCheck };
+  for (const m of ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12']) sections[m] = (browser) => autoPlay(browser, m);
+  const all = Object.keys(sections);
+  const parted = Object.values(PARTS).flat();
+  const stray = [...all.filter((k) => !parted.includes(k)), ...parted.filter((k, i) => !all.includes(k) || parted.indexOf(k) !== i)];
+  if (stray.length) throw new Error(`PARTS 和實際的段落對不上：${stray.join(', ')}`);
+  // PART=ui 跑其中一份（CI 用）；ONLY=big,m10 只跑指定的幾段（開發時用）；都沒設就全部跑
+  const { PART, ONLY } = process.env;
+  if (PART && !PARTS[PART]) throw new Error(`沒有 ${PART} 這一份，只有 ${Object.keys(PARTS).join(', ')}`);
+  const only = PART ? PARTS[PART] : ONLY ? ONLY.split(',') : all;
+  const unknown = only.filter((k) => !all.includes(k));
+  if (unknown.length) throw new Error(`沒有這幾段：${unknown.join(', ')}（有的是 ${all.join(', ')}）`);
   fs.mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
-  // ONLY=big,m10 之類可以只跑其中幾段（開發時用；CI 全部跑）
-  const only = process.env.ONLY ? process.env.ONLY.split(',') : null;
-  const want = (k) => !only || only.includes(k);
-  if (want('click')) await clickThrough(browser);
-  if (want('hangar')) await hangarCheck(browser);
-  if (want('big')) await bigMapCheck(browser);
-  if (want('pick')) await pickCheck(browser);
-  if (want('codex')) await codexCheck(browser);
-  for (const m of ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12']) if (want(m)) await autoPlay(browser, m);
+  for (const k of all) {
+    if (!only.includes(k)) continue;
+    const t = Date.now();
+    await sections[k](browser);
+    // 每一段花的時間：CI 的機器快慢差到兩倍，哪一段變慢了看這裡
+    console.log(`     ── ${k}：${Math.round((Date.now() - t) / 1000)} 秒`);
+  }
   await browser.close();
   console.log(failed ? `${failed} 個問題（截圖在 ${OUT}）` : `全部通過（截圖在 ${OUT}）`);
   process.exit(failed ? 1 : 0);
-})();
+})().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

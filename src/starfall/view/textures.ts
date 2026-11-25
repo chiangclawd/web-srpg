@@ -745,6 +745,28 @@ const ICONS: Record<string, IconFn> = {
     g.closePath();
     g.fill();
   },
+  // 挑戰徽章：菱形外框，裡面兩道往上的折線
+  ic_chal: (g) => {
+    stroke(g, 4.5);
+    g.beginPath();
+    g.moveTo(32, 4);
+    g.lineTo(60, 32);
+    g.lineTo(32, 60);
+    g.lineTo(4, 32);
+    g.closePath();
+    g.stroke();
+    for (const y of [21, 34]) {
+      g.beginPath();
+      g.moveTo(21, y + 8);
+      g.lineTo(32, y - 2);
+      g.lineTo(43, y + 8);
+      g.lineTo(43, y + 15);
+      g.lineTo(32, y + 5);
+      g.lineTo(21, y + 15);
+      g.closePath();
+      g.fill();
+    }
+  },
   ic_lock: (g) => {
     stroke(g, 5);
     g.fillRect(14, 28, 36, 28);
