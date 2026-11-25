@@ -1,9 +1,10 @@
 /**
  * 請 Gemini 試聽一段音訊並回報（是否有人聲、曲風、樂器、瑕疵、能否循環）。
- *   NODE_USE_ENV_PROXY=1 node scripts/art/gemini-listen.mjs <audio.mp3> [額外問題]
- * 環境變數：GEMINI_LISTEN_MODEL（預設 gemini-2.5-flash）。
+ *   node scripts/art/gemini-listen.mjs <audio.mp3> [額外問題]
+ * 環境變數：GEMINI_LISTEN_MODEL（預設 gemini-2.5-flash）、GEMINI_API_KEY（金鑰；雲端工作環境由網路代理附加，那裡要加 NODE_USE_ENV_PROXY=1）。
  */
 import fs from 'node:fs';
+import { keyHeader } from './gemini-key.mjs';
 
 const [file, extra] = process.argv.slice(2);
 if (!file) {
@@ -18,7 +19,7 @@ ending (how the last 10 seconds end), loop_friendly (true/false), fits_game_batt
 
 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
   method: 'POST',
-  headers: { 'content-type': 'application/json' },
+  headers: { 'content-type': 'application/json', ...keyHeader() },
   body: JSON.stringify({
     contents: [{ role: 'user', parts: [{ inline_data: { mime_type: 'audio/mpeg', data: fs.readFileSync(file).toString('base64') } }, { text: ask }] }],
     generationConfig: { responseMimeType: 'application/json' },

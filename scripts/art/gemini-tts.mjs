@@ -1,13 +1,14 @@
 /**
  * 用 Gemini TTS 產生英雄語音。
- *   NODE_USE_ENV_PROXY=1 node scripts/art/gemini-tts.mjs <out.mp3> <voice> <text> [style]
+ *   node scripts/art/gemini-tts.mjs <out.mp3> <voice> <text> [style]
  * 回傳 24kHz PCM，交給 ffmpeg 去頭尾靜音、轉成 48 kbps 單聲道 MP3。
- * 環境變數：GEMINI_TTS_MODEL（預設 gemini-2.5-flash-preview-tts）。
+ * 環境變數：GEMINI_TTS_MODEL（預設 gemini-2.5-flash-preview-tts）、GEMINI_API_KEY（金鑰；雲端工作環境由網路代理附加，那裡要加 NODE_USE_ENV_PROXY=1）。
  */
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { keyHeader } from './gemini-key.mjs';
 
 const [out, voice, text, style] = process.argv.slice(2);
 if (!out || !voice || !text) {
@@ -21,7 +22,7 @@ const prompt = !style ? text : /gemini-3/.test(model) ? `[${style}] ${text}` : `
 async function tts(text) {
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...keyHeader() },
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text }] }],
       generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } },
