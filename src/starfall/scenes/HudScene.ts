@@ -6,6 +6,7 @@ import { sfx } from '../audio';
 import { L, T } from '../i18n';
 import type { StrKey } from '../i18n';
 import { persist, save } from '../save';
+import { featById } from '../data/achievements';
 import { missionById } from '../data/missions';
 import { SPEAKERS } from '../data/story';
 import type { Speaker } from '../data/story';
@@ -49,6 +50,8 @@ export class HudScene extends Phaser.Scene {
   /** 對話框打開時鍵盤焦點先停在哪一顆 */
   private modalFirst: Button | null = null;
   private nav: KeyNav | null = null;
+  /** 畫面上還掛著幾張「成就達成」的牌子（同時好幾張就往下排） */
+  private awards = 0;
 
   constructor() {
     super('SfHud');
@@ -63,6 +66,7 @@ export class HudScene extends Phaser.Scene {
     this.actions = new Map();
     this.menuOpen = false;
     this.modalFirst = null;
+    this.awards = 0;
   }
 
   create(): void {
@@ -501,6 +505,42 @@ export class HudScene extends Phaser.Scene {
     this.tweens.add({ targets: t, y: 136, alpha: 0, duration: 500, delay: 1700, onComplete: () => t.destroy() });
   }
 
+  /** 成就達成：畫面上方滑下一張金邊的小牌子，停幾秒自己收掉。不擋操作 */
+  award(id: string): void {
+    const def = featById(id);
+    if (!def) return;
+    const slot = this.awards++;
+    const z = Math.min(this.z, 1.4);
+    const name = addText(this, 18, 8, L(def.name), { size: 20, raw: true, strokeW: 0 }).setOrigin(0, 0.5);
+    const label = addText(this, 18, -15, T('featGot'), { size: 13, raw: true, strokeW: 0, color: COL.yellow }).setOrigin(0, 0.5);
+    const W = Math.max(name.width, label.width) + 92;
+    const H = 58;
+    const y = 56 * z + slot * (H + 8) * z;
+    const box = this.add.container(this.w / 2, y - 30).setDepth(45).setScale(z).setAlpha(0);
+    const g = this.add.graphics();
+    drawPanel(g, -W / 2, -H / 2, W, H, { line: 0xffd75a, alpha: 0.95, cut: 10 });
+    const ic = this.add
+      .image(-W / 2 + 34, 0, 'ic_medal')
+      .setScale(40 / 64 / TEX)
+      .setTint(0xffd75a);
+    name.setX(-W / 2 + 66);
+    label.setX(-W / 2 + 66);
+    box.add([g, ic, label, name]);
+    this.time.delayedCall(slot * 260, () => sfx('select'));
+    this.tweens.add({ targets: box, y, alpha: 1, duration: 260, delay: slot * 260, ease: 'Quad.easeOut' });
+    this.tweens.add({
+      targets: box,
+      alpha: 0,
+      y: y - 16,
+      duration: 400,
+      delay: 3200 + slot * 260,
+      onComplete: () => {
+        box.destroy(true);
+        this.awards = Math.max(0, this.awards - 1);
+      },
+    });
+  }
+
   /** 教學提示（每則只出現一次），點任何地方或下一個動作後收起 */
   showTip(key: StrKey): void {
     const sv = save();
@@ -557,19 +597,23 @@ export class HudScene extends Phaser.Scene {
     this.modalFirst = null;
   }
 
-  /** parts：這次新拿到的零件（重打已經拿過的星就是 0） */
-  showResult(result: 'win' | 'lose', reason: string, parts = 0): void {
+  /** parts：這次新拿到的零件（重打已經拿過的星就是 0）；feats：這一場達成的成就 */
+  showResult(result: 'win' | 'lose', reason: string, parts = 0, feats: string[] = []): void {
     const bs = this.battle;
     const b = bs.battle;
     const win = result === 'win';
     const W = 580;
-    const H = win ? 450 : 360;
+    // 這一場達成的成就：多一行（輸了也列，戰術成就做到的當下就算）
+    const got = feats.map((id) => featById(id)).filter((f) => !!f);
+    const featLine = got.length ? `${T('featGot')}　${got.map((f) => L(f.name)).join('、')}` : '';
+    const H = (win ? 450 : 360) + (featLine ? 36 : 0);
     const box = this.openModal(W, H, win ? 0x6dff9a : COL.enemy);
     box.add(addText(this, 0, -H / 2 + 44, win ? T('victory') : T('defeat'), { size: 40, raw: true, color: win ? COL.green : COL.red, strokeW: 6 }).setOrigin(0.5));
     box.add(addText(this, 0, -H / 2 + 86, L(bs.mission.name), { size: 18, raw: true, strokeW: 0, color: COL.dim }).setOrigin(0.5));
     const by = H / 2 - 48;
     if (!win) {
       box.add(addText(this, 0, -H / 2 + 130, T(`lose_${reason}` as StrKey), { size: 20, raw: true, strokeW: 0 }).setOrigin(0.5));
+      if (featLine) box.add(fitText(addText(this, 0, -H / 2 + 172, featLine, { size: 17, raw: true, strokeW: 0, color: COL.yellow }).setOrigin(0.5), W - 40));
       this.modalFirst = new Button(this, -135, by, 250, 56, T('retry'), () => bs.restart(), { primary: true });
       box.add(this.modalFirst);
       box.add(new Button(this, 135, by, 250, 56, T('toMissions'), () => bs.leave('missions'), { color: 0x8fb0c8 }));
@@ -595,10 +639,10 @@ export class HudScene extends Phaser.Scene {
       }
       return;
     }
-    const got = [true, b.lost === 0, b.thirdStar()];
+    const stars = [true, b.lost === 0, b.thirdStar()];
     const kind = bs.mission.win.type;
     const labels = [T('star1'), T('star2'), kind === 'survive' ? T('star3hp') : kind === 'hold' ? T('star3hold', bs.mission.par) : T('star3par', bs.mission.par)];
-    got.forEach((ok, i) => {
+    stars.forEach((ok, i) => {
       const x = (i - 1) * 86;
       const star = this.add
         .image(x, -H / 2 + 150, 'ic_star')
@@ -625,6 +669,7 @@ export class HudScene extends Phaser.Scene {
     } else {
       box.add(fitText(addText(this, 0, py, T('partsNone'), { size: 15, raw: true, strokeW: 0, color: COL.dim, bold: false }).setOrigin(0.5), W - 40));
     }
+    if (featLine) box.add(fitText(addText(this, 0, py + 38, featLine, { size: 17, raw: true, strokeW: 0, color: COL.yellow }).setOrigin(0.5), W - 40));
     const next = bs.nextMission();
     const hangar = (x: number, w: number): Button => new Button(this, x, by, w, 56, T('hangar'), () => bs.leave('hangar'), { color: 0xffd75a, icon: 'ic_parts' });
     // 主線最後一關（下一關是後日談）和全部的最後一關，多一行完結的話

@@ -10,6 +10,7 @@ import { HudScene } from './scenes/HudScene';
 import { DialogueScene } from './scenes/DialogueScene';
 import { SettingsScene } from './scenes/SettingsScene';
 import { SavesScene } from './scenes/SavesScene';
+import { CodexScene } from './scenes/CodexScene';
 import type { HudScene as Hud } from './scenes/HudScene';
 import type { DialogueScene as Dialogue } from './scenes/DialogueScene';
 import { initCloud, onCloudChanged } from './cloud/sync';
@@ -24,7 +25,7 @@ const game = new Phaser.Game({
   width: Math.round(computeViewW() * RS),
   height: Math.round(VIEW_H * RS),
   backgroundColor: '#070d18',
-  scene: [BootScene, TitleScene, MissionScene, HangarScene, BattleScene, HudScene, DialogueScene, SettingsScene, SavesScene],
+  scene: [BootScene, TitleScene, MissionScene, HangarScene, BattleScene, HudScene, DialogueScene, SettingsScene, SavesScene, CodexScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -54,7 +55,7 @@ window.addEventListener('resize', () => {
     for (const s of game.scene.getScenes(true)) {
       const key = s.scene.key;
       // 沒有進行中狀態的畫面直接重畫（沒給資料時 Phaser 沿用上次的，設定頁關掉之後要做的事也還在）
-      if (key === 'SfTitle' || key === 'SfMissions' || key === 'SfHangar' || key === 'SfSettings' || key === 'SfSaves') s.scene.restart();
+      if (key === 'SfTitle' || key === 'SfMissions' || key === 'SfHangar' || key === 'SfSettings' || key === 'SfSaves' || key === 'SfCodex') s.scene.restart();
       else if (key === 'SfHud') (s as Hud).relayout();
       else if (key === 'SfDialogue') (s as Dialogue).resized();
     }
@@ -75,7 +76,7 @@ initCloud();
 onCloudChanged(() => {
   for (const s of game.scene.getScenes(true)) {
     const key = s.scene.key;
-    if (key === 'SfTitle' || key === 'SfMissions' || key === 'SfHangar' || key === 'SfSaves') s.scene.restart();
+    if (key === 'SfTitle' || key === 'SfMissions' || key === 'SfHangar' || key === 'SfSaves' || key === 'SfCodex') s.scene.restart();
   }
 });
 

@@ -65,6 +65,8 @@ export class TitleScene extends Phaser.Scene {
       },
       { primary: true, size: 24 },
     ).setScale(z);
+    // 「開始作戰」右邊：圖鑑・成就
+    new Button(this, x + (260 + 12 + 59) * z, by, 118, 64, T('records'), () => this.scene.start('SfCodex'), { color: 0xffd75a, size: 17 }).setScale(z);
     // 蓋在上面的畫面（設定、存檔）開著的時候，這裡不處理按鍵、也不自己重畫
     const overlay = (): boolean => this.scene.isActive('SfSettings') || this.scene.isActive('SfSaves');
     // 下面一排三顆：切換語言、存檔、設定

@@ -4,7 +4,7 @@
 
 - 入口：`starfall.html` → `src/starfall/main.ts`
 - 線上版：https://chiangclawd.github.io/web-srpg/starfall.html
-- 目前內容：主線三章共 9 個任務（已完結）＋後日談 3 個大地圖任務、6 台我方機體、18 種敵人與設施、機庫改造（零件獎勵）、配樂 4 首、中英文、一般 / 輕鬆兩種難度
+- 目前內容：主線三章共 9 個任務（已完結）＋後日談 3 個大地圖任務、6 台我方機體、18 種敵人與設施、機庫改造（零件獎勵）、機體圖鑑（27 則）和 20 個成就、配樂 4 首、中英文、一般 / 輕鬆兩種難度
 
 ## 故事
 
@@ -152,6 +152,28 @@
 - 機體要加入小隊之後才能改造。改造只影響我方機體（開戰時套用），敵方同型機不受影響。
 - 資料與計算都在 `src/starfall/data/upgrades.ts`，畫面在 `scenes/HangarScene.ts`。
 
+## 圖鑑與成就
+
+標題畫面「開始作戰」右邊的「圖鑑・成就」（`scenes/CodexScene.ts`）。兩個分頁版面一樣：左邊一格一格的方塊，右邊是選中那一個的說明。
+
+- **機體圖鑑**：27 則，我方、機群、議會軍、要保護的設施（方塊的邊框顏色照陣營分）。遇過的才看得到內容：機型、數值、武器、技能、被動、
+  一段介紹和第一次出現的任務；沒遇過的是剪影和「？？？」。數值直接讀 `data/units.ts`（我方是改造前的），分類和介紹在 `data/codex.ts`。
+  介紹只寫第一次遇到時就知道的事，不透露後面的劇情。
+- **成就**：20 個（`data/achievements.ts`）。沒達成的也看得到條件，有進度的畫進度條。三種：
+  - 進度（章節、星數、改造、圖鑑全開）：直接從存檔算，不另外記。
+  - 戰術（把敵人轟進裂谷、用警戒射擊或反擊擊破、一次行動擊破兩個、貫穿射擊打中三個、繞過塔盾）：做到的當下就算，之後輸了或重來也留著。
+  - 過關那一刻（提早三回合、全員滿耐久、保護的設施沒受傷、借來的機群一台都沒少）：看過關時場上的狀態，不追蹤整場的過程
+    —— 追蹤的話要把紀錄放進戰鬥中存檔，那份存檔的格式就得改。所以「完好歸隊」是過關時耐久全滿，中途受傷再修好也算。
+- **什麼時候記**：進戰場和每次增援，場上的機型記成遇過；每個動作演出之前先判定、先存檔，演完才在畫面上方跳「成就達成」；
+  這一場達成的在結算畫面再列一次（輸了也列）。規則都在 `records.ts`（純函式，`tests/starfall/records.test.ts`）。
+- **存在哪裡**：存檔裡「看過的教學」那份清單，遇過的機型是 `seen_<機型>`、戰鬥中達成的成就是 `ach_<編號>`。
+  這份清單本來就會存檔、匯出、雲端同步（兩台裝置取聯集），所以存檔和雲端文件的形狀都沒變，Firestore 的規則不用重貼。
+  清單上限 200 筆，現在最多 13 + 27 + 10。跟著存檔欄位走：換存檔就是另一份，刪除存檔會一起清掉。
+- **加這個功能之前的存檔**：過關的任務裡出現的機型都算遇過，進度類的成就直接成立；戰術和過關類的沒有紀錄，要再做到一次。
+- **圖**：`public/assets/starfall/codex.webp`（每種機體一格，約 180 KB），進這個畫面才載入。
+  整張機體圖表一張就是 2048×1100，二十幾張一起載進來手機吃不消。重新渲染過機體圖表之後跑 `node scripts/art/starfall-codex.mjs` 重做。
+- 還沒有的：累計型的成就（擊破幾台之類）要存數字，得改存檔和雲端文件的形狀，留到下次需要重貼規則時一起做；「隱藏成就」也沒有。
+
 ## 程式結構
 
 ```
@@ -161,17 +183,18 @@ src/starfall/
 │   ├── ai.ts       敵方 AI；autoPlay() 讓雙方都用 AI 打完一關
 │   ├── terrain.ts  地形
 │   └── types.ts
-├── data/           units.ts（機體）、missions.ts（關卡，ASCII 地圖）、story.ts（對話）、upgrades.ts（零件與改造）
+├── data/           units.ts（機體）、missions.ts（關卡，ASCII 地圖）、story.ts（對話）、upgrades.ts（零件與改造）、codex.ts（圖鑑的分類和介紹）、achievements.ts（成就）
+├── records.ts      圖鑑和成就的規則：哪些遇過、哪些達成（純函式）
 ├── view/           iso.ts（等角投影）、textures.ts（程序繪圖的地塊與圖示）、sheets.ts（3D 圖表）、UnitView.ts、ui.ts、fx.ts（陰影、霧、粒子、擊破演出）、shots.ts（各種武器的彈道）
-└── scenes/         Boot / Title / Mission / Hangar（機庫）/ Battle（戰場）/ Hud（介面）/ Dialogue / Settings（設定）
+└── scenes/         Boot / Title / Mission / Hangar（機庫）/ Battle（戰場）/ Hud（介面）/ Dialogue / Settings（設定）/ Saves（存檔）/ Codex（圖鑑・成就）
 ```
 
 ```bash
-npm run test:starfall                 # 規則測試（62 項）
+npm run test:starfall                 # 規則測試（91 項）
 npx tsx scripts/starfall-sim.ts       # 自動對戰：每關打不打得過、幾回合
 npx tsx scripts/starfall-sim.ts m3 -v # 逐步列出某一關的過程（加 --easy 用輕鬆難度）
 npx tsx scripts/starfall-sim.ts --lv=2 --cautious --care=2  # 強化線都升到 2 級、謹慎打法、隊長保守；--max 是全部改滿
-node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍第一關、機庫、大地圖、被擋住的格子 + 十二關自動對戰（要先 build 並開 preview；ONLY=big,m10 可以只跑幾段）
+node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍第一關、機庫、大地圖、被擋住的格子、圖鑑・成就 + 十二關自動對戰（要先 build 並開 preview；ONLY=big,m10 可以只跑幾段）
 ```
 
 自動對戰的機器人不是最佳解，只是一套固定的判斷，數值稍微一動走法就可能整個不同
@@ -192,6 +215,7 @@ node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍�
    渲染設定裡的 `proc: "hit" / "down"` 是受擊和擊破前癱倒的程序動作（`render.html` 的 `PROC`：以待機的第一格為底，在世界座標軸上擺骨頭），
    `sway` 是沒有骨架的無人機待機時的搖晃。四個方向（yaw 45 / 135 / 315 / 225）都實際渲染，遊戲裡不再水平翻轉。
    遊戲開機只載入我方六台的圖表，其餘進戰場時才載入那一關會出現的（`BattleScene.preload`）。
+   圖鑑用的是另一張小圖集：重新渲染之後跑 `node scripts/art/starfall-codex.mjs`，從每張圖表裁出待機的第一格排成 `codex.webp`。
 4. **地塊**：`blender -b --factory-startup -P scripts/art/tiles/starfall_tiles.py -- <資料夾>`（Cycles，投影跟單位一樣），
    再 `py scripts/art/tiles/pack_tiles.py <資料夾> public/assets/starfall/tiles.webp` 排成一張圖。載不到這張圖時遊戲退回用 Canvas 現畫的地塊。
    這是冰原和船艙共用的那一套。冷凍艙、反應爐、戰場各有自己的一套：渲染時加 `--theme=bay`（或 `reactor`、`field`），各渲染到自己的資料夾，
@@ -214,5 +238,5 @@ node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍�
 
 整體的規劃和進度在 [STARFALL_ROADMAP.md](STARFALL_ROADMAP.md)。
 
-- 外傳或挑戰模式、更多大地圖任務
-- 日文、戰鬥中存檔、堡壘的塔盾模型
+- 挑戰模式、外傳、更多大地圖任務
+- 日文、堡壘的塔盾模型
