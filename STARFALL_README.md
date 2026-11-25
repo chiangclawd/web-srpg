@@ -194,6 +194,10 @@ node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍�
    遊戲開機只載入我方六台的圖表，其餘進戰場時才載入那一關會出現的（`BattleScene.preload`）。
 4. **地塊**：`blender -b --factory-startup -P scripts/art/tiles/starfall_tiles.py -- <資料夾>`（Cycles，投影跟單位一樣），
    再 `py scripts/art/tiles/pack_tiles.py <資料夾> public/assets/starfall/tiles.webp` 排成一張圖。載不到這張圖時遊戲退回用 Canvas 現畫的地塊。
+   這是冰原和船艙共用的那一套。冷凍艙、反應爐、戰場各有自己的一套：渲染時加 `--theme=bay`（或 `reactor`、`field`），各渲染到自己的資料夾，
+   打包成 `tiles_bay.webp` / `tiles_reactor.webp` / `tiles_field.webp`。每套只收那個主題的關卡用得到的地形，進到那一章的關卡才載入，換章時把上一套放掉；
+   圖集裡沒有的地形、或圖集載不到，就用共用的那一套（`tests/starfall/tiles.test.ts` 會檢查有沒有收齊）。
+   裝飾刻意放得少（三種花樣只有一種有東西可看）：每格都有霜或排熱口的話，整片地板會像花布。戰場的焦痕不畫在地塊上，由遊戲依座標撒幾處。
 5. **音效**：`py scripts/art/sfx/starfall_sfx.py public/assets/starfall/sfx`（numpy 離線合成 + ffmpeg）。戰鬥的聲音和兩段環境音是檔案，
    第一次點擊後才下載；還沒載完或載不到時退回 Web Audio 即時合成的版本。
 6. **字型**：`npm run starfall:font-chars` 把遊戲裡每個字串用到的字收成字表（`scripts/art/fonts/starfall-chars.txt`，不含註解），

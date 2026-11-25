@@ -14,6 +14,26 @@ export const TILE_VARIANTS = 3;
 export const TILE_ATLAS = 'sf_tiles';
 /** 冰面佔地圖最大的面積，花樣多一點才看不出重複 */
 const ICE_VARIANTS = 8;
+/**
+ * 有自己一套地塊的主題（冷凍艙、反應爐、戰場）。冰原和船艙用 TILE_ATLAS 那一套。
+ * 每套只收那個主題的關卡用得到的地形；圖集裡沒有的地形、或圖集載不到，就退回 TILE_ATLAS。
+ */
+const THEME_TILES = ['bay', 'reactor', 'field'];
+
+/** 這個主題的地塊圖集叫什麼（沒有自己一套的回傳 null） */
+export function themeAtlas(theme: string): string | null {
+  return THEME_TILES.includes(theme) ? `sf_tiles_${theme}` : null;
+}
+
+/** 把這個主題的地塊圖集排進載入佇列（進到那一關才載入；已經載入過的跳過）。回傳這次是不是真的要載入 */
+export function loadThemeTiles(scene: Phaser.Scene, theme: string): boolean {
+  const key = themeAtlas(theme);
+  // 別章的那一套先放掉：一套是 1536×1920 的貼圖，手機上不要三套都留在記憶體裡
+  for (const t of THEME_TILES) if (t !== theme && scene.textures.exists(`sf_tiles_${t}`)) scene.textures.remove(`sf_tiles_${t}`);
+  if (!key || scene.textures.exists(key)) return false;
+  scene.load.atlas(key, `assets/starfall/tiles_${theme}.webp`, `assets/starfall/tiles_${theme}.json`);
+  return true;
+}
 
 function variantsOf(id: TerrainId): number {
   return id === 'ice' ? ICE_VARIANTS : TILE_VARIANTS;
