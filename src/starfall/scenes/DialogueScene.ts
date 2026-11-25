@@ -3,7 +3,7 @@ import Phaser from 'phaser';
 import { COL, VIEW_H, addText, setupCamera, uiZoom, viewW } from '../config';
 import { music, sfx } from '../audio';
 import { L, T } from '../i18n';
-import { SPEAKERS } from '../data/story';
+import { SPEAKERS, portraitKey } from '../data/story';
 import type { Line } from '../data/story';
 import { Button, drawPanel } from '../view/ui';
 
@@ -15,6 +15,8 @@ export class DialogueScene extends Phaser.Scene {
   private nameText!: Phaser.GameObjects.Text;
   private namePlate!: Phaser.GameObjects.Graphics;
   private portrait: Phaser.GameObjects.Image | null = null;
+  /** 現在畫面上的立繪是誰的：同一個人接著說話時只換表情，不重新滑進來 */
+  private portraitWho = '';
   private cg: Phaser.GameObjects.Image | null = null;
   private cgKey = '';
   private full = '';
@@ -33,6 +35,7 @@ export class DialogueScene extends Phaser.Scene {
     this.onDone = data.onDone;
     this.i = Phaser.Math.Clamp(data.at ?? 0, 0, Math.max(0, data.lines.length - 1));
     this.portrait = null;
+    this.portraitWho = '';
     this.cg = null;
     this.cgKey = '';
     this.timer = null;
@@ -60,6 +63,19 @@ export class DialogueScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-SPACE', () => this.advance());
     this.input.keyboard?.on('keydown-ENTER', () => this.advance());
     this.input.keyboard?.on('keydown-ESC', () => this.skip());
+    // 表情差分用到才載入（開機只載平常的那一張）。還沒載好的那幾句先用平常的表情，載好了就換上
+    const need = new Set<string>();
+    for (const l of this.lines) {
+      const k = portraitKey(l);
+      if (k && !this.textures.exists(k)) need.add(k);
+    }
+    if (need.size) {
+      for (const k of need) this.load.image(k, `assets/starfall/${k}.webp`);
+      this.load.on(Phaser.Loader.Events.FILE_COMPLETE, (key: string) => {
+        if (this.portrait && key === portraitKey(this.lines[this.i])) this.portrait.setTexture(key);
+      });
+      this.load.start();
+    }
     // 從中間接著播（視窗比例變了重排）：前面句子換上的全螢幕插圖要先鋪回去，不用淡入
     const cg = this.lines
       .slice(0, this.i)
@@ -94,16 +110,25 @@ export class DialogueScene extends Phaser.Scene {
     if (line.music) music(line.music);
     const x0 = (this.w - this.boxW) / 2;
     const y0 = VIEW_H - this.boxH - 14;
-    // 立繪：從對話框上緣往上長，換人說話時淡入
-    this.portrait?.destroy();
-    this.portrait = null;
+    // 立繪：從對話框上緣往上長，換人說話時淡入。這一句有指定表情、圖也載好了就用那一張
+    const want = portraitKey(line);
+    const key = want && this.textures.exists(want) ? want : sp.portrait;
     // 有全螢幕插圖時不放立繪：人物已經在畫面裡了，名牌就夠分辨誰在說話
-    if (sp.portrait && !this.cg) {
-      const im = this.add.image(x0 + 150, y0 + 6, sp.portrait).setOrigin(0.5, 1).setDepth(1);
-      im.setScale(Math.min(430, y0 - 20) / im.height);
-      im.setAlpha(0);
-      this.tweens.add({ targets: im, alpha: 1, x: { from: x0 + 130, to: x0 + 150 }, duration: 180 });
-      this.portrait = im;
+    if (key && !this.cg && this.portrait && this.portraitWho === line.who) {
+      // 同一個人接著說：表情差分跟原圖一樣大、身體一模一樣，原地換圖就只有臉在變
+      this.portrait.setTexture(key);
+    } else {
+      this.portrait?.destroy();
+      this.portrait = null;
+      this.portraitWho = '';
+      if (key && !this.cg) {
+        const im = this.add.image(x0 + 150, y0 + 6, key).setOrigin(0.5, 1).setDepth(1);
+        im.setScale(Math.min(430, y0 - 20) / im.height);
+        im.setAlpha(0);
+        this.tweens.add({ targets: im, alpha: 1, x: { from: x0 + 130, to: x0 + 150 }, duration: 180 });
+        this.portrait = im;
+        this.portraitWho = line.who;
+      }
     }
     const name = L(sp.name);
     this.nameText.setText(name).setColor(`#${sp.color.toString(16).padStart(6, '0')}`);

@@ -259,11 +259,11 @@ src/starfall/
 ```
 
 ```bash
-npm run test:starfall                 # 規則測試（123 項）
+npm run test:starfall                 # 規則測試（129 項）
 npx tsx scripts/starfall-sim.ts       # 自動對戰：每關打不打得過、幾回合
 npx tsx scripts/starfall-sim.ts m3 -v # 逐步列出某一關的過程（加 --easy 用輕鬆難度、--hard 用挑戰模式）
 npx tsx scripts/starfall-sim.ts --lv=2 --cautious --care=2  # 強化線都升到 2 級、謹慎打法、隊長保守；--max 是全部改滿
-node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍第一關、機庫、大地圖、被擋住的格子、圖鑑・成就、挑戰模式、離線遊玩、回報問題 + 十二關自動對戰（要先 build 並開 preview；ONLY=big,m10 可以只跑幾段）
+node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍第一關、機庫、大地圖、被擋住的格子、圖鑑・成就、挑戰模式、離線遊玩、回報問題、表情差分 + 十二關自動對戰（要先 build 並開 preview；ONLY=big,m10 可以只跑幾段）
 ```
 
 瀏覽器檢查整套接著跑，CI 的機器上要 25–50 分鐘（同一份程式，分到的機器快慢差到兩倍）。所以 CI 把它拆成四個平行的工作
@@ -305,6 +305,17 @@ node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍�
    加了新的文字、用到字表沒有的字時 `tests/starfall/font.test.ts` 會失敗並列出缺的字，照這兩步重做。缺的字和玩家的帳號名稱會退回系統字型。
    遊戲開機時用 `fonts.ts` 載入，字型好了才進標題畫面（最多等 4 秒）。授權是 SIL OFL 1.1，全文在字型檔旁邊的 `OFL.txt`。
 7. 立繪、背景、主視覺也是 Gemini（`pt_*.txt`、`bg_*.txt`、`title.txt`），立繪用 `scripts/art/key.py` 去背。
+   **立繪的表情差分**（8 個角色共 19 張，`pt_<誰>_<表情>.webp`）分兩步：
+   - `node scripts/art/starfall-faces.mjs <原圖資料夾> --max=<張數>`：拿現有的立繪當參考圖，請 Gemini 只換表情重畫一張
+     （模型 `gemini-nano-banana-2.1`，3:4、1K）。表情的清單和描述在 `scripts/art/prompts/starfall/faces.json`。
+     不加 `--max` 只會列出還缺哪些，不會發出請求；已經有的圖不會重做。
+   - `py scripts/art/starfall_faces.py <原圖資料夾> --preview=<資料夾>`：生成的圖會把整張重畫，身體的線條跟原圖差一兩個像素，
+     所以只取臉：在 `faces.json` 給的臉部範圍裡找出跟原圖不一樣的地方，貼回原本的立繪。輸出跟原圖一樣大、輪廓一樣，
+     對話時同一個人換表情只有臉在動。`--preview` 存每個角色的對照圖，貼完要用眼睛看過。
+   - 艾可的「難過」是例外：Gemini 的內容過濾一直把那一張擋掉（換了三種描述都一樣），而艾可的眼睛只是玻璃上兩個發光的形狀，
+     所以用 `py scripts/art/starfall_echo_sad.py` 從另外兩個表情算出來。
+   - 劇本裡哪一句用哪個表情寫在 `data/story.ts`（每一句的 `face`，能用的列在 `FACES`）。表情的圖在對話開始時才載入，
+     還沒載好的那幾句先用平常的表情。`tests/starfall/faces.test.ts` 檢查圖都在、大小和輪廓跟原圖一樣、臉以外沒有動。
 8. 配樂：`scripts/art/gemini-music.mjs`（Lyria）+ `music_*.txt`，再用 `scripts/art/prep_music.py` 統一響度。
 
 模型原始檔不放在這個公開 repo（在私人的 kingdom-bastion-art 的 `starfall/`）。

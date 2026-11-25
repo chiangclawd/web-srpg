@@ -9,9 +9,10 @@
 //      同一個網站上的塔防不受影響；瀏覽器說可以安裝時標題畫面多一顆「安裝」（這一段自己把 dist 端出來，不用 GAME_URL）
 //   8. 回報問題：設定頁左下角進得去，列得出版本和裝置的資訊、複製得了；程式出的錯會記下來，重新整理之後還在；
 //      表單設定好的時候，按鈕會帶著這些資訊開表單
-//   9. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
+//   9. 表情差分：對話照劇本標的表情換立繪，用到才載入；同一個人接著說話時原地換臉
+//  10. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
 // 用法：先 npx vite build && npx vite preview --port 4173，再 node scripts/starfall-check.cjs [截圖資料夾]
-// （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址；ONLY=click,hangar,big,pick,codex,challenge,offline,report,m10 只跑其中幾段；
+// （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址；ONLY=click,hangar,big,pick,codex,challenge,offline,report,faces,m10 只跑其中幾段；
 //   SLOW=4 把網頁的 CPU 放慢四倍，用來重現 CI 上慢的機器。CI 把這份檢查拆成幾個平行的工作，見 .github/workflows/phone-check.yml）
 const path = require('node:path');
 const fs = require('node:fs');
@@ -34,7 +35,7 @@ const MAXED = {
 // CI 把這份檢查拆成幾個平行的工作，一個工作跑一份（PART=ui）。每一段都要放進其中一份，漏掉的話這支程式一開始就會報錯；
 // 多加一份的時候 .github/workflows/phone-check.yml 的 matrix 也要加（tests/starfall/ci.test.ts 會對）。
 const PARTS = {
-  ui: ['click', 'hangar', 'big', 'pick', 'codex', 'challenge', 'offline', 'report'],
+  ui: ['click', 'hangar', 'big', 'pick', 'codex', 'challenge', 'offline', 'report', 'faces'],
   'ch1-2': ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'],
   ch3: ['m7', 'm8', 'm9'],
   epilogue: ['m10', 'm11', 'm12'],
@@ -1048,6 +1049,78 @@ async function reportCheck(browser) {
   await ctx.close();
 }
 
+/** 表情差分：對話照劇本標的表情換立繪；同一個人接著說話時原地換臉，身體不動 */
+async function facesCheck(browser) {
+  const view = { w: 844, h: 390, dpr: 2, touch: true };
+  const { ctx, page } = await open(browser, view, {});
+  const { press } = ui(page);
+  const now = () =>
+    page.evaluate(() => {
+      const s = window.__sf.scene.getScene('SfDialogue');
+      const l = s.lines[s.i];
+      return { i: s.i, who: l.who, face: l.face ?? null, tex: s.portrait ? s.portrait.texture.key : null, w: s.portrait ? Math.round(s.portrait.displayWidth) : 0, h: s.portrait ? Math.round(s.portrait.displayHeight) : 0 };
+    });
+  const loaded = (keys) => page.waitForFunction((keys) => keys.every((k) => window.__sf.textures.exists(k)), keys, { timeout: 20000 }).then(() => true, () => false);
+  const next = () =>
+    page.evaluate(() => {
+      const s = window.__sf.scene.getScene('SfDialogue');
+      s.advance();
+      s.advance();
+    });
+
+  // 1. 第一關的開場：開機時沒有載表情的圖，對話開始才載
+  ok(!(await page.evaluate(() => window.__sf.textures.exists('pt_bruno_shock'))), '開機時還沒載入表情的圖');
+  await press('SfTitle', '開始作戰');
+  await page.waitForFunction(() => window.__sf.scene.isActive('SfMissions'));
+  await page.waitForTimeout(400);
+  await press('SfMissions', '出擊');
+  await page.waitForFunction(() => window.__sf.scene.isActive('SfDialogue'), null, { timeout: 30000 });
+  ok(await loaded(['pt_echo_calm', 'pt_bruno_shock', 'pt_echo_alert', 'pt_kai_shout']), '這段對話用到的表情載進來了');
+  ok(!(await page.evaluate(() => window.__sf.textures.exists('pt_vey_smile'))), '這段對話沒用到的表情沒有載');
+  const total = await page.evaluate(() => window.__sf.scene.getScene('SfDialogue').lines.length);
+  const seen = [];
+  for (let n = 0; n < total; n++) {
+    await page.waitForTimeout(260);
+    const l = await now();
+    const want = l.who === 'sys' || l.who === 'radio' ? null : 'pt_' + l.who + (l.face ? '_' + l.face : '');
+    if (l.tex !== want) ok(false, '第 ' + (l.i + 1) + ' 句的立繪不對', { ...l, want });
+    if (l.face) seen.push(l.who + ':' + l.face);
+    if (l.who === 'bruno' && l.face === 'shock') await page.screenshot({ path: path.join(OUT, 'faces-shock.png') });
+    if (n < total - 1) await next();
+  }
+  ok(seen.join(' ') === 'echo:calm bruno:shock echo:calm echo:alert kai:shout', '開場的五句照劇本換了表情', seen);
+  await page.evaluate(() => window.__sf.scene.getScene('SfDialogue').finish());
+  await page.waitForFunction(() => window.__sf.scene.getScene('SfBattle').mode === 'idle', null, { timeout: 30000 });
+
+  // 2. 同一個人接著說：立繪還是同一個物件，只有圖換了，大小不變；沒有的表情退回平常那一張
+  await page.evaluate(() => {
+    const say = (who, face) => ({ who, face, zh: '測試。', en: 'Test.' });
+    window.__sf.scene.getScene('SfBattle').scene.launch('SfDialogue', { lines: [say('kai'), say('kai', 'smile'), say('kai', 'nope'), say('vey', 'guilt'), say('cantor', 'smile')], onDone: () => undefined });
+  });
+  await page.waitForFunction(() => window.__sf.scene.isActive('SfDialogue') && !!window.__sf.scene.getScene('SfDialogue').portrait, null, { timeout: 15000 });
+  ok(await loaded(['pt_kai_smile', 'pt_vey_guilt']), '自訂的對話也會載入用到的表情');
+  await page.evaluate(() => (window.__sf.scene.getScene('SfDialogue').portrait.__same = true));
+  const a = await now();
+  await next();
+  await page.waitForTimeout(260);
+  const b = await now();
+  const same = await page.evaluate(() => !!window.__sf.scene.getScene('SfDialogue').portrait.__same);
+  ok(a.tex === 'pt_kai' && b.tex === 'pt_kai_smile', '同一個人換了表情', { a: a.tex, b: b.tex });
+  ok(same && a.w === b.w && a.h === b.h && a.w > 0, '是原地換圖：立繪沒有重新進場，大小也沒變', { same, a: [a.w, a.h], b: [b.w, b.h] });
+  await page.screenshot({ path: path.join(OUT, 'faces-smile.png') });
+  await next();
+  await page.waitForTimeout(260);
+  ok((await now()).tex === 'pt_kai', '沒有的表情退回平常那一張');
+  await next();
+  await page.waitForTimeout(260);
+  const v = await now();
+  ok(v.tex === 'pt_vey_guilt' && !(await page.evaluate(() => !!window.__sf.scene.getScene('SfDialogue').portrait.__same)), '換人說話時換成那個人的立繪', v);
+  await next();
+  await page.waitForTimeout(260);
+  ok((await now()).tex === 'pt_cantor', '沒有表情差分的角色照常顯示');
+  await ctx.close();
+}
+
 async function autoPlay(browser, mission) {
   const epilogue = ['m10', 'm11', 'm12'].includes(mission);
   const { ctx, page } = await open(browser, { w: 1280, h: 720, dpr: 1 }, epilogue ? { stars: ALL_STARS, tips: ALL_TIPS, upgrades: MAXED } : { stars: { m1: 1, m2: 1 }, tips: TIPS });
@@ -1077,7 +1150,7 @@ async function autoPlay(browser, mission) {
 }
 
 (async () => {
-  const sections = { click: clickThrough, hangar: hangarCheck, big: bigMapCheck, pick: pickCheck, codex: codexCheck, challenge: challengeCheck, offline: offlineCheck, report: reportCheck };
+  const sections = { click: clickThrough, hangar: hangarCheck, big: bigMapCheck, pick: pickCheck, codex: codexCheck, challenge: challengeCheck, offline: offlineCheck, report: reportCheck, faces: facesCheck };
   for (const m of ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12']) sections[m] = (browser) => autoPlay(browser, m);
   const all = Object.keys(sections);
   const parted = Object.values(PARTS).flat();
