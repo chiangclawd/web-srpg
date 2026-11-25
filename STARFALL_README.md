@@ -190,12 +190,18 @@ src/starfall/
 ```
 
 ```bash
-npm run test:starfall                 # 規則測試（91 項）
+npm run test:starfall                 # 規則測試（93 項）
 npx tsx scripts/starfall-sim.ts       # 自動對戰：每關打不打得過、幾回合
 npx tsx scripts/starfall-sim.ts m3 -v # 逐步列出某一關的過程（加 --easy 用輕鬆難度）
 npx tsx scripts/starfall-sim.ts --lv=2 --cautious --care=2  # 強化線都升到 2 級、謹慎打法、隊長保守；--max 是全部改滿
 node scripts/starfall-check.cjs       # 瀏覽器檢查：手機觸控點一遍第一關、機庫、大地圖、被擋住的格子、圖鑑・成就 + 十二關自動對戰（要先 build 並開 preview；ONLY=big,m10 可以只跑幾段）
 ```
+
+瀏覽器檢查整套接著跑，CI 的機器上要 25–50 分鐘（同一份程式，分到的機器快慢差到兩倍）。所以 CI 把它拆成四個平行的工作
+（`.github/workflows/phone-check.yml` 的 `starfall`），每個工作用 `PART=ui / ch1-2 / ch3 / epilogue` 跑其中一份；
+分法寫在檢查腳本的 `PARTS`，新加的段落沒排進去腳本會直接報錯，CI 的清單和它對不上則是規則測試（`ci.test.ts`）會擋。
+「連點兩下」的兩下把時間寫在觸控事件裡，機器再慢，遊戲看到的間隔也一樣（分兩次送的話，慢的機器上會隔太久，被當成點了兩次）。
+在自己的電腦上要重現慢的機器：`SLOW=6 ONLY=pick node scripts/starfall-check.cjs`（把網頁的 CPU 放慢六倍）。
 
 自動對戰的機器人不是最佳解，只是一套固定的判斷，數值稍微一動走法就可能整個不同
 （例如強化線都升到 2 級時，預設打法反而在第八關輸掉；輸的局通常是隊長或保護目標被打掉）。

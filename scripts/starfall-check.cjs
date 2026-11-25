@@ -6,7 +6,8 @@
 //   5. 圖鑑・成就：標題進得去、方塊和分頁點得到；戰鬥裡遇到的機體會記下來，成就會跳提示、結算畫面會列出來
 //   6. 每個任務各用自動對戰打完一次（我方也交給 AI），確認演出、敵方回合、結算都沒有程式錯誤
 // 用法：先 npx vite build && npx vite preview --port 4173，再 node scripts/starfall-check.cjs [截圖資料夾]
-// （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址；ONLY=click,hangar,big,pick,codex,m10 只跑其中幾段）
+// （Playwright 用全域安裝的版本時設 PLAYWRIGHT=/path/to/playwright；GAME_URL 可改網址；ONLY=click,hangar,big,pick,codex,m10 只跑其中幾段；
+//   SLOW=4 把網頁的 CPU 放慢四倍，用來重現 CI 上慢的機器。CI 把這份檢查拆成幾個平行的工作，見 .github/workflows/phone-check.yml）
 const path = require('node:path');
 const fs = require('node:fs');
 const { chromium } = require(process.env.PLAYWRIGHT ?? 'playwright');
@@ -25,6 +26,14 @@ const MAXED = {
   sparrow: { plating: 3, firepower: 3, mods: ['sparrow_thrust', 'sparrow_barrel'] },
   hale_ally: { plating: 3, firepower: 3, mods: ['hale_net', 'hale_phalanx'] },
 };
+// CI 把這份檢查拆成幾個平行的工作，一個工作跑一份（PART=ui）。每一段都要放進其中一份，漏掉的話這支程式一開始就會報錯；
+// 多加一份的時候 .github/workflows/phone-check.yml 的 matrix 也要加（tests/starfall/ci.test.ts 會對）。
+const PARTS = {
+  ui: ['click', 'hangar', 'big', 'pick', 'codex'],
+  'ch1-2': ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'],
+  ch3: ['m7', 'm8', 'm9'],
+  epilogue: ['m10', 'm11', 'm12'],
+};
 let failed = 0;
 
 const ok = (cond, msg, extra) => {
@@ -40,6 +49,8 @@ async function open(browser, view, save) {
   const ctx = await browser.newContext({ viewport: { width: view.w, height: view.h }, deviceScaleFactor: view.dpr, isMobile: !!view.touch, hasTouch: !!view.touch });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => ok(false, `程式錯誤：${e.message}`));
+  // SLOW=4：把網頁的 CPU 放慢四倍，在自己的電腦上重現 CI 上比較慢的機器
+  if (process.env.SLOW) await (await ctx.newCDPSession(page)).send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.SLOW) });
   await page.addInitScript((s) => localStorage.setItem('starfall_save_v1', JSON.stringify(s)), { lang: 'zh', sfx: 0, music: 0, stars: {}, tips: [], fast: true, ...save });
   await page.goto(URL);
   await page.waitForFunction(() => window.__sf && window.__sf.scene.isActive('SfTitle'), null, { timeout: 120000 });
@@ -47,6 +58,21 @@ async function open(browser, view, save) {
 }
 
 const idle = (page, timeout = 60000) => page.waitForFunction(() => window.__sf.scene.getScene('SfBattle').mode !== 'busy', null, { timeout });
+
+/**
+ * 連點兩下。兩下的時間直接寫在觸控事件裡（相隔 0.12 秒），遊戲是照事件的時間判斷連點的，
+ * 所以機器再慢結果也一樣。分兩次 tap 送的話，慢的機器上兩下會隔超過 0.35 秒，被當成點了兩次。
+ */
+async function doubleTap(page, p) {
+  const cdp = await page.context().newCDPSession(page);
+  const t = Date.now() / 1000;
+  const send = (type, at) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: p[0], y: p[1] }], timestamp: at });
+  await send('touchStart', t);
+  await send('touchEnd', t + 0.03);
+  await send('touchStart', t + 0.12);
+  await send('touchEnd', t + 0.15);
+  await cdp.detach();
+}
 
 /** 觸控點擊與「用按鈕上的文字找按鈕」 */
 function ui(page) {
@@ -444,8 +470,8 @@ async function pickCheck(browser) {
   await setup(move);
   await select('kai');
   await page.waitForTimeout(700);
-  await tap(p, 90);
-  await tap(p, 700);
+  await doubleTap(page, p);
+  await page.waitForTimeout(700);
   s = await state();
   ok(s.sel === 'bruno' && same(s.kai, [2, 9]) && s.peek === null, '在友軍身上連點兩下：改選友軍，沒有移動', s);
 
@@ -455,8 +481,8 @@ async function pickCheck(browser) {
   await select('kai');
   await page.waitForTimeout(700);
   const full = (await state()).foes;
-  await tap(p, 90);
-  await tap(p, 700);
+  await doubleTap(page, p);
+  await page.waitForTimeout(700);
   s = await state();
   ok(s.sel === 'bruno' && s.mode === 'unit' && s.foes === full, '敵人躲在友軍身後、在那裡連點兩下：改選友軍，沒有開火', s);
   await setup(foe);
@@ -667,18 +693,31 @@ async function autoPlay(browser, mission) {
 }
 
 (async () => {
+  const sections = { click: clickThrough, hangar: hangarCheck, big: bigMapCheck, pick: pickCheck, codex: codexCheck };
+  for (const m of ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12']) sections[m] = (browser) => autoPlay(browser, m);
+  const all = Object.keys(sections);
+  const parted = Object.values(PARTS).flat();
+  const stray = [...all.filter((k) => !parted.includes(k)), ...parted.filter((k, i) => !all.includes(k) || parted.indexOf(k) !== i)];
+  if (stray.length) throw new Error(`PARTS 和實際的段落對不上：${stray.join(', ')}`);
+  // PART=ui 跑其中一份（CI 用）；ONLY=big,m10 只跑指定的幾段（開發時用）；都沒設就全部跑
+  const { PART, ONLY } = process.env;
+  if (PART && !PARTS[PART]) throw new Error(`沒有 ${PART} 這一份，只有 ${Object.keys(PARTS).join(', ')}`);
+  const only = PART ? PARTS[PART] : ONLY ? ONLY.split(',') : all;
+  const unknown = only.filter((k) => !all.includes(k));
+  if (unknown.length) throw new Error(`沒有這幾段：${unknown.join(', ')}（有的是 ${all.join(', ')}）`);
   fs.mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
-  // ONLY=big,m10 之類可以只跑其中幾段（開發時用；CI 全部跑）
-  const only = process.env.ONLY ? process.env.ONLY.split(',') : null;
-  const want = (k) => !only || only.includes(k);
-  if (want('click')) await clickThrough(browser);
-  if (want('hangar')) await hangarCheck(browser);
-  if (want('big')) await bigMapCheck(browser);
-  if (want('pick')) await pickCheck(browser);
-  if (want('codex')) await codexCheck(browser);
-  for (const m of ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12']) if (want(m)) await autoPlay(browser, m);
+  for (const k of all) {
+    if (!only.includes(k)) continue;
+    const t = Date.now();
+    await sections[k](browser);
+    // 每一段花的時間：CI 的機器快慢差到兩倍，哪一段變慢了看這裡
+    console.log(`     ── ${k}：${Math.round((Date.now() - t) / 1000)} 秒`);
+  }
   await browser.close();
   console.log(failed ? `${failed} 個問題（截圖在 ${OUT}）` : `全部通過（截圖在 ${OUT}）`);
   process.exit(failed ? 1 : 0);
-})();
+})().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
