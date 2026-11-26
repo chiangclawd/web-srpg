@@ -265,6 +265,21 @@
   製作名單兩邊寫的一樣、隱私權說明提到每一項服務），以及瀏覽器檢查的 `privacy` 那一段。
 - **沒有驗證的**：真的 Google 帳號和 Firebase。再確認帳號的視窗、刪除登入紀錄這兩步只在假的雲端上跑過，要用自己的帳號實際刪一次才算數。
 
+## 介紹頁
+
+給別人的入口：`public/echo/index.html`，網址是 <https://chiangclawd.github.io/web-srpg/echo/>。
+內容是主視覺、特色、截圖、怎麼裝到主畫面、怎麼回報問題，中文為主、每段附一行英文。寫明這是公開測試、目前只在電腦的瀏覽器上完整測過。
+
+- **為什麼放在 `echo/`**：離線快取管的是 `starfall` 開頭的網址，介紹頁和它的截圖放在範圍外面，不會算進第一次要存的 35 MB，
+  裝成 App 之後也不會被開在全螢幕的 App 視窗裡。主視覺直接用遊戲的 `assets/starfall/title.webp`，沒有另外放一份。
+- **截圖**：`node scripts/starfall-shots.cjs`（先 build 並開 preview）自動擺好八個畫面，存到 `public/echo/shots/`（1600×900 的 webp，合計約 0.8 MB）。
+  戰鬥畫面的擺法是先讓雙方各打兩回合，再選一台打得到敵人的機體、按下攻擊，畫面上就有射程、目標和傷害預估。
+  遊戲的畫面改了就重拍。第二個參數給 `en` 拍英文版；`SHOT_VIEW`、`SHOT_DPR`、`SHOT_WIDTH` 可以換尺寸，之後商店截圖也用這一支。
+- **測試**：`tests/starfall/intro.test.ts` 檢查連到的檔案都在、截圖資料夾沒有多的或少的、回報表單的網址跟遊戲裡的一樣、
+  頁面上寫的數字（任務、機體、圖鑑、成就）跟遊戲對得上、頁面不在離線清單裡。任務或成就的數量改了，測試會失敗，提醒要改頁面。
+- 塔防的 App 打包時會把 `echo/` 拿掉（`scripts/app-dist.mjs`）。
+- **沒有驗證的**：安裝到主畫面的步驟是照各平台一般的做法寫的，iPhone、iPad、Android 上都還沒有實際照著做過。
+
 ## 程式結構
 
 ```
@@ -285,7 +300,7 @@ src/starfall/
 ```
 
 ```bash
-npm run test:starfall                 # 規則測試（151 項）
+npm run test:starfall                 # 規則測試（156 項）
 npx tsx scripts/starfall-sim.ts       # 自動對戰：每關打不打得過、幾回合
 npx tsx scripts/starfall-sim.ts m3 -v # 逐步列出某一關的過程（加 --easy 用輕鬆難度、--hard 用挑戰模式）
 npx tsx scripts/starfall-sim.ts --lv=2 --cautious --care=2  # 強化線都升到 2 級、謹慎打法、隊長保守；--max 是全部改滿

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>星墜殘響 Starfall Echo｜科幻機甲戰棋・公開測試</title>
+    <meta name="description" content="科幻機甲戰棋：指揮拾荒隊的機甲小隊，在墜毀殖民船的殘骸間對抗失控的機群。12 個任務的完整故事，手機、平板、電腦的瀏覽器免安裝直接玩，免費、沒有廣告。" />
+    <meta name="theme-color" content="#070d18" />
+    <link rel="canonical" href="https://chiangclawd.github.io/web-srpg/echo/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="星墜殘響 Starfall Echo" />
+    <meta property="og:description" content="科幻機甲戰棋：12 個任務的完整故事，免安裝直接玩，免費、沒有廣告。公開測試中，歡迎回報問題。" />
+    <meta property="og:url" content="https://chiangclawd.github.io/web-srpg/echo/" />
+    <meta property="og:image" content="https://chiangclawd.github.io/web-srpg/assets/starfall/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" sizes="192x192" href="../starfall-icon-192.png" />
+    <link rel="apple-touch-icon" href="../starfall-icon-180.png" />
+    <style>
+      :root {
+        --bg: #070d18;
+        --panel: #0d1826;
+        --panel-2: #12233a;
+        --rule: #23384d;
+        --ink: #e2edf8;
+        --muted: #8fb0c8;
+        --cyan: #5fe3ff;
+        --orange: #ff9a3c;
+        --font: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", "Trebuchet MS", system-ui, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      html { background: var(--bg); scroll-behavior: smooth; }
+      body { margin: 0; color: var(--ink); font: 16px/1.75 var(--font); -webkit-font-smoothing: antialiased; }
+      a { color: var(--cyan); }
+      .wrap {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding-left: max(18px, env(safe-area-inset-left));
+        padding-right: max(18px, env(safe-area-inset-right));
+      }
+      .en { color: var(--muted); font-size: 0.9rem; }
+
+      /* 主視覺：左上角是天空，標題放那裡 */
+      .hero {
+        position: relative;
+        min-height: min(92vh, 760px);
+        display: flex;
+        align-items: flex-end;
+        background: #050a14 url('../assets/starfall/title.webp') 62% 40% / cover no-repeat;
+      }
+      .hero::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(90deg, rgba(7, 13, 24, 0.72) 0%, rgba(7, 13, 24, 0.35) 42%, rgba(7, 13, 24, 0) 68%),
+          linear-gradient(180deg, rgba(7, 13, 24, 0.1) 25%, rgba(7, 13, 24, 0.78) 70%, var(--bg) 100%);
+      }
+      /* 直放的手機：文字會蓋到整張圖上，壓暗一點 */
+      @media (max-width: 640px) {
+        .hero::after { background: linear-gradient(180deg, rgba(7, 13, 24, 0.2) 0%, rgba(7, 13, 24, 0.72) 34%, rgba(7, 13, 24, 0.9) 72%, var(--bg) 100%); }
+      }
+      .hero .wrap { position: relative; z-index: 1; width: 100%; padding-block: 40px 44px; }
+      .tag { display: inline-block; margin: 0 0 10px; padding: 3px 12px; border: 1px solid var(--orange); background: rgba(7, 13, 24, 0.82); color: var(--orange); font-size: 0.85rem; font-weight: 700; letter-spacing: 0.08em; }
+      h1 { margin: 0; font-size: clamp(2.6rem, 9vw, 5rem); line-height: 1.05; font-weight: 900; letter-spacing: 0.06em; text-shadow: 0 3px 0 #04101c, 0 8px 24px rgba(0, 0, 0, 0.7); }
+      .sub { margin: 8px 0 0; font-weight: 700; letter-spacing: 0.42em; color: var(--cyan); text-shadow: 0 2px 8px #000; }
+      .lead { margin: 16px 0 0; max-width: 36em; font-size: 1.1rem; text-shadow: 0 2px 8px #000; }
+      .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 12px 26px;
+        font-weight: 800;
+        font-size: 1.05rem;
+        text-decoration: none;
+        border: 2px solid var(--cyan);
+        color: var(--cyan);
+        background: rgba(10, 22, 38, 0.86);
+        clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+      }
+      .btn.play { background: var(--cyan); color: #04101c; }
+      .btn:active { transform: translateY(1px); }
+      .note { margin: 14px 0 0; color: var(--muted); font-size: 0.92rem; text-shadow: 0 1px 4px #000; }
+
+      section { padding-block: 44px 6px; }
+      h2 { margin: 0 0 18px; font-size: 1.55rem; }
+      h2 small { display: block; font-size: 0.8rem; color: var(--cyan); letter-spacing: 0.2em; font-weight: 700; }
+      .panel { background: var(--panel); border: 1px solid var(--rule); padding: 18px 20px; }
+      .panel h3 { margin: 0 0 6px; font-size: 1.08rem; color: var(--cyan); }
+      .panel p { margin: 0 0 6px; }
+      .panel p:last-child { margin-bottom: 0; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+      .test { border-color: var(--orange); background: linear-gradient(180deg, rgba(255, 154, 60, 0.1), var(--panel) 60%); }
+      .test h3 { color: var(--orange); }
+
+      /* 截圖：橫向捲動 */
+      .shots { display: grid; grid-auto-flow: column; grid-auto-columns: min(88%, 680px); gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 12px; }
+      .shots figure { margin: 0; scroll-snap-align: start; }
+      .shots img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border: 1px solid var(--rule); background: var(--panel); }
+      .shots figcaption { margin-top: 6px; color: var(--muted); font-size: 0.9rem; }
+
+      ol, ul { margin: 6px 0 0; padding-left: 1.3em; }
+      li { margin: 4px 0; }
+      footer { margin-top: 52px; padding-block: 24px 44px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 0.9rem; }
+      footer nav { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 10px; }
+    </style>
+  </head>
+  <body>
+    <header class="hero">
+      <div class="wrap">
+        <p class="tag">公開測試 PUBLIC TEST</p>
+        <h1>星墜殘響</h1>
+        <p class="sub">STARFALL ECHO</p>
+        <p class="lead">
+          殖民船「曙光號」墜毀在冰衛星上，已經八十年。船還記得它的任務，把在這裡出生的人當成遺失的貨物。<br />
+          <span class="en">Eighty years after the colony ship fell, it still remembers its mission, and it counts the people born here as lost cargo.</span>
+        </p>
+        <div class="cta">
+          <a class="btn play" href="../starfall.html">▶ 立即遊玩 Play now</a>
+          <a class="btn" href="#feedback">回報問題 Report a problem</a>
+        </div>
+        <p class="note">
+          手機、平板、電腦的瀏覽器直接玩・免費・沒有廣告・玩過一次之後可以離線<br />
+          Plays in the browser on phones, tablets and computers · Free · No ads · Works offline after the first visit
+        </p>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section>
+        <div class="panel test">
+          <h3>這是公開測試版</h3>
+          <p>遊戲已經可以從頭玩到結局。目前只在電腦的瀏覽器上完整測過，手機和平板上跑得怎麼樣，要靠你回報，尤其是 Android 手機。</p>
+          <p class="en">The game is complete from start to ending. So far it has only been fully tested in desktop browsers, so reports from phones and tablets, Android phones above all, are the most useful ones.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2><small>FEATURES</small>遊戲特色</h2>
+        <div class="grid">
+          <div class="panel">
+            <h3>看得見結果的回合制戰術</h3>
+            <p>傷害是固定的，出手之前就看得到會打掉多少、對方會不會反擊。高低差、側面和背後、掩體，都算得出來。</p>
+            <p class="en">Turn-based tactics with fixed damage: you see the result before you commit. Height, flanking and cover all count.</p>
+          </div>
+          <div class="panel">
+            <h3>6 台機體，各有打法</h3>
+            <p>突擊、重裝、狙擊、修復、斥候、指揮。每一台有自己的技能，可以在機庫用過關拿到的零件改造。</p>
+            <p class="en">Six frames with their own skills, upgraded in the hangar with parts earned from missions.</p>
+          </div>
+          <div class="panel">
+            <h3>12 個任務的完整故事</h3>
+            <p>主線三章加後日談，有結局。角色立繪會換表情，重要的場面有全螢幕插圖，各章有自己的配樂。</p>
+            <p class="en">Twelve missions across three chapters and an epilogue, with portraits, illustrations and a soundtrack for each chapter.</p>
+          </div>
+          <div class="panel">
+            <h3>打完還有</h3>
+            <p>每一關都能用加強的敵人再挑戰一次；機體與敵人的圖鑑 27 則、成就 23 個。難度有一般和輕鬆兩種。</p>
+            <p class="en">A challenge mode for every mission, a codex of 27 entries and 23 achievements. Two difficulty settings.</p>
+          </div>
+          <div class="panel">
+            <h3>為手機做的操作</h3>
+            <p>觸控直接點；電腦可以用滑鼠、鍵盤或手把。文字大小和色盲配色可以調，中文、英文隨時切換。</p>
+            <p class="en">Built for touch, with mouse, keyboard and gamepad support. Text size, colour-blind palette, Chinese and English.</p>
+          </div>
+          <div class="panel">
+            <h3>存檔跟著你</h3>
+            <p>三個存檔欄位，戰鬥中離開可以接著打。想跨裝置的話可以用 Google 帳號登入同步；不登入也能玩，存檔只留在裝置上。</p>
+            <p class="en">Three save slots and mid-battle resume. Optional Google sign-in syncs saves across devices; without it, saves stay on the device.</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2><small>SCREENSHOTS</small>遊戲畫面</h2>
+        <div class="shots">
+          <figure><img src="shots/ice.webp" alt="冰原上的戰鬥：選好目標，畫面上方顯示傷害預估" width="1600" height="900" /><figcaption>出手前先看預估 Forecast before you fire</figcaption></figure>
+          <figure><img src="shots/cg.webp" alt="劇情插圖：冬眠艙打開，父子重逢" width="1600" height="900" loading="lazy" /><figcaption>劇情插圖 Story illustrations</figcaption></figure>
+          <figure><img src="shots/bay.webp" alt="冬眠艙裡的首領戰" width="1600" height="900" loading="lazy" /><figcaption>首領戰 Boss fights</figcaption></figure>
+          <figure><img src="shots/talk.webp" alt="對話：角色立繪和表情" width="1600" height="900" loading="lazy" /><figcaption>對話與立繪 Dialogue</figcaption></figure>
+          <figure><img src="shots/reactor.webp" alt="主反應爐的戰鬥：移動範圍和行動選單" width="1600" height="900" loading="lazy" /><figcaption>移動與行動 Move and act</figcaption></figure>
+          <figure><img src="shots/field.webp" alt="後日談的大地圖作戰，左上角有小地圖" width="1600" height="900" loading="lazy" /><figcaption>後日談的大型作戰 Large battles in the epilogue</figcaption></figure>
+          <figure><img src="shots/hangar.webp" alt="機庫：用零件改造機體" width="1600" height="900" loading="lazy" /><figcaption>機庫改造 The hangar</figcaption></figure>
+          <figure><img src="shots/missions.webp" alt="任務列表" width="1600" height="900" loading="lazy" /><figcaption>任務列表 Missions</figcaption></figure>
+        </div>
+      </section>
+
+      <section>
+        <h2><small>INSTALL</small>裝到主畫面</h2>
+        <p>不裝也能玩。裝到主畫面之後會像 App 一樣全螢幕、橫向開啟。</p>
+        <div class="grid">
+          <div class="panel">
+            <h3>iPhone、iPad</h3>
+            <ol>
+              <li>用 Safari 開遊戲。</li>
+              <li>按「分享」。</li>
+              <li>選「加入主畫面」。</li>
+            </ol>
+            <p class="en">Open the game in Safari, tap Share, then Add to Home Screen.</p>
+          </div>
+          <div class="panel">
+            <h3>Android</h3>
+            <ol>
+              <li>用 Chrome 開遊戲。</li>
+              <li>標題畫面有「安裝」就按它。</li>
+              <li>沒有的話，按右上角的選單，選「安裝應用程式」或「加到主畫面」。</li>
+            </ol>
+            <p class="en">Open the game in Chrome and tap Install on the title screen, or use the browser menu: Install app / Add to Home screen.</p>
+          </div>
+          <div class="panel">
+            <h3>電腦</h3>
+            <ol>
+              <li>用 Chrome 或 Edge 開遊戲。</li>
+              <li>按標題畫面的「安裝」，或網址列右邊的安裝圖示。</li>
+            </ol>
+            <p class="en">In Chrome or Edge, use Install on the title screen or the install icon in the address bar.</p>
+          </div>
+        </div>
+        <p>第一次開的時候，遊戲會在背景把自己存進裝置（約 35 MB），標題畫面右下角看得到進度。存完之後沒有網路也能玩。</p>
+        <p class="en">On the first visit the game saves itself to the device in the background (about 35 MB; progress shows at the bottom right of the title screen). After that it plays without a network.</p>
+      </section>
+
+      <section id="feedback">
+        <h2><small>FEEDBACK</small>回報問題</h2>
+        <div class="grid">
+          <div class="panel">
+            <h3>從遊戲裡回報（建議）</h3>
+            <p>「設定」左下角的「回報問題」會列出版本、裝置和最近的錯誤。按「打開回報表單」，這些資訊會自動帶進表單，你只要補上當時的經過。</p>
+            <p class="en">In the game: Settings, then Report a problem at the bottom left. It opens the form with the version, device and recent errors already filled in.</p>
+          </div>
+          <div class="panel">
+            <h3>直接填表單</h3>
+            <p><a href="https://docs.google.com/forms/d/e/1FAIpQLSd6gGeyuQlyPykgDlFhzDpxGzpLJHl51QGE7o0hK4NjjvYKnA/viewform" rel="noopener">星墜殘響 問題回報</a>。不用登入，也不會收集你的電子郵件。請寫上手機或平板的型號。</p>
+            <p class="en">Or open <a href="https://docs.google.com/forms/d/e/1FAIpQLSd6gGeyuQlyPykgDlFhzDpxGzpLJHl51QGE7o0hK4NjjvYKnA/viewform" rel="noopener">the report form</a> directly. No sign-in, no email collected. Please name your phone or tablet model.</p>
+          </div>
+          <div class="panel">
+            <h3>最想知道的事</h3>
+            <ul>
+              <li>哪裡卡住、當掉或畫面跑掉。</li>
+              <li>按不到或看不清楚的地方。</li>
+              <li>跑得順不順，用的是什麼裝置。</li>
+              <li>哪一關太難、太簡單，或看不懂要做什麼。</li>
+            </ul>
+            <p class="en">Crashes and layout problems, things that are hard to tap or read, how it runs on your device, and missions that feel too hard, too easy or unclear.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <nav>
+          <a href="../starfall.html">開始遊戲 Play</a>
+          <a href="../legal/starfall-privacy.html">隱私權說明 Privacy</a>
+          <a href="../legal/starfall-licenses.html">製作名單與授權 Credits and licences</a>
+          <a href="https://github.com/chiangclawd/web-srpg" rel="noopener">GitHub</a>
+        </nav>
+        <div>© 2026 chiangclawd・圖像、3D 模型與配樂以 AI 工具生成（Gemini、Meshy、Lyria）<br />Images, 3D models and music were generated with AI tools (Gemini, Meshy, Lyria).</div>
+      </div>
+    </footer>
+  </body>
+</html>
