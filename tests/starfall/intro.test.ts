@@ -51,7 +51,7 @@ test('介紹頁：截圖的資料夾跟頁面用到的一致', () => {
   assert.deepEqual(fs.readdirSync(`${DIR}/shots`).sort(), used);
   // 截圖腳本拍的就是這幾張
   const script = fs.readFileSync('scripts/starfall-shots.cjs', 'utf8');
-  const shot = [...script.matchAll(/\{ name: '(\w+)'/g)].map((m) => `${m[1]}.webp`).sort();
+  const shot = [...script.matchAll(/\{ name: '(\w+)', store: \d+/g)].map((m) => `${m[1]}.webp`).sort();
   assert.deepEqual(shot, used);
   for (const f of used) assert.ok(fs.statSync(`${DIR}/shots/${f}`).size < 250 * 1024, `${f} 超過 250 KB`);
 });

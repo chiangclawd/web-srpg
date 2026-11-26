@@ -1311,10 +1311,16 @@ async function cgCheck(browser) {
       s.advance();
       s.advance();
     });
-  /** 走到第 i 句（從 0 算），等淡入淡出做完 */
+  /** 走到第 i 句（從 0 算），等插圖淡入做完。不能只等固定的時間：CI 的機器慢，淡入要的時間比本機長得多 */
   const goto = async (i) => {
     while ((await now()).i < i) await next();
-    await page.waitForTimeout(1200);
+    await page
+      .waitForFunction(() => {
+        const s = window.__sf.scene.getScene('SfDialogue');
+        return s.cgKey ? !!s.cg && s.cg.texture.key === s.cgKey && s.cg.alpha >= 0.999 : !s.cg;
+      }, null, { timeout: 20000 })
+      .catch(() => undefined);
+    await page.waitForTimeout(300);
     return now();
   };
   const start = async (m) => {
@@ -1347,8 +1353,13 @@ async function cgCheck(browser) {
   l = await goto(5);
   ok(l.cg === 'cg_wake' && l.tex === null, '下一句沿用同一張插圖', l);
   // 視窗比例變了會整個重排：插圖直接鋪回去，停在同一句
-  await page.evaluate(() => window.__sf.scene.getScene('SfDialogue').resized());
-  await page.waitForTimeout(500);
+  await page.evaluate(() => {
+    const s = window.__sf.scene.getScene('SfDialogue');
+    s.cg.__old = true;
+    s.resized();
+  });
+  // 等場景真的重開（畫面上的插圖換成新的那一個）
+  await page.waitForFunction(() => { const s = window.__sf.scene.getScene('SfDialogue'); return window.__sf.scene.isActive('SfDialogue') && !!s.cg && !s.cg.__old; }, null, { timeout: 20000 }).catch(() => undefined);
   l = await now();
   ok(l.i === 5 && l.cg === 'cg_wake' && l.alpha === 1 && l.tex === null, '重排之後插圖還在、停在同一句', l);
   l = await goto(6);
