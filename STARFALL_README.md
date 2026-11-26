@@ -4,7 +4,7 @@
 
 - 入口：`starfall.html` → `src/starfall/main.ts`
 - 線上版：https://chiangclawd.github.io/web-srpg/starfall.html
-- 目前內容：主線三章共 9 個任務（已完結）＋後日談 3 個大地圖任務、6 台我方機體、18 種敵人與設施、機庫改造（零件獎勵）、機體圖鑑（27 則）和 23 個成就、主線打完後開放的挑戰模式、配樂 8 首、劇情插圖 9 張、中英文、一般 / 輕鬆兩種難度
+- 目前內容：主線三章共 9 個任務（已完結）＋後日談 3 個大地圖任務、6 台我方機體、21 種敵人與設施、機庫改造（零件獎勵）、機體圖鑑（27 則）和 23 個成就、主線打完後開放的挑戰模式、配樂 8 首、劇情插圖 9 張、中英文、一般 / 輕鬆兩種難度
 
 ## 故事
 
@@ -274,11 +274,27 @@
   裝成 App 之後也不會被開在全螢幕的 App 視窗裡。主視覺直接用遊戲的 `assets/starfall/title.webp`，沒有另外放一份。
 - **截圖**：`node scripts/starfall-shots.cjs`（先 build 並開 preview）自動擺好八個畫面，存到 `public/echo/shots/`（1600×900 的 webp，合計約 0.8 MB）。
   戰鬥畫面的擺法是先讓雙方各打兩回合，再選一台打得到敵人的機體、按下攻擊，畫面上就有射程、目標和傷害預估。
-  遊戲的畫面改了就重拍。第二個參數給 `en` 拍英文版；`SHOT_VIEW`、`SHOT_DPR`、`SHOT_WIDTH` 可以換尺寸，之後商店截圖也用這一支。
+  遊戲的畫面改了就重拍。第二個參數給 `en` 拍英文版；`SHOT_VIEW`、`SHOT_DPR`、`SHOT_WIDTH` 可以換尺寸。商店截圖也是這一支拍的（見下一節）。
 - **測試**：`tests/starfall/intro.test.ts` 檢查連到的檔案都在、截圖資料夾沒有多的或少的、回報表單的網址跟遊戲裡的一樣、
   頁面上寫的數字（任務、機體、圖鑑、成就）跟遊戲對得上、頁面不在離線清單裡。任務或成就的數量改了，測試會失敗，提醒要改頁面。
 - 塔防的 App 打包時會把 `echo/` 拿掉（`scripts/app-dist.mjs`）。
 - **沒有驗證的**：安裝到主畫面的步驟是照各平台一般的做法寫的，iPhone、iPad、Android 上都還沒有實際照著做過。
+
+## 商店素材
+
+上架要用的東西。文案在版本庫裡，圖和影片是產生出來的，放在 `store-shots/starfall/`，不進版本庫。
+
+- **文案**：[STARFALL_STORE_LISTING.md](STARFALL_STORE_LISTING.md)，繁中和英文的名稱、副標題、簡短說明、宣傳文字、完整說明、關鍵字，
+  加上分類、分級、隱私權欄位怎麼填。`tests/starfall/store.test.ts` 量每一欄的字數上限，也對數字（任務、機體、敵人、圖鑑、成就）。
+- **截圖**：`node scripts/starfall-shots.cjs --store`。四種尺寸（iPhone 6.9 吋 2868×1320、6.5 吋 2778×1284、iPad 13 吋 2752×2064、
+  Google Play 1920×1080）、中英文各一套，每套八張，照上架的順序編號；另外各一張 Google Play 的主題圖（1024×500）。全部拍完要二、三十分鐘。
+  `SIZES=googleplay LANGS=zh` 可以只拍一部分。iPad 那一套上下有黑邊：遊戲最窄只排到 16:9，截圖照實拍。
+- **預告片**：`node scripts/starfall-trailer.cjs [資料夾] [zh|en]`，約 32 秒、1920×1080：片頭卡片、出手前的預估、開場的劇情和插圖、
+  首領戰、後日談的大地圖、片尾卡片，配第一章的戰鬥曲。要有 ffmpeg。
+  不是錄螢幕：每一段先把場面擺好，把遊戲的時鐘停下來，自己一格一格往前推（每格 1/30 秒），每推一格把畫布存成一張圖，最後用 ffmpeg 接起來。
+  所以不會掉格，電腦快慢也不影響結果。做得到是因為遊戲裡的等待、動畫、打字全都走 Phaser 的時鐘，沒有用 `setTimeout`；
+  之後要是有東西改用實際的時間，錄出來那一段就會對不上。`REUSE=1` 沿用上次錄的畫面只重新剪接。
+- **沒有驗證的**：預告片我只抽了畫面看過，沒有人從頭看過、聽過；截圖沒有實際上傳到商店後台試過尺寸。
 
 ## 程式結構
 
@@ -300,7 +316,7 @@ src/starfall/
 ```
 
 ```bash
-npm run test:starfall                 # 規則測試（156 項）
+npm run test:starfall                 # 規則測試（159 項）
 npx tsx scripts/starfall-sim.ts       # 自動對戰：每關打不打得過、幾回合
 npx tsx scripts/starfall-sim.ts m3 -v # 逐步列出某一關的過程（加 --easy 用輕鬆難度、--hard 用挑戰模式）
 npx tsx scripts/starfall-sim.ts --lv=2 --cautious --care=2  # 強化線都升到 2 級、謹慎打法、隊長保守；--max 是全部改滿
