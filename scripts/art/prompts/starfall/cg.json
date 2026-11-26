@@ -1,0 +1,64 @@
+{
+  "wake": {
+    "refs": [
+      { "img": "title", "use": "the art style, and the exact designs of the yellow mech, the white-and-orange mech, the small white drone, the wrecked starship and the ringed planet" },
+      { "img": "pt_echo", "use": "a closer look at the small white drone" }
+    ]
+  },
+  "span": {
+    "refs": [
+      { "img": "title", "use": "the art style, and the exact designs of the white-and-orange mech, the yellow mech, the navy sniper mech, the small white drone and the ringed planet" },
+      { "img": "unit:shepherd", "use": "the tall thin machine that waits at the far end of the span" }
+    ]
+  },
+  "tram": {
+    "refs": [
+      { "img": "title", "use": "the art style, and the exact designs of the white-and-orange mech and the yellow mech" },
+      { "img": "unit:swift", "use": "the small red scout mech" },
+      { "img": "unit:hunter", "use": "the four-legged machines that chase it" }
+    ]
+  },
+  "reunion": {
+    "crop": { "bottom": 0.17 },
+    "refs": [
+      { "img": "title", "use": "the key art: the art style" },
+      { "img": "cg_ending", "use": "how people are drawn in this game; the young man in the white jacket and the big man in the yellow coverall appear in it from behind" },
+      { "img": "bg_bay", "use": "the place: the sleep bay with its walls of pods" },
+      { "img": "pt_tomas", "use": "the older man who has just woken up" },
+      { "img": "pt_kai", "use": "the young man who holds him" },
+      { "img": "pt_echo", "use": "the small white drone" }
+    ]
+  },
+  "keel": {
+    "refs": [
+      { "img": "title", "use": "the art style, and the exact designs of the white-and-orange mech, the yellow mech, the navy sniper mech, the small white drone, the wrecked starship and the ringed planet" },
+      { "img": "unit:swift", "use": "the slim red scout mech at the rear of the squad" }
+    ]
+  },
+  "rollcall": {
+    "refs": [
+      { "img": "title", "use": "the art style, and the exact designs of the white-and-orange mech, the yellow mech, the navy sniper mech and the small white drone" },
+      { "img": "bg_reactor", "use": "the place: the reactor chamber, its column of light and its galleries of machines" },
+      { "img": "pt_echo", "use": "a closer look at the small white drone" },
+      { "img": "unit:swift", "use": "the slim red scout mech" },
+      { "img": "unit:arbiter", "use": "the white command mech with crimson and gold trim" }
+    ]
+  },
+  "landing": {
+    "refs": [
+      { "img": "title", "use": "the art style, and the exact designs of the white-and-orange mech, the yellow mech, the wrecked starship and the ringed planet" },
+      { "img": "bg_field", "use": "the place: the frozen plain and the dropships on the horizon" },
+      { "img": "unit:sentry", "use": "the two android drones (draw their eye and light lines blue, not red)" },
+      { "img": "unit:weaver", "use": "the six-legged spider-walker drone (draw its eyes and light lines blue, not red)" }
+    ]
+  },
+  "tribunal": {
+    "refs": [
+      { "img": "title", "use": "the key art: the art style, the proportions of mechs and the ringed planet" },
+      { "img": "cg_ending", "use": "how people are drawn in this game; the young man in the white jacket, the red-haired girl and the white drone shell appear in it from behind" },
+      { "img": "unit:tribunal", "use": "the kneeling command mech" },
+      { "img": "pt_varga", "use": "the woman who stands in front of the mech" },
+      { "img": "pt_echo", "use": "the small white drone shell the girl holds up" }
+    ]
+  }
+}

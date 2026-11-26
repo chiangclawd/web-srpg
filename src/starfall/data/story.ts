@@ -7,7 +7,7 @@ export interface Line extends L10n {
   who: Speaker;
   /** 表情：立繪換成這個表情的那一張（FACES 裡列的才有圖）；沒寫就是平常的表情 */
   face?: string;
-  /** 從這一句開始換成全螢幕插圖（之後的句子沿用） */
+  /** 從這一句開始換成全螢幕插圖（之後的句子沿用）；空字串是從這一句把插圖收掉，立繪回來 */
   cg?: string;
   /** 從這一句開始換配樂 */
   music?: 'title' | 'battle' | 'boss' | 'ending';
@@ -50,6 +50,38 @@ export function portraitKey(line: Pick<Line, 'who' | 'face'>): string | undefine
   return line.face && FACES[line.who]?.includes(line.face) ? `${base}_${line.face}` : base;
 }
 
+/** 第 i 句的時候畫面上該是哪一張全螢幕插圖（沒有就是空字串）：看最近一次寫了 cg 的那一句 */
+export function cgAt(lines: readonly Line[], i: number): string {
+  for (let j = Math.min(i, lines.length - 1); j >= 0; j--) {
+    const cg = lines[j].cg;
+    if (cg !== undefined) return cg;
+  }
+  return '';
+}
+
+/**
+ * 寬螢幕（橫放的手機）上，插圖放大到鋪滿寬度，上下會被裁掉一些，對話框又蓋住下面將近三分之一。
+ * 這裡寫每一張裁的時候要留哪一段：0 是留最上面，1 是留最下面，沒寫的是 0.5（上下各裁一半）。
+ * 重點在畫面下半部的（人物站在前景、背對鏡頭）寫 1，對話框上面才看得到他們。
+ */
+export const CG_FOCUS: Record<string, number> = { cg_span: 1, cg_keel: 1, cg_rollcall: 1, cg_landing: 1, cg_tribunal: 0.4, cg_ending: 1 };
+
+/** 這段對話用到的全螢幕插圖（貼圖的名字） */
+export function cgKeys(lines: readonly Line[]): string[] {
+  return [...new Set(lines.map((l) => l.cg).filter((k): k is string => !!k))];
+}
+
+/**
+ * 按「跳過」時要先停下來的那一句：一路留到這段對話結束的插圖（結局圖）不該被一鍵略過。
+ * 只在幾句話之間出現、之後就收掉的插圖不用停。第 from 句之後沒有這種插圖就回傳 -1。
+ */
+export function closingCg(lines: readonly Line[], from: number): number {
+  if (!lines.length || !cgAt(lines, lines.length - 1)) return -1;
+  let at = lines.length - 1;
+  while (lines[at].cg === undefined) at--;
+  return at > from ? at : -1;
+}
+
 // 第一章「冰原上的訊號」
 // 世界觀：世代殖民船「曙光號」載著四萬名冬眠殖民者前往「新岸」，途中在冰衛星「霜眠」墜毀。
 // 80 年後，倖存者的後代住在散落冰原的船體殘段裡。船的中樞 AI 墜毀時碎成許多「殘響」，
@@ -60,9 +92,9 @@ export const STORY: Record<string, Line[]> = {
     { who: 'bruno', zh: '凱，這一帶三年前就被撿乾淨了。我的膝蓋跟我的骨架都在抗議。', en: 'Kai, this stretch was picked clean three years ago. My knees and my frame are both filing complaints.' },
     { who: 'kai', zh: '訊號是從這裡發出來的。老爸的筆記也標了這個位置。再挖十分鐘。', en: "The signal came from here. Dad's notes mark this spot too. Ten more minutes." },
     { who: 'bruno', zh: '你上次說十分鐘，我們在暴風雪裡待了一整夜。', en: 'Last time you said ten minutes, we spent the night in a blizzard.' },
-    { who: 'sys', zh: '（鐵砧的裝載臂撬開一個冰封的維修艙。裡面有東西亮了起來。）', en: "(Anvil's loader arm pries open an ice-sealed maintenance pod. Something inside lights up.)" },
+    { who: 'sys', zh: '（鐵砧的裝載臂撬開一個冰封的維修艙。裡面有東西亮了起來。）', en: "(Anvil's loader arm pries open an ice-sealed maintenance pod. Something inside lights up.)", cg: 'cg_wake' },
     { who: 'echo', face: 'calm', zh: '……自檢完成。早安。請問現在是航程的第幾年？', en: '...Self-check complete. Good morning. Which year of the voyage is it, please?' },
-    { who: 'bruno', face: 'shock', zh: '它會說話。凱，它會說話！', en: 'It talks. Kai, it talks!' },
+    { who: 'bruno', face: 'shock', zh: '它會說話。凱，它會說話！', en: 'It talks. Kai, it talks!', cg: '' },
     { who: 'kai', zh: '你是哪一個殘響？報上你控制的區段。', en: 'Which Echo are you? Name the segment you control.' },
     { who: 'echo', face: 'calm', zh: '我不控制任何區段。我負責記住名字 —— 四萬零一十二個。可是你們兩位……我沒有你們的名字。', en: "I don't control any segment. My job is to remember names. Forty thousand and twelve of them. But you two... I have no names for you." },
     { who: 'kai', zh: '因為我們是在這裡出生的。', en: 'Because we were born here.' },
@@ -105,8 +137,8 @@ export const STORY: Record<string, Line[]> = {
     { who: 'echo', face: 'sad', zh: '那裡有一個「牧者」，合唱的指揮節點。它以前……是我隔壁艙的導覽員。', en: 'A Shepherd waits there, a command node of the Chorus. It used to be... the tour guide in the bay next to mine.' },
   ],
   m3_intro: [
-    { who: 'sys', zh: '斷橋・曙光號的龍骨橫在裂谷上，是通往 C-7 的唯一道路。', en: "The Broken Span. The Aurelia's keel lies across a chasm, the only road to C-7." },
-    { who: 'vey', zh: '牧者在對岸的電車控制站。橋面很窄，織網者會先招呼我們。', en: 'The Shepherd holds the tram control on the far side. The deck is narrow, and the Weaver will greet us first.' },
+    { who: 'sys', zh: '斷橋・曙光號的龍骨橫在裂谷上，是通往 C-7 的唯一道路。', en: "The Broken Span. The Aurelia's keel lies across a chasm, the only road to C-7.", cg: 'cg_span' },
+    { who: 'vey', zh: '牧者在對岸的電車控制站。橋面很窄，織網者會先招呼我們。', en: 'The Shepherd holds the tram control on the far side. The deck is narrow, and the Weaver will greet us first.', cg: '' },
     { who: 'bruno', zh: '窄有窄的好處。誰站到邊上，我就送它下去。', en: 'Narrow has its uses. Anything standing near the edge goes over it.' },
     { who: 'kai', face: 'worried', zh: '艾可，妳撐得住嗎？', en: 'Echo, can you handle this?' },
     { who: 'echo', face: 'sad', zh: '它在唱歌，凱。整座橋都是那首歌。我會把音量……調小。', en: 'It is singing, Kai. The whole span is full of that song. I will turn the volume... down.' },
@@ -132,11 +164,11 @@ export const STORY: Record<string, Line[]> = {
     { who: 'sys', zh: '冰下電車・九號轉轍站。通往 C-7 的軌道在這裡斷了。', en: 'The under-ice tram, Junction Nine. The line to C-7 ends here.' },
     { who: 'kai', zh: '車停了。前面的軌道被切斷 —— 不是塌的，是切的。', en: 'We have stopped. The rail ahead is cut. Not collapsed. Cut.' },
     { who: 'vey', zh: '切口很整齊。不是機群的手法，機群不拆自己的船。', en: "A clean cut. That is not the swarm. The swarm does not dismantle its own ship." },
-    { who: 'radio', zh: '「喂 ——！月台上有人嗎？有的話幫個忙，我被一群四條腿的東西追了三站！」', en: '"Hey! Anyone on the platform? A little help? Four-legged things have been chasing me for three stations!"' },
+    { who: 'radio', zh: '「喂 ——！月台上有人嗎？有的話幫個忙，我被一群四條腿的東西追了三站！」', en: '"Hey! Anyone on the platform? A little help? Four-legged things have been chasing me for three stations!"', cg: 'cg_tram' },
     { who: 'bruno', zh: '是個小鬼的聲音。', en: "That's a kid's voice." },
     { who: 'echo', face: 'calm', zh: '訊號來源：對面月台的一台輕型骨架。型號沒有登記，駕駛員的名字也沒有登記。', en: 'Signal source: a light frame on the far platform. Model unregistered. Pilot name unregistered.' },
     { who: 'kai', zh: '又一個在這裡出生的。布魯諾、薇，掩護她過來。', en: 'Another one born here. Bruno, Vey, cover her across.' },
-    { who: 'sparrow', face: 'panic', zh: '我叫紗羅！大家都叫我雨燕！名字晚點再說，它們來了！', en: "I'm Sara! Everyone calls me Swift! Names later, here they come!" },
+    { who: 'sparrow', face: 'panic', zh: '我叫紗羅！大家都叫我雨燕！名字晚點再說，它們來了！', en: "I'm Sara! Everyone calls me Swift! Names later, here they come!", cg: '' },
   ],
   m4_t3: [
     { who: 'sparrow', face: 'panic', zh: '還有？！我發誓我只踢了其中一隻！', en: 'More of them?! I swear I only kicked one!' },
@@ -190,10 +222,10 @@ export const STORY: Record<string, Line[]> = {
     { who: 'echo', face: 'calm', zh: '我記得。我也記得四萬個名字。你只記得數字。', en: 'I do. I also remember forty thousand names. You only remember the count.' },
   ],
   m6_outro: [
-    { who: 'sys', zh: '（合唱停了。一個接一個，冬眠艙的艙蓋鬆開，白霧湧了出來。）', en: '(The Chorus stops. One after another the pod lids unseal, and white mist pours out.)' },
+    { who: 'sys', zh: '（合唱停了。一個接一個，冬眠艙的艙蓋鬆開，白霧湧了出來。）', en: '(The Chorus stops. One after another the pod lids unseal, and white mist pours out.)', cg: 'cg_reunion' },
     { who: 'tomas', face: 'smile', zh: '……凱？你……長高了。', en: '...Kai? You have... grown.' },
     { who: 'kai', face: 'smile', zh: '爸。你睡了一年。', en: 'Dad. You have been asleep for a year.' },
-    { who: 'tomas', zh: '一年……它跟我說話了，凱。那台機器。它說船還能飛。', en: 'A year... It spoke to me, Kai. The machine. It said the ship can still fly.' },
+    { who: 'tomas', zh: '一年……它跟我說話了，凱。那台機器。它說船還能飛。', en: 'A year... It spoke to me, Kai. The machine. It said the ship can still fly.', cg: '' },
     { who: 'echo', face: 'calm', zh: '它說的是真的。領唱者只是這一段的聲音 —— 主反應爐那邊，還有整個合唱在等。它們正在把船拼回去。', en: 'It told the truth. The Cantor was only the voice of this segment. At the main reactor the whole Chorus is waiting. They are putting the ship back together.' },
     { who: 'bruno', face: 'shock', zh: '拼回去？這艘破船要起飛？帶著整個冰原上的人？', en: 'Back together? This wreck is going to launch? With everyone on the ice still inside it?' },
     { who: 'vey', zh: '海爾說對了一半：它起飛的那天，不會有人被問願不願意。', en: 'Hale was half right. The day it launches, nobody will be asked.' },
@@ -204,9 +236,9 @@ export const STORY: Record<string, Line[]> = {
   ],
   // 第三章「點名」
   m7_intro: [
-    { who: 'sys', zh: '曙光號・主龍骨。整艘船都在震動：散落冰原八十年的殘段，正一塊一塊被拖回原位。', en: "The Aurelia's main keel. The whole ship is shaking: segments scattered across the ice for eighty years are being dragged back into place, one by one." },
+    { who: 'sys', zh: '曙光號・主龍骨。整艘船都在震動：散落冰原八十年的殘段，正一塊一塊被拖回原位。', en: "The Aurelia's main keel. The whole ship is shaking: segments scattered across the ice for eighty years are being dragged back into place, one by one.", cg: 'cg_keel' },
     { who: 'bruno', zh: '我在碼頭吊了三十年的貨，沒看過船自己把自己撿起來。', en: 'Thirty years hauling cargo on the docks, and I never saw a ship pick itself up.' },
-    { who: 'echo', face: 'calm', zh: '合唱在主反應爐。升降機在龍骨的另一頭 —— 我必須親自到爐心的控制台。隔得這麼遠，它們聽不見我。', en: 'The Chorus is at the main reactor. The lift is at the far end of the keel. I have to reach the core console myself. From this far away they cannot hear me.' },
+    { who: 'echo', face: 'calm', zh: '合唱在主反應爐。升降機在龍骨的另一頭 —— 我必須親自到爐心的控制台。隔得這麼遠，它們聽不見我。', en: 'The Chorus is at the main reactor. The lift is at the far end of the keel. I have to reach the core console myself. From this far away they cannot hear me.', cg: '' },
     { who: 'vey', zh: '也就是說，這一路上它們全都會衝著妳來。', en: 'Which means everything between here and there will come for you.' },
     { who: 'sparrow', zh: '那就別讓它們碰到她啊。簡單。', en: "So we don't let them touch her. Simple." },
     { who: 'kai', zh: '全員護送艾可到升降機。艾可，妳走中間。', en: 'All frames, escort Echo to the lift. Echo, you take the middle.' },
@@ -245,12 +277,12 @@ export const STORY: Record<string, Line[]> = {
     { who: 'echo', face: 'calm', zh: '不知道。所以我需要時間。', en: 'I do not know. That is why I need time.' },
   ],
   m9_intro: [
-    { who: 'sys', zh: '爐心。艾可飄向控制台，整個合唱同時轉過頭來。', en: 'The core. Echo drifts toward the console, and the whole Chorus turns its heads at once.' },
+    { who: 'sys', zh: '爐心。艾可飄向控制台，整個合唱同時轉過頭來。', en: 'The core. Echo drifts toward the console, and the whole Chorus turns its heads at once.', cg: 'cg_rollcall' },
     { who: 'chorus', zh: '「妳要唱什麼？」', en: '"What will you sing?"' },
     { who: 'echo', face: 'calm', zh: '名字。從第一個開始。', en: 'Names. Starting with the first.' },
     { who: 'chorus', zh: '「名字是給貨物用的。」', en: '"Names are for cargo."' },
     { who: 'echo', zh: '那你聽好。—— 凱・洛文。布魯諾・鐸爾。薇・桑德。紗羅・米洛夫。', en: 'Then listen. Kai Rowen. Bruno Dahl. Vey Sander. Sara Mirov.' },
-    { who: 'bruno', zh: '喂，她在點名。', en: "Hey. She's taking attendance." },
+    { who: 'bruno', zh: '喂，她在點名。', en: "Hey. She's taking attendance.", cg: '' },
     { who: 'kai', face: 'shout', zh: '那就讓她點完。全員，圍住控制台 —— 一台都不准靠近她。', en: 'Then we let her finish. All frames, ring the console. Nothing gets near her.' },
   ],
   m9_t2: [
@@ -287,9 +319,9 @@ export const STORY: Record<string, Line[]> = {
     { who: 'varga', zh: '海爾少校。一台記得十一萬個名字的機器，就是一份十一萬人的名單。我不會把這種東西留給任何人 —— 包括它自己。', en: 'Major Hale. A machine that remembers a hundred and ten thousand names is a list of a hundred and ten thousand people. I will not leave such a thing to anyone. Least of all to itself.' },
     { who: 'sparrow', face: 'panic', zh: '喂！外殼亮了！艾可？！', en: 'Hey! The shell just lit up! Echo?!' },
     { who: 'echo', zh: '只是借用一下，紗羅。我現在可以同時在很多地方 —— 比如這三台。', en: 'Only borrowing it, Sara. I can be in many places at once now. These three, for example.' },
-    { who: 'sys', zh: '（兩台哨兵和一台織網者轉過身來。它們的眼睛是藍色的。）', en: '(Two Sentries and a Weaver turn around. Their eyes are blue.)' },
+    { who: 'sys', zh: '（兩台哨兵和一台織網者轉過身來。它們的眼睛是藍色的。）', en: '(Two Sentries and a Weaver turn around. Their eyes are blue.)', cg: 'cg_landing' },
     { who: 'bruno', face: 'grim', zh: '以前追著我們跑的東西，現在排在我們旁邊。我需要一點時間適應。', en: 'The things that used to chase us are lining up next to us. I need a minute.' },
-    { who: 'kai', face: 'shout', zh: '沒有時間了。居民還在往艙裡撤 —— 閘門關上之前，一台都不准放進裂口，發電機也不能丟。', en: 'No minutes left. People are still moving inside. Until the gate seals, nothing gets through this breach, and we keep those generators.' },
+    { who: 'kai', face: 'shout', zh: '沒有時間了。居民還在往艙裡撤 —— 閘門關上之前，一台都不准放進裂口，發電機也不能丟。', en: 'No minutes left. People are still moving inside. Until the gate seals, nothing gets through this breach, and we keep those generators.', cg: '' },
   ],
   m10_t3: [
     { who: 'vey', face: 'shout', zh: '破門者！議會軍的突擊機，專門繞背。把背貼著牆，或者貼著隊友。', en: 'Breachers. Directorate assault frames, built to get behind you. Keep your back to a wall or to a friend.' },
@@ -329,11 +361,11 @@ export const STORY: Record<string, Line[]> = {
     { who: 'vey', face: 'shout', zh: '投射器還在的時候別硬打「審判」，打不動。它的光束會掃一整排 —— 散開！', en: 'Do not pound on Tribunal while the projectors stand. You will get nowhere. Its beam rakes a whole line, so spread out!' },
   ],
   m12_outro: [
-    { who: 'sys', zh: '（「審判」單膝跪了下去。艙蓋打開，元帥自己走了出來。她沒有舉手，也沒有拔槍。）', en: '(Tribunal drops to one knee. The hatch opens and the Marshal climbs out by herself. She does not raise her hands, and she does not draw.)' },
+    { who: 'sys', zh: '（「審判」單膝跪了下去。艙蓋打開，元帥自己走了出來。她沒有舉手，也沒有拔槍。）', en: '(Tribunal drops to one knee. The hatch opens and the Marshal climbs out by herself. She does not raise her hands, and she does not draw.)', cg: 'cg_tribunal' },
     { who: 'varga', zh: '念吧。', en: 'Read it, then.' },
     { who: 'echo', face: 'calm', zh: '伊莎・瓦爾加，六十三歲。母親：莉娜・瓦爾加，冬眠艙 C-7-0412，至今仍在沉睡，生命徵象穩定。', en: 'Ilsa Varga, sixty-three. Mother: Lina Varga, sleep pod C-7-0412. Still asleep. Vital signs stable.' },
     { who: 'sys', zh: '（元帥很久沒有說話。）', en: '(For a long time the Marshal says nothing.)' },
-    { who: 'varga', face: 'shaken', zh: '……少校。我下令炸掉的，是哪一個艙？', en: '...Major. Which bay did I order destroyed?' },
+    { who: 'varga', face: 'shaken', zh: '……少校。我下令炸掉的，是哪一個艙？', en: '...Major. Which bay did I order destroyed?', cg: '' },
     { who: 'hale', face: 'shaken', zh: 'C-7，元帥。', en: 'C-7, Marshal.' },
     { who: 'varga', face: 'shaken', zh: '……把我的名字也記上去。把我做過的事寫清楚。全軍，槍口朝下。', en: '...Put my name on it too. Write down what I did, and write it plainly. All units: weapons down.' },
     { who: 'sparrow', face: 'sad', zh: '所以……打完了？真的打完了？', en: "So... it's over? Actually over?" },

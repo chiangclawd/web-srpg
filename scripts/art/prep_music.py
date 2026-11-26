@@ -19,7 +19,8 @@ res = subprocess.run(
     ['ffmpeg', '-hide_banner', '-i', raw, '-af', f'{trim},loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json', '-f', 'null', '-'],
     capture_output=True, text=True, check=True,
 )
-m = json.loads(res.stderr[res.stderr.rindex('{'):])
+# 新版 ffmpeg 在 loudnorm 的 JSON 後面還會再印一行統計，只取最後一組大括號
+m = json.loads(res.stderr[res.stderr.rindex('{'):res.stderr.rindex('}') + 1])
 norm = (
     f"loudnorm=I=-16:TP=-1.5:LRA=11:linear=true:measured_I={m['input_i']}:measured_TP={m['input_tp']}"
     f":measured_LRA={m['input_lra']}:measured_thresh={m['input_thresh']}:offset={m['target_offset']}"

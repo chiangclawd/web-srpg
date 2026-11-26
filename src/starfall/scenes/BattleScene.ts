@@ -3,6 +3,7 @@
 import Phaser from 'phaser';
 import { COL, RS, TEX, VIEW_H, addText, cssPx, hudButton, hudZoom, viewW, worldPx } from '../config';
 import { ambience, music, sfx } from '../audio';
+import type { Track } from '../audio';
 import { L, T } from '../i18n';
 import { persist, save } from '../save';
 import { Battle } from '../sim/Battle';
@@ -11,7 +12,7 @@ import { aiTakeTurn } from '../sim/ai';
 import { TERRAIN } from '../sim/terrain';
 import { DIR_VEC } from '../sim/types';
 import type { BattleEvent, Dir, Forecast, MissionDef, Pos, SkillDef, Unit } from '../sim/types';
-import { MISSIONS, missionById } from '../data/missions';
+import { MISSIONS, battleTrack, missionById } from '../data/missions';
 import { STORY } from '../data/story';
 import { UNITS } from '../data/units';
 import { loadoutDefs, missionParts } from '../data/upgrades';
@@ -77,6 +78,8 @@ export class BattleScene extends Phaser.Scene {
   private marks: Record<MarkKind, Phaser.GameObjects.Image[]> = { move: [], target: [], aim: [], select: [], threat: [], zone: [], line: [] };
   private range: Map<number, Reach> | null = null;
   private bg!: Phaser.GameObjects.Image;
+  /** 這一關現在要播的配樂（檢查腳本會讀） */
+  track: Track = 'battle';
   private zoom = 1;
   private minZoom = 0.6;
   /** 大地圖：整張放不進畫面，開場拉近到我方附近，介面多一張小地圖和「下一台」按鈕 */
@@ -173,8 +176,10 @@ export class BattleScene extends Phaser.Scene {
   create(): void {
     makeAnims(this);
     const b = this.battle;
-    // 有首領的關卡換一首比較兇的曲子
-    music(this.battle.units.some((u) => u.def.boss) ? 'boss' : 'battle');
+    // 配樂：平常是這一章的戰鬥曲。首領出手或挨打之後換成首領曲（bossMusic）；
+    // 接著打上次的戰鬥時，首領已經受過傷就直接從首領曲開始
+    this.track = this.battle.units.some((u) => u.def.boss && u.alive && u.hp < u.maxHp) ? 'boss' : battleTrack(this.mission);
+    music(this.track);
     // 環境音：室外是風，船裡是機器的嗡鳴
     const theme = this.mission.theme ?? 'hull';
     ambience(theme === 'ice' || theme === 'field' ? 'amb_wind' : 'amb_hum');
@@ -1181,6 +1186,7 @@ export class BattleScene extends Phaser.Scene {
         break;
       }
       case 'attack':
+        this.bossMusic(e.uid, e.target);
         await this.playAttack(e);
         break;
       case 'heal': {
@@ -1371,6 +1377,13 @@ export class BattleScene extends Phaser.Scene {
   private dirOf(a: Pos, p: Pos): Dir {
     const i = DIR_VEC.findIndex(([dx, dy]) => dx === Math.sign(p.x - a.x) && dy === Math.sign(p.y - a.y));
     return (i < 0 ? 0 : i) as Dir;
+  }
+
+  /** 首領開打了（牠出手，或是牠挨打）：換成首領曲，之後就不換回來 */
+  private bossMusic(...uids: number[]): void {
+    if (this.track === 'boss' || !uids.some((id) => this.views.get(id)?.unit.def.boss)) return;
+    this.track = 'boss';
+    music('boss');
   }
 
   private async playAttack(e: Extract<BattleEvent, { t: 'attack' }>): Promise<void> {

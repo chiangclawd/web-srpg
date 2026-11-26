@@ -452,6 +452,7 @@ export const MISSIONS: MissionDef[] = [
   {
     id: 'm9',
     chapter: 3,
+    music: 'rollcall',
     name: { zh: '新的航行計畫', en: 'A New Flight Plan' },
     brief: { zh: '艾可要在爐心的控制台上改寫航行計畫。讓她站上控制台，連續守住 5 個回合 —— 整個合唱都會來阻止她。', en: 'Echo must rewrite the flight plan at the core console. Get her onto the console and hold it for 5 turns in a row. The whole Chorus will try to stop her.' },
     tiles: [
@@ -745,6 +746,15 @@ export const MISSIONS: MissionDef[] = [
     theme: 'field',
   },
 ];
+
+/**
+ * 這一關平常播哪一首戰鬥配樂：有專屬的用專屬的，不然照章（第一章是 battle）。
+ * 有首領的關卡也先播這一首，首領出手或挨打之後才換成首領曲（BattleScene）。
+ */
+export function battleTrack(m: Pick<MissionDef, 'chapter' | 'music'>): 'battle' | 'ch2' | 'ch3' | 'ch4' | 'rollcall' {
+  if (m.music) return m.music;
+  return m.chapter === 2 ? 'ch2' : m.chapter === 3 ? 'ch3' : m.chapter === 4 ? 'ch4' : 'battle';
+}
 
 export const missionById = (id: string): MissionDef => {
   const m = MISSIONS.find((x) => x.id === id);
